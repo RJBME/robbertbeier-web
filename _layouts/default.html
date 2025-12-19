@@ -18,12 +18,12 @@
     [data-theme="dark"] {
       --bg: #1a1a1a;
       --text: #f0f0f0; 
-      --link: #a389f4; /* Lighter purple for dark mode contrast */
+      --link: #a389f4;
       --border: #333333;
       --shadow: rgba(0,0,0,0.5);
     }
 
-    /* 2. Global Text Overrides - Fixes index.html visibility */
+    /* 2. Base Styles */
     body { 
       background-color: var(--bg);
       color: var(--text);
@@ -35,14 +35,14 @@
       transition: background-color 0.3s, color 0.3s;
     }
 
-    /* This block forces every header, paragraph, and date to use theme colors */
-    h1, h2, h3, h4, p, li, time, span, small {
-        color: var(--text);
-    }
-
+    /* 3. The "Everything" Fix for Dark Mode Visibility */
+    /* This forces every header, link, paragraph, and date to be readable */
     [data-theme="dark"] h1, 
     [data-theme="dark"] h2, 
     [data-theme="dark"] h3, 
+    [data-theme="dark"] h1 a, 
+    [data-theme="dark"] h2 a, 
+    [data-theme="dark"] h3 a,
     [data-theme="dark"] p, 
     [data-theme="dark"] li, 
     [data-theme="dark"] time,
@@ -51,27 +51,29 @@
         color: var(--text) !important;
     }
 
-    /* 3. Links - Fixes "Read full post" and "Back to timeline" */
+    /* Ensure link text in dark mode uses the lighter purple */
+    [data-theme="dark"] a {
+        color: var(--link) !important;
+    }
+
+    /* Standard link colors (fixes the blue links you saw) */
     a { 
       color: var(--link) !important; 
       text-decoration: none; 
       font-weight: bold;
     }
     
-    a:hover {
-      text-decoration: underline;
-    }
+    a:hover { text-decoration: underline; }
+
+    /* Standard text colors for light mode */
+    h1, h2, h3, p, li, time { color: var(--text); }
+    span, small { color: var(--text); opacity: 0.8; }
 
     /* 4. Layout & UI Elements */
     img { max-width: 100%; height: auto; border-radius: 4px; cursor: pointer; }
-    
     .mini-preview img { width: 23%; margin: 0.5%; aspect-ratio: 1/1; object-fit: cover; }
-    
     .master-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-    
     nav { margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
-    
-    /* Navigation specific links */
     nav a { margin-right: 15px; color: var(--link) !important; }
     
     .lightbox-target { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
