@@ -1,2 +1,2 @@
 # This tells GitHub to stop using its default theme/menu
-theme: none
+remote_theme: []
