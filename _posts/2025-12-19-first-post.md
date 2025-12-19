@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: posts
 title: "My first entry"
 date: 2025-12-19 12:00:00 -0500
 images:
