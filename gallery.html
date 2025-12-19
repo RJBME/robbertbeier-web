@@ -1,3 +1,8 @@
+---
+layout: default
+title: Gallery
+---
+
 <h1>Photo Archive</h1>
 <p>A collection of all images posted to the timeline.</p>
 
@@ -5,15 +10,8 @@
   {% for post in site.posts %}
     {% for img in post.images %}
       <div class="gallery-item">
-        <img src="{{ img }}" class="thumb-trigger" alt="{{ post.title }}">
+        <img src="{{ img | relative_url }}" class="thumb-trigger" alt="{{ post.title }}">
       </div>
     {% endfor %}
   {% endfor %}
-</div>
-
-<div id="modal">
-    <span class="close-modal" aria-label="Close">&times;</span>
-    <div id="viewer">
-        <img id="mimg" src="" alt="Full Resolution">
-    </div>
 </div>

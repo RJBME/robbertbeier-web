@@ -6,208 +6,100 @@
   <link rel="icon" type="image/png" href="/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    /* 1. Theme Variables */
-    :root {
-      --bg: #ffffff;
-      --text: #333333;
-      --link: #5D3FD3;
-      --border: #eeeeee;
-      --shadow: rgba(0,0,0,0.1);
-    }
+    :root { --bg: #ffffff; --text: #333333; --link: #5D3FD3; --border: #eeeeee; }
+    [data-theme="dark"] { --bg: #1a1a1a; --text: #f0f0f0; --link: #a389f4; --border: #333333; }
 
-    [data-theme="dark"] {
-      --bg: #1a1a1a;
-      --text: #f0f0f0; 
-      --link: #a389f4;
-      --border: #333333;
-      --shadow: rgba(0,0,0,0.5);
-    }
-
-    /* 2. Base Styles */
-    body { 
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-      line-height: 1.6; 
-      max-width: 800px; 
-      margin: 0 auto; 
-      padding: 2rem; 
-      transition: background-color 0.3s, color 0.3s;
-    }
-
-    /* 3. Dark Mode Overrides */
-    [data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3, 
-    [data-theme="dark"] h1 a, [data-theme="dark"] h2 a, [data-theme="dark"] h3 a,
-    [data-theme="dark"] p, [data-theme="dark"] li, [data-theme="dark"] time,
-    [data-theme="dark"] span, [data-theme="dark"] small {
-        color: var(--text) !important;
-    }
+    body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; transition: background-color 0.3s, color 0.3s; }
+    
+    /* Dark Mode Text Fixes */
+    [data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3, [data-theme="dark"] p, [data-theme="dark"] time, [data-theme="dark"] a { color: var(--text) !important; }
     [data-theme="dark"] a { color: var(--link) !important; }
 
-    /* 4. Layout & UI Elements */
     a { color: var(--link) !important; text-decoration: none; font-weight: bold; }
-    a:hover { text-decoration: underline; }
-    h1, h2, h3, p, li, time { color: var(--text); }
     nav { margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
-    nav a { margin-right: 15px; }
-
-    /* Python-Inspired Grid: Uniform 3:2 aspect, no-crop frames */
-    .master-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 30px; }
-    .gallery-item { position: relative; width: 100%; padding-top: 66.66%; overflow: hidden; border-radius: 6px; background: var(--border); }
-    .gallery-item img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; cursor: pointer; transition: transform 0.2s; }
-    .gallery-item img:hover { transform: scale(1.03); }
-
-    /* Timeline Mini Previews */
-    .mini-preview img { width: 23%; margin: 0.5%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px; }
-
-    /* Modal / Pan Lightbox UI */
-    #modal { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95); z-index: 99999; justify-content: center; align-items: center; }
-    #viewer { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-    #mimg { max-width: 90%; max-height: 90%; transition: transform 0.1s linear; cursor: zoom-in; box-shadow: 0 0 20px rgba(0,0,0,0.5); border-radius: 4px; }
-    #mimg.panning { max-width: none; max-height: none; cursor: crosshair; }
-    .close-modal { position: absolute; top: 20px; right: 30px; color: white; font-size: 50px; cursor: pointer; z-index: 100001; line-height: 1; }
     
-    #theme-toggle { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
-    article img { box-shadow: 0 4px 10px var(--shadow); border-radius: 4px; }
+    /* Python-Style Grid */
+    .master-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+    .gallery-item { position: relative; width: 100%; padding-top: 66.66%; overflow: hidden; border-radius: 6px; background: var(--border); }
+    .gallery-item img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; cursor: pointer; }
+
+    /* Lightbox & Pan UI */
+    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center; }
+    #viewer { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+    #mimg { max-width: 90%; max-height: 90%; transition: transform 0.1s linear; cursor: zoom-in; }
+    #mimg.panning { max-width: none; max-height: none; cursor: crosshair; }
+    .close-modal { position: absolute; top: 20px; right: 30px; color: white; font-size: 50px; cursor: pointer; z-index: 100001; }
+    
+    #theme-toggle { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; }
   </style>
 </head>
 <body>
 
 <nav>
-  <div>
-    <a href="/">Timeline</a>
-    <a href="/gallery">Gallery</a>
-  </div>
-  <button id="theme-toggle" aria-label="Toggle Dark Mode">🌙 Dark Mode</button>
+  <div><a href="/">Timeline</a> <a href="/gallery">Gallery</a></div>
+  <button id="theme-toggle">🌙 Dark Mode</button>
 </nav>
 
 {{ content }}
 
 <div id="modal">
   <span class="close-modal">&times;</span>
-  <div id="viewer">
-    <img id="mimg" src="" alt="Full view">
-  </div>
+  <div id="viewer"><img id="mimg" src=""></div>
 </div>
 
-<footer style="margin-top: 80px; padding: 40px 0; border-top: 1px solid var(--border); font-size: 0.9rem; text-align: center;">
-  <p style="margin-bottom: 20px;"><a href="#" style="text-decoration: none;">↑ Back to Top</a></p>
-  <p style="opacity: 0.7;">
-    &copy; {{ "now" | date: "%Y" }} Robert Beier. <br>
-    <small>Last updated: {{ "now" | date: "%B %d, %Y at %l:%M %p" }}</small>
-  </p>
+<footer style="margin-top: 80px; text-align: center; font-size: 0.9rem;">
+  <p><a href="#">↑ Back to Top</a></p>
+  <p>&copy; {{ "now" | date: "%Y" }} Robert Beier. <small>Updated: {{ "now" | date: "%m/%d/%y %I:%M %p" }}</small></p>
 </footer>
 
 <script>
-  // 1. Lightbox / Pan Mode Logic
-  const modal = document.getElementById('modal');
-  const mimg = document.getElementById('mimg');
-  const viewer = document.getElementById('viewer');
-  let isPan = false;
-  let currentImages = [];
-  let currentIndex = 0;
+  const modal = document.getElementById('modal'), mimg = document.getElementById('mimg'), viewer = document.getElementById('viewer');
+  let isPan = false, currentImages = [], currentIndex = 0;
 
-  // Function to open specific image and update navigation index
-  function openLightbox(imgSrc) {
-    // Refresh the list of images currently on the page
-    currentImages = Array.from(document.querySelectorAll('img')).filter(img => !img.closest('#viewer'));
-    currentIndex = currentImages.findIndex(img => img.src === imgSrc);
-    
-    mimg.src = imgSrc;
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    resetPan();
-  }
-
-  // Handle clicking any image on the page
-  document.addEventListener('click', (e) => {
+  // Replicating Python logic for image handling
+  document.addEventListener('click', e => {
     if (e.target.tagName === 'IMG' && !e.target.closest('#viewer')) {
-      openLightbox(e.target.src);
+      currentImages = Array.from(document.querySelectorAll('img')).filter(i => !i.closest('#viewer'));
+      currentIndex = currentImages.indexOf(e.target);
+      mimg.src = e.target.src;
+      modal.style.display = 'flex';
+      resetPan();
     }
   });
 
-  function navigate(direction) {
-    if (currentImages.length === 0) return;
-    stopTimer(); // Ensure any future slideshow logic is stopped
-    currentIndex = (currentIndex + direction + currentImages.length) % currentImages.length;
-    mimg.src = currentImages[currentIndex].src;
-    resetPan();
-  }
-
-  function stopTimer() { /* Placeholder for future slideshow pause functionality */ }
-
-  function closeModal() {
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-    resetPan();
-  }
-
+  const closeModal = () => { modal.style.display = 'none'; resetPan(); };
   document.querySelector('.close-modal').onclick = closeModal;
-  modal.onclick = (e) => { if(e.target === modal || e.target === viewer) closeModal(); };
+  modal.onclick = e => { if(e.target === modal || e.target === viewer) closeModal(); };
 
-  // Pan functionality matching your Python handlePanMove logic
-  mimg.onclick = (e) => { e.stopPropagation(); isPan ? resetPan() : enterPan(); };
+  mimg.onclick = e => { e.stopPropagation(); isPan ? resetPan() : enterPan(); };
+  function enterPan() { isPan = true; mimg.classList.add('panning'); mimg.style.maxWidth = mimg.style.maxHeight = 'none'; }
+  function resetPan() { isPan = false; mimg.classList.remove('panning'); mimg.style.maxWidth = mimg.style.maxHeight = '90%'; mimg.style.transform = 'translate(0,0)'; }
 
-  function enterPan() {
-    isPan = true;
-    mimg.classList.add('panning');
-    mimg.style.maxWidth = 'none';
-    mimg.style.maxHeight = 'none';
-  }
-
-  function resetPan() {
-    isPan = false;
-    if (mimg) {
-      mimg.classList.remove('panning');
-      mimg.style.maxWidth = '90%';
-      mimg.style.maxHeight = '90%';
-      mimg.style.transform = 'translate(0,0)';
-    }
-  }
-
-  viewer.onmousemove = (e) => {
+  viewer.onmousemove = e => {
     if (!isPan) return;
     const { width, height, left, top } = viewer.getBoundingClientRect();
-    const x = (e.clientX - left) / width;
-    const y = (e.clientY - top) / height;
-    const moveX = (mimg.offsetWidth - width) * x;
-    const moveY = (mimg.offsetHeight - height) * y;
+    const moveX = (mimg.offsetWidth - width) * ((e.clientX - left) / width);
+    const moveY = (mimg.offsetHeight - height) * ((e.clientY - top) / height);
     mimg.style.transform = `translate(${-moveX}px, ${-moveY}px)`;
   };
 
-  // 2. Keyboard Navigation matching your Python script
-  window.addEventListener('keydown', (e) => {
+  window.addEventListener('keydown', e => {
     if (modal.style.display === 'flex') {
       if (e.key === 'Escape') closeModal();
-      if (e.key === 'ArrowRight') navigate(1);
-      if (e.key === 'ArrowLeft') navigate(-1);
+      if (e.key === 'ArrowRight') { currentIndex = (currentIndex + 1) % currentImages.length; mimg.src = currentImages[currentIndex].src; resetPan(); }
+      if (e.key === 'ArrowLeft') { currentIndex = (currentIndex - 1 + currentImages.length) % currentImages.length; mimg.src = currentImages[currentIndex].src; resetPan(); }
     }
   });
 
-  // 3. Theme Toggle Logic
+  // Theme Logic
   const toggle = document.getElementById('theme-toggle');
-  const currentTheme = localStorage.getItem('theme');
-
-  if (currentTheme) {
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    if (currentTheme === 'dark') toggle.textContent = '☀️ Light Mode';
-  } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    toggle.textContent = '☀️ Light Mode';
-  }
-
-  toggle.addEventListener('click', () => {
-    let theme = document.documentElement.getAttribute('data-theme');
-    if (theme === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'light');
-      localStorage.setItem('theme', 'light');
-      toggle.textContent = '🌙 Dark Mode';
-    } else {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      localStorage.setItem('theme', 'dark');
-      toggle.textContent = '☀️ Light Mode';
-    }
-  });
+  const setTheme = (t) => {
+    document.documentElement.setAttribute('data-theme', t);
+    toggle.textContent = t === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    localStorage.setItem('theme', t);
+  };
+  if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) setTheme('dark');
+  toggle.onclick = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 </script>
 </body>
 </html>
