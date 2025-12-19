@@ -1,0 +1,19 @@
+---
+layout: default
+title: Gallery
+---
+
+<h1>Photo Archive</h1>
+<p>A collection of all images posted to the timeline.</p>
+
+<div class="master-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 30px;">
+  {% for post in site.posts %}
+    {% for img in post.images %}
+      <div class="gallery-item">
+        <a href="{{ img }}">
+          <img src="{{ img }}" style="width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+        </a>
+      </div>
+    {% endfor %}
+  {% endfor %}
+</div>
