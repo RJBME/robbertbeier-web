@@ -1,27 +1,19 @@
----
-layout: default
-title: Gallery
----
-
 <h1>Photo Archive</h1>
 <p>A collection of all images posted to the timeline.</p>
 
 <div class="master-grid">
   {% for post in site.posts %}
     {% for img in post.images %}
-      {% assign img_id = img | split: '/' | last | replace: '.', '-' %}
-
       <div class="gallery-item">
-        <a href="#{{ img_id }}">
-          <img src="{{ img }}">
-        </a>
-      </div>
-
-      <div id="{{ img_id }}" class="lightbox-target">
-        <a href="#!" class="lightbox-close" aria-label="Close"></a>
-        
-        <img src="{{ img }}" alt="Gallery Image">
+        <img src="{{ img }}" class="thumb-trigger" alt="{{ post.title }}">
       </div>
     {% endfor %}
   {% endfor %}
+</div>
+
+<div id="modal">
+    <span class="close-modal" aria-label="Close">&times;</span>
+    <div id="viewer">
+        <img id="mimg" src="" alt="Full Resolution">
+    </div>
 </div>
