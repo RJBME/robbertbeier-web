@@ -33,10 +33,16 @@
       transition: background-color 0.3s, color 0.3s;
     }
 
-    /* This section ensures all text elements use the theme variables */
-    h1, h2, h3, h4, p, li, span, div {
-      color: var(--text);
-    }
+   /* Added this below body style in attempt to fix visibility */
+h1, h2, h3, h4, h5, h6, p, li, time {
+    color: var(--text) !important;
+}
+
+/* Specific fix for the date text which might be in a 'span' or 'small' tag */
+span, small {
+    color: var(--text);
+    opacity: 0.8; /* Makes the date slightly softer than the title */
+}
 
     img { max-width: 100%; height: auto; border-radius: 4px; cursor: pointer; }
     
