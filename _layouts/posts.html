@@ -1,23 +1,25 @@
 ---
 layout: default
 ---
-<article>
+<article style="max-width: 800px; margin: 0 auto;">
   <h1>{{ page.title }}</h1>
   <p style="color: #666;">{{ page.date | date: "%B %-d, %Y" }}</p>
   
-  <div class="post-content">
+  <div class="post-content" style="margin-bottom: 30px;">
     {{ content }}
   </div>
 
   {% if page.images %}
-    <hr>
-    <h3>Images from this post</h3>
-    <div class="post-specific-gallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0;">
+    <h3>Post Gallery</h3>
+    <div class="post-specific-gallery" style="display: flex; flex-direction: column; gap: 20px;">
       {% for img in page.images %}
-        <img src="{{ img }}" style="width: 100%; border-radius: 4px;">
+        <img src="{{ img }}" style="width: 100%; max-width: 700px; height: auto; border-radius: 4px; display: block; margin: 0 auto;">
       {% endfor %}
     </div>
   {% endif %}
   
-  <p style="margin-top: 40px;"><a href="/">← Back to Timeline</a></p>
+  <p style="margin-top: 50px; border-top: 1px solid #eee; padding-top: 20px;">
+    <a href="/" style="text-decoration: none; color: #007aff; font-weight: bold;">← Back to Timeline</a>
+  </p>
 </article>
