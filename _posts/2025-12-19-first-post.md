@@ -3,11 +3,7 @@ layout: post
 title: "My first entry"
 date: 2025-12-19 12:00:00 -0500
 images:
-  - https://via.placeholder.com/400
-  - https://via.placeholder.com/401
-  - https://via.placeholder.com/402
-  - https://via.placeholder.com/403
-  - https://via.placeholder.com/404
+  - assets/images/DCS_3919.jpg
 ---
 This is the first paragraph. It should show up on the homepage as a preview. 
 
