@@ -1,0 +1,23 @@
+---
+layout: default
+---
+<article>
+  <h1>{{ page.title }}</h1>
+  <p style="color: #666;">{{ page.date | date: "%B %-d, %Y" }}</p>
+  
+  <div class="post-content">
+    {{ content }}
+  </div>
+
+  {% if page.images %}
+    <hr>
+    <h3>Images from this post</h3>
+    <div class="post-specific-gallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
+      {% for img in page.images %}
+        <img src="{{ img }}" style="width: 100%; border-radius: 4px;">
+      {% endfor %}
+    </div>
+  {% endif %}
+  
+  <p style="margin-top: 40px;"><a href="/">← Back to Timeline</a></p>
+</article>
