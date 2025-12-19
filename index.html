@@ -1,0 +1,33 @@
+---
+layout: default
+title: Home
+---
+
+<div class="posts-timeline">
+  {% for post in site.posts %}
+    <article style="margin-bottom: 50px; border-bottom: 1px solid #eee; padding-bottom: 30px;">
+      <h2 style="margin-bottom: 5px;">
+        <a href="{{ post.url }}" style="text-decoration: none; color: #000;">{{ post.title }}</a>
+      </h2>
+      <p style="color: #666; font-size: 0.9rem;">{{ post.date | date: "%B %-d, %Y" }}</p>
+
+      <div class="post-excerpt">
+        {{ post.excerpt }}
+      </div>
+
+      {% if post.images %}
+        <div class="mini-preview" style="display: flex; gap: 10px; margin-top: 15px;">
+          {% for img in post.images limit:4 %}
+            <div style="flex: 1;">
+               <img src="{{ img }}" style="width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px;">
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <p style="margin-top: 20px;">
+        <a href="{{ post.url }}" style="font-weight: bold; color: #007aff;">Read full post →</a>
+      </p>
+    </article>
+  {% endfor %}
+</div>
