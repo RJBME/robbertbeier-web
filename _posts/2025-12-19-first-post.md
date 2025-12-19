@@ -3,7 +3,7 @@ layout: post
 title: "My first entry"
 date: 2025-12-19 12:00:00 -0500
 images:
-  - assets/images/DCS_3919.jpg
+  - /assets/images/DCS_3919.jpg
 ---
 This is the first paragraph. It should show up on the homepage as a preview. 
 
