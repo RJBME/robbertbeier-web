@@ -3,7 +3,7 @@ layout: posts
 title: "Welcome"
 date: 2025-12-20 09:00:00 -0500
 images:
-  - /assets/images/DSC_3919_small.png
+
 ---
 Have owned my own domain for quite a while...
 
