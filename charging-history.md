@@ -6,9 +6,9 @@ nav_exclude: true
 ---
 
 <style>
-  :root { --hist-text: #2c3e50; --hist-border: #eee; }
+  :root { --hist-text: #2c3e50; --hist-border: #eee; --hist-header: #f4f4f4; }
   @media (prefers-color-scheme: dark) {
-    :root { --hist-text: #ecf0f1; --hist-border: #333; }
+    :root { --hist-text: #ecf0f1; --hist-border: #333; --hist-header: #2d2d2d; }
   }
   
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: inline-block; }
@@ -22,7 +22,7 @@ nav_exclude: true
   .badge-other { background: #f5f5f5; color: #424242; }
 
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--hist-text); }
-  th { background: rgba(0,0,0,0.05); padding: 12px; border: 1px solid var(--hist-border); text-align: left; }
+  th { background: var(--hist-header); padding: 12px; border: 1px solid var(--hist-border); text-align: left; }
   td { padding: 12px; border: 1px solid var(--hist-border); }
 </style>
 
