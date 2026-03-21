@@ -43,7 +43,7 @@ permalink: /charging/\
 | :--- | :--- | :--- | :--- |\
 \{% assign sorted_logs = site.data.charging | sort: 'date' | reverse %\}\
 \{% for log in sorted_logs limit: 10 %\}\
-| \{\{ log.date \}\} | \{\{ log.location \}\} | \{\{ log.energy_kwh \}\} kWh | $\{\{ log.cost | float | printf: "%.2f" \}\} |\
+| \{\{ log.date \}\} | \{\{ log.location \}\} | \{\{ log.energy_kwh \}\} kWh | $\{\{ log.cost | plus: 0 | round: 2 \}\} |\
 \{% endfor %\}\
 \
 [View Full History](/charging-history/)}
