@@ -8,15 +8,16 @@ nav_exclude: true
 <style>
   :root { --hist-text: #2c3e50; --hist-border: #eee; --hist-header: #f4f4f4; }
   @media (prefers-color-scheme: dark) {
-    :root { --hist-text: #ecf0f1; --hist-border: #333; --hist-header: #2d2d2d; }
+    :root { --hist-text: #f1f1f1; --hist-border: #333; --hist-header: #2d2d2d; }
   }
   
-  .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: inline-block; }
-  .badge-work { background: #e1f5fe; color: #01579b; }
+  .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; display: inline-block; }
+  .badge-work { background: #e3f2fd; color: #01579b; }
   .badge-home { background: #f3e5f5; color: #4a148c; }
   .badge-tesla { background: #ffebee; color: #CC0000; }
   .badge-cp { background: #fff3e0; color: #e65100; }
-  .badge-ea { background: #f1f8e9; color: #33691e; }
+  .badge-blink { background: #f1f8e9; color: #65A844; }
+  .badge-ea { background: #f9fbe7; color: #827717; }
   .badge-evgo { background: #e0f7fa; color: #006064; }
   .badge-rivian { background: #fffde7; color: #ff8f00; }
   .badge-other { background: #f5f5f5; color: #424242; }
@@ -26,7 +27,7 @@ nav_exclude: true
   td { padding: 12px; border: 1px solid var(--hist-border); }
 </style>
 
-# All Charging Sessions
+# Charging History Deep Dive
 
 <table>
   <thead>
@@ -45,7 +46,7 @@ nav_exclude: true
       <td>{{ log.date }}</td>
       <td>
         {% assign loc = log.location | downcase %}
-        <span class="badge {% if loc contains 'work' %}badge-work{% elsif loc contains 'home' %}badge-home{% elsif loc contains 'tesla' %}badge-tesla{% elsif loc contains 'chargepoint' %}badge-cp{% elsif loc contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">
+        <span class="badge {% if loc contains 'work' %}badge-work{% elsif loc contains 'home' %}badge-home{% elsif loc contains 'tesla' %}badge-tesla{% elsif loc contains 'chargepoint' %}badge-cp{% elsif loc contains 'blink' %}badge-blink{% elsif loc contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">
           {{ log.location }}
         </span>
       </td>
