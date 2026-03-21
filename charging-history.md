@@ -6,16 +6,27 @@ nav_exclude: true
 ---
 
 <style>
-  .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
-  .badge-work { background: #e1f5fe; color: #0288d1; }
-  .badge-home { background: #f3e5f5; color: #7b1fa2; }
-  .badge-other { background: #f5f5f5; color: #616161; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th { background: #f4f4f4; padding: 12px; border: 1px solid #ddd; text-align: left; }
-  td { padding: 12px; border: 1px solid #eee; }
+  :root { --hist-text: #2c3e50; --hist-border: #eee; }
+  @media (prefers-color-scheme: dark) {
+    :root { --hist-text: #ecf0f1; --hist-border: #333; }
+  }
+  
+  .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; display: inline-block; }
+  .badge-work { background: #e1f5fe; color: #01579b; }
+  .badge-home { background: #f3e5f5; color: #4a148c; }
+  .badge-tesla { background: #ffebee; color: #CC0000; }
+  .badge-cp { background: #fff3e0; color: #e65100; }
+  .badge-ea { background: #f1f8e9; color: #33691e; }
+  .badge-evgo { background: #e0f7fa; color: #006064; }
+  .badge-rivian { background: #fffde7; color: #ff8f00; }
+  .badge-other { background: #f5f5f5; color: #424242; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--hist-text); }
+  th { background: rgba(0,0,0,0.05); padding: 12px; border: 1px solid var(--hist-border); text-align: left; }
+  td { padding: 12px; border: 1px solid var(--hist-border); }
 </style>
 
-# Deep Dive: All Charging Sessions
+# All Charging Sessions
 
 <table>
   <thead>
@@ -33,19 +44,14 @@ nav_exclude: true
     <tr>
       <td>{{ log.date }}</td>
       <td>
-        <span class="badge {% if log.location == 'Work' %}badge-work{% else %}badge-home{% endif %}">
+        {% assign loc = log.location | downcase %}
+        <span class="badge {% if loc contains 'work' %}badge-work{% elsif loc contains 'home' %}badge-home{% elsif loc contains 'tesla' %}badge-tesla{% elsif loc contains 'chargepoint' %}badge-cp{% elsif loc contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">
           {{ log.location }}
         </span>
       </td>
-      <td style="color: #888;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
+      <td style="opacity: 0.6;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
       <td>{{ log.energy_kwh }}</td>
-      <td>
-        {% if log.cost == 0 or log.cost == 0.0 %}
-          <span style="color: #aaa;">Free</span>
-        {% else %}
-          ${{ log.cost | plus: 0.0001 | round: 2 }}
-        {% endif %}
-      </td>
+      <td>{% if log.cost == 0 %}Free{% else %}${{ log.cost | plus: 0.0001 | round: 2 }}{% endif %}</td>
     </tr>
     {% endfor %}
   </tbody>
