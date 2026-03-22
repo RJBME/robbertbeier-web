@@ -2,38 +2,26 @@
 layout: page
 title: Charging
 permalink: /charging/
-nav_order: 3
 ---
 
 <style>
-  /* FORCED THEME OVERRIDES */
-  :root { 
-    --dash-bg: #ffffff; --dash-text: #2c3e50; --dash-border: #eaeaea; 
-    --card-bg: #ffffff; --table-head: #f9f9f9;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { 
-      --dash-bg: #1a1a1a; --dash-text: #f1f1f1; --dash-border: #444; 
-      --card-bg: #2d2d2d; --table-head: #3d3d3d;
-    }
-  }
-
-  .dash-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--dash-text); background: var(--dash-bg); padding: 20px; border-radius: 12px; }
-  .status-bar { display: flex; background: #000000; color: #ffffff; padding: 20px; border-radius: 12px; justify-content: space-around; text-align: center; margin-bottom: 25px; border: 1px solid #333; }
+  .dash-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); }
+  
+  .status-bar { display: flex; background: #000000; color: #ffffff !important; padding: 20px; border-radius: 12px; justify-content: space-around; text-align: center; margin-bottom: 25px; }
   .status-item { flex: 1; border-right: 1px solid #333; }
   .status-item:last-child { border-right: none; }
   .status-label { font-size: 0.7rem; text-transform: uppercase; color: #888; display: block; }
   .status-value { font-size: 1.5rem; font-weight: bold; display: block; margin-top: 5px; color: #fff !important; }
   
   .media-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; margin-bottom: 30px; }
-  .card { background: var(--card-bg); border: 1px solid var(--dash-border); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .card { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-  .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; color: var(--dash-text) !important; }
-  .charging-table th { background: var(--table-head); padding: 12px; text-align: left; border-bottom: 2px solid var(--dash-border); color: var(--dash-text); }
-  .charging-table td { padding: 12px; border-bottom: 1px solid var(--dash-border); color: var(--dash-text); }
+  .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; color: var(--text); }
+  .charging-table th { background: var(--table-head); padding: 12px; text-align: left; border-bottom: 2px solid var(--dash-border); color: var(--text); }
+  .charging-table td { padding: 12px; border-bottom: 1px solid var(--dash-border); color: var(--text); }
   
-  /* Brand Pills - Forced Legibility */
-  .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; border: 1px solid rgba(0,0,0,0.05); }
+  /* Brand Pills */
+  .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
   .badge-work { background: #e3f2fd; color: #0288d1; }
   .badge-home { background: #f3e5f5; color: #7b1fa2; }
   .badge-tesla { background: #ffebee; color: #CC0000; }
@@ -57,8 +45,8 @@ nav_order: 3
 <div class="dash-container">
   <div class="status-bar">
     <div class="status-item"><span class="status-label">Energy</span><span class="status-value">{{ total_kwh | divided_by: 1000.0 | round: 2 }} MWh</span></div>
-    <div class="status-item"><span class="status-label">Actual Cost</span><span class="status-value">${{ total_cost | round: 2 }}</span></div>
-    <div class="status-item"><span class="status-label">Gas Savings</span><span class="status-value" style="color: #2ecc71 !important;">${{ total_kwh | times: 3.0 | divided_by: 23 | times: 2.50 | minus: total_cost | round: 0 }}</span></div>
+    <div class="status-item"><span class="status-label">Cost</span><span class="status-value">${{ total_cost | round: 2 }}</span></div>
+    <div class="status-item"><span class="status-label">Savings</span><span class="status-value" style="color: #2ecc71 !important;">${{ total_kwh | times: 3.0 | divided_by: 23 | times: 2.50 | minus: total_cost | round: 0 }}</span></div>
   </div>
 
   <div class="media-grid">
@@ -72,7 +60,7 @@ nav_order: 3
     </div>
   </div>
 
-  <div class="card" style="padding: 0;">
+  <div class="card" style="padding: 0; overflow-x: auto;">
     <div style="padding: 15px; border-bottom: 1px solid var(--dash-border);">
       <h3 style="margin: 0; font-size: 1.1rem;">Recent Sessions</h3>
     </div>
@@ -92,7 +80,7 @@ nav_order: 3
             </span>
           </td>
           <td>{{ log.energy_kwh }} kWh</td>
-          <td>{% if log.cost == 0 %}Free{% else %}${{ log.cost | plus: 0.0001 | round: 2 }}{% endif %}</td>
+          <td>{% if log.cost == 0 %}FREE{% else %}${{ log.cost | plus: 0.0001 | round: 2 }}{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -107,7 +95,9 @@ nav_order: 3
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
   Chart.register(ChartDataLabels);
-  new Chart(document.getElementById('energyChart'), {
+  const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
+  
+  const chargerChart = new Chart(document.getElementById('energyChart'), {
     type: 'doughnut',
     data: {
       labels: ['Work', 'Home/Other'],
@@ -120,7 +110,7 @@ nav_order: 3
     options: {
       cutout: '70%',
       plugins: {
-        legend: { position: 'bottom', labels: { color: window.matchMedia('(prefers-color-scheme: dark)').matches ? '#eee' : '#333' } },
+        legend: { position: 'bottom', labels: { color: isDark() ? '#eee' : '#333' } },
         datalabels: {
           display: true, color: '#fff',
           formatter: (v) => (v/1000).toFixed(2) + ' MWh',
@@ -128,5 +118,13 @@ nav_order: 3
         }
       }
     }
+  });
+
+  // Listen for theme changes to update chart text color
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    setTimeout(() => {
+      chargerChart.options.plugins.legend.labels.color = isDark() ? '#eee' : '#333';
+      chargerChart.update();
+    }, 100);
   });
 </script>

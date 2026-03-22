@@ -2,16 +2,10 @@
 layout: page
 title: Charging History
 permalink: /charging-history/
-nav_exclude: true
 ---
 
 <style>
-  :root { --hist-text: #2c3e50; --hist-border: #eee; --hist-header: #f4f4f4; --hist-bg: #ffffff; }
-  @media (prefers-color-scheme: dark) {
-    :root { --hist-text: #f1f1f1; --hist-border: #444; --hist-header: #2d2d2d; --hist-bg: #1a1a1a; }
-  }
-  
-  .history-container { background: var(--hist-bg); color: var(--hist-text); padding: 20px; border-radius: 12px; }
+  .history-container { color: var(--text); }
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
   .badge-work { background: #e3f2fd; color: #01579b; }
   .badge-home { background: #f3e5f5; color: #4a148c; }
@@ -20,9 +14,9 @@ nav_exclude: true
   .badge-blink { background: #f1f8e9; color: #65A844; }
   .badge-other { background: #f5f5f5; color: #424242; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--hist-text) !important; }
-  th { background: var(--hist-header); padding: 12px; border: 1px solid var(--hist-border); text-align: left; color: var(--hist-text); }
-  td { padding: 12px; border: 1px solid var(--hist-border); color: var(--hist-text); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--text) !important; margin-top: 20px; }
+  th { background: var(--table-head); padding: 12px; border: 1px solid var(--dash-border); text-align: left; color: var(--text); }
+  td { padding: 12px; border: 1px solid var(--dash-border); color: var(--text); }
 </style>
 
 <div class="history-container">
