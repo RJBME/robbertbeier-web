@@ -6,40 +6,66 @@ permalink: /charging-history/
 
 <style>
   .history-container { color: var(--text); }
-  .filter-controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; background: var(--dash-card); padding: 15px; border-radius: 8px; border: 1px solid var(--dash-border); }
-  .filter-group { display: flex; flex-direction: column; font-size: 0.75rem; }
-  select { padding: 5px; border-radius: 4px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); }
+  .filter-bar { 
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; 
+    background: var(--dash-card); padding: 20px; border-radius: 12px; margin-bottom: 25px; 
+    border: 1px solid var(--dash-border);
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 5px; }
+  .filter-group label { font-size: 0.7rem; text-transform: uppercase; font-weight: bold; color: #888; }
+  select { padding: 8px; border-radius: 6px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.85rem; }
 
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
   .badge-work { background: #e3f2fd; color: #01579b; }
   .badge-home { background: #f3e5f5; color: #4a148c; }
   .badge-tesla { background: #ffebee; color: #CC0000; }
   .badge-cp { background: #fff3e0; color: #e65100; }
-  .badge-blink { background: #f1f8e9; color: #65A844; }
+  .badge-blink { background: #e8f5e9; color: #65A844; }
+  .badge-rivian { background: #fffde7; color: #ff8f00; }
   .badge-other { background: #f5f5f5; color: #424242; }
 
-  #history-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--text) !important; }
-  #history-table th { background: var(--table-head); padding: 12px; border: 1px solid var(--dash-border); text-align: left; color: var(--text); }
-  #history-table td { padding: 12px; border: 1px solid var(--dash-border); color: var(--text); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--text) !important; }
+  th { background: var(--table-head); padding: 12px; border: 1px solid var(--dash-border); text-align: left; }
+  td { padding: 12px; border: 1px solid var(--dash-border); }
 </style>
 
 <div class="history-container">
-  <h1>Full Charging History</h1>
-  
-  <div class="filter-controls">
+  <h1>Charging History</h1>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>Year</label>
+      <select id="yearFilter" onchange="applyFilters()">
+        <option value="">All Years</option>
+        <option value="2025">2025</option>
+        <option value="2026">2026</option>
+      </select>
+    </div>
     <div class="filter-group">
       <label>Location</label>
-      <select id="locFilter" onchange="filterTable()">
+      <select id="locFilter" onchange="applyFilters()">
         <option value="">All Locations</option>
-        <option value="Work">Work</option>
-        <option value="Home">Home</option>
+        <option value="work">Work</option>
+        <option value="home">Home</option>
+        <option value="tesla">Tesla</option>
+        <option value="chargepoint">ChargePoint</option>
+        <option value="blink">Blink</option>
       </select>
     </div>
     <div class="filter-group">
       <label>Vehicle</label>
-      <select id="vehFilter" onchange="filterTable()">
+      <select id="vehFilter" onchange="applyFilters()">
         <option value="">All Vehicles</option>
         <option value="2025 Mustang Mach-e GT">2025 Mach-e GT</option>
+        <option value="2026 Mach-e">2026 Mach-e (Future)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Type</label>
+      <select id="costFilter" onchange="applyFilters()">
+        <option value="">All Entries</option>
+        <option value="free">Free Only</option>
+        <option value="paid">Paid Only</option>
       </select>
     </div>
   </div>
@@ -57,11 +83,15 @@ permalink: /charging-history/
     <tbody>
       {% assign all_logs = site.data.charging | sort: 'date' | reverse %}
       {% for log in all_logs %}
-      <tr class="log-row" data-loc="{{ log.location }}" data-veh="{{ log.vehicle }}">
+      <tr class="log-row" 
+          data-year="{{ log.date | slice: 0, 4 }}" 
+          data-loc="{{ log.location | downcase }}" 
+          data-veh="{{ log.vehicle | default: '2025 Mustang Mach-e GT' | downcase }}"
+          data-cost="{% if log.cost > 0 %}paid{% else %}free{% endif %}">
         <td>{{ log.date }}</td>
         <td>
           {% assign loc = log.location | downcase %}
-          <span class="badge {% if loc contains 'work' %}badge-work{% elsif loc contains 'home' %}badge-home{% elsif loc contains 'tesla' %}badge-tesla{% elsif loc contains 'chargepoint' %}badge-cp{% elsif loc contains 'blink' %}badge-blink{% else %}badge-other{% endif %}">
+          <span class="badge {% if loc contains 'work' %}badge-work{% elsif loc contains 'home' %}badge-home{% elsif loc contains 'tesla' %}badge-tesla{% elsif loc contains 'chargepoint' %}badge-cp{% elsif loc contains 'blink' %}badge-blink{% elsif loc contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">
             {{ log.location }}
           </span>
         </td>
@@ -75,19 +105,26 @@ permalink: /charging-history/
 </div>
 
 <script>
-function filterTable() {
-  const locVal = document.getElementById('locFilter').value.toLowerCase();
-  const vehVal = document.getElementById('vehFilter').value.toLowerCase();
+function applyFilters() {
+  const year = document.getElementById('yearFilter').value;
+  const loc = document.getElementById('locFilter').value;
+  const veh = document.getElementById('vehFilter').value.toLowerCase();
+  const cost = document.getElementById('costFilter').value;
+  
   const rows = document.querySelectorAll('.log-row');
 
   rows.forEach(row => {
-    const rLoc = row.getAttribute('data-loc').toLowerCase();
-    const rVeh = (row.getAttribute('data-veh') || "").toLowerCase();
-    
-    const locMatch = !locVal || rLoc.includes(locVal);
-    const vehMatch = !vehVal || rVeh.includes(vehVal);
-    
-    row.style.display = (locMatch && vehMatch) ? "" : "none";
+    const rYear = row.getAttribute('data-year');
+    const rLoc = row.getAttribute('data-loc');
+    const rVeh = row.getAttribute('data-veh');
+    const rCost = row.getAttribute('data-cost');
+
+    const matchYear = !year || rYear === year;
+    const matchLoc = !loc || rLoc.includes(loc);
+    const matchVeh = !veh || rVeh.includes(veh);
+    const matchCost = !cost || rCost === cost;
+
+    row.style.display = (matchYear && matchLoc && matchVeh && matchCost) ? "" : "none";
   });
 }
 </script>

@@ -7,7 +7,7 @@ permalink: /charging/
 <style>
   .dash-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); }
   
-  /* The Header Bar - Now Theme-Aware */
+  /* The Header Bar - Dynamic Colors */
   .status-bar { 
     display: flex; 
     background: var(--dash-card); 
@@ -18,7 +18,6 @@ permalink: /charging/
     text-align: center; 
     margin-bottom: 25px; 
     border: 1px solid var(--dash-border);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
   }
   .status-item { flex: 1; border-right: 1px solid var(--dash-border); }
   .status-item:last-child { border-right: none; }
@@ -32,14 +31,14 @@ permalink: /charging/
   .charging-table th { background: var(--table-head); padding: 12px; text-align: left; border-bottom: 2px solid var(--dash-border); color: var(--text); }
   .charging-table td { padding: 12px; border-bottom: 1px solid var(--dash-border); color: var(--text); }
   
-  /* Brand Pills */
+  /* Unified Brand Pills */
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
   .badge-work { background: #e3f2fd; color: #0288d1; }
   .badge-home { background: #f3e5f5; color: #7b1fa2; }
   .badge-tesla { background: #ffebee; color: #CC0000; }
   .badge-cp { background: #fff3e0; color: #FF7A14; }
-  .badge-blink { background: #f1f8e9; color: #65A844; }
-  .badge-rivian { background: #fffde7; color: #ef6c00; }
+  .badge-blink { background: #e8f5e9; color: #65A844; }
+  .badge-rivian { background: #fffde7; color: #ffa500; } /* Fixed Rivian Yellow/Orange */
   .badge-other { background: #f5f5f5; color: #616161; }
 </style>
 
@@ -56,7 +55,7 @@ permalink: /charging/
 
 <div class="dash-container">
   <div class="status-bar">
-    <div class="status-item"><span class="status-label">Energy</span><span class="status-value">{{ total_kwh | divided_by: 1000.0 | round: 2 }} MWh</span></div>
+    <div class="status-item"><span class="status-label">Total Energy</span><span class="status-value">{{ total_kwh | divided_by: 1000.0 | round: 2 }} MWh</span></div>
     <div class="status-item"><span class="status-label">Total Cost</span><span class="status-value">${{ total_cost | round: 2 }}</span></div>
     <div class="status-item"><span class="status-label">Gas Savings</span><span class="status-value" style="color: #2ecc71 !important;">${{ total_kwh | times: 3.0 | divided_by: 23 | times: 2.50 | minus: total_cost | round: 0 }}</span></div>
   </div>
@@ -87,7 +86,7 @@ permalink: /charging/
           <td>{{ log.date }}</td>
           <td>
             {% assign loc = log.location | downcase %}
-            <span class="badge {% if loc contains 'work' %}badge-work{% elsif loc contains 'home' %}badge-home{% elsif loc contains 'tesla' %}badge-tesla{% elsif loc contains 'chargepoint' %}badge-cp{% elsif loc contains 'blink' %}badge-blink{% else %}badge-other{% endif %}">
+            <span class="badge {% if loc contains 'work' %}badge-work{% elsif loc contains 'home' %}badge-home{% elsif loc contains 'tesla' %}badge-tesla{% elsif loc contains 'chargepoint' %}badge-cp{% elsif loc contains 'blink' %}badge-blink{% elsif loc contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">
               {{ log.location | truncate: 15 }}
             </span>
           </td>
@@ -98,7 +97,7 @@ permalink: /charging/
       </tbody>
     </table>
     <div style="padding: 20px; text-align: center;">
-       <a href="/charging-history/" style="color: #3498db; font-weight: bold; text-decoration: none;">View All Sessions →</a>
+       <a href="/charging-history/" style="color: #3498db; font-weight: bold; text-decoration: none;">View All Data →</a>
     </div>
   </div>
 </div>
