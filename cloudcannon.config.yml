@@ -1,0 +1,34 @@
+# cloudcannon.config.yml
+collections_config:
+  charging:
+    path: _data/charging.yml
+    parser: yaml
+    output: false
+    icon: electrical_services
+    name: Charging Sessions
+
+_inputs:
+  date:
+    type: date
+  location:
+    type: select
+    options:
+      values:
+        - Work
+        - Home
+        - Tesla
+        - ChargePoint
+        - Blink
+        - Electrify America
+        - EVgo
+        - Rivian
+  vehicle:
+    type: select
+    options:
+      values:
+        - "2025 Mustang Mach-e GT"
+        - "2026 Mach-e"
+  energy_kwh:
+    type: number
+  cost:
+    type: number
