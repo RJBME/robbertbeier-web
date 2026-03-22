@@ -11,11 +11,10 @@ permalink: /charging/
   .status-item:last-child { border-right: none; }
   .status-label { font-size: 0.7rem; text-transform: uppercase; color: #888; display: block; }
   .status-value { font-size: 1.5rem; font-weight: bold; display: block; margin-top: 5px; color: var(--text) !important; }
+  
   .media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
   .card { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; color: var(--text) !important; }
-  .charging-table th { background: var(--table-head); padding: 12px; text-align: left; border-bottom: 2px solid var(--dash-border); }
-  .charging-table td { padding: 12px; border-bottom: 1px solid var(--dash-border); }
+  
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
   .badge-work { background: #e3f2fd; color: #0288d1; }
   .badge-home { background: #f3e5f5; color: #7b1fa2; }
@@ -24,6 +23,10 @@ permalink: /charging/
   .badge-blink { background: #e8f5e9; color: #65A844; }
   .badge-rivian { background: #fffde7; color: #ffa500; }
   .badge-other { background: #f5f5f5; color: #616161; }
+
+  .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; color: var(--text) !important; }
+  .charging-table th { background: var(--table-head); padding: 12px; text-align: left; border-bottom: 2px solid var(--dash-border); }
+  .charging-table td { padding: 12px; border-bottom: 1px solid var(--dash-border); }
 </style>
 
 {% assign total_cost = 0.0 %}{% assign total_kwh = 0.0 %}
@@ -45,17 +48,17 @@ permalink: /charging/
 <div class="dash-container">
   <div class="status-bar">
     <div class="status-item"><span class="status-label">Total Energy</span><span class="status-value">{{ total_kwh | divided_by: 1000.0 | round: 2 }} MWh</span></div>
-    <div class="status-item"><span class="status-label">Total Cost</span><span class="status-value">${{ total_cost | round: 2 }}</span></div>
+    <div class="status-item"><span class="status-label">Actual Cost</span><span class="status-value">${{ total_cost | round: 2 }}</span></div>
     <div class="status-item"><span class="status-label">Gas Savings</span><span class="status-value" style="color: #2ecc71 !important;">${{ total_kwh | times: 3.0 | divided_by: 23 | times: 2.50 | minus: total_cost | round: 0 }}</span></div>
   </div>
 
   <div class="media-grid">
     <div class="card">
-      <h4 style="margin:0 0 15px 0; font-size:0.9rem;">Work vs Home/Other</h4>
+      <h4 style="margin:0 0 15px 0; font-size:0.9rem;">Energy Distribution (MWh)</h4>
       <canvas id="energyChart" height="200"></canvas>
     </div>
     <div class="card">
-      <h4 style="margin:0 0 15px 0; font-size:0.9rem;">kWh by Location (Ranked)</h4>
+      <h4 style="margin:0 0 15px 0; font-size:0.9rem;">Ranked Energy (kWh)</h4>
       <canvas id="locationBarChart" height="200"></canvas>
     </div>
   </div>
@@ -115,7 +118,10 @@ permalink: /charging/
     options: {
       indexAxis: 'y',
       plugins: { legend: { display: false }, datalabels: { display: false } },
-      scales: { x: { display: false }, y: { grid: { display: false }, ticks: { color: getThemeColor() } } }
+      scales: { 
+        x: { grid: { color: '#444' }, ticks: { color: '#888' }, display: true },
+        y: { grid: { display: false }, ticks: { color: getThemeColor() } }
+      }
     }
   });
 
