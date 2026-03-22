@@ -1,8 +1,5 @@
-collections_config:
-  charging:
-    path: _data/charging.yml
-    parser: yaml
-    name: Charging Sessions
-    schemas:
-      default:
-        path: .cloudcannon/schemas/charging.yaml  # <--- DOUBLE CHECK THIS PATH
+date: 2026-03-22
+location: "Home"
+energy_kwh: 0.0
+cost: 0.0
+notes: ""

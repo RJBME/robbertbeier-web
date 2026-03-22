@@ -1,10 +1,8 @@
-# cloudcannon.config.yml
 collections_config:
   charging:
     path: _data/charging.yml
     parser: yaml
     name: Charging Sessions
-    # THIS PART IS CRITICAL:
     schemas:
       default:
         path: .cloudcannon/schemas/charging.yaml
