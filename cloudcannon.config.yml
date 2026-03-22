@@ -6,6 +6,10 @@ collections_config:
     output: false
     icon: electrical_services
     name: Charging Sessions
+    # THIS IS THE KEY PART:
+    schemas:
+      default:
+        path: .cloudcannon/schemas/charging.yaml
 
 _inputs:
   date:
