@@ -51,9 +51,9 @@ permalink: /charging-history/
   <table id="history-table">
     <thead><tr><th>Date</th><th>Location</th><th>Vehicle</th><th>Energy (kWh)</th><th>Cost</th></tr></thead>
     <tbody>
-      {% assign all_logs = site.data.charging | sort: 'date' | reverse %}{% for log in all_logs %}
-      <tr class="log-row" data-year="{{ log.date | slice: 0, 4 }}" data-loc="{{ log.location }}" data-veh="{{ log.vehicle }}" data-kwh="{{ log.energy_kwh }}" data-cost="{{ log.cost }}" data-type="{% if log.cost > 0 %}paid{% else %}free{% endif %}">
-        <td>{{ log.date }}</td>
+      {% assign all_logs = site.charging | sort: 'date' | reverse %}{% for log in all_logs %}
+      <tr class="log-row" data-year="{{ log.date | date: '%Y' }}" data-loc="{{ log.location }}" data-veh="{{ log.vehicle }}" data-kwh="{{ log.energy_kwh }}" data-cost="{{ log.cost }}" data-type="{% if log.cost > 0 %}paid{% else %}free{% endif %}">
+        <td>{{ log.date | date: "%Y-%m-%d" }}</td>
         <td>{% assign l = log.location | downcase %}<span class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">{{ log.location }}</span></td>
         <td style="opacity: 0.6;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
         <td>{{ log.energy_kwh }}</td>

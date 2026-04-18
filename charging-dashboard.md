@@ -32,7 +32,7 @@ permalink: /charging/
 {% assign total_cost = 0.0 %}{% assign total_kwh = 0.0 %}
 {% assign work_kwh = 0.0 %}{% assign home_kwh = 0.0 %}{% assign tesla_kwh = 0.0 %}{% assign cp_kwh = 0.0 %}{% assign blink_kwh = 0.0 %}{% assign rivian_kwh = 0.0 %}{% assign other_kwh = 0.0 %}
 
-{% for entry in site.data.charging %}
+{% for entry in site.charging %}
   {% assign c = entry.cost | plus: 0 %}{% assign k = entry.energy_kwh | plus: 0 %}
   {% assign total_cost = total_cost | plus: c %}{% assign total_kwh = total_kwh | plus: k %}
   {% assign loc = entry.location | downcase %}
@@ -71,9 +71,9 @@ permalink: /charging/
     <table class="charging-table">
       <thead><tr><th>Date</th><th>Location</th><th>Energy</th><th>Cost</th></tr></thead>
       <tbody>
-        {% assign sorted = site.data.charging | reverse %}{% for log in sorted limit: 8 %}
+        {% assign sorted = site.charging | reverse %}{% for log in sorted limit: 8 %}
         <tr>
-          <td>{{ log.date }}</td>
+          <td>{{ log.date | date: "%Y-%m-%d" }}</td>
           <td><span class="badge {% assign l = log.location | downcase %}{% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">{{ log.location | truncate: 15 }}</span></td>
           <td>{{ log.energy_kwh }} kWh</td>
           <td>{% if log.cost == 0 %}Free{% else %}${{ log.cost | plus: 0.0001 | round: 2 }}{% endif %}</td>
