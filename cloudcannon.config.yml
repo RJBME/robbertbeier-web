@@ -1,21 +1,36 @@
-collections_config:
-  data:
-    path: _data
-    parser: yaml
-    disable_add: false
+# Disable collections for the data file to stop the "New File" behavior
+collections_config: {}
 
-_inputs:
-  location:
-    type: select
-    options:
-      values: [Home, Work, Tesla, ChargePoint, Rivian]
-      
-structures:
-      _structures:
-        values:
-          - value:
-              date: ''
-              location: ''
-              energy_kwh: 0.0
-              cost: 0.0
-              notes: null
+# Define how the data file should be edited
+data_config:
+  charging:
+    # Point it to your specific data file
+    path: _data/charging.yml
+    
+    # Tell CloudCannon exactly how to build the form for each item
+    _inputs:
+      date:
+        type: date   # This forces the clean YYYY-MM-DD picker
+      location:
+        type: select
+        options:
+          values:
+            - Home
+            - Work
+            - "Tesla, Lansing"
+            - "Tesla, Ohio"
+            - "Tesla, Battle Creek"
+            - "ChargePoint, Muskegon"
+            - "ChargePoint, Clare, MI"
+            - "ChargePoint, Grand Rapids, MI"
+            - "ChargePoint, DIA, Detroit"
+            - "Rivian, Clare, MI"
+            - "MGM Grand, Detroit, MI"
+            - "Blink, BJ's Wholesale, Canton"
+            - "Paul & Carol's, Beulah, MI"
+      energy_kwh:
+        type: number
+      cost:
+        type: number
+      notes:
+        type: textarea
