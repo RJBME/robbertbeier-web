@@ -27,6 +27,7 @@ permalink: /charging/
   .status-item:last-child { border-right: none; }
   .status-label { font-size: 0.7rem; text-transform: uppercase; color: #888; display: block; }
   .status-value { font-size: 1.5rem; font-weight: bold; display: block; margin-top: 5px; color: var(--text) !important; }
+  .status-footnote { font-size: 0.65rem; color: #888; display: block; margin-top: 4px; line-height: 1.4; }
 
   .media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
   .card { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -72,11 +73,30 @@ permalink: /charging/
   {% else %}{% assign other_kwh = other_kwh | plus: k %}{% endif %}
 {% endfor %}
 
+{% comment %} Gas savings calculation values {% endcomment %}
+{% assign mpg = 23 %}
+{% assign gas_price = 2.50 %}
+{% assign miles_per_kwh = 3.0 %}
+{% assign gas_savings = total_kwh | times: miles_per_kwh | divided_by: mpg | times: gas_price | minus: total_cost | round: 0 %}
+
 <div class="dash-container">
   <div class="status-bar">
-    <div class="status-item"><span class="status-label">Total Energy</span><span class="status-value">{{ total_kwh | divided_by: 1000.0 | round: 2 }} MWh</span></div>
-    <div class="status-item"><span class="status-label">Actual Cost</span><span class="status-value">${{ total_cost | round: 2 }}</span></div>
-    <div class="status-item"><span class="status-label">Gas Savings</span><span class="status-value" style="color: #2ecc71 !important;">${{ total_kwh | times: 3.0 | divided_by: 23 | times: 2.50 | minus: total_cost | round: 0 }}</span></div>
+    <div class="status-item">
+      <span class="status-label">Total Energy</span>
+      <span class="status-value">{{ total_kwh | divided_by: 1000.0 | round: 2 }} MWh</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Actual Cost</span>
+      <span class="status-value">${{ total_cost | round: 2 }}</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Gas Savings</span>
+      <span class="status-value" style="color: #2ecc71 !important;">${{ gas_savings }}</span>
+      <span class="status-footnote">
+        vs. {{ mpg }} MPG car @ ${{ gas_price }}/gal<br>
+        assuming {{ miles_per_kwh }} mi/kWh
+      </span>
+    </div>
   </div>
 
   <div class="media-grid">
@@ -98,21 +118,22 @@ permalink: /charging/
     <table class="charging-table">
       <thead><tr><th>Date</th><th>Location</th><th>Energy</th><th>Cost</th></tr></thead>
       <tbody>
-        {% assign sorted = site.charging | reverse %}{% for log in sorted limit: 8 %}
-        {% assign log_date = log.date | date: "%Y-%m-%d" %}
-        {% assign log_loc = log.location | downcase %}
-        {% comment %} Apply home rate calculation for recent entries {% endcomment %}
-        {% if log_loc contains "home" and log_date >= home_rate_effective_date %}
-          {% assign display_cost = log.energy_kwh | times: home_rate_per_kwh %}
-        {% else %}
-          {% assign display_cost = log.cost | plus: 0 %}
-        {% endif %}
+        {% assign sorted = site.charging | reverse %}
+        {% for log in sorted limit: 8 %}
+          {% assign log_date = log.date | date: "%Y-%m-%d" %}
+          {% assign log_loc = log.location | downcase %}
+          {% if log_loc contains "home" and log_date >= home_rate_effective_date %}
+            {% assign display_cost = log.energy_kwh | times: home_rate_per_kwh %}
+          {% else %}
+            {% assign display_cost = log.cost | plus: 0 %}
+          {% endif %}
         <tr>
           <td>{{ log.date | date: "%Y-%m-%d" }}</td>
-          <td><span class="badge {% assign l = log.location | downcase %}{% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">{{ log.location | truncate: 15 }}</span></td>
+          <td><span class="badge {% assign l = log.location | downcase %}{% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">{{ log.location | truncate: 20 }}</span></td>
           <td>{{ log.energy_kwh }} kWh</td>
-          <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 }}{% endif %}</td>
-        </tr>{% endfor %}
+          <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 | append: "" | split: "." | first }}{% assign cents = display_cost | round: 2 | times: 100 | round | modulo: 100 %}{% if cents < 10 %}.0{{ cents }}{% else %}.{{ cents }}{% endif %}{% endif %}</td>
+        </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
@@ -125,23 +146,52 @@ permalink: /charging/
   const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
   const getThemeColor = () => isDark() ? '#eee' : '#333';
 
-  new Chart(document.getElementById('energyChart'), {
+  // Donut chart — use dark labels on light bg, light labels on dark bg
+  // Also use a shadow/stroke so labels are readable over any slice color
+  const donutChart = new Chart(document.getElementById('energyChart'), {
     type: 'doughnut',
     data: {
       labels: ['Work', 'Home/Other'],
-      datasets: [{ data: [{{ work_kwh | divided_by: 1000.0 }}, {{ total_kwh | minus: work_kwh | divided_by: 1000.0 }}], backgroundColor: ['#0288d1', '#7b1fa2'], borderWidth: 0 }]
+      datasets: [{
+        data: [{{ work_kwh | divided_by: 1000.0 }}, {{ total_kwh | minus: work_kwh | divided_by: 1000.0 }}],
+        backgroundColor: ['#0288d1', '#7b1fa2'],
+        borderWidth: 0
+      }]
     },
-    options: { cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: getThemeColor() } }, datalabels: { display: true, color: '#fff', formatter: (v) => v.toFixed(2) + ' MWh', font: { weight: 'bold' } } } }
+    options: {
+      cutout: '70%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: getThemeColor(),
+            // Square boxes so color is easy to see in both modes
+            usePointStyle: false,
+            boxWidth: 14,
+            padding: 16
+          }
+        },
+        datalabels: {
+          display: true,
+          color: '#ffffff',
+          formatter: (v) => v.toFixed(2) + ' MWh',
+          font: { weight: 'bold', size: 13 },
+          // Text shadow to ensure readability in light mode
+          textShadowColor: 'rgba(0,0,0,0.6)',
+          textShadowBlur: 4
+        }
+      }
+    }
   });
 
   const rawData = [
-    { label: 'Work', val: {{ work_kwh }}, color: '#0288d1' },
-    { label: 'Home', val: {{ home_kwh }}, color: '#7b1fa2' },
-    { label: 'Tesla', val: {{ tesla_kwh }}, color: '#CC0000' },
-    { label: 'CP', val: {{ cp_kwh }}, color: '#FF7A14' },
-    { label: 'Blink', val: {{ blink_kwh }}, color: '#65A844' },
+    { label: 'Work',   val: {{ work_kwh }},   color: '#0288d1' },
+    { label: 'Home',   val: {{ home_kwh }},   color: '#7b1fa2' },
+    { label: 'Tesla',  val: {{ tesla_kwh }},  color: '#CC0000' },
+    { label: 'CP',     val: {{ cp_kwh }},     color: '#FF7A14' },
+    { label: 'Blink',  val: {{ blink_kwh }},  color: '#65A844' },
     { label: 'Rivian', val: {{ rivian_kwh }}, color: '#ffa500' },
-    { label: 'Other', val: {{ other_kwh }}, color: '#616161' }
+    { label: 'Other',  val: {{ other_kwh }},  color: '#616161' }
   ].sort((a, b) => b.val - a.val);
 
   const barChart = new Chart(document.getElementById('locationBarChart'), {
@@ -154,15 +204,21 @@ permalink: /charging/
       indexAxis: 'y',
       plugins: { legend: { display: false }, datalabels: { display: false } },
       scales: {
-        x: { grid: { color: '#444' }, ticks: { color: '#888' }, display: true },
+        x: { grid: { color: isDark() ? '#444' : '#ddd' }, ticks: { color: '#888' }, display: true },
         y: { grid: { display: false }, ticks: { color: getThemeColor() } }
       }
     }
   });
 
+  // Update both charts when theme switches
   window.addEventListener('themeChanged', () => {
     const color = getThemeColor();
+    // Donut legend
+    donutChart.options.plugins.legend.labels.color = color;
+    donutChart.update();
+    // Bar y-axis labels
     barChart.options.scales.y.ticks.color = color;
+    barChart.options.scales.x.grid.color = isDark() ? '#444' : '#ddd';
     barChart.update();
   });
 </script>

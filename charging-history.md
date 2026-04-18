@@ -27,11 +27,16 @@ permalink: /charging-history/
   .summary-label { font-size: 0.6rem; text-transform: uppercase; color: #bdc3c7; }
   .summary-value { font-size: 1.2rem; font-weight: bold; display: block; }
 
-  .filter-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; background: var(--dash-card); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--dash-border); align-items: end; }
+  /* Filter bar — two rows: top for brand, bottom for the rest */
+  .filter-bar { background: var(--dash-card); padding: 16px 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--dash-border); }
+  .filter-row { display: grid; gap: 12px; align-items: end; margin-bottom: 10px; }
+  .filter-row:last-child { margin-bottom: 0; }
+  .filter-row-brand { grid-template-columns: 1fr 1fr auto; }
+  .filter-row-other  { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
   .filter-group { display: flex; flex-direction: column; gap: 5px; }
   .filter-group label { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; color: #888; }
   select { padding: 8px; border-radius: 6px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
-  .btn-reset { padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+  .btn-reset { padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; align-self: flex-end; }
 
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
   .badge-work { background: #e3f2fd; color: #01579b; }
@@ -46,20 +51,24 @@ permalink: /charging-history/
   th { background: var(--table-head); padding: 12px; border: 1px solid var(--dash-border); text-align: left; }
   td { padding: 12px; border: 1px solid var(--dash-border); }
 
-  .note-icon { position: relative; cursor: default; font-size: 1rem; }
+  /* Notes tooltip — wider, shorter, horizontal */
+  .note-icon { position: relative; cursor: default; font-size: 1rem; display: inline-block; }
   .note-tooltip {
     display: none;
     position: absolute;
-    bottom: 125%;
+    bottom: 130%;
     left: 50%;
     transform: translateX(-50%);
     background: #2c3e50;
     color: white;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    white-space: normal;
-    max-width: 250px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
     z-index: 100;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
@@ -69,7 +78,7 @@ permalink: /charging-history/
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border: 6px solid transparent;
+    border: 5px solid transparent;
     border-top-color: #2c3e50;
   }
   .note-icon:hover .note-tooltip { display: block; }
@@ -85,11 +94,52 @@ permalink: /charging-history/
   </div>
 
   <div class="filter-bar">
-    <div class="filter-group"><label>Year</label><select id="yearFilter" onchange="applyFilters()"><option value="">All Years</option><option value="2025">2025</option><option value="2026">2026</option></select></div>
-    <div class="filter-group"><label>Location</label><select id="locFilter" onchange="applyFilters()"><option value="">All Locations</option></select></div>
-    <div class="filter-group"><label>Vehicle</label><select id="vehFilter" onchange="applyFilters()"><option value="">All Vehicles</option></select></div>
-    <div class="filter-group"><label>Cost</label><select id="costFilter" onchange="applyFilters()"><option value="">All Types</option><option value="free">Free Only</option><option value="paid">Paid Only</option></select></div>
-    <button class="btn-reset" onclick="resetFilters()">Reset All</button>
+    <!-- Row 1: Brand + Location (nested under brand) + Reset -->
+    <div class="filter-row filter-row-brand">
+      <div class="filter-group">
+        <label>Brand</label>
+        <select id="brandFilter" onchange="onBrandChange()">
+          <option value="">All Brands</option>
+          <option value="home">Home</option>
+          <option value="work">Work</option>
+          <option value="tesla">Tesla</option>
+          <option value="chargepoint">ChargePoint</option>
+          <option value="rivian">Rivian</option>
+          <option value="blink">Blink</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Location</label>
+        <select id="locFilter" onchange="applyFilters()">
+          <option value="">All Locations</option>
+        </select>
+      </div>
+      <button class="btn-reset" onclick="resetFilters()">Reset All</button>
+    </div>
+    <!-- Row 2: Year, Vehicle, Cost -->
+    <div class="filter-row filter-row-other">
+      <div class="filter-group">
+        <label>Year</label>
+        <select id="yearFilter" onchange="applyFilters()">
+          <option value="">All Years</option>
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Vehicle</label>
+        <select id="vehFilter" onchange="applyFilters()"><option value="">All Vehicles</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Cost</label>
+        <select id="costFilter" onchange="applyFilters()">
+          <option value="">All Types</option>
+          <option value="free">Free Only</option>
+          <option value="paid">Paid Only</option>
+        </select>
+      </div>
+    </div>
   </div>
 
   <table id="history-table">
@@ -109,7 +159,7 @@ permalink: /charging-history/
         {% assign log_date = log.date | date: "%Y-%m-%d" %}
         {% assign log_loc = log.location | downcase %}
 
-        {% comment %} Apply home rate for entries on or after the effective date, use stored cost for all others {% endcomment %}
+        {% comment %} Apply home rate for entries on or after the effective date {% endcomment %}
         {% if log_loc contains "home" and log_date >= home_rate_effective_date %}
           {% assign display_cost = log.energy_kwh | times: home_rate_per_kwh %}
           {% assign cost_data = display_cost %}
@@ -118,9 +168,19 @@ permalink: /charging-history/
           {% assign cost_data = log.cost %}
         {% endif %}
 
+        {% comment %} Determine brand for filtering {% endcomment %}
+        {% if log_loc contains "work" %}{% assign brand = "work" %}
+        {% elsif log_loc contains "home" %}{% assign brand = "home" %}
+        {% elsif log_loc contains "tesla" %}{% assign brand = "tesla" %}
+        {% elsif log_loc contains "chargepoint" %}{% assign brand = "chargepoint" %}
+        {% elsif log_loc contains "rivian" %}{% assign brand = "rivian" %}
+        {% elsif log_loc contains "blink" %}{% assign brand = "blink" %}
+        {% else %}{% assign brand = "other" %}{% endif %}
+
       <tr class="log-row"
         data-year="{{ log.date | date: '%Y' }}"
         data-loc="{{ log.location }}"
+        data-brand="{{ brand }}"
         data-veh="{{ log.vehicle }}"
         data-kwh="{{ log.energy_kwh }}"
         data-cost="{{ cost_data }}"
@@ -129,7 +189,7 @@ permalink: /charging-history/
         <td>{% assign l = log.location | downcase %}<span class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">{{ log.location }}</span></td>
         <td style="opacity: 0.6;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
         <td>{{ log.energy_kwh }}</td>
-        <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 }}{% endif %}</td>
+        <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 | append: "" | split: "." | first }}{% assign cents = display_cost | round: 2 | times: 100 | round | modulo: 100 %}{% if cents < 10 %}.0{{ cents }}{% else %}.{{ cents }}{% endif %}{% endif %}</td>
         <td>
           {% if log.notes and log.notes != "" %}
             <span class="note-icon">📝
@@ -144,38 +204,63 @@ permalink: /charging-history/
 </div>
 
 <script>
+// All unique locations keyed by brand — built from table rows
+const brandLocMap = {};
+
 function initFilters() {
-  const locations = new Set(); const vehicles = new Set();
+  const vehicles = new Set();
+
   document.querySelectorAll('.log-row').forEach(row => {
-    locations.add(row.getAttribute('data-loc'));
-    vehicles.add(row.getAttribute('data-veh'));
+    const brand = row.getAttribute('data-brand');
+    const loc   = row.getAttribute('data-loc');
+    const veh   = row.getAttribute('data-veh');
+
+    if (!brandLocMap[brand]) brandLocMap[brand] = new Set();
+    brandLocMap[brand].add(loc);
+    vehicles.add(veh);
   });
-  const populate = (id, set) => {
-    const s = document.getElementById(id);
-    Array.from(set).sort().forEach(val => { s.add(new Option(val, val)); });
-  };
-  populate('locFilter', locations);
-  populate('vehFilter', vehicles);
+
+  const vehSel = document.getElementById('vehFilter');
+  Array.from(vehicles).sort().forEach(v => vehSel.add(new Option(v, v)));
+
+  applyFilters();
+}
+
+function onBrandChange() {
+  const brand = document.getElementById('brandFilter').value;
+  const locSel = document.getElementById('locFilter');
+
+  // Reset location dropdown
+  locSel.innerHTML = '<option value="">All Locations</option>';
+
+  if (brand && brandLocMap[brand]) {
+    Array.from(brandLocMap[brand]).sort().forEach(loc => {
+      locSel.add(new Option(loc, loc));
+    });
+  }
+
   applyFilters();
 }
 
 function applyFilters() {
-  const year = document.getElementById('yearFilter').value;
-  const loc = document.getElementById('locFilter').value;
-  const veh = document.getElementById('vehFilter').value;
+  const year     = document.getElementById('yearFilter').value;
+  const brand    = document.getElementById('brandFilter').value;
+  const loc      = document.getElementById('locFilter').value;
+  const veh      = document.getElementById('vehFilter').value;
   const costType = document.getElementById('costFilter').value;
 
-  let totalKwh = 0; let totalCost = 0; let count = 0;
+  let totalKwh = 0, totalCost = 0, count = 0;
 
   document.querySelectorAll('.log-row').forEach(row => {
-    const matchYear = !year || row.getAttribute('data-year') === year;
-    const matchLoc = !loc || row.getAttribute('data-loc') === loc;
-    const matchVeh = !veh || row.getAttribute('data-veh') === veh;
-    const matchCost = !costType || row.getAttribute('data-type') === costType;
+    const matchYear  = !year     || row.getAttribute('data-year')  === year;
+    const matchBrand = !brand    || row.getAttribute('data-brand') === brand;
+    const matchLoc   = !loc      || row.getAttribute('data-loc')   === loc;
+    const matchVeh   = !veh      || row.getAttribute('data-veh')   === veh;
+    const matchCost  = !costType || row.getAttribute('data-type')  === costType;
 
-    if (matchYear && matchLoc && matchVeh && matchCost) {
+    if (matchYear && matchBrand && matchLoc && matchVeh && matchCost) {
       row.style.display = "";
-      totalKwh += parseFloat(row.getAttribute('data-kwh'));
+      totalKwh  += parseFloat(row.getAttribute('data-kwh'));
       totalCost += parseFloat(row.getAttribute('data-cost'));
       count++;
     } else {
@@ -184,12 +269,14 @@ function applyFilters() {
   });
 
   document.getElementById('sumEnergy').innerText = totalKwh.toFixed(1) + " kWh";
-  document.getElementById('sumCost').innerText = "$" + totalCost.toFixed(2);
-  document.getElementById('sumCount').innerText = count;
+  document.getElementById('sumCost').innerText   = "$" + totalCost.toFixed(2);
+  document.getElementById('sumCount').innerText  = count;
 }
 
 function resetFilters() {
-  document.querySelectorAll('select').forEach(s => s.value = "");
+  document.getElementById('brandFilter').value = '';
+  document.getElementById('locFilter').innerHTML = '<option value="">All Locations</option>';
+  document.querySelectorAll('#yearFilter, #vehFilter, #costFilter').forEach(s => s.value = '');
   applyFilters();
 }
 
