@@ -3,7 +3,7 @@ url: "https://www.robertbeier.com"
 # Sets the site to Eastern Time (US & Canada)
 timezone: America/New_York
 # Disables the default GitHub theme and its "Full Gallery" menu
-remote_theme: []
+theme: minima
 # CloudCannon Configuration for Mach-E Charging
 cloudcannon:
   _data:
