@@ -5,8 +5,8 @@ collections_config:
     icon: ev_station
     create:
       extra_data:
-        filename: '{date}'
-      path: '[relative_base_path]/{filename}.[ext]'
+        filename: '{date|year}-{date|month}-{date|day}'
+      path: '[relative_base_path]/{filename}[count].md'
     schemas:
       default:
         path: .cloudcannon/schemas/charging.md
