@@ -1,44 +1,11 @@
-# cloudcannon.config.yml
-
 collections_config:
-  charging:
-    path: _data/charging.yml
+  data:
+    path: _data
     parser: yaml
-    name: Charging Sessions
-    icon: ev_station
-    # We remove 'schemas' and explicitly tell it to use the Data Editor
-    _editables:
-      content: false
+    disable_add: false
 
-# This section formats the form itself
 _inputs:
-  charging:
-    type: array
-    options:
-      empty_type: default
-    structures:
-      _structures:
-        values:
-          - value:
-              date: ''
-              location: ''
-              energy_kwh: 0.0
-              cost: 0.0
-              notes: ''
-
-  # This creates the dropdown for the location field
   location:
     type: select
     options:
-      values:
-        - Home
-        - Work
-        - Tesla
-        - ChargePoint
-        - Rivian
-
-  # Format the text boxes
-  energy_kwh:
-    type: number
-  cost:
-    type: number
+      values: [Home, Work, Tesla, ChargePoint, Rivian]
