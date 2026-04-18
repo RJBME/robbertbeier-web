@@ -1,20 +1,10 @@
-- date: '2026-03-19'
+- date: 2026-03-19
   location: Work
   energy_kwh: 17.5
   cost: 0.0
-  notes: ''
-- date: '2026-03-18'
+  notes: 
+- date: 2026-03-18
   location: Work
   energy_kwh: 7.3
   cost: 0.0
-  notes: ''
-- date: '2026-03-18'
-  location: Work
-  energy_kwh: 7.7
-  cost: 0.0
-  notes: ''
-- date: '2026-03-17'
-  location: Home
-  energy_kwh: 1.8
-  cost: 0.33
-  notes: ''
+  notes:
