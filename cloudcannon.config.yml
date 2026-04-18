@@ -3,12 +3,25 @@ collections_config:
     path: _data/charging.yml
     parser: yaml
     name: Charging Sessions
-    schemas:
-      default:
-        path: .cloudcannon/schemas/charging.yaml
+    icon: ev_station
+    # We remove 'schemas' from here because it's a data file, not a folder of files.
 
-# This MUST start at the very edge of the left margin
+# Tell CloudCannon how to edit the items INSIDE the data file:
 _inputs:
+  charging:
+    type: array
+    options:
+      empty_type: default
+    structures:
+      _structures:
+        values:
+          - value:
+              date: ''
+              location: ''
+              energy_kwh: 0.0
+              cost: 0.0
+              notes: ''
+
   location:
     type: select
     options:
