@@ -4,11 +4,34 @@ collections_config: {}
 # Define how the data file should be edited
 data_config:
   charging:
-    # Point it to your specific data file
     path: _data/charging.yml
+    
+    # Format the array list itself (this solves the scrolling issue)
+    _structures:
+      charging_items:
+        values:
+          - value:
+              date: ''
+              location: ''
+              energy_kwh: 0.0
+              cost: 0.0
+              notes: null
+
+    # Apply settings to the array
+    _options:
+      # This collapses all items by default, making the list short!
+      empty_type: default
     
     # Tell CloudCannon exactly how to build the form for each item
     _inputs:
+      # The array itself
+      charging:
+        options:
+          start_collapsed: true
+          preview:
+            text: "{date} - {location}" # This makes the collapsed row easy to read
+      
+      # The individual fields inside the array
       date:
         type: date   # This forces the clean YYYY-MM-DD picker
       location:
