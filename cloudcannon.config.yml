@@ -3,32 +3,11 @@ collections_config:
     path: _charging
     name: Charging Sessions
     icon: ev_station
+    schemas:
+      default:
+        path: .cloudcannon/schemas/charging.yaml
     _editables:
       content: false
-
-_inputs:
-  date:
-    type: date
-  location:
-    type: select
-    options:
-      values:
-        - Home
-        - Work
-        - "Tesla, Lansing"
-        - "Tesla, Ohio"
-        - "Tesla, Battle Creek"
-        - "ChargePoint, Muskegon"
-        - "ChargePoint, Clare, MI"
-        - "ChargePoint, Grand Rapids, MI"
-        - "ChargePoint, DIA, Detroit"
-        - "Rivian, Clare, MI"
-        - "MGM Grand, Detroit, MI"
-        - "Blink, BJ's Wholesale, Canton"
-        - "Paul & Carol's, Beulah, MI"
-  energy_kwh:
-    type: number
-  cost:
-    type: number
-  notes:
-    type: textarea
+    add_options:
+      - name: Add Charging Session
+        schema: default
