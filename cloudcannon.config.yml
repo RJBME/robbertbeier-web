@@ -3,11 +3,13 @@ collections_config:
     path: _charging
     name: Charging Sessions
     icon: ev_station
-    _default_file_extension: md
+    create:
+      extra_data:
+        filename: '{date}'
+      path: '[relative_base_path]/{filename}.[ext]'
     schemas:
       default:
-        path: .cloudcannon/schemas/charging.yaml
-        _file_name_template: "{date}"
+        path: .cloudcannon/schemas/charging.md
     _editables:
       content: false
     add_options:
