@@ -6,7 +6,6 @@ data_config:
   charging:
     path: _data/charging.yml
     
-    # Format the array list itself (this solves the scrolling issue)
     _structures:
       charging_items:
         values:
@@ -17,43 +16,37 @@ data_config:
               cost: 0.0
               notes: null
 
-    # Apply settings to the array
     _options:
-      # This collapses all items by default, making the list short!
       empty_type: default
-    
-    # Tell CloudCannon exactly how to build the form for each item
-    _inputs:
-      # The array itself
-      charging:
-        options:
-          start_collapsed: true
-          preview:
-            text: "{date} - {location}" # This makes the collapsed row easy to read
-      
-      # The individual fields inside the array
-      date:
-        type: date   # This forces the clean YYYY-MM-DD picker
-      location:
-        type: select
-        options:
-          values:
-            - Home
-            - Work
-            - "Tesla, Lansing"
-            - "Tesla, Ohio"
-            - "Tesla, Battle Creek"
-            - "ChargePoint, Muskegon"
-            - "ChargePoint, Clare, MI"
-            - "ChargePoint, Grand Rapids, MI"
-            - "ChargePoint, DIA, Detroit"
-            - "Rivian, Clare, MI"
-            - "MGM Grand, Detroit, MI"
-            - "Blink, BJ's Wholesale, Canton"
-            - "Paul & Carol's, Beulah, MI"
-      energy_kwh:
-        type: number
-      cost:
-        type: number
-      notes:
-        type: textarea
+
+_inputs:
+  charging:
+    options:
+      start_collapsed: true
+      preview:
+        text: "{date} - {location}"
+  date:
+    type: date
+  location:
+    type: select
+    options:
+      values:
+        - Home
+        - Work
+        - "Tesla, Lansing"
+        - "Tesla, Ohio"
+        - "Tesla, Battle Creek"
+        - "ChargePoint, Muskegon"
+        - "ChargePoint, Clare, MI"
+        - "ChargePoint, Grand Rapids, MI"
+        - "ChargePoint, DIA, Detroit"
+        - "Rivian, Clare, MI"
+        - "MGM Grand, Detroit, MI"
+        - "Blink, BJ's Wholesale, Canton"
+        - "Paul & Carol's, Beulah, MI"
+  energy_kwh:
+    type: number
+  cost:
+    type: number
+  notes:
+    type: textarea
