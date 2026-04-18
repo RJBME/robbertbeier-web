@@ -1,910 +1,895 @@
-<<<<<<< HEAD
-- date: 2025-08-22
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+- date: '2025-08-22'
+  location: "Work"
   energy_kwh: 5.0
   cost: 0.0
-- date: 2025-08-26
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-08-26'
+  location: "Work"
   energy_kwh: 20.0
   cost: 0.0
-- date: 2025-08-26
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-08-26'
+  location: "Work"
   energy_kwh: 36.0
   cost: 0.0
-- date: 2025-08-29
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-08-29'
+  location: "Work"
   energy_kwh: 25.0
   cost: 0.0
-- date: 2025-08-31
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-08-31'
+  location: "Home"
   energy_kwh: 10.0
   cost: 1.81
-  notes: " "Top up before trip to Cedar Point""
-- date: 2025-09-01
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: "Top up before trip to Cedar Point"
+- date: '2025-09-01'
+  location: "Home"
   energy_kwh: 45.0
   cost: 8.16
-  notes: " "Top up after trip to Cedar Point for work week usage""
-- date: 2025-09-03
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: "Top up after trip to Cedar Point for work week usage"
+- date: '2025-09-03'
+  location: "Work"
   energy_kwh: 47.0
   cost: 0.0
-- date: 2025-09-03
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-03'
+  location: "Work"
   energy_kwh: 2.0
   cost: 0.0
-- date: 2025-09-04
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-04'
+  location: "Work"
   energy_kwh: 7.0
   cost: 0.0
-- date: 2025-09-05
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-05'
+  location: "Work"
   energy_kwh: 16.0
   cost: 0.0
-- date: 2025-09-09
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-09'
+  location: "Work"
   energy_kwh: 20.0
   cost: 0.0
-- date: 2025-09-11
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-11'
+  location: "Work"
   energy_kwh: 5.0
   cost: 0.0
-- date: 2025-09-16
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-16'
+  location: "Work"
   energy_kwh: 13.0
   cost: 0.0
-- date: 2025-09-17
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-17'
+  location: "Work"
   energy_kwh: 41.0
   cost: 0.0
-- date: 2025-09-19
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-19'
+  location: "Work"
   energy_kwh: 36.0
   cost: 0.0
-- date: 2025-09-19
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-19'
+  location: "Work"
   energy_kwh: 27.0
   cost: 0.0
-- date: 2025-09-24
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-24'
+  location: "Work"
   energy_kwh: 15.0
   cost: 0.0
-- date: 2025-09-25
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-25'
+  location: "Work"
   energy_kwh: 36.0
   cost: 0.0
-- date: 2025-09-26
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-26'
+  location: "Home"
   energy_kwh: 21.0
   cost: 3.81
-- date: 2025-09-26
-  location: " "ChargePoint, Clare, MI""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-26'
+  location: "ChargePoint, Clare, MI"
   energy_kwh: 20.43
   cost: 6.5
-- date: 2025-09-28
-  location: " "Paul & Carol's, Beulah, MI""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-28'
+  location: "Paul & Carol's, Beulah, MI"
   energy_kwh: 65.0
   cost: 0.0
-- date: 2025-09-28
-  location: " "Rivian, Clare, MI""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-28'
+  location: "Rivian, Clare, MI"
   energy_kwh: 24.19
   cost: 14.52
-- date: 2025-09-29
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-29'
+  location: "Home"
   energy_kwh: 14.0
   cost: 2.54
-- date: 2025-09-30
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-30'
+  location: "Home"
   energy_kwh: 12.0
   cost: 2.18
-- date: 2025-09-30
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-09-30'
+  location: "Work"
   energy_kwh: 18.0
   cost: 0.0
-- date: 2025-10-01
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-01'
+  location: "Work"
   energy_kwh: 27.0
   cost: 0.0
-- date: 2025-10-06
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-06'
+  location: "Work"
   energy_kwh: 59.0
   cost: 0.0
-- date: 2025-10-07
-  location: " "MGM Grand, Detroit, MI""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-07'
+  location: "MGM Grand, Detroit, MI"
   energy_kwh: 15.0
   cost: 0.0
-- date: 2025-10-08
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-08'
+  location: "Work"
   energy_kwh: 6.0
   cost: 0.0
-- date: 2025-10-09
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-09'
+  location: "Work"
   energy_kwh: 18.0
   cost: 0.0
-- date: 2025-10-10
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-10'
+  location: "Work"
   energy_kwh: 13.0
   cost: 0.0
-- date: 2025-10-13
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-13'
+  location: "Work"
   energy_kwh: 12.0
   cost: 0.0
-- date: 2025-10-14
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-14'
+  location: "Work"
   energy_kwh: 26.0
   cost: 0.0
-- date: 2025-10-16
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-16'
+  location: "Work"
   energy_kwh: 23.0
   cost: 0.0
-- date: 2025-10-21
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-21'
+  location: "Work"
   energy_kwh: 9.0
   cost: 0.0
-- date: 2025-10-22
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-22'
+  location: "Work"
   energy_kwh: 18.0
   cost: 0.0
-- date: 2025-10-23
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-23'
+  location: "Work"
   energy_kwh: 6.0
   cost: 0.0
-- date: 2025-10-24
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-24'
+  location: "Work"
   energy_kwh: 47.0
   cost: 0.0
-- date: 2025-10-27
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-27'
+  location: "Work"
   energy_kwh: 9.0
   cost: 0.0
-- date: 2025-10-28
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-28'
+  location: "Work"
   energy_kwh: 22.0
   cost: 0.0
-- date: 2025-10-29
-  location: " "Tesla, Ohio""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-29'
+  location: "Tesla, Ohio"
   energy_kwh: 29.0
   cost: 0.0
-  notes: " "Work trip to Graco in Ohio, work paid $15.30""
-- date: 2025-10-29
-  location: " "Tesla, Ohio""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: "Work trip to Graco in Ohio, work paid $15.30"
+- date: '2025-10-29'
+  location: "Tesla, Ohio"
   energy_kwh: 53.0
   cost: 0.0
-  notes: " "Work trip to Graco in Ohio, work paid $31.71""
-- date: 2025-10-29
-  location: " "Tesla, Ohio""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: "Work trip to Graco in Ohio, work paid $31.71"
+- date: '2025-10-29'
+  location: "Tesla, Ohio"
   energy_kwh: 31.0
   cost: 0.0
-  notes: " "Work trip to Graco in Ohio, work paid $15.88""
-- date: 2025-10-30
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: "Work trip to Graco in Ohio, work paid $15.88"
+- date: '2025-10-30'
+  location: "Home"
   energy_kwh: 11.0
   cost: 1.99
-- date: 2025-10-31
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-31'
+  location: "Work"
   energy_kwh: 13.0
   cost: 0.0
-- date: 2025-10-31
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-10-31'
+  location: "Work"
   energy_kwh: 11.0
   cost: 0.0
-- date: 2025-11-03
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-03'
+  location: "Home"
   energy_kwh: 9.7
   cost: 1.76
-- date: 2025-11-03
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-03'
+  location: "Work"
   energy_kwh: 37.1
   cost: 0.0
-- date: 2025-11-05
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-05'
+  location: "Work"
   energy_kwh: 9.0
   cost: 0.0
-- date: 2025-11-06
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-06'
+  location: "Work"
   energy_kwh: 10.7
   cost: 0.0
-- date: 2025-11-07
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-07'
+  location: "Work"
   energy_kwh: 42.2
   cost: 0.0
-- date: 2025-11-07
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-07'
+  location: "Work"
   energy_kwh: 1.7
   cost: 0.0
-- date: 2025-11-07
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-07'
+  location: "Work"
   energy_kwh: 12.3
   cost: 0.0
-- date: 2025-11-11
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-11'
+  location: "Home"
   energy_kwh: 27.0
   cost: 4.9
-- date: 2025-11-12
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-12'
+  location: "Work"
   energy_kwh: 61.9
   cost: 0.0
-- date: 2025-11-15
-  location: " "Tesla, Battle Creek""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-15'
+  location: "Tesla, Battle Creek"
   energy_kwh: 8.9
   cost: 4.36
-- date: 2025-11-17
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-17'
+  location: "Home"
   energy_kwh: 6.8
   cost: 1.23
-- date: 2025-11-17
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-17'
+  location: "Home"
   energy_kwh: 32.2
   cost: 5.84
-- date: 2025-11-18
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-18'
+  location: "Home"
   energy_kwh: 6.6
   cost: 1.2
-- date: 2025-11-18
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-18'
+  location: "Work"
   energy_kwh: 17.0
   cost: 0.0
-- date: 2025-11-19
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-19'
+  location: "Work"
   energy_kwh: 11.0
   cost: 0.0
-- date: 2025-11-21
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-21'
+  location: "Home"
   energy_kwh: 14.6
   cost: 2.65
-- date: 2025-11-21
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-21'
+  location: "Work"
   energy_kwh: 46.2
   cost: 0.0
-- date: 2025-11-24
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-24'
+  location: "Work"
   energy_kwh: 44.8
   cost: 0.0
-- date: 2025-11-24
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-24'
+  location: "Work"
   energy_kwh: 11.4
   cost: 0.0
-- date: 2025-11-25
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-25'
+  location: "Work"
   energy_kwh: 3.5
   cost: 0.0
-- date: 2025-11-27
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-11-27'
+  location: "Home"
   energy_kwh: 49.7
   cost: 9.01
-- date: 2025-12-02
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-02'
+  location: "Home"
   energy_kwh: 12.2
   cost: 2.21
-- date: 2025-12-02
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-02'
+  location: "Work"
   energy_kwh: 43.8
   cost: 0.0
-- date: 2025-12-05
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-05'
+  location: "Home"
   energy_kwh: 3.0
   cost: 0.54
-- date: 2025-12-05
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-05'
+  location: "Work"
   energy_kwh: 40.1
   cost: 0.0
-- date: 2025-12-05
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-05'
+  location: "Work"
   energy_kwh: 15.1
   cost: 0.0
-- date: 2025-12-05
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-05'
+  location: "Work"
   energy_kwh: 4.8
   cost: 0.0
-- date: 2025-12-08
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-08'
+  location: "Home"
   energy_kwh: 1.2
   cost: 0.22
-- date: 2025-12-09
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-09'
+  location: "Home"
   energy_kwh: 11.8
   cost: 2.14
-- date: 2025-12-09
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-09'
+  location: "Work"
   energy_kwh: 22.9
   cost: 0.0
-- date: 2025-12-10
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-10'
+  location: "Home"
   energy_kwh: 4.0
   cost: 0.73
-- date: 2025-12-10
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-10'
+  location: "Work"
   energy_kwh: 49.6
   cost: 0.0
-- date: 2025-12-11
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-11'
+  location: "Work"
   energy_kwh: 4.8
   cost: 0.0
-- date: 2025-12-12
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-12'
+  location: "Home"
   energy_kwh: 28.2
   cost: 5.11
-  notes: " "Topping off to head to Muskegeon for Robotics""
-- date: 2025-12-12
-  location: " "ChargePoint, Muskegon""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: "Topping off to head to Muskegeon for Robotics"
+- date: '2025-12-12'
+  location: "ChargePoint, Muskegon"
   energy_kwh: 12.0
   cost: 0.0
-- date: 2025-12-12
-  location: " "ChargePoint, Muskegon""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-12'
+  location: "ChargePoint, Muskegon"
   energy_kwh: 24.0
   cost: 0.0
-- date: 2025-12-13
-  location: " "ChargePoint, Muskegon""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-13'
+  location: "ChargePoint, Muskegon"
   energy_kwh: 38.7
   cost: 0.0
-- date: 2025-12-13
-  location: " "Tesla, Lansing""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-13'
+  location: "Tesla, Lansing"
   energy_kwh: 36.3
   cost: 19.21
-- date: 2025-12-14
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-14'
+  location: "Home"
   energy_kwh: 7.0
   cost: 1.27
-- date: 2025-12-15
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-15'
+  location: "Home"
   energy_kwh: 4.0
   cost: 0.73
-- date: 2025-12-15
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-15'
+  location: "Work"
   energy_kwh: 19.8
   cost: 0.0
-- date: 2025-12-15
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-15'
+  location: "Work"
   energy_kwh: 3.8
   cost: 0.0
-- date: 2025-12-16
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-16'
+  location: "Home"
   energy_kwh: 14.8
   cost: 2.68
-- date: 2025-12-16
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-16'
+  location: "Work"
   energy_kwh: 13.8
   cost: 0.0
-- date: 2025-12-17
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-17'
+  location: "Home"
   energy_kwh: 11.4
   cost: 2.07
-- date: 2025-12-17
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-17'
+  location: "Work"
   energy_kwh: 8.6
   cost: 0.0
-- date: 2025-12-18
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-18'
+  location: "Home"
   energy_kwh: 7.9
   cost: 1.43
-- date: 2025-12-18
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-18'
+  location: "Home"
   energy_kwh: 5.3
   cost: 0.96
-- date: 2025-12-18
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-18'
+  location: "Home"
   energy_kwh: 0.7
   cost: 0.13
-- date: 2025-12-19
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-19'
+  location: "Home"
   energy_kwh: 19.8
   cost: 3.59
-- date: 2025-12-22
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-22'
+  location: "Home"
   energy_kwh: 32.0
   cost: 5.8
-- date: 2025-12-23
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-23'
+  location: "Home"
   energy_kwh: 11.0
   cost: 1.99
-- date: 2025-12-24
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-24'
+  location: "Home"
   energy_kwh: 4.6
   cost: 0.83
-- date: 2025-12-24
-  location: " "Blink, BJ's Wholesale, Canton""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-24'
+  location: "Blink, BJ's Wholesale, Canton"
   energy_kwh: 3.0
   cost: 0.0
-- date: 2025-12-24
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-24'
+  location: "Home"
   energy_kwh: 3.5
   cost: 0.63
-- date: 2025-12-24
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-24'
+  location: "Home"
   energy_kwh: 7.2
   cost: 1.31
-- date: 2025-12-25
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-25'
+  location: "Home"
   energy_kwh: 33.3
   cost: 6.04
-- date: 2025-12-26
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-26'
+  location: "Home"
   energy_kwh: 19.4
   cost: 3.52
-- date: 2025-12-30
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-30'
+  location: "Home"
   energy_kwh: 14.2
   cost: 2.57
-- date: 2025-12-30
-  location: " "ChargePoint, DIA, Detroit""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-30'
+  location: "ChargePoint, DIA, Detroit"
   energy_kwh: 6.1
   cost: 0.0
-- date: 2025-12-30
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2025-12-30'
+  location: "Home"
   energy_kwh: 19.9
   cost: 3.61
-- date: 2026-01-02
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-02'
+  location: "Home"
   energy_kwh: 12.8
   cost: 2.32
-- date: 2026-01-03
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-03'
+  location: "Home"
   energy_kwh: 30.7
   cost: 5.57
-- date: 2026-01-04
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-04'
+  location: "Home"
   energy_kwh: 9.9
   cost: 1.8
-- date: 2026-01-04
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-04'
+  location: "Home"
   energy_kwh: 11.1
   cost: 2.01
-- date: 2026-01-06
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-06'
+  location: "Home"
   energy_kwh: 14.5
   cost: 2.63
-- date: 2026-01-06
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-06'
+  location: "Work"
   energy_kwh: 29.7
   cost: 0.0
-- date: 2026-01-08
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-08'
+  location: "Work"
   energy_kwh: 12.3
   cost: 0.0
-- date: 2026-01-12
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-12'
+  location: "Home"
   energy_kwh: 11.0
   cost: 1.99
-- date: 2026-01-13
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-13'
+  location: "Home"
   energy_kwh: 30.6
   cost: 5.55
-- date: 2026-01-14
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-14'
+  location: "Home"
   energy_kwh: 11.8
   cost: 2.14
-- date: 2026-01-14
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-14'
+  location: "Work"
   energy_kwh: 1.7
   cost: 0.0
-- date: 2026-01-14
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-14'
+  location: "Work"
   energy_kwh: 4.0
   cost: 0.0
-- date: 2026-01-14
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-14'
+  location: "Home"
   energy_kwh: 7.4
   cost: 1.34
-- date: 2026-01-16
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-16'
+  location: "Home"
   energy_kwh: 27.2
   cost: 4.93
-- date: 2026-01-16
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-16'
+  location: "Work"
   energy_kwh: 15.4
   cost: 0.0
-- date: 2026-01-18
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-18'
+  location: "Home"
   energy_kwh: 24.0
   cost: 4.35
-- date: 2026-01-20
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-20'
+  location: "Home"
   energy_kwh: 12.7
   cost: 2.3
-- date: 2026-01-20
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-20'
+  location: "Home"
   energy_kwh: 10.0
   cost: 1.81
-- date: 2026-01-20
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-20'
+  location: "Work"
   energy_kwh: 44.3
   cost: 0.0
-- date: 2026-01-21
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-21'
+  location: "Work"
   energy_kwh: 8.9
   cost: 0.0
-- date: 2026-01-22
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-22'
+  location: "Work"
   energy_kwh: 12.6
   cost: 0.0
-- date: 2026-01-23
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-23'
+  location: "Work"
   energy_kwh: 37.2
   cost: 0.0
-- date: 2026-01-25
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-25'
+  location: "Home"
   energy_kwh: 10.3
   cost: 1.87
-- date: 2026-01-25
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-25'
+  location: "Home"
   energy_kwh: 1.4
   cost: 0.25
-- date: 2026-01-26
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-26'
+  location: "Work"
   energy_kwh: 20.2
   cost: 0.0
-- date: 2026-01-27
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-27'
+  location: "Home"
   energy_kwh: 2.3
   cost: 0.42
-- date: 2026-01-27
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-27'
+  location: "Work"
   energy_kwh: 21.6
   cost: 0.0
-- date: 2026-01-28
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-28'
+  location: "Work"
   energy_kwh: 18.5
   cost: 0.0
-- date: 2026-01-28
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-28'
+  location: "Work"
   energy_kwh: 23.3
   cost: 0.0
-- date: 2026-01-29
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-01-29'
+  location: "Work"
   energy_kwh: 8.8
   cost: 0.0
-- date: 2026-02-02
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-02'
+  location: "Home"
   energy_kwh: 9.8
   cost: 1.78
-- date: 2026-02-02
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-02'
+  location: "Work"
   energy_kwh: 18.8
   cost: 0.0
-- date: 2026-02-03
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-03'
+  location: "Home"
   energy_kwh: 8.8
   cost: 1.6
-- date: 2026-02-04
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-04'
+  location: "Home"
   energy_kwh: 10.2
   cost: 1.85
-- date: 2026-02-04
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-04'
+  location: "Work"
   energy_kwh: 2.6
   cost: 0.0
-- date: 2026-02-04
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-04'
+  location: "Home"
   energy_kwh: 11.0
   cost: 1.99
-- date: 2026-02-05
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-05'
+  location: "Home"
   energy_kwh: 8.4
   cost: 1.52
-- date: 2026-02-05
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-05'
+  location: "Work"
   energy_kwh: 15.6
   cost: 0.0
-- date: 2026-02-06
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-06'
+  location: "Home"
   energy_kwh: 6.6
   cost: 1.2
-- date: 2026-02-06
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-06'
+  location: "Work"
   energy_kwh: 11.0
   cost: 0.0
-- date: 2026-02-09
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-09'
+  location: "Home"
   energy_kwh: 15.0
   cost: 2.72
-- date: 2026-02-09
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-09'
+  location: "Work"
   energy_kwh: 25.6
   cost: 0.0
-- date: 2026-02-10
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-10'
+  location: "Work"
   energy_kwh: 26.0
   cost: 0.0
-- date: 2026-02-11
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-11'
+  location: "Work"
   energy_kwh: 0.9
   cost: 0.0
-- date: 2026-02-11
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-11'
+  location: "Work"
   energy_kwh: 7.5
   cost: 0.0
-- date: 2026-02-12
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-12'
+  location: "Work"
   energy_kwh: 32.6
   cost: 0.0
-- date: 2026-02-13
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-13'
+  location: "Work"
   energy_kwh: 20.7
   cost: 0.0
-- date: 2026-02-16
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-16'
+  location: "Work"
   energy_kwh: 4.7
   cost: 0.0
-- date: 2026-02-17
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-17'
+  location: "Work"
   energy_kwh: 21.2
   cost: 0.0
-- date: 2026-02-19
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-19'
+  location: "Work"
   energy_kwh: 14.6
   cost: 0.0
-- date: 2026-02-20
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-20'
+  location: "Work"
   energy_kwh: 42.8
   cost: 0.0
-- date: 2026-02-21
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-21'
+  location: "Home"
   energy_kwh: 10.5
   cost: 1.9
-- date: 2026-02-21
-  location: " "ChargePoint, Grand Rapids, MI""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-21'
+  location: "ChargePoint, Grand Rapids, MI"
   energy_kwh: 16.3
   cost: 6.04
-  notes: " "Coming back from Grand Rapids for Fencing Tournament, $0.35/kWh but there is an Energy Tax added to final cost""
-- date: 2026-02-21
-  location: " "Tesla, Lansing""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: "Coming back from Grand Rapids for Fencing Tournament"
+- date: '2026-02-21'
+  location: "Tesla, Lansing"
   energy_kwh: 34.1
   cost: 18.05
-  notes: " "Coming back from Grand Rapids for Fencing Tournament""
-- date: 2026-02-22
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: "Coming back from Grand Rapids for Fencing Tournament"
+- date: '2026-02-22'
+  location: "Home"
   energy_kwh: 24.2
   cost: 4.39
-- date: 2026-02-23
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-23'
+  location: "Work"
   energy_kwh: 12.3
   cost: 0.0
-- date: 2026-02-24
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-24'
+  location: "Home"
   energy_kwh: 10.3
   cost: 1.87
-- date: 2026-02-24
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-24'
+  location: "Work"
   energy_kwh: 14.9
   cost: 0.0
-- date: 2026-02-26
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-26'
+  location: "Home"
   energy_kwh: 33.1
   cost: 6.0
-- date: 2026-02-26
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-26'
+  location: "Work"
   energy_kwh: 12.7
   cost: 0.0
-- date: 2026-02-27
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-02-27'
+  location: "Work"
   energy_kwh: 48.8
   cost: 0.0
-- date: 2026-03-03
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-03'
+  location: "Work"
   energy_kwh: 15.3
   cost: 0.0
-- date: 2026-03-04
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-04'
+  location: "Work"
   energy_kwh: 13.1
   cost: 0.0
-- date: 2026-03-05
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-05'
+  location: "Work"
   energy_kwh: 36.2
   cost: 0.0
-- date: 2026-03-05
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-05'
+  location: "Work"
   energy_kwh: 2.7
   cost: 0.0
-- date: 2026-03-10
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-10'
+  location: "Work"
   energy_kwh: 3.7
   cost: 0.0
-- date: 2026-03-11
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-11'
+  location: "Work"
   energy_kwh: 19.7
   cost: 0.0
-- date: 2026-03-13
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-13'
+  location: "Work"
   energy_kwh: 76.2
   cost: 0.0
-- date: 2026-03-17
-  location: " "Home""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-17'
+  location: "Home"
   energy_kwh: 1.8
   cost: 0.33
-- date: 2026-03-18
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-18'
+  location: "Work"
   energy_kwh: 7.7
   cost: 0.0
-- date: 2026-03-18
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-18'
+  location: "Work"
   energy_kwh: 7.3
   cost: 0.0
-- date: 2026-03-19
-  location: " "Work""
-  vehicle: "2025 Mustang Mach-e GT"
+  notes: null
+- date: '2026-03-19'
+  location: "Work"
   energy_kwh: 17.5
   cost: 0.0
-=======
-- date: 2026-04-17T13:00:00Z
-  location: Work
-  energy_kwh: 29.5
-  cost: 0
->>>>>>> 66ffb0c7b544ec01d1fbcdaee0ae4934a884e299
+  notes: null
