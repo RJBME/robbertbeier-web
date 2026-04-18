@@ -1,13 +1,8 @@
 collections_config:
   charging:
-    path: _charging
+    path: _data/charging.yml
+    parser: yaml
     name: Charging Sessions
-    icon: ev_station
     schemas:
       default:
         path: .cloudcannon/schemas/charging.yaml
-    _editables:
-      content: false
-    add_options:
-      - name: Add Charging Session
-        schema: default

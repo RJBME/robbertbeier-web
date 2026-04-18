@@ -2,36 +2,125 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Robert Beier</title>
+  <title>{{ page.title }} | Robert Beier</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    :root { --bg: #ffffff; --text: #333333; --link: #5D3FD3; --border: #eeeeee; }
-    [data-theme="dark"] { --bg: #1a1a1a; --text: #f0f0f0; --link: #a389f4; --border: #333333; }
-    body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
-    nav { margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; display: flex; justify-content: space-between; }
+    /* Global Variables */
+    :root { 
+      --bg: #ffffff; --text: #333333; --link: #5D3FD3; --border: #eeeeee; 
+      --dash-card: #ffffff; --dash-border: #eaeaea; --table-head: #f9f9f9;
+    }
+    [data-theme="dark"] { 
+      --bg: #1a1a1a; --text: #f0f0f0; --link: #a389f4; --border: #333333; 
+      --dash-card: #252525; --dash-border: #444; --table-head: #2d2d2d;
+    }
+
+    body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; transition: background-color 0.3s, color 0.3s; }
+    
+    /* Navigation Style */
+    nav { margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+    nav div a { margin-right: 15px; color: var(--link); text-decoration: none; font-weight: bold; position: relative; }
+    nav div a.active { color: var(--text); }
+    nav div a.active::after { content: ''; position: absolute; bottom: -17px; left: 0; width: 100%; height: 2px; background: var(--link); }
+
     a { color: var(--link); text-decoration: none; font-weight: bold; }
-    #theme-toggle { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 12px; border-radius: 20px; cursor: pointer; }
+    h1, h2, h3 { color: var(--text); }
+
+    /* Theme Toggle Button */
+    #theme-toggle { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+
+    /* Gallery Grid */
+    .master-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+    .gallery-item { position: relative; width: 100%; padding-top: 66.66%; overflow: hidden; border-radius: 6px; background: var(--border); }
+    .gallery-item img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; cursor: pointer; }
+
+    /* Lightbox */
+    #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center; }
+    #viewer { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+    #mimg { max-width: 90%; max-height: 90%; transition: transform 0.1s linear; cursor: zoom-in; }
+    #mimg.panning { max-width: none; max-height: none; cursor: crosshair; }
+    .close-modal { position: absolute; top: 20px; right: 30px; color: white; font-size: 50px; cursor: pointer; z-index: 100001; }
   </style>
 </head>
 <body>
+
 <nav>
   <div>
-    <a href="/">Home</a>
+    {% for item in site.data.navigation %}
+      <a href="{{ item.link }}" {% if page.url == item.link %}class="active"{% endif %}>
+        {{ item.name }}
+      </a>
+    {% endfor %}
   </div>
   <button id="theme-toggle">🌙 Dark Mode</button>
 </nav>
 
 {{ content }}
 
+<div id="modal">
+  <span class="close-modal">&times;</span>
+  <div id="viewer"><img id="mimg" src=""></div>
+</div>
+
+<footer style="margin-top: 80px; text-align: center; font-size: 0.9rem; border-top: 1px solid var(--border); padding-top: 20px;">
+  <p><a href="#">↑ Back to Top</a></p>
+  <p>&copy; {{ "now" | date: "%Y" }} Robert Beier. <small>Updated: {{ "now" | date: "%m/%d/%y" }}</small></p>
+</footer>
+
 <script>
+  const modal = document.getElementById('modal'), mimg = document.getElementById('mimg'), viewer = document.getElementById('viewer');
+  let isPan = false, currentImages = [], currentIndex = 0;
+
+  // Image handling for Timeline & Gallery
+  document.addEventListener('click', e => {
+    if (e.target.tagName === 'IMG' && !e.target.closest('#viewer')) {
+      currentImages = Array.from(document.querySelectorAll('img')).filter(i => !i.closest('#viewer'));
+      currentIndex = currentImages.indexOf(e.target);
+      mimg.src = e.target.src;
+      modal.style.display = 'flex';
+      resetPan();
+    }
+  });
+
+  const closeModal = () => { modal.style.display = 'none'; resetPan(); };
+  document.querySelector('.close-modal').onclick = closeModal;
+  modal.onclick = e => { if(e.target === modal || e.target === viewer) closeModal(); };
+
+  mimg.onclick = e => { e.stopPropagation(); isPan ? resetPan() : enterPan(); };
+  function enterPan() { isPan = true; mimg.classList.add('panning'); mimg.style.maxWidth = mimg.style.maxHeight = 'none'; }
+  function resetPan() { isPan = false; mimg.classList.remove('panning'); mimg.style.maxWidth = mimg.style.maxHeight = '90%'; mimg.style.transform = 'translate(0,0)'; }
+
+  viewer.onmousemove = e => {
+    if (!isPan) return;
+    const { width, height, left, top } = viewer.getBoundingClientRect();
+    const moveX = (mimg.offsetWidth - width) * ((e.clientX - left) / width);
+    const moveY = (mimg.offsetHeight - height) * ((e.clientY - top) / height);
+    mimg.style.transform = `translate(${-moveX}px, ${-moveY}px)`;
+  };
+
+  window.addEventListener('keydown', e => {
+    if (modal.style.display === 'flex') {
+      if (e.key === 'Escape') closeModal();
+      if (e.key === 'ArrowRight') { currentIndex = (currentIndex + 1) % currentImages.length; mimg.src = currentImages[currentIndex].src; resetPan(); }
+      if (e.key === 'ArrowLeft') { currentIndex = (currentIndex - 1 + currentImages.length) % currentImages.length; mimg.src = currentImages[currentIndex].src; resetPan(); }
+    }
+  });
+
+  // Theme Switching Logic
   const toggle = document.getElementById('theme-toggle');
   const setTheme = (t) => {
     document.documentElement.setAttribute('data-theme', t);
     toggle.textContent = t === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
     localStorage.setItem('theme', t);
+    // Custom Event to notify Charts if they exist
+    window.dispatchEvent(new Event('themeChanged'));
   };
-  if (localStorage.getItem('theme') === 'dark') setTheme('dark');
+
+  if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    setTheme('dark');
+  }
+
   toggle.onclick = () => {
     const current = document.documentElement.getAttribute('data-theme');
     setTheme(current === 'dark' ? 'light' : 'dark');
