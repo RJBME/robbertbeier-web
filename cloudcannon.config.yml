@@ -1,13 +1,11 @@
 collections_config:
   charging:
-    path: _data/charging.yml
+    path: _charging
     name: Charging Sessions
     icon: ev_station
-    # This disables the WYSIWYG text editor
     _editables:
       content: false
 
-# This defines the form layout for adding a NEW entry
 _inputs:
   date:
     type: date
