@@ -1,0 +1,1758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EV Deep Dive — Visual Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet"/>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+:root {
+  --gt:      #00C2FF;
+  --gt-dim:  #004E6A;
+  --gt-glow: rgba(0,194,255,0.25);
+  --pr:      #5B9BFF;
+  --pr-dim:  #1E3A8A;
+  --pr-glow: rgba(91,155,255,0.25);
+  --ts:      #FF6B6B;
+  --ts-dim:  #7F1D1D;
+  --ts-glow: rgba(255,107,107,0.25);
+  --bg:      #07090F;
+  --s1:      #0D1117;
+  --s2:      #1C2333;
+  --border:  rgba(255,255,255,0.10);
+  --text:    #F0F4FF;
+  --body:    #C8D0E0;
+  --muted:   #8A95A8;
+  --mono:    'JetBrains Mono', monospace;
+  --sans:    'Inter', sans-serif;
+  --display: 'Bebas Neue', cursive;
+  --r:       10px;
+}
+body.light {
+  --bg:    #E8ECF5;
+  --s1:    #FFFFFF;
+  --s2:    #EEF2FF;
+  --border:rgba(0,0,0,0.10);
+  --text:  #0A0E1A;
+  --body:  #1E2A3A;
+  --muted: #4A5568;
+  --gt:    #0088CC;
+  --gt-dim:#005580;
+  --pr:    #2563EB;
+  --pr-dim:#1E3A8A;
+  --ts:    #DC2626;
+  --ts-dim:#991B1B;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.shell{display:grid;grid-template-rows:52px 1fr 56px;height:100vh;width:100%}
+
+/* TOP BAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 2rem;border-bottom:1px solid var(--border);background:var(--bg);z-index:200}
+.wordmark{font-family:var(--mono);font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.wordmark b{color:var(--text)}
+.topbar-right{display:flex;gap:.5rem}
+.pbtn{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.4rem 1rem;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;transition:.2s}
+.pbtn:hover{background:var(--text);color:var(--bg)}
+
+/* VIEWPORT */
+.viewport{position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;padding:1.5rem 2rem 1rem;opacity:0;pointer-events:none;transform:translateX(40px);transition:opacity .55s cubic-bezier(.22,1,.36,1),transform .55s cubic-bezier(.22,1,.36,1);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.slide::-webkit-scrollbar{width:3px}
+.slide::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.slide.active{opacity:1;pointer-events:auto;transform:translateX(0)}
+
+/* BOTTOM BAR */
+.bottombar{display:flex;align-items:center;justify-content:space-between;padding:0 2rem;border-top:1px solid var(--border);background:var(--bg);z-index:200}
+.dots{display:flex;gap:.4rem}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--border);cursor:pointer;transition:.3s}
+.dot.on{background:var(--text);transform:scale(1.4)}
+.nav{display:flex;gap:.4rem}
+.nbtn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.nbtn:hover{background:var(--text);color:var(--bg)}
+.counter{font-family:var(--mono);font-size:.65rem;color:var(--muted);letter-spacing:.15em}
+
+/* TYPOGRAPHY */
+.eyebrow{font-family:var(--mono);font-size:.6rem;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem}
+.slide-h{font-family:var(--display);font-size:clamp(2rem,4vw,3.5rem);line-height:.95;letter-spacing:.02em;margin-bottom:.25rem;color:var(--text)}
+.slide-sub{font-size:.82rem;color:var(--body);line-height:1.65;margin-bottom:1.2rem;max-width:760px}
+
+/* BRAND */
+.cgt{color:var(--gt)}.cpr{color:var(--pr)}.cts{color:var(--ts)}
+.bgt{background:var(--gt)}.bpr{background:var(--pr)}.bts{background:var(--ts)}
+
+/* GLASS CARD */
+.gc{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);position:relative;overflow:hidden}
+.gc-top{position:absolute;top:0;left:0;right:0;height:3px}
+
+/* HERO GRID */
+.hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.hero-card{display:flex;flex-direction:column;padding:1.5rem}
+.hc-brand{font-family:var(--mono);font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem}
+.hc-model{font-family:var(--display);font-size:2.2rem;line-height:1;margin-bottom:.15rem}
+.hc-tag{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--body);margin-bottom:.75rem}
+.hc-desc{font-size:.75rem;line-height:1.65;color:var(--body);flex:1;margin-bottom:1rem}
+.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;border-top:1px solid var(--border);padding-top:.75rem}
+.kpi{display:flex;flex-direction:column;gap:.15rem}
+.kpi-l{font-family:var(--mono);font-size:.52rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.kpi-v{font-family:var(--mono);font-size:1.1rem;font-weight:700}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.5rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:.15rem .5rem;border-radius:99px;margin-left:.4rem;vertical-align:middle;flex-shrink:0}
+.badge.gt{background:rgba(0,194,255,.18);color:var(--gt)}
+.badge.pr{background:rgba(91,155,255,.18);color:var(--pr)}
+.badge.ts{background:rgba(255,107,107,.18);color:var(--ts)}
+.badge.tie{background:rgba(255,255,255,.10);color:var(--body)}
+
+/* RADAR */
+.radar-legend{display:flex;gap:1.5rem;margin-top:.75rem;flex-wrap:wrap;justify-content:center}
+.rl-item{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;color:var(--body)}
+.rl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* SPEC TABLE */
+.vspec-table{width:100%;border-collapse:collapse}
+.vspec-table th{font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);padding:.6rem .75rem;text-align:left;border-bottom:1px solid var(--border)}
+.vspec-table th.cgt{color:var(--gt)}.vspec-table th.cpr{color:var(--pr)}.vspec-table th.cts{color:var(--ts)}
+.vspec-table td{padding:.6rem .75rem;font-family:var(--mono);font-size:.68rem;border-bottom:1px solid var(--border);vertical-align:middle;line-height:1.55;color:var(--body)}
+.vspec-table td:first-child{color:var(--muted);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;width:18%}
+.vspec-table tbody tr:hover{background:var(--s2)}
+.vspec-table tbody tr:last-child td{border-bottom:none}
+
+/* BAR CHARTS */
+.bar-compare{display:flex;flex-direction:column;gap:.6rem}
+.bc-row{display:grid;grid-template-columns:130px 1fr 90px;align-items:center;gap:.75rem}
+.bc-label{font-family:var(--mono);font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--body);text-align:right}
+.bc-track{height:8px;background:var(--s2);border-radius:99px;overflow:hidden}
+.bc-fill{height:100%;border-radius:99px;width:0;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+.bc-val{font-family:var(--mono);font-size:.62rem;font-weight:700;color:var(--text)}
+.bar-group-title{font-family:var(--mono);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--body);margin-bottom:.6rem;margin-top:.5rem}
+
+/* INTERACTIVE SLIDERS FOR EFFICIENCY */
+.eff-slider-wrap {
+  position: relative;
+  width: 100%;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+.epa-tick {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 14px;
+  background: #FF4040;
+  z-index: 10;
+  pointer-events: none;
+}
+.epa-tick-label {
+  position: absolute;
+  top: -16px;
+  font-family: var(--mono);
+  font-size: 8px;
+  color: #FF4040;
+  font-weight: 700;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* TRADEOFF */
+.tradeoff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.to-card{border-radius:var(--r);border:1px solid var(--border);background:var(--s1);padding:1.25rem;display:flex;flex-direction:column;gap:.4rem}
+.to-top{display:flex;align-items:center;gap:.6rem;margin-bottom:.25rem}
+.to-icon{font-size:1.5rem}
+.to-model{font-family:var(--display);font-size:1.4rem;line-height:1}
+.to-subtitle{font-family:var(--mono);font-size:.55rem;color:var(--body);text-transform:uppercase;letter-spacing:.15em}
+.to-section-label{font-family:var(--mono);font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;margin-top:.5rem;padding:.35rem .5rem;border-radius:4px;display:block;font-weight:700}
+.to-section-label.win{background:rgba(34,197,94,.15);color:#34D478}
+.to-section-label.miss{background:rgba(239,68,68,.12);color:#FF7070}
+.to-item{font-size:.72rem;line-height:1.55;color:var(--body);padding:.2rem 0;border-bottom:1px solid var(--border);display:flex;gap:.4rem;align-items:flex-start}
+.to-item:last-child{border-bottom:none}
+.to-item .ico{flex-shrink:0;margin-top:1px;font-size:.75rem}
+.to-item strong{color:var(--text)}
+
+/* VERDICT */
+.verdict-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.vc{border-radius:var(--r);border:1px solid var(--border);background:var(--s1);padding:1.5rem;position:relative;overflow:hidden}
+.vc::after{content:'';position:absolute;inset:0;opacity:.04;pointer-events:none}
+.vc.gt::after{background:var(--gt)}.vc.pr::after{background:var(--pr)}.vc.ts::after{background:var(--ts)}
+.vc-score{font-family:var(--display);font-size:5rem;line-height:1;opacity:.10;position:absolute;top:-.5rem;right:.75rem;letter-spacing:-.02em}
+.vc-badge{display:inline-block;font-family:var(--mono);font-size:.55rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;padding:.3rem .75rem;border-radius:99px;margin-bottom:.75rem}
+.vc.gt .vc-badge{background:var(--gt-glow);color:var(--gt)}
+.vc.pr .vc-badge{background:var(--pr-glow);color:var(--pr)}
+.vc.ts .vc-badge{background:var(--ts-glow);color:var(--ts)}
+.vc-model{font-family:var(--display);font-size:1.8rem;line-height:1;margin-bottom:.4rem}
+.vc-para{font-size:.74rem;line-height:1.65;color:var(--body);margin-bottom:.75rem}
+.vc-para strong{color:var(--text)}
+.pro-list{display:flex;flex-direction:column;gap:.3rem}
+.pro-item{font-size:.72rem;color:var(--body);display:flex;gap:.4rem;align-items:flex-start;line-height:1.4}
+.vc.gt .pro-item span{color:var(--gt)}
+.vc.pr .pro-item span{color:var(--pr)}
+.vc.ts .pro-item span{color:var(--ts)}
+
+/* REFS */
+.ref-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}
+.ref-card{border:1px solid var(--border);border-radius:8px;padding:.9rem 1.1rem;background:var(--s1);text-decoration:none;display:flex;flex-direction:column;gap:.2rem;transition:.2s}
+.ref-card:hover{border-color:var(--gt)}
+.ref-label{font-family:var(--mono);font-size:.52rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.ref-title{font-size:.76rem;font-weight:600;color:var(--text)}
+.ref-url{font-family:var(--mono);font-size:.58rem;color:var(--body)}
+
+/* 2-COL */
+.two-col{display:grid;grid-template-columns:1fr 300px;gap:1.25rem;align-items:start}
+.insight-box{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem;display:flex;flex-direction:column;gap:.75rem}
+.ib-head{font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text);margin-bottom:.1rem;font-weight:700}
+.ib-item{display:flex;gap:.5rem;align-items:flex-start;padding-bottom:.65rem;border-bottom:1px solid var(--border)}
+.ib-item:last-child{border-bottom:none;padding-bottom:0}
+.ib-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.ib-text{font-size:.72rem;line-height:1.6;color:var(--body)}
+.ib-text strong{color:var(--text)}
+
+/* HEATMAP */
+.hmap{display:grid;grid-template-columns:160px repeat(3,1fr);gap:2px}
+.hmap-head{font-family:var(--mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;padding:.5rem .75rem;display:flex;align-items:center;gap:.4rem;font-weight:700}
+.hmap-row-label{font-family:var(--mono);font-size:.6rem;color:var(--body);text-transform:uppercase;letter-spacing:.08em;padding:.55rem .75rem;background:var(--s2);border-radius:4px;display:flex;align-items:center;font-weight:600}
+.hmap-cell{padding:.55rem .75rem;border-radius:4px;font-family:var(--mono);font-size:.6rem;font-weight:700;display:flex;align-items:center;gap:.3rem;line-height:1.35}
+.hm-win{background:rgba(34,197,94,.15);color:#34D478}
+.hm-mid{background:rgba(251,191,36,.10);color:#FBC840}
+.hm-low{background:rgba(239,68,68,.12);color:#FF7070}
+
+.sdiv{height:1px;background:var(--border);margin:.75rem 0}
+
+/* TRIP CALCULATOR LAYOUT */
+.trip-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 1.25rem;
+  flex: 1;
+  min-height: 0;
+}
+
+/* LEAFLET DARK MODE HACK */
+body:not(.light) .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(1.2);
+}
+.leaflet-container {
+  background: var(--s1);
+  font-family: var(--mono);
+}
+.leaflet-control-attribution {
+  background: rgba(0,0,0,0.5) !important;
+  color: #fff !important;
+}
+body.light .leaflet-control-attribution {
+  background: rgba(255,255,255,0.7) !important;
+  color: #000 !important;
+}
+.map-label {
+  background: var(--s1);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: bold;
+}
+
+/* ═══════════════════════════════════════════════
+   PRINT / PDF STYLES (SAFARI OPTIMIZED)
+═══════════════════════════════════════════════ */
+@media print {
+  @page {
+    size: landscape;
+    margin: 0;
+  }
+
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  /* Override dark-mode variables for print */
+  :root {
+    --bg:     #ffffff !important;
+    --s1:     #ffffff !important;
+    --s2:     #f0f2f8 !important;
+    --border: rgba(0,0,0,0.12) !important;
+    --text:   #0A0E1A !important;
+    --body:   #1E2A3A !important;
+    --muted:  #4A5568 !important;
+    --gt:     #0077AA !important;
+    --gt-dim: #005580 !important;
+    --pr:     #2563EB !important;
+    --pr-dim: #1E3A8A !important;
+    --ts:     #DC2626 !important;
+    --ts-dim: #991B1B !important;
+  }
+
+  .topbar, .bottombar {
+    display: none !important;
+  }
+
+  /* Flatten the shell so slides stack vertically */
+  .shell {
+    display: block !important;
+    height: auto !important;
+    width: 100% !important;
+  }
+
+  .viewport {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
+  }
+
+  /* Each slide = one landscape page, forces page break */
+  .slide {
+    position: relative !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    overflow: hidden !important;
+
+    /* Print specific sizing */
+    width: 100vw !important;
+    height: 100vh !important; 
+    min-height: 100vh !important;
+    max-height: 100vh !important;
+
+    padding: 1.2rem 1.8rem !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .slide:last-of-type {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  /* Scale grids so they fit on one page */
+  .hero-grid, .two-col, .trip-layout, .tradeoff-grid, .verdict-grid, .ref-grid {
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+
+  .two-col, .trip-layout {
+    align-items: stretch !important;
+  }
+
+  .hero-card, .gc, .to-card, .vc, .ref-card {
+    background: #f8f9fc !important;
+    border-color: rgba(0,0,0,0.12) !important;
+  }
+
+  /* Bar fills — use inline --pw for print */
+  .bc-fill {
+    width: var(--pw, 0%) !important;
+    transition: none !important;
+  }
+
+  /* Ensure colored elements print */
+  .hm-win { background: rgba(34,197,94,.15) !important; color: #166534 !important; }
+  .hm-mid { background: rgba(251,191,36,.15) !important; color: #92400E !important; }
+  .hm-low { background: rgba(239,68,68,.15) !important;  color: #991B1B !important; }
+
+  .to-section-label.win { background: rgba(34,197,94,.15) !important; color: #166534 !important; }
+  .to-section-label.miss { background: rgba(239,68,68,.12) !important; color: #991B1B !important; }
+
+  .badge.gt { background: rgba(0,119,170,.12) !important; }
+  .badge.pr { background: rgba(37,99,235,.12) !important; }
+  .badge.ts { background: rgba(220,38,38,.12) !important; }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
+
+/* RESPONSIVE LAYOUT */
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.1);
+}
+input[type=range]::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+input[type=range]:focus { outline: none; }
+input[type=range]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.2);
+}
+
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  html, body { overflow: hidden; }
+  .shell { grid-template-rows: 46px 1fr 50px; }
+  .slide { padding: 1rem 1.25rem .75rem; }
+  .slide-h { font-size: clamp(1.6rem, 3.5vw, 2.8rem); }
+  .slide-sub { font-size: .75rem; margin-bottom: .85rem; }
+  .two-col, .trip-layout { grid-template-columns: 1fr !important; gap: .85rem !important; }
+  .hero-grid { grid-template-columns: 1fr 1fr 1fr; gap: .65rem; }
+  .tradeoff-grid { grid-template-columns: 1fr !important; gap: .65rem; }
+  .verdict-grid  { grid-template-columns: 1fr !important; gap: .65rem; }
+  .insight-box { display: none; }
+  .vspec-table td, .vspec-table th { padding: .45rem .5rem; font-size: .62rem; }
+}
+
+@media screen and (max-width: 767px) {
+  html, body { overflow-y: auto !important; overflow-x: hidden; }
+  .shell { display: block !important; height: auto !important; min-height: 100vh; }
+  .topbar { position: sticky; top: 0; z-index: 200; padding: 0 1rem; }
+  .bottombar { position: sticky; bottom: 0; z-index: 200; padding: 0 1rem; }
+  .viewport { position: static !important; overflow: visible !important; height: auto !important; }
+  .slide { position: static !important; opacity: 1 !important; transform: none !important; pointer-events: auto !important; display: none; padding: 1rem; min-height: calc(100vh - 96px); overflow-y: visible !important; }
+  .slide.active { display: flex; flex-direction: column; }
+  .slide-h  { font-size: clamp(1.4rem, 7vw, 2.2rem); line-height: 1; }
+  .slide-sub { font-size: .72rem; margin-bottom: .65rem; }
+  .two-col, .trip-layout { grid-template-columns: 1fr !important; gap: .65rem !important; }
+  #trip-map { min-height: 350px !important; }
+  .hero-grid, .tradeoff-grid, .verdict-grid, .ref-grid { grid-template-columns: 1fr !important; gap: .6rem !important; }
+  .hmap { grid-template-columns: 100px repeat(3,1fr) !important; gap: 1px !important; }
+  .insight-box { display: none !important; }
+  #slide-5 [style*="grid-template-columns:1fr 1fr"] { display: flex !important; flex-direction: column !important; gap: .85rem !important; }
+}
+
+@media screen and (min-width: 1440px) {
+  .slide-h { font-size: 4rem; }
+  .hc-model { font-size: 2.6rem; }
+  .kpi-v    { font-size: 1.25rem; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header class="topbar">
+  <div class="wordmark"><b>EV DEEP DIVE</b> &nbsp;&middot;&nbsp; 2025&ndash;26 MY ANALYSIS</div>
+  <div class="topbar-right">
+    <button class="pbtn" id="theme-btn" onclick="toggleTheme()">&#9680; Light</button>
+    <button class="pbtn" onclick="window.print()">&#8595; PDF</button>
+  </div>
+</header>
+
+<div class="viewport">
+
+<div class="slide active" id="slide-1">
+  <div class="eyebrow">Executive Overview &middot; MY2025&ndash;2026</div>
+  <div class="slide-h">Three Architectures.<br>Three Philosophies.</div>
+  <div class="slide-sub">A technical &amp; experiential comparison of the 2025 Mach-E GT, 2026 Mach-E Premium LFP AWD, and 2026 Tesla Model Y Long Range AWD.</div>
+  <div class="hero-grid">
+
+    <div class="gc hero-card">
+      <div class="gc-top bgt"></div>
+      <div class="hc-brand">Ford Performance &middot; MY2025</div>
+      <div class="hc-model cgt">Mach-E GT</div>
+      <div class="hc-tag">The Visceral One</div>
+      <div style="display:flex;justify-content:center;margin-bottom:.75rem">
+        <svg width="110" height="110" viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="44" fill="none" stroke="var(--s2)" stroke-width="10"/>
+          <circle cx="55" cy="55" r="44" fill="none" stroke="var(--gt)" stroke-width="10" stroke-dasharray="276.5" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 55 55)"/>
+          <text x="55" y="50" text-anchor="middle" font-family="'Bebas Neue',sans-serif" font-size="18" fill="var(--gt)">480</text>
+          <text x="55" y="65" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="var(--muted)">HP</text>
+        </svg>
+      </div>
+      <div class="hc-desc">Ford Performance re-mapped the dual-PMSM inverters for 2025, pushing peak current beyond standard thermal limits. MagneRide 4 magnetorheological dampers adjust 1,000&times;/sec. Brembo 4-piston monoblocs stop the 4,991 lb mass. This is the emotional purchase.</div>
+      <div class="kpi-row">
+        <div class="kpi"><span class="kpi-l">0&ndash;60 mph</span><span class="kpi-v cgt">3.3 s</span></div>
+        <div class="kpi"><span class="kpi-l">Peak Torque</span><span class="kpi-v cgt">700 lb-ft</span></div>
+        <div class="kpi"><span class="kpi-l">Gross kWh</span><span class="kpi-v cgt">91 kWh</span></div>
+        <div class="kpi"><span class="kpi-l">EPA Range</span><span class="kpi-v cgt">280 mi</span></div>
+      </div>
+    </div>
+
+    <div class="gc hero-card">
+      <div class="gc-top bpr"></div>
+      <div class="hc-brand">Ford &middot; MY2026</div>
+      <div class="hc-model cpr">Mach-E Premium</div>
+      <div class="hc-tag">The Intelligent One</div>
+      <div style="display:flex;justify-content:center;margin-bottom:.75rem">
+        <svg width="110" height="110" viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="44" fill="none" stroke="var(--s2)" stroke-width="10"/>
+          <circle cx="55" cy="55" r="44" fill="none" stroke="var(--pr)" stroke-width="10" stroke-dasharray="276.5" stroke-dashoffset="83" stroke-linecap="round" transform="rotate(-90 55 55)"/>
+          <text x="55" y="50" text-anchor="middle" font-family="'Bebas Neue',sans-serif" font-size="18" fill="var(--pr)">325</text>
+          <text x="55" y="65" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="var(--muted)">HP</text>
+        </svg>
+      </div>
+      <div class="hc-desc">The LFP chemistry swap for 2026 rewrites the ownership contract. Zero structural memory means 100% SoC every night &mdash; no guilt, no degradation risk. BlueCruise hands-free highway driving is included. This is the smartest buy in the segment.</div>
+      <div class="kpi-row">
+        <div class="kpi"><span class="kpi-l">0&ndash;60 mph</span><span class="kpi-v cpr">4.6 s</span></div>
+        <div class="kpi"><span class="kpi-l">Peak Torque</span><span class="kpi-v cpr">500 lb-ft</span></div>
+        <div class="kpi"><span class="kpi-l">LFP kWh</span><span class="kpi-v cpr">73 kWh</span></div>
+        <div class="kpi"><span class="kpi-l">Daily Range</span><span class="kpi-v cpr">260 mi</span></div>
+      </div>
+    </div>
+
+    <div class="gc hero-card">
+      <div class="gc-top bts"></div>
+      <div class="hc-brand">Tesla &middot; MY2026</div>
+      <div class="hc-model cts">Model Y LR AWD</div>
+      <div class="hc-tag">The Efficient One</div>
+      <div style="display:flex;justify-content:center;margin-bottom:.75rem">
+        <svg width="110" height="110" viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="44" fill="none" stroke="var(--s2)" stroke-width="10"/>
+          <circle cx="55" cy="55" r="44" fill="none" stroke="var(--ts)" stroke-width="10" stroke-dasharray="276.5" stroke-dashoffset="77" stroke-linecap="round" transform="rotate(-90 55 55)"/>
+          <text x="55" y="50" text-anchor="middle" font-family="'Bebas Neue',sans-serif" font-size="18" fill="var(--ts)">346</text>
+          <text x="55" y="65" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="var(--muted)">HP</text>
+        </svg>
+      </div>
+      <div class="hc-desc">The 0.23 Cd drag coefficient and Octovalve heat pump make the Model Y the range and efficiency king. At 327 miles EPA and 250 kW Supercharging, no crossover EV is better at covering ground. OTA software cadence ensures it improves continuously post-purchase.</div>
+      <div class="kpi-row">
+        <div class="kpi"><span class="kpi-l">0&ndash;60 mph</span><span class="kpi-v cts">4.6 s</span></div>
+        <div class="kpi"><span class="kpi-l">Peak Torque</span><span class="kpi-v cts">376 lb-ft</span></div>
+        <div class="kpi"><span class="kpi-l">Gross kWh</span><span class="kpi-v cts">~82 kWh</span></div>
+        <div class="kpi"><span class="kpi-l">EPA Range</span><span class="kpi-v cts">327 mi</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+<div class="slide" id="slide-2">
+  <div class="eyebrow">At-a-Glance Scoring &middot; Multi-Axis Analysis</div>
+  <div class="slide-h">How They Score Across Every Axis.</div>
+  <div class="slide-sub">Visual scoring across 8 key ownership dimensions. Green = class leader. Amber = competitive. Red = notable weakness.</div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;flex:1;min-height:0">
+
+   <div class="gc" style="padding:.75rem .75rem .5rem;display:flex;flex-direction:column;min-height:0">
+  <div style="font-family:var(--mono);font-size:.54rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem;font-weight:700;text-align:center">Multi-Axis Performance Radar &mdash; 0&ndash;10 Scale</div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:0">
+  <svg id="radar-svg" style="width:100%;height:100%;display:block" viewBox="0 0 600 440" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div style="display:flex;gap:1.25rem;justify-content:center;margin-top:.4rem;flex-wrap:wrap;padding-bottom:.2rem">
+    <div style="display:flex;align-items:center;gap:.45rem;font-family:var(--mono);font-size:.63rem;color:var(--body)"><div style="width:11px;height:11px;border-radius:50%;background:var(--gt);flex-shrink:0"></div>Mach-E GT</div>
+    <div style="display:flex;align-items:center;gap:.45rem;font-family:var(--mono);font-size:.63rem;color:var(--body)"><div style="width:11px;height:11px;border-radius:50%;background:var(--pr);flex-shrink:0"></div>Mach-E Premium</div>
+    <div style="display:flex;align-items:center;gap:.45rem;font-family:var(--mono);font-size:.63rem;color:var(--body)"><div style="width:11px;height:11px;border-radius:50%;background:var(--ts);flex-shrink:0"></div>Model Y LR</div>
+  </div>
+</div>
+
+    <div style="display:flex;flex-direction:column;gap:.75rem;min-height:0">
+
+      <div class="gc" style="padding:1.1rem;flex:1;min-height:0;display:flex;flex-direction:column">
+        <div style="font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.65rem;font-weight:700">Category Scorecard</div>
+        <table style="width:100%;border-collapse:collapse;font-family:var(--mono);flex:1">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:.45rem .6rem;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);width:38%;font-weight:600">Category</th>
+              <th style="text-align:center;padding:.45rem .4rem;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gt);width:20.5%;font-weight:700">GT</th>
+              <th style="text-align:center;padding:.45rem .4rem;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--pr);width:20.5%;font-weight:700">Prem</th>
+              <th style="text-align:center;padding:.45rem .4rem;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ts);width:21%;font-weight:700">Model Y</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:.42rem .6rem;font-size:.6rem;color:var(--body);letter-spacing:.06em;text-transform:uppercase">Performance</td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(34,197,94,.15);color:#34D478;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#127942; 10/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9889; 7/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9889; 7/10</span></td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:.42rem .6rem;font-size:.6rem;color:var(--body);letter-spacing:.06em;text-transform:uppercase">Range / Efficiency</td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(239,68,68,.12);color:#FF7070;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#8595; 6/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 8/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(34,197,94,.15);color:#34D478;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#127942; 10/10</span></td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:.42rem .6rem;font-size:.6rem;color:var(--body);letter-spacing:.06em;text-transform:uppercase">Daily Usability</td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 7/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(34,197,94,.15);color:#34D478;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#127942; 10/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 8/10</span></td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:.42rem .6rem;font-size:.6rem;color:var(--body);letter-spacing:.06em;text-transform:uppercase">Charging Speed</td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 7/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 7/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(34,197,94,.15);color:#34D478;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#127942; 10/10</span></td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:.42rem .6rem;font-size:.6rem;color:var(--body);letter-spacing:.06em;text-transform:uppercase">Chassis / Dynamics</td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(34,197,94,.15);color:#34D478;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#127942; 10/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 7/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 8/10</span></td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:.42rem .6rem;font-size:.6rem;color:var(--body);letter-spacing:.06em;text-transform:uppercase">Tech / Software</td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 8/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 8/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(34,197,94,.15);color:#34D478;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#127942; 10/10</span></td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:.42rem .6rem;font-size:.6rem;color:var(--body);letter-spacing:.06em;text-transform:uppercase">Comfort / NVH</td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 8/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(34,197,94,.15);color:#34D478;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#127942; 10/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(239,68,68,.12);color:#FF7070;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#8595; 6/10</span></td>
+            </tr>
+            <tr>
+              <td style="padding:.42rem .6rem;font-size:.6rem;color:var(--body);letter-spacing:.06em;text-transform:uppercase">Long-Distance</td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 7/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(251,191,36,.10);color:#FBC840;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#9650; 8/10</span></td>
+              <td style="padding:.42rem .4rem;text-align:center"><span style="background:rgba(34,197,94,.15);color:#34D478;border-radius:4px;padding:.2rem .4rem;font-size:.6rem;font-weight:700;display:inline-block;width:100%;text-align:center">&#127942; 10/10</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="gc" style="padding:1.1rem">
+        <div style="font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.7rem;font-weight:700">Overall Points Tally (out of 80)</div>
+        <div style="display:flex;flex-direction:column;gap:.65rem">
+
+          <div style="display:grid;grid-template-columns:110px 1fr 60px;align-items:center;gap:.75rem">
+            <div style="font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--gt);text-align:right;font-weight:700">Mach-E GT</div>
+            <div style="position:relative;height:22px;background:var(--s2);border-radius:4px;overflow:hidden">
+              <div class="bc-fill" style="height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gt-dim),var(--gt))" data-target="87.5" data-pw="87.5%"></div>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:.5rem;font-family:var(--mono);font-size:.58rem;color:rgba(0,0,0,0.7);font-weight:700;mix-blend-mode:multiply">70 pts</div>
+            </div>
+            <div style="font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--gt)">70/80</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:110px 1fr 60px;align-items:center;gap:.75rem">
+            <div style="font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--pr);text-align:right;font-weight:700">Mach-E Prem</div>
+            <div style="position:relative;height:22px;background:var(--s2);border-radius:4px;overflow:hidden">
+              <div class="bc-fill" style="height:100%;border-radius:4px;background:linear-gradient(90deg,var(--pr-dim),var(--pr))" data-target="93.75" data-pw="93.75%"></div>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:.5rem;font-family:var(--mono);font-size:.58rem;color:rgba(0,0,0,0.7);font-weight:700;mix-blend-mode:multiply">75 pts</div>
+            </div>
+            <div style="font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--pr)">75/80</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:110px 1fr 60px;align-items:center;gap:.75rem">
+            <div style="font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ts);text-align:right;font-weight:700">Model Y LR</div>
+            <div style="position:relative;height:22px;background:var(--s2);border-radius:4px;overflow:hidden">
+              <div class="bc-fill" style="height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ts-dim),var(--ts))" data-target="98.75" data-pw="98.75%"></div>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:.5rem;font-family:var(--mono);font-size:.58rem;color:rgba(0,0,0,0.7);font-weight:700;mix-blend-mode:multiply">79 pts</div>
+            </div>
+            <div style="font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--ts)">79/80</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div></div></div>
+
+
+<div class="slide" id="slide-3">
+  <div class="eyebrow">Section 01 &middot; Powertrain Architecture &amp; Telemetry</div>
+  <div class="slide-h">Power, Torque<br>&amp; Acceleration.</div>
+  <div class="slide-sub">Motor topologies, inverter maps, and instrumented acceleration data. Winner badges indicate class leadership per metric.</div>
+  <div class="two-col">
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+      <div class="gc" style="padding:1.1rem">
+        <div class="bar-group-title">Peak Torque (lb-ft) &mdash; Higher = Better</div>
+        <div class="bar-compare">
+          <div class="bc-row"><div class="bc-label">GT (w/ Upgrade)</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--gt-dim),var(--gt))" data-target="100" data-pw="100%"></div></div><div class="bc-val cgt">700</div></div>
+          <div class="bc-row"><div class="bc-label">Mach-E Premium</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--pr-dim),var(--pr))" data-target="71" data-pw="71%"></div></div><div class="bc-val cpr">500</div></div>
+          <div class="bc-row"><div class="bc-label">Model Y LR</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--ts-dim),var(--ts))" data-target="54" data-pw="54%"></div></div><div class="bc-val cts">376</div></div>
+        </div>
+        <div class="sdiv"></div>
+        <div class="bar-group-title">0&ndash;60 mph (seconds) &mdash; Lower Bar = Faster Car</div>
+        <div class="bar-compare">
+          <div class="bc-row"><div class="bc-label">GT (Perf. Upgrade)</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--gt-dim),var(--gt))" data-target="72" data-pw="72%"></div></div><div class="bc-val cgt">3.3 s</div></div>
+          <div class="bc-row"><div class="bc-label">GT (Standard)</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--gt-dim),var(--gt))" data-target="82" data-pw="82%"></div></div><div class="bc-val cgt">3.8 s</div></div>
+          <div class="bc-row"><div class="bc-label">Mach-E Premium</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--pr-dim),var(--pr))" data-target="100" data-pw="100%"></div></div><div class="bc-val cpr">4.6 s</div></div>
+          <div class="bc-row"><div class="bc-label">Model Y LR</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--ts-dim),var(--ts))" data-target="100" data-pw="100%"></div></div><div class="bc-val cts">4.6 s</div></div>
+        </div>
+      </div>
+      <div class="gc" style="padding:1.1rem">
+        <table class="vspec-table">
+          <thead><tr><th>Spec</th><th class="cgt">Mach-E GT</th><th class="cpr">Mach-E Prem</th><th class="cts">Model Y LR</th></tr></thead>
+          <tbody>
+            <tr><td>Front Motor</td><td>PMSM <span class="badge gt">Torque Leader</span></td><td>PMSM</td><td>AC Induction</td></tr>
+            <tr><td>Rear Motor</td><td>High-output PMSM</td><td>PMSM</td><td>PMSRM (97% eff.) <span class="badge ts">Most Efficient</span></td></tr>
+            <tr><td>1/4 Mile</td><td>11.8 s @ 114 mph <span class="badge gt">Quickest</span></td><td>13.2 s @ 104 mph</td><td>12.2 s @ 114 mph</td></tr>
+            <tr><td>Top Speed</td><td>124 mph</td><td>111 mph</td><td>135 mph <span class="badge ts">Fastest</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="insight-box">
+      <div class="ib-head">&#128300; Engineer's Notes</div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--gt)"></div><div class="ib-text"><strong>GT Inverter Re-Map:</strong> Ford Performance raised the current ceiling above standard thermal limits &mdash; trading long-term margin for repeatable peak burst torque. Multiple back-to-back launches show minimal power attenuation.</div></div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--ts)"></div><div class="ib-text"><strong>Tesla PMSRM:</strong> Uses both magnetic torque and reluctance torque simultaneously. At cruise speed it operates near 97% efficiency &mdash; the primary reason Model Y dominates range-per-kWh metrics versus any PMSM competitor.</div></div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--pr)"></div><div class="ib-text"><strong>Premium's 500 lb-ft:</strong> Deceptively fast in real-world feel. The 0&ndash;40 mph torque delivery is immediate and linear. The 4.6s number understates how it pulls onto a highway at full throttle.</div></div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--ts)"></div><div class="ib-text"><strong>OTA Power Unlock:</strong> Tesla's $2k Acceleration Boost drops 0&ndash;60 to 4.2s via overnight software update &mdash; zero hardware changes. Ford has no equivalent OTA performance path on either Mach-E.</div></div>
+    </div>
+  </div>
+</div>
+
+
+<div class="slide" id="slide-4">
+  <div class="eyebrow">Section 02 &middot; Battery Chemistry, Pack Design &amp; Charging Infrastructure</div>
+  <div class="slide-h">Chemistry, Range<br>&amp; Charging.</div>
+  <div class="slide-sub">The LFP vs NMC argument fundamentally changes the daily ownership calculus. Charging speed and network infrastructure determine road-trip viability.</div>
+  <div class="two-col">
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+      <div class="gc" style="padding:1.1rem">
+        <div class="bar-group-title">Effective DAILY Usable Energy (kWh at Recommended Charge Limit)</div>
+        <div class="bar-compare">
+          <div class="bc-row"><div class="bc-label">GT &mdash; 80% of 91</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--gt-dim),var(--gt))" data-target="99" data-pw="99%"></div></div><div class="bc-val cgt">72.8 kWh</div></div>
+          <div class="bc-row"><div class="bc-label">Premium &mdash; 100% &#10003;</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--pr-dim),var(--pr))" data-target="100" data-pw="100%"></div></div><div class="bc-val cpr">73.0 kWh <span class="badge pr">LFP WIN</span></div></div>
+          <div class="bc-row"><div class="bc-label">Model Y &mdash; 80% of 82</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--ts-dim),var(--ts))" data-target="90" data-pw="90%"></div></div><div class="bc-val cts">65.6 kWh</div></div>
+        </div>
+        <div style="font-family:var(--mono);font-size:.62rem;color:var(--body);margin-top:.6rem;padding:.5rem;background:var(--s2);border-radius:6px">&#9889; Despite a smaller 73 kWh pack, the Premium's LFP at 100% daily SoC yields more effective daily energy than larger NMC packs at their recommended 80% limit.</div>
+      </div>
+      <div class="gc" style="padding:1.1rem">
+        <div class="bar-group-title">Peak DC Fast Charge Rate (kW) &mdash; Higher = Better</div>
+        <div class="bar-compare">
+          <div class="bc-row"><div class="bc-label">Mach-E GT</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--gt-dim),var(--gt))" data-target="60" data-pw="60%"></div></div><div class="bc-val cgt">150 kW</div></div>
+          <div class="bc-row"><div class="bc-label">Mach-E Premium</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--pr-dim),var(--pr))" data-target="60" data-pw="60%"></div></div><div class="bc-val cpr">150 kW</div></div>
+          <div class="bc-row"><div class="bc-label">Model Y LR</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--ts-dim),var(--ts))" data-target="100" data-pw="100%"></div></div><div class="bc-val cts">250 kW <span class="badge ts">Winner</span></div></div>
+        </div>
+      </div>
+      <div class="gc" style="padding:1.1rem">
+        <table class="vspec-table">
+          <thead><tr><th>Spec</th><th class="cgt">GT</th><th class="cpr">Premium</th><th class="cts">Model Y</th></tr></thead>
+          <tbody>
+            <tr><td>Cell Chemistry</td><td>NMC</td><td>LFP <span class="badge pr">Longevity</span></td><td>NCA / 4680 NMC</td></tr>
+            <tr><td>10&ndash;80% Time</td><td>~36 min</td><td>~33 min</td><td>~27 min <span class="badge ts">Fastest</span></td></tr>
+            <tr><td>Thermal Mgmt</td><td>Liquid-cooled + PTC</td><td>Liquid + PTC (LFP stable)</td><td>Octovalve Heat Pump <span class="badge ts">Best</span></td></tr>
+            <tr><td>Network Access</td><td>CCS + NACS adapter</td><td>CCS + NACS adapter</td><td>NACS native <span class="badge ts">Seamless</span></td></tr>
+            <tr><td>City MPGe</td><td>88</td><td>96</td><td>129 <span class="badge ts">Most Efficient</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="insight-box">
+      <div class="ib-head">&#9877; Chemistry Deep Dive</div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--pr)"></div><div class="ib-text"><strong>LFP Olivine Structure:</strong> Lithium Iron Phosphate uses a thermally stable olivine crystal lattice. Unlike NMC, it does not experience SEI growth at 100% SoC &mdash; 10-year degradation curves are dramatically flatter than NMC competitors.</div></div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--ts)"></div><div class="ib-text"><strong>Tesla Octovalve:</strong> A single 8-way heat-exchanger valve routes coolant between battery, motors, power electronics, and cabin simultaneously &mdash; recovering waste motor heat to warm the pack in cold weather instead of drawing via resistive PTC heaters.</div></div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--gt)"></div><div class="ib-text"><strong>GT's Advantage Shrinks Daily:</strong> The 91 kWh pack sounds dominant &mdash; but at 80% daily limit, effective usable energy is 72.8 kWh. The LFP Premium at 100% yields 73.0 kWh. GT's real advantage only materializes beyond 260 miles on a single charge.</div></div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--ts)"></div><div class="ib-text"><strong>Supercharger Pre-Conditioning:</strong> Tesla's native route planning automatically heats the battery to optimal temperature before arrival. Ford requires manual initiation &mdash; a notable UX gap on cold-weather road trips.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="slide" id="slide-5">
+  <div class="eyebrow">Section 03 &middot; Fuel Cost Analysis &amp; Ownership Economics</div>
+  <div class="slide-h">Cost to Drive.<br>Your Numbers.</div>
+  <div class="slide-sub">Adjust the sliders to match your electricity rate, live vehicle efficiency, and your ICE vehicle's fuel economy. Costs update instantly.</div>
+
+  <div class="gc" style="padding:1rem 1.25rem;margin-bottom:.85rem">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center">
+
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem">
+          <label for="kwh-slider" style="font-family:var(--mono);font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700">
+            &#9889; Electricity Rate
+          </label>
+          <div style="display:flex;align-items:baseline;gap:.2rem">
+            <span id="kwh-display" style="font-family:var(--mono);font-size:1.3rem;font-weight:700;color:var(--gt)">0.17</span>
+            <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted)">$/kWh</span>
+          </div>
+        </div>
+        <input type="range" id="kwh-slider"
+          min="0" max="60" value="17" step="1"
+          style="width:100%;height:6px;-webkit-appearance:none;appearance:none;
+                 border-radius:99px;outline:none;cursor:pointer;
+                 background:var(--s2)"
+          oninput="updateCosts()"/>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.52rem;color:var(--muted);margin-top:.25rem">
+          <span>$0.00</span><span>$0.30</span><span>$0.60</span>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem">
+          <label for="mpg-slider" style="font-family:var(--mono);font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-weight:700">
+            &#9981; ICE Vehicle Fuel Economy
+          </label>
+          <div style="display:flex;align-items:baseline;gap:.2rem">
+            <span id="mpg-display" style="font-family:var(--mono);font-size:1.3rem;font-weight:700;color:var(--muted)">28</span>
+            <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted)">MPG</span>
+          </div>
+        </div>
+        <input type="range" id="mpg-slider"
+          min="15" max="45" value="28" step="1"
+          style="width:100%;height:6px;-webkit-appearance:none;appearance:none;
+                 border-radius:99px;outline:none;cursor:pointer;
+                 background:var(--s2)"
+          oninput="updateCosts()"/>
+        <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.52rem;color:var(--muted);margin-top:.25rem">
+          <span>15 MPG</span><span>30 MPG</span><span>45 MPG</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;flex:1;min-height:0">
+
+    <div style="display:flex;flex-direction:column;gap:.85rem;min-height:0">
+      
+      <div class="gc" style="padding:1.1rem;">
+        <div style="font-family:var(--mono);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:.75rem;font-weight:700">Live EV Efficiency (mi/kWh)</div>
+        
+        <div style="margin-bottom:.65rem;">
+            <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.6rem;margin-bottom:.25rem;">
+                <span style="color:var(--gt);font-weight:700;">Mach-E GT</span>
+                <span id="eff-val-gt" style="font-weight:700;color:var(--text);">3.3</span>
+            </div>
+            <div class="eff-slider-wrap">
+                <div class="epa-tick-label" style="left:43.33%;">EPA</div><div class="epa-tick" style="left:43.33%;"></div>
+                <input type="range" id="eff-slider-gt" min="2.0" max="5.0" step="0.1" value="3.3" style="width:100%;-webkit-appearance:none;height:6px;border-radius:99px;background:var(--s2);outline:none;cursor:pointer" oninput="updateCosts()"/>
+            </div>
+        </div>
+
+        <div style="margin-bottom:.65rem;">
+            <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.6rem;margin-bottom:.25rem;">
+                <span style="color:var(--pr);font-weight:700;">Mach-E Premium</span>
+                <span id="eff-val-pr" style="font-weight:700;color:var(--text);">3.6</span>
+            </div>
+            <div class="eff-slider-wrap">
+                <div class="epa-tick-label" style="left:53.33%;">EPA</div><div class="epa-tick" style="left:53.33%;"></div>
+                <input type="range" id="eff-slider-pr" min="2.0" max="5.0" step="0.1" value="3.6" style="width:100%;-webkit-appearance:none;height:6px;border-radius:99px;background:var(--s2);outline:none;cursor:pointer" oninput="updateCosts()"/>
+            </div>
+        </div>
+
+        <div>
+            <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.6rem;margin-bottom:.25rem;">
+                <span style="color:var(--ts);font-weight:700;">Model Y LR</span>
+                <span id="eff-val-my" style="font-weight:700;color:var(--text);">4.2</span>
+            </div>
+            <div class="eff-slider-wrap">
+                <div class="epa-tick-label" style="left:73.33%;">EPA</div><div class="epa-tick" style="left:73.33%;"></div>
+                <input type="range" id="eff-slider-my" min="2.0" max="5.0" step="0.1" value="4.2" style="width:100%;-webkit-appearance:none;height:6px;border-radius:99px;background:var(--s2);outline:none;cursor:pointer" oninput="updateCosts()"/>
+            </div>
+        </div>
+      </div>
+
+      <div class="gc" style="padding:1.1rem; flex:1;">
+        <table style="width:100%;border-collapse:collapse;font-family:var(--mono)">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:.45rem .5rem;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;width:30%">Metric</th>
+              <th style="text-align:center;padding:.45rem .35rem;font-size:.58rem;text-transform:uppercase;color:var(--gt);font-weight:700;width:23%">GT</th>
+              <th style="text-align:center;padding:.45rem .35rem;font-size:.58rem;text-transform:uppercase;color:var(--pr);font-weight:700;width:24%">Premium</th>
+              <th style="text-align:center;padding:.45rem .35rem;font-size:.58rem;text-transform:uppercase;color:var(--ts);font-weight:700;width:23%">Model Y</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:.45rem .5rem;font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">&#9889; $/Mile</td>
+              <td style="padding:.45rem .35rem;text-align:center">
+                <span id="cpm-gt" style="border-radius:4px;padding:.22rem .5rem;font-size:.7rem;font-weight:700;display:inline-block;background:rgba(0,194,255,.15);color:var(--gt)">$0.052</span>
+              </td>
+              <td style="padding:.45rem .35rem;text-align:center">
+                <span id="cpm-pr" style="border-radius:4px;padding:.22rem .5rem;font-size:.7rem;font-weight:700;display:inline-block;background:rgba(91,155,255,.15);color:var(--pr)">$0.047</span>
+              </td>
+              <td style="padding:.45rem .35rem;text-align:center">
+                <span id="cpm-my" style="border-radius:4px;padding:.22rem .5rem;font-size:.7rem;font-weight:700;display:inline-block;background:rgba(255,107,107,.15);color:var(--ts)">$0.040</span>
+              </td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:.45rem .5rem;font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Annual (15k mi)</td>
+              <td style="padding:.45rem .35rem;text-align:center;font-size:.66rem;font-weight:700;color:var(--body)" id="ann-gt">$780</td>
+              <td style="padding:.45rem .35rem;text-align:center;font-size:.66rem;font-weight:700;color:var(--body)" id="ann-pr">$706</td>
+              <td style="padding:.45rem .35rem;text-align:center;font-size:.66rem;font-weight:700;color:var(--body)" id="ann-my">$600</td>
+            </tr>
+            <tr>
+              <td style="padding:.45rem .5rem;font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">5-Year Total</td>
+              <td style="padding:.45rem .35rem;text-align:center;font-size:.66rem;font-weight:700;color:var(--body)" id="fyr-gt">$3,900</td>
+              <td style="padding:.45rem .35rem;text-align:center;font-size:.66rem;font-weight:700;color:var(--body)" id="fyr-pr">$3,531</td>
+              <td style="padding:.45rem .35rem;text-align:center;font-size:.66rem;font-weight:700;color:var(--body)" id="fyr-my">$3,001</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div><div style="display:flex;flex-direction:column;gap:.85rem;min-height:0">
+
+      <div class="gc" style="padding:1.1rem">
+        <div style="font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.65rem;font-weight:700">&#128200; Live EV vs ICE Comparison</div>
+
+        <div style="background:var(--s2);border-radius:8px;padding:.75rem 1rem;margin-bottom:.65rem;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-family:var(--mono);font-size:.55rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:.2rem">Your ICE Vehicle</div>
+            <div style="font-family:var(--mono);font-size:.6rem;color:var(--body)" id="ice-label">28 MPG &middot; Gas price set below</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:var(--mono);font-size:.55rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:.2rem">Cost / Mile</div>
+            <div style="font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--text)" id="ice-cpm-display">—</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:.75rem">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.35rem">
+            <label style="font-family:var(--mono);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700">&#9981; Gas Price</label>
+            <div style="display:flex;align-items:baseline;gap:.2rem">
+              <span id="gas-display" style="font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--muted)">3.50</span>
+              <span style="font-family:var(--mono);font-size:.6rem;color:var(--muted)">$/gal</span>
+            </div>
+          </div>
+          <input type="range" id="gas-slider"
+            min="250" max="500" value="350" step="5"
+            style="width:100%;height:6px;-webkit-appearance:none;appearance:none;
+                   border-radius:99px;outline:none;cursor:pointer;
+                   background:var(--s2)"
+            oninput="updateCosts()"/>
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.52rem;color:var(--muted);margin-top:.2rem">
+            <span>$2.50</span><span>$3.75</span><span>$5.00</span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem" id="compare-cells">
+          </div>
+      </div>
+
+      <div class="gc" style="padding:1.1rem; flex:1;">
+        <div style="font-family:var(--mono);font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem;font-weight:700">5-Year Fuel Savings vs ICE</div>
+        <div style="font-family:var(--mono);font-size:.55rem;color:var(--muted);margin-bottom:.7rem" id="savings-subtitle">Comparing to ICE @ 28 MPG</div>
+        <div style="display:flex;flex-direction:column;gap:.6rem" id="savings-bars">
+          </div>
+      </div>
+
+    </div></div>
+</div>
+
+
+<div class="slide" id="slide-6">
+  <div class="eyebrow">Section 04 &middot; Suspension Geometry, Braking &amp; NVH Architecture</div>
+  <div class="slide-h">Chassis, Dynamics<br>&amp; Feel.</div>
+  <div class="slide-sub">Where the Mach-E GT pulls away decisively. Suspension topology, unsprung mass, brake hardware, and skidpad data.</div>
+  <div class="two-col">
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+      <div class="gc" style="padding:1.1rem">
+        <div class="bar-group-title">Estimated Skidpad Lateral G &mdash; Higher = Better Handling</div>
+        <div class="bar-compare">
+          <div class="bc-row"><div class="bc-label">Mach-E GT</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--gt-dim),var(--gt))" data-target="100" data-pw="100%"></div></div><div class="bc-val cgt">~0.92g <span class="badge gt">Best</span></div></div>
+          <div class="bc-row"><div class="bc-label">Model Y LR</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--ts-dim),var(--ts))" data-target="96" data-pw="96%"></div></div><div class="bc-val cts">~0.88g</div></div>
+          <div class="bc-row"><div class="bc-label">Mach-E Premium</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--pr-dim),var(--pr))" data-target="92" data-pw="92%"></div></div><div class="bc-val cpr">~0.85g</div></div>
+        </div>
+        <div class="sdiv"></div>
+        <div class="bar-group-title">Curb Weight (lbs) &mdash; Lower = Better for Performance</div>
+        <div class="bar-compare">
+          <div class="bc-row"><div class="bc-label">Model Y LR</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--ts-dim),var(--ts))" data-target="88" data-pw="88%"></div></div><div class="bc-val cts">4,398 <span class="badge ts">Lightest</span></div></div>
+          <div class="bc-row"><div class="bc-label">Mach-E Premium</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--pr-dim),var(--pr))" data-target="93" data-pw="93%"></div></div><div class="bc-val cpr">4,650</div></div>
+          <div class="bc-row"><div class="bc-label">Mach-E GT</div><div class="bc-track"><div class="bc-fill" style="background:linear-gradient(90deg,var(--gt-dim),var(--gt))" data-target="100" data-pw="100%"></div></div><div class="bc-val cgt">4,991</div></div>
+        </div>
+      </div>
+      <div class="gc" style="padding:1.1rem">
+        <table class="vspec-table">
+          <thead><tr><th>Spec</th><th class="cgt">GT</th><th class="cpr">Premium</th><th class="cts">Model Y</th></tr></thead>
+          <tbody>
+            <tr><td>Front Suspension</td><td>MacPherson + MagneRide&#174; 4 <span class="badge gt">Adaptive</span></td><td>MacPherson (Passive soft)</td><td>Double Wishbone (Passive stiff)</td></tr>
+            <tr><td>Rear Suspension</td><td>Multi-link + MagneRide&#174; 4</td><td>Multi-link (Passive)</td><td>Multi-link (Passive)</td></tr>
+            <tr><td>MagneRide Detail</td><td>1,000 adj/sec &mdash; same tech as Corvette Z06 <span class="badge gt">Unique</span></td><td>N/A</td><td>N/A</td></tr>
+            <tr><td>Front Brakes</td><td>Brembo 4-piston, 385mm <span class="badge gt">Best Hardware</span></td><td>Single piston, 362mm</td><td>4-piston fixed, 355mm</td></tr>
+            <tr><td>Drag (Cd)</td><td>0.28</td><td>0.27</td><td>0.23 <span class="badge ts">Best Aero</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="insight-box">
+      <div class="ib-head">&#127950; Dynamics Notes</div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--gt)"></div><div class="ib-text"><strong>MagneRide 4 (Multimatic):</strong> Magnetic particles in damper fluid align in microseconds when current is applied &mdash; 1,000 adjustments per second. Same core technology as the Corvette Z06. Sports-car body control with near-luxury ride compliance simultaneously. No passive suspension achieves this duality.</div></div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--ts)"></div><div class="ib-text"><strong>Tesla Double Wishbone Front:</strong> Superior camber control under lateral load vs. MacPherson strut geometry &mdash; but Tesla's stiff passive tune transfers secondary road texture to occupants measurably more than either Mach-E at highway speed.</div></div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--pr)"></div><div class="ib-text"><strong>Premium's Ride Priority:</strong> Softer spring rates produce the most compliant daily ride of the three. Correct tuning for 12,000+ urban miles per year. Dynamics intentionally take a back seat to occupant isolation.</div></div>
+      <div class="ib-item"><div class="ib-dot" style="background:var(--gt)"></div><div class="ib-text"><strong>Brembo Advantage:</strong> 4-piston fixed monobloc calipers deliver better pedal linearity, more thermal mass, and superior fade resistance vs. the sliding single-piston units on the Premium. On canyon roads this hardware gap is immediately felt.</div></div>
+    </div>
+  </div>
+</div>
+
+
+<div class="slide" id="slide-7">
+  <div class="eyebrow">Section 05 &middot; Software Architecture, ADAS &amp; Connectivity</div>
+  <div class="slide-h">Silicon, Software<br>&amp; Autonomy.</div>
+  <div class="slide-sub">The most philosophically divergent battleground. Ford bets on open integration and sensor fusion. Tesla bets on pure vision and OTA evolution.</div>
+  <div style="display:flex;flex-direction:column;gap:.75rem">
+    <div class="gc" style="padding:1.1rem">
+      <div class="hmap" style="grid-template-columns:175px 1fr 1fr 1fr">
+        <div></div>
+        <div class="hmap-head cgt">Mach-E GT</div>
+        <div class="hmap-head cpr">Mach-E Premium</div>
+        <div class="hmap-head cts">Model Y LR</div>
+        <div class="hmap-row-label">Infotainment SoC</div>
+        <div class="hmap-cell hm-mid" style="grid-column:2/4">Snapdragon SA8195P &mdash; QNX RTOS kernel</div>
+        <div class="hmap-cell hm-mid">AMD Ryzen + Custom GPU (Linux)</div>
+        <div class="hmap-row-label">Driver Display</div>
+        <div class="hmap-cell hm-win" style="grid-column:2/4">&#10003; 10.2" Dedicated digital cluster</div>
+        <div class="hmap-cell hm-low">&#10007; None &mdash; center screen only</div>
+        <div class="hmap-row-label">CarPlay / Android Auto</div>
+        <div class="hmap-cell hm-win" style="grid-column:2/4">&#10003; Wireless, both platforms</div>
+        <div class="hmap-cell hm-low">&#10007; Not supported &mdash; native apps only</div>
+        <div class="hmap-row-label">Hands-Free Highway</div>
+        <div class="hmap-cell hm-win" style="grid-column:2/4">&#10003; BlueCruise 1.2 &mdash; IR eye-tracking DMS</div>
+        <div class="hmap-cell hm-mid">FSD $8k option &mdash; hands-on required</div>
+        <div class="hmap-row-label">ADAS Sensor Suite</div>
+        <div class="hmap-cell hm-win" style="grid-column:2/4">Radar + 8 Cameras + 12 Ultrasonic (Mobileye)</div>
+        <div class="hmap-cell hm-mid">HW4.0 &mdash; 9 cameras only, pure vision</div>
+        <div class="hmap-row-label">OTA Updates</div>
+        <div class="hmap-cell hm-mid" style="grid-column:2/4">FOTA &mdash; modular ECU updates, slower cadence</div>
+        <div class="hmap-cell hm-win">Full vehicle OTA &mdash; inverter + FSD weekly</div>
+        <div class="hmap-row-label">Charging Network</div>
+        <div class="hmap-cell hm-mid" style="grid-column:2/4">CCS native + NACS via adapter (17k+ Superchargers)</div>
+        <div class="hmap-cell hm-win">NACS native &mdash; seamless pre-conditioning</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+      <div class="insight-box">
+        <div class="ib-head">&#128737; BlueCruise vs Tesla Autopilot</div>
+        <div class="ib-item"><div class="ib-dot" style="background:var(--pr)"></div><div class="ib-text"><strong>BlueCruise 1.2</strong> uses infrared DMS eye-tracking &mdash; monitoring where your pupils are aimed, not just head position. Dramatically reduces false disengagements. Genuinely hands-free on ~130,000 pre-mapped US highway miles.</div></div>
+        <div class="ib-item"><div class="ib-dot" style="background:var(--ts)"></div><div class="ib-text"><strong>Tesla FSD (Supervised)</strong> requires hand on torque sensor. The $8k Full Self-Driving option expands capability significantly but remains supervised. Pure-vision HW4.0 has known gaps in low-contrast weather.</div></div>
+      </div>
+      <div class="insight-box">
+        <div class="ib-head">&#128225; Connectivity Winners &amp; Losers</div>
+        <div class="ib-item"><div class="ib-dot" style="background:var(--ts)"></div><div class="ib-text"><strong>Tesla OTA is unmatched:</strong> Inverter maps, regen, suspension calibration, and FSD all update overnight. Your Model Y is demonstrably a better car 12 months post-purchase than at delivery.</div></div>
+        <div class="ib-item"><div class="ib-dot" style="background:var(--pr)"></div><div class="ib-text"><strong>Ford wins on openness:</strong> Wireless CarPlay and Android Auto are non-negotiable for buyers with curated app ecosystems. Tesla's refusal to support either platform remains the single most polarizing ownership decision in the segment.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="slide" id="slide-8">
+  <div class="eyebrow">Buyer's Guide &middot; Trade-Off &amp; Opportunity Cost Analysis</div>
+  <div class="slide-h">What You Give Up<br>With Each Choice.</div>
+  <div class="slide-sub">Every purchase is a set of trade-offs. Here is exactly what you sacrifice &mdash; and gain &mdash; with each vehicle. No marketing. Just the facts.</div>
+  <div class="tradeoff-grid">
+
+    <div class="to-card" style="border-top:3px solid var(--gt)">
+      <div class="to-top"><div class="to-icon">&#127937;</div><div><div class="to-model cgt">BUY THE GT</div><div class="to-subtitle">You gain these advantages</div></div></div>
+      <span class="to-section-label win">&#10003; What You Win</span>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>MagneRide 4</strong> &mdash; the only adaptive damping in this class. 1,000 adj/sec.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>700 lb-ft + Brembo brakes</strong> &mdash; legitimate, repeatable performance hardware.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>3.3s 0&ndash;60</strong> &mdash; class-leading, repeatable without thermal rollback.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>~0.92g skidpad</strong> &mdash; sports-car lateral grip from a 4,991-lb SUV.</div></div>
+      <span class="to-section-label miss">&#10007; What You Miss vs Premium</span>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No LFP chemistry</strong> &mdash; must limit to 80% SoC daily or risk accelerated degradation.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>8 fewer MPGe city</strong> &mdash; 88 vs 96. Meaningful over 15,000 annual miles.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>Sport-biased ride</strong> &mdash; MagneRide harder-tuned vs. Premium's isolation focus.</div></div>
+      <span class="to-section-label miss">&#10007; What You Miss vs Model Y</span>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>47 fewer EPA miles</strong> &mdash; 280 vs 327. Limits long-haul planning headroom.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>150 vs 250 kW DC charging</strong> &mdash; adds ~9 minutes per road-trip stop.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No native Supercharger pre-cond.</strong> &mdash; adapter required; cold-weather gaps.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No OTA performance evolution</strong> &mdash; vehicle capabilities are static post-purchase.</div></div>
+    </div>
+
+    <div class="to-card" style="border-top:3px solid var(--pr)">
+      <div class="to-top"><div class="to-icon">&#128197;</div><div><div class="to-model cpr">BUY THE PREMIUM</div><div class="to-subtitle">You gain these advantages</div></div></div>
+      <span class="to-section-label win">&#10003; What You Win</span>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>LFP battery</strong> &mdash; 100% SoC every night, zero guilt, best long-term cell longevity.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>BlueCruise hands-free</strong> &mdash; the most usable highway autonomy system available today.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>Best NVH / ride comfort</strong> &mdash; most acoustically isolated, softest ride of the three.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>Wireless CarPlay + Android Auto</strong> &mdash; your full app ecosystem, immediately.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>4.8 cu-ft frunk</strong> with drain plug &mdash; most usable front storage in class.</div></div>
+      <span class="to-section-label miss">&#10007; What You Miss vs GT</span>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No MagneRide</strong> &mdash; passive suspension only. Perceptibly less dynamic at the limit.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No Brembo brakes</strong> &mdash; single-piston sliding calipers vs. 4-piston fixed monoblocs.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>200 fewer lb-ft</strong> &mdash; 500 vs 700. Significant under hard acceleration.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>0.07g less lateral grip</strong> &mdash; 0.85g vs 0.92g. Notable on back roads at the limit.</div></div>
+      <span class="to-section-label miss">&#10007; What You Miss vs Model Y</span>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>67 fewer EPA miles</strong> &mdash; 260 vs 327. Meaningful on 250+ mile trips.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>100 kW slower DC charging</strong> &mdash; 150 vs 250 kW peak rate.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No Octovalve heat pump</strong> &mdash; less efficient thermal management sub-40&deg;F.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No full-vehicle OTA</strong> &mdash; Ford's update cadence is slower and less comprehensive.</div></div>
+    </div>
+
+    <div class="to-card" style="border-top:3px solid var(--ts)">
+      <div class="to-top"><div class="to-icon">&#128506;</div><div><div class="to-model cts">BUY MODEL Y</div><div class="to-subtitle">You gain these advantages</div></div></div>
+      <span class="to-section-label win">&#10003; What You Win</span>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>327 mi EPA range</strong> &mdash; 47 more than GT; 67 more than the Premium.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>250 kW Supercharging</strong> &mdash; 10&ndash;80% in ~27 min, native pre-conditioning included.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>0.23 Cd drag</strong> &mdash; best aerodynamics in class; primary driver of range supremacy.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>Weekly OTA updates</strong> &mdash; inverter, regen, FSD, and range all improve post-purchase.</div></div>
+      <div class="to-item"><span class="ico">&#8599;</span><div><strong>129 MPGe city</strong> &mdash; lowest cost-per-mile of the three over a 5-year horizon.</div></div>
+      <span class="to-section-label miss">&#10007; What You Miss vs GT</span>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No MagneRide</strong> &mdash; stiff passive tune. Harsher secondary ride at all speeds.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No Brembo hardware</strong> &mdash; lesser pedal feel and thermal endurance at the limit.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>324 fewer lb-ft</strong> &mdash; 376 vs 700 torque. Model Y is not a performance vehicle.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>1.3s slower 0&ndash;60</strong> &mdash; 4.6s vs 3.3s. The gap is visceral back-to-back.</div></div>
+      <span class="to-section-label miss">&#10007; What You Miss vs Premium</span>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No CarPlay / Android Auto</strong> &mdash; biggest polarizer in segment. Non-negotiable for many.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No hands-free highway driving</strong> &mdash; Autopilot requires torque-sensor hand contact.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>Harshest ride of the three</strong> &mdash; stiff passive tune transmits road texture clearly.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>No LFP chemistry</strong> &mdash; NMC requires 80% daily charge limit for long-term health.</div></div>
+      <div class="to-item"><span class="ico">&#8600;</span><div><strong>Smaller frunk</strong> &mdash; 1.7 vs 4.8 cu-ft. Functionally very different practicality.</div></div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="slide" id="slide-9">
+  <div class="eyebrow">Final Analysis &middot; Editorial Verdict</div>
+  <div class="slide-h">The Verdict.</div>
+  <div class="slide-sub">Three architecturally distinct answers. One right choice &mdash; depending entirely on how you drive and where you drive it.</div>
+  <div class="verdict-grid">
+
+    <div class="vc gt">
+      <div class="vc-score" style="color:var(--gt)">GT</div>
+      <div style="height:3px;background:var(--gt);margin:-1.5rem -1.5rem 1rem -1.5rem"></div>
+      <div class="vc-badge">For The Driver</div>
+      <div class="vc-model cgt">Mach-E GT</div>
+      <div class="vc-para">If you have ever read a suspension geometry teardown for fun, the GT is your car. <strong>MagneRide 4 is the decisive hardware advantage</strong> &mdash; the same damping system in the Corvette Z06, tuned for an SUV body without sacrificing compliance. The Brembo brakes provide pedal modulation and thermal endurance the performance envelope demands.<br><br>The 3.3s launch is honest and repeatable. The 700 lb-ft is immediate and violent. This is what it feels like to drive an electric muscle car before the technology became domesticated.</div>
+      <div class="pro-list">
+        <div class="pro-item"><span>&#8599;</span>Only adaptive suspension (MagneRide 4) in class</div>
+        <div class="pro-item"><span>&#8599;</span>Brembo 4-piston 385mm front brakes</div>
+        <div class="pro-item"><span>&#8599;</span>~0.92g skidpad &mdash; genuine sports-car dynamics</div>
+        <div class="pro-item"><span>&#8599;</span>3.3s 0&ndash;60 with repeatable thermal management</div>
+        <div class="pro-item"><span>&#8599;</span>B&amp;O audio + mode-reactive ambient lighting</div>
+      </div>
+    </div>
+
+    <div class="vc pr">
+      <div class="vc-score" style="color:var(--pr)">PR</div>
+      <div style="height:3px;background:var(--pr);margin:-1.5rem -1.5rem 1rem -1.5rem"></div>
+      <div class="vc-badge">For The Owner</div>
+      <div class="vc-model cpr">Mach-E Premium</div>
+      <div class="vc-para">The LFP chemistry upgrade for 2026 is the single most impactful engineering change in Ford's EV lineup. <strong>Charging to 100% every night is no longer an anxiety decision &mdash; it's the manufacturer's recommendation.</strong> The 260-mile full-charge range competes with the GT's 80%-limited 72.8 kWh effective daily energy.<br><br>BlueCruise hands-free, B&amp;O audio, ventilated seats, and the best NVH of the three &mdash; this vehicle will cost less to own and operate over five years than either competitor here.</div>
+      <div class="pro-list">
+        <div class="pro-item"><span>&#8599;</span>LFP chemistry &mdash; 100% daily charge, zero degradation risk</div>
+        <div class="pro-item"><span>&#8599;</span>BlueCruise &mdash; most usable hands-free highway system today</div>
+        <div class="pro-item"><span>&#8599;</span>Best ride comfort and acoustic isolation of the three</div>
+        <div class="pro-item"><span>&#8599;</span>Wireless CarPlay + Android Auto included</div>
+        <div class="pro-item"><span>&#8599;</span>4.8 cu-ft frunk with drain plug &mdash; class-leading practicality</div>
+      </div>
+    </div>
+
+    <div class="vc ts">
+      <div class="vc-score" style="color:var(--ts)">MY</div>
+      <div style="height:3px;background:var(--ts);margin:-1.5rem -1.5rem 1rem -1.5rem"></div>
+      <div class="vc-badge">For The Road Tripper</div>
+      <div class="vc-model cts">Model Y LR AWD</div>
+      <div class="vc-para">If your calendar includes regular 300+ mile drives, the Model Y is the instrument of least resistance. <strong>327 miles, 250 kW Supercharging, native battery pre-conditioning, and the industry's best route planning</strong> create a road-trip experience Ford cannot yet fully replicate.<br><br>The OTA architecture is a genuine long-term competitive advantage. Your Model Y will be a measurably better vehicle 18 months post-purchase &mdash; an engineering reality no other manufacturer in this class can currently claim.</div>
+      <div class="pro-list">
+        <div class="pro-item"><span>&#8599;</span>327 mi EPA &mdash; class-leading by a meaningful margin</div>
+        <div class="pro-item"><span>&#8599;</span>250 kW Supercharging &mdash; 10&ndash;80% in ~27 minutes natively</div>
+        <div class="pro-item"><span>&#8599;</span>0.23 Cd &mdash; best aerodynamics in segment; 129 MPGe city</div>
+        <div class="pro-item"><span>&#8599;</span>Full-vehicle OTA &mdash; inverter + FSD + range improvements post-sale</div>
+        <div class="pro-item"><span>&#8599;</span>Lowest cost-per-mile of the three over 5-year ownership</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="slide" id="slide-10">
+  <div class="eyebrow">Technical Sources &middot; Reference Material</div>
+  <div class="slide-h">Sources &amp;<br>References.</div>
+  <div class="slide-sub">Technical data, instrumented test figures, and architectural analysis sourced and cross-referenced from the following.</div>
+  <div class="ref-grid">
+    <a class="ref-card" href="https://www.caranddriver.com/ford/mustang-mach-e" target="_blank">
+      <span class="ref-label">Instrumented Testing</span>
+      <span class="ref-title">Mach-E Full Test Coverage &mdash; Performance, Range &amp; Dynamics</span>
+      <span class="ref-url">caranddriver.com/ford/mustang-mach-e</span>
+    </a>
+    <a class="ref-card" href="https://www.caranddriver.com/tesla/model-y" target="_blank">
+      <span class="ref-label">Instrumented Testing</span>
+      <span class="ref-title">Tesla Model Y Full Test Coverage &mdash; Range, Efficiency &amp; Dynamics</span>
+      <span class="ref-url">caranddriver.com/tesla/model-y</span>
+    </a>
+    <a class="ref-card" href="https://www.roadandtrack.com" target="_blank">
+      <span class="ref-label">Chassis &amp; Dynamics Analysis</span>
+      <span class="ref-title">EV Platform Engineering &amp; Suspension Deep Dives</span>
+      <span class="ref-url">roadandtrack.com</span>
+    </a>
+    <a class="ref-card" href="https://electrek.co/guides/ford-mustang-mach-e/" target="_blank">
+      <span class="ref-label">Battery Chemistry &amp; Architecture</span>
+      <span class="ref-title">Ford Mach-E LFP Battery Transition &mdash; Cell Chemistry Analysis</span>
+      <span class="ref-url">electrek.co/guides/ford-mustang-mach-e</span>
+    </a>
+    <a class="ref-card" href="https://electrek.co/guides/tesla-model-y/" target="_blank">
+      <span class="ref-label">Octovalve &amp; 4680 Cell Analysis</span>
+      <span class="ref-title">Tesla Model Y Architecture &mdash; Thermal Management &amp; Pack Design</span>
+      <span class="ref-url">electrek.co/guides/tesla-model-y</span>
+    </a>
+    <a class="ref-card" href="https://media.ford.com" target="_blank">
+      <span class="ref-label">OEM Engineering Specifications</span>
+      <span class="ref-title">Ford Media Center &mdash; Official Mach-E Technical Data Sheets</span>
+      <span class="ref-url">media.ford.com</span>
+    </a>
+    <a class="ref-card" href="https://www.tesla.com/modely" target="_blank">
+      <span class="ref-label">OEM Engineering Specifications</span>
+      <span class="ref-title">Tesla Model Y &mdash; Official Performance &amp; Range Data</span>
+      <span class="ref-url">tesla.com/modely</span>
+    </a>
+    <a class="ref-card" href="https://www.motortrend.com" target="_blank">
+      <span class="ref-label">Real-World Range &amp; Efficiency Testing</span>
+      <span class="ref-title">MotorTrend EV Range Testing Protocol &amp; Results</span>
+      <span class="ref-url">motortrend.com</span>
+    </a>
+    <a class="ref-card" href="https://autoblog.com" target="_blank">
+      <span class="ref-label">Market Analysis &amp; Pricing</span>
+      <span class="ref-title">AutoBlog &mdash; Premium EV Crossover Segment Coverage</span>
+      <span class="ref-url">autoblog.com</span>
+    </a>
+    <a class="ref-card" href="https://www.kbb.com" target="_blank">
+      <span class="ref-label">Residual Value &amp; Market Positioning</span>
+      <span class="ref-title">Kelley Blue Book &mdash; EV Segment Valuation &amp; Ownership Costs</span>
+      <span class="ref-url">kbb.com</span>
+    </a>
+  </div>
+</div>
+
+<div class="slide" id="slide-11">
+  <div class="eyebrow">Interactive Tool &middot; Route Economics</div>
+  <div class="slide-h">Road Trip Calculator.</div>
+  <div class="slide-sub">Forecast your energy costs for long-haul routes. The map radius dynamically updates to show your outbound driving distance (one-way) from 48170.</div>
+
+  <div class="trip-layout">
+    
+    <div style="display:flex; flex-direction:column; gap: .75rem; overflow-y:auto; padding-right:4px; padding-bottom: 1rem;">
+      
+      <div class="gc" style="padding:1.1rem">
+         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem">
+          <label class="eyebrow" style="font-weight:700">Trip Distance (Round Trip Total)</label>
+          <div style="display:flex;align-items:baseline;gap:.2rem">
+            <span id="trip-dist-display" style="font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--text)">500</span>
+            <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted)">Miles</span>
+          </div>
+        </div>
+        <input type="range" id="trip-dist-slider" min="0" max="2500" value="500" step="25" style="width:100%;height:6px;-webkit-appearance:none;appearance:none;border-radius:99px;outline:none;cursor:pointer;background:var(--s2)" oninput="updateTripCost()"/>
+      </div>
+
+      <div class="gc" style="padding:1.1rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+         <div>
+            <label class="eyebrow" style="font-weight:700">&#9889; Electricity ($/kWh)</label>
+            <div style="font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--gt);margin-bottom:.3rem" id="trip-kwh-display">0.17</div>
+            <input type="range" id="trip-kwh-slider" min="0" max="60" value="17" step="1" style="width:100%;height:6px;-webkit-appearance:none;border-radius:99px;background:var(--s2);outline:none;cursor:pointer" oninput="updateTripCost()"/>
+         </div>
+         <div>
+            <label class="eyebrow" style="font-weight:700">&#9981; Gas ($/gal)</label>
+            <div style="font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--muted);margin-bottom:.3rem" id="trip-gas-display">3.50</div>
+            <input type="range" id="trip-gas-slider" min="250" max="500" value="350" step="5" style="width:100%;height:6px;-webkit-appearance:none;border-radius:99px;background:var(--s2);outline:none;cursor:pointer" oninput="updateTripCost()"/>
+         </div>
+      </div>
+
+      <div class="gc" style="padding:1.1rem">
+        <div class="bar-group-title" style="margin-top:0">Vehicle Efficiencies</div>
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+           <div style="width:40px;font-family:var(--mono);font-size:.55rem;color:var(--gt)">GT</div>
+           <input type="range" id="trip-eff-gt" min="2.0" max="5.0" step="0.1" value="3.3" style="flex:1;height:6px;-webkit-appearance:none;border-radius:99px;background:var(--s2);outline:none;cursor:pointer" oninput="updateTripCost()"/>
+           <div style="width:30px;font-family:var(--mono);font-size:.6rem;text-align:right" id="trip-eff-gt-val">3.3</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+           <div style="width:40px;font-family:var(--mono);font-size:.55rem;color:var(--pr)">PREM</div>
+           <input type="range" id="trip-eff-pr" min="2.0" max="5.0" step="0.1" value="3.6" style="flex:1;height:6px;-webkit-appearance:none;border-radius:99px;background:var(--s2);outline:none;cursor:pointer" oninput="updateTripCost()"/>
+           <div style="width:30px;font-family:var(--mono);font-size:.6rem;text-align:right" id="trip-eff-pr-val">3.6</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+           <div style="width:40px;font-family:var(--mono);font-size:.55rem;color:var(--ts)">MY</div>
+           <input type="range" id="trip-eff-my" min="2.0" max="5.0" step="0.1" value="4.2" style="flex:1;height:6px;-webkit-appearance:none;border-radius:99px;background:var(--s2);outline:none;cursor:pointer" oninput="updateTripCost()"/>
+           <div style="width:30px;font-family:var(--mono);font-size:.6rem;text-align:right" id="trip-eff-my-val">4.2</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+           <div style="width:40px;font-family:var(--mono);font-size:.55rem;color:var(--muted)">ICE</div>
+           <input type="range" id="trip-mpg" min="15" max="45" step="1" value="28" style="flex:1;height:6px;-webkit-appearance:none;border-radius:99px;background:var(--s2);outline:none;cursor:pointer" oninput="updateTripCost()"/>
+           <div style="width:30px;font-family:var(--mono);font-size:.6rem;text-align:right" id="trip-mpg-val">28</div>
+        </div>
+      </div>
+
+      <div class="gc" style="padding:1.1rem;flex:1">
+        <div class="bar-group-title" style="margin-top:0">Estimated Trip Energy Cost</div>
+        <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.75rem">
+          <div style="display:grid;grid-template-columns:60px 1fr 60px;align-items:center;gap:.75rem">
+            <div style="font-family:var(--mono);font-size:.6rem;color:var(--gt);font-weight:700">GT</div>
+            <div style="height:12px;background:var(--s2);border-radius:99px;overflow:hidden"><div id="trip-bar-gt" style="height:100%;width:0%;background:var(--gt);transition:width .3s"></div></div>
+            <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--text);text-align:right" id="trip-cost-gt">$0</div>
+          </div>
+          <div style="display:grid;grid-template-columns:60px 1fr 60px;align-items:center;gap:.75rem">
+            <div style="font-family:var(--mono);font-size:.6rem;color:var(--pr);font-weight:700">Premium</div>
+            <div style="height:12px;background:var(--s2);border-radius:99px;overflow:hidden"><div id="trip-bar-pr" style="height:100%;width:0%;background:var(--pr);transition:width .3s"></div></div>
+            <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--text);text-align:right" id="trip-cost-pr">$0</div>
+          </div>
+          <div style="display:grid;grid-template-columns:60px 1fr 60px;align-items:center;gap:.75rem">
+            <div style="font-family:var(--mono);font-size:.6rem;color:var(--ts);font-weight:700">Model Y</div>
+            <div style="height:12px;background:var(--s2);border-radius:99px;overflow:hidden"><div id="trip-bar-my" style="height:100%;width:0%;background:var(--ts);transition:width .3s"></div></div>
+            <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--text);text-align:right" id="trip-cost-my">$0</div>
+          </div>
+          <div style="display:grid;grid-template-columns:60px 1fr 60px;align-items:center;gap:.75rem;margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border)">
+            <div style="font-family:var(--mono);font-size:.6rem;color:var(--muted);font-weight:700">ICE</div>
+            <div style="height:12px;background:var(--s2);border-radius:99px;overflow:hidden"><div id="trip-bar-ice" style="height:100%;width:0%;background:var(--muted);transition:width .3s"></div></div>
+            <div style="font-family:var(--mono);font-size:.8rem;font-weight:700;color:var(--text);text-align:right" id="trip-cost-ice">$0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gc" id="trip-map" style="width: 100%; height: 100%; z-index: 1;"></div>
+
+  </div>
+</div>
+
+</div><footer class="bottombar">
+  <div class="dots" id="dots"></div>
+  <div class="counter" id="counter">01 / 11</div>
+  <div class="nav">
+    <button class="nbtn" onclick="go(cur-1)" title="Previous">&#8592;</button>
+    <button class="nbtn" onclick="go(cur+1)" title="Next">&#8594;</button>
+  </div>
+</footer>
+
+</div><script>
+const TOTAL = 11;
+let cur = 1;
+
+/* Build dots */
+const dotsEl = document.getElementById('dots');
+for (let i = 1; i <= TOTAL; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 1 ? ' on' : '');
+  d.title = 'Slide ' + i;
+  d.onclick = (function(n){ return function(){ go(n); }; })(i);
+  dotsEl.appendChild(d);
+}
+
+/* Slide engine */
+function go(n) {
+  n = Math.max(1, Math.min(n, TOTAL));
+  if (n === cur) return;
+  document.getElementById('slide-' + cur).classList.remove('active');
+  dotsEl.children[cur - 1].classList.remove('on');
+  cur = n;
+  var s = document.getElementById('slide-' + cur);
+  s.classList.add('active');
+  s.scrollTop = 0;
+  dotsEl.children[cur - 1].classList.add('on');
+  var pad = function(x){ return String(x).padStart(2,'0'); };
+  document.getElementById('counter').textContent = pad(cur) + ' / ' + pad(TOTAL);
+  animateBars(s);
+  if (cur === 5) updateCosts();
+  if (cur === 11) {
+    if (!tripMap) {
+      initMap();
+    } else {
+      setTimeout(function(){ tripMap.invalidateSize(); }, 100);
+    }
+    updateTripCost();
+  }
+}
+
+/* Keyboard navigation */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(cur + 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(cur - 1);
+  if (e.key === 'Home') go(1);
+  if (e.key === 'End')  go(TOTAL);
+});
+
+/* Bar animator */
+function animateBars(slideEl) {
+  var fills = slideEl.querySelectorAll('.bc-fill');
+  fills.forEach(function(f){
+    f.style.width = '0%';
+    f.style.setProperty('--pw', f.dataset.pw || '0%');
+  });
+  requestAnimationFrame(function(){
+    setTimeout(function(){
+      fills.forEach(function(f){
+        f.style.width = (f.dataset.target || 0) + '%';
+      });
+    }, 120);
+  });
+}
+
+/* ─────────────────────────────────────────────
+   COST SLIDE INTERACTIVE LOGIC
+───────────────────────────────────────────── */
+function getKwhRate() {
+  return parseInt(document.getElementById('kwh-slider').value, 10) / 100;
+}
+function getMpg() {
+  return parseInt(document.getElementById('mpg-slider').value, 10);
+}
+function getGasPrice() {
+  return parseInt(document.getElementById('gas-slider').value, 10) / 100; 
+}
+function getEff(id) {
+  return parseFloat(document.getElementById(id).value);
+}
+
+function fmt(n, decimals) { return n.toFixed(decimals !== undefined ? decimals : 2); }
+function fmtDollar(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
+
+function updateSliderTrack(sliderId, min, max, val) {
+  var pct = ((val - min) / (max - min)) * 100;
+  var el  = document.getElementById(sliderId);
+  if (!el) return;
+  var col = getComputedStyle(document.documentElement)
+              .getPropertyValue(
+                sliderId === 'kwh-slider' ? '--gt' :
+                sliderId === 'mpg-slider' ? '--muted' : '--muted'
+              ).trim() || '#888';
+  
+  if(sliderId.includes('eff-slider') || sliderId.includes('trip-eff') || sliderId === 'trip-kwh-slider'){
+      col = getComputedStyle(document.documentElement).getPropertyValue(
+          sliderId.includes('gt') || sliderId === 'trip-kwh-slider' ? '--gt' : 
+          sliderId.includes('pr') ? '--pr' : 
+          sliderId.includes('my') ? '--ts' : '--muted'
+      ).trim();
+  }
+  if(sliderId === 'trip-dist-slider') col = getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
+
+  el.style.background = 'linear-gradient(90deg,' + col + ' 0%,' + col + ' ' + pct + '%,' + 'var(--s2) ' + pct + '%,var(--s2) 100%)';
+}
+
+function updateCosts() {
+  var rate     = getKwhRate();
+  var mpg      = getMpg();
+  var gasPrice = getGasPrice();
+  var miles    = 15000;
+
+  var effGt = getEff('eff-slider-gt');
+  var effPr = getEff('eff-slider-pr');
+  var effMy = getEff('eff-slider-my');
+
+  /* Update displays */
+  document.getElementById('kwh-display').textContent  = fmt(rate, 2);
+  document.getElementById('mpg-display').textContent  = mpg;
+  document.getElementById('gas-display').textContent  = fmt(gasPrice, 2);
+  
+  document.getElementById('eff-val-gt').textContent  = fmt(effGt, 1);
+  document.getElementById('eff-val-pr').textContent  = fmt(effPr, 1);
+  document.getElementById('eff-val-my').textContent  = fmt(effMy, 1);
+
+  /* Update slider tracks */
+  updateSliderTrack('kwh-slider', 0, 60, parseInt(document.getElementById('kwh-slider').value));
+  updateSliderTrack('mpg-slider', 15, 45, mpg);
+  updateSliderTrack('gas-slider', 250, 500, parseInt(document.getElementById('gas-slider').value));
+  updateSliderTrack('eff-slider-gt', 2.0, 5.0, effGt);
+  updateSliderTrack('eff-slider-pr', 2.0, 5.0, effPr);
+  updateSliderTrack('eff-slider-my', 2.0, 5.0, effMy);
+
+  /* ICE cost per mile */
+  var iceCpm   = gasPrice / mpg;
+  var iceAnn   = iceCpm * miles;
+  var ice5yr   = iceAnn * 5;
+
+  document.getElementById('ice-label').textContent    = mpg + ' MPG · $' + fmt(gasPrice, 2) + '/gal';
+  document.getElementById('ice-cpm-display').textContent = '$' + fmt(iceCpm, 3) + '/mi';
+
+  /* Per-EV calcs based on live efficiency */
+  var evData = [
+      { key: 'gt',   cpm: rate / effGt, label: 'Mach-E GT',   bgA: '0,194,255' },
+      { key: 'prem', cpm: rate / effPr, label: 'Mach-E Prem', bgA: '91,155,255' },
+      { key: 'my',   cpm: rate / effMy, label: 'Model Y LR',  bgA: '255,107,107' }
+  ];
+
+  var ids  = {
+    cpm: { gt: 'cpm-gt', prem: 'cpm-pr', my: 'cpm-my' },
+    ann: { gt: 'ann-gt', prem: 'ann-pr', my: 'ann-my' },
+    fyr: { gt: 'fyr-gt', prem: 'fyr-pr', my: 'fyr-my' }
+  };
+
+  var compareCells = '';
+  var savingsBars  = '';
+
+  evData.forEach(function(ev) {
+    var k      = ev.key;
+    var cpm    = ev.cpm;
+    var ann    = cpm * miles;
+    var fyr    = ann * 5;
+    var saving = ice5yr - fyr;
+
+    /* Update table cells */
+    var cpmEl = document.getElementById(ids.cpm[k]);
+    if (cpmEl) cpmEl.textContent = '$' + fmt(cpm, 3);
+
+    var annEl = document.getElementById(ids.ann[k]);
+    if (annEl) annEl.textContent = fmtDollar(ann);
+
+    var fyrEl = document.getElementById(ids.fyr[k]);
+    if (fyrEl) fyrEl.textContent = fmtDollar(fyr);
+
+    /* Comparison: EV cheaper, equal, or ICE cheaper */
+    var diff = cpm - iceCpm;
+    var compBg, compCol, compLabel;
+    if (Math.abs(diff) < 0.005) {
+      compBg    = 'rgba(251,191,36,.15)';
+      compCol   = '#FBC840';
+      compLabel = 'Even';
+    } else if (diff < 0) {
+      compBg    = 'rgba(34,197,94,.15)';
+      compCol   = '#34D478';
+      compLabel = 'EV saves ' + fmt(Math.abs(diff)*100, 1) + '&cent;/mi';
+    } else {
+      compBg    = 'rgba(239,68,68,.15)';
+      compCol   = '#FF7070';
+      compLabel = 'ICE saves ' + fmt(diff*100, 1) + '&cent;/mi';
+    }
+
+    compareCells +=
+      '<div style="border-radius:8px;padding:.6rem .5rem;text-align:center;background:' + compBg + '">'
+    + '<div style="font-family:var(--mono);font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:' + compCol + ';font-weight:700;margin-bottom:.3rem">' + ev.label + '</div>'
+    + '<div style="font-family:var(--mono);font-size:.75rem;font-weight:700;color:var(--text);margin-bottom:.2rem">$' + fmt(cpm, 3) + '/mi</div>'
+    + '<div style="font-family:var(--mono);font-size:.58rem;color:' + compCol + ';font-weight:600">' + compLabel + '</div>'
+    + '</div>';
+
+    /* Savings bars */
+    var barPct   = Math.max(0, Math.min(100, (saving / Math.max(ice5yr, 1)) * 100));
+    var barColor = saving >= 0
+      ? 'linear-gradient(90deg,rgba(' + ev.bgA + ',0.4),rgba(' + ev.bgA + ',1))'
+      : 'linear-gradient(90deg,rgba(239,68,68,0.4),rgba(239,68,68,1))';
+    var savingLabel = saving >= 0
+      ? fmtDollar(saving) + ' saved over 5 yrs'
+      : fmtDollar(Math.abs(saving)) + ' MORE than ICE over 5 yrs';
+
+    savingsBars +=
+      '<div style="display:flex;flex-direction:column;gap:.25rem">'
+    + '<div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:.6rem">'
+    + '<span style="color:rgba(' + ev.bgA + ',1);font-weight:700">' + ev.label + '</span>'
+    + '<span style="color:' + (saving >= 0 ? '#34D478' : '#FF7070') + ';font-weight:700">' + savingLabel + '</span>'
+    + '</div>'
+    + '<div style="height:16px;background:var(--s2);border-radius:4px;overflow:hidden;position:relative">'
+    + '<div style="height:100%;width:' + barPct + '%;background:' + barColor + ';border-radius:4px;transition:width .4s ease"></div>'
+    + '</div>'
+    + '</div>';
+  });
+
+  var ccEl = document.getElementById('compare-cells');
+  if (ccEl) ccEl.innerHTML = compareCells;
+
+  var sbEl = document.getElementById('savings-bars');
+  if (sbEl) sbEl.innerHTML = savingsBars;
+
+  var subEl = document.getElementById('savings-subtitle');
+  if (subEl) subEl.textContent =
+    'vs ICE @ ' + mpg + ' MPG · $' + fmt(gasPrice,2) + '/gal · 15,000 mi/yr';
+}
+
+/* ─────────────────────────────────────────────
+   LEAFLET MAP & TRIP CALCULATOR LOGIC
+───────────────────────────────────────────── */
+let tripMap = null;
+let tripCircle = null;
+const plymouthCoords = [42.3714, -83.4652];
+
+function initMap() {
+    tripMap = L.map('trip-map', { zoomControl: true }).setView(plymouthCoords, 6);
+    tripMap.zoomControl.setPosition('bottomright');
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(tripMap);
+
+    // Center dot with permanently visible tooltip
+    L.circleMarker(plymouthCoords, {
+        radius: 6,
+        fillColor: 'var(--text)',
+        color: 'var(--bg)',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1
+    }).addTo(tripMap).bindTooltip("Plymouth, MI (48170)", {
+        permanent: true, 
+        direction: "right", 
+        className: "map-label"
+    });
+
+    // Range Ring
+    tripCircle = L.circle(plymouthCoords, {
+        color: '#00C2FF',
+        fillColor: '#00C2FF',
+        fillOpacity: 0.15,
+        weight: 2,
+        dashArray: '5 5'
+    }).addTo(tripMap);
+}
+
+function updateTripCost() {
+  var dist = parseInt(document.getElementById('trip-dist-slider').value, 10);
+  var kwhRate = parseInt(document.getElementById('trip-kwh-slider').value, 10) / 100;
+  var gasPrice = parseInt(document.getElementById('trip-gas-slider').value, 10) / 100;
+  var effGt = parseFloat(document.getElementById('trip-eff-gt').value);
+  var effPr = parseFloat(document.getElementById('trip-eff-pr').value);
+  var effMy = parseFloat(document.getElementById('trip-eff-my').value);
+  var mpg = parseInt(document.getElementById('trip-mpg').value, 10);
+
+  // Update text readouts
+  document.getElementById('trip-dist-display').textContent = dist;
+  document.getElementById('trip-kwh-display').textContent = kwhRate.toFixed(2);
+  document.getElementById('trip-gas-display').textContent = gasPrice.toFixed(2);
+  document.getElementById('trip-eff-gt-val').textContent = effGt.toFixed(1);
+  document.getElementById('trip-eff-pr-val').textContent = effPr.toFixed(1);
+  document.getElementById('trip-eff-my-val').textContent = effMy.toFixed(1);
+  document.getElementById('trip-mpg-val').textContent = mpg;
+
+  // Update slider gradient fills
+  updateSliderTrack('trip-dist-slider', 0, 2500, dist);
+  updateSliderTrack('trip-kwh-slider', 0, 60, kwhRate * 100);
+  updateSliderTrack('trip-gas-slider', 250, 500, gasPrice * 100);
+  updateSliderTrack('trip-eff-gt', 2.0, 5.0, effGt);
+  updateSliderTrack('trip-eff-pr', 2.0, 5.0, effPr);
+  updateSliderTrack('trip-eff-my', 2.0, 5.0, effMy);
+  updateSliderTrack('trip-mpg', 15, 45, mpg);
+
+  // Calculate costs
+  var costGt = (dist / effGt) * kwhRate;
+  var costPr = (dist / effPr) * kwhRate;
+  var costMy = (dist / effMy) * kwhRate;
+  var costIce = (dist / mpg) * gasPrice;
+  var maxCost = Math.max(costGt, costPr, costMy, costIce, 1); // Prevent div-by-zero on visual bars
+
+  // Update cost numbers
+  document.getElementById('trip-cost-gt').textContent = '$' + costGt.toFixed(0);
+  document.getElementById('trip-cost-pr').textContent = '$' + costPr.toFixed(0);
+  document.getElementById('trip-cost-my').textContent = '$' + costMy.toFixed(0);
+  document.getElementById('trip-cost-ice').textContent = '$' + costIce.toFixed(0);
+
+  // Update visual bars
+  document.getElementById('trip-bar-gt').style.width = (costGt / maxCost * 100) + '%';
+  document.getElementById('trip-bar-pr').style.width = (costPr / maxCost * 100) + '%';
+  document.getElementById('trip-bar-my').style.width = (costMy / maxCost * 100) + '%';
+  document.getElementById('trip-bar-ice').style.width = (costIce / maxCost * 100) + '%';
+
+  // Update Map Radius
+  if (tripMap && tripCircle) {
+      // The slider is "Round Trip Total", so the physical outward radius is half that distance
+      let radiusMiles = dist / 2;
+      // Prevent the circle from collapsing entirely
+      if (radiusMiles < 5) radiusMiles = 5; 
+      
+      let radiusMeters = radiusMiles * 1609.34;
+      tripCircle.setRadius(radiusMeters);
+      
+      // Pad the bounds slightly so the circle isn't touching the literal edge of the frame
+      tripMap.fitBounds(tripCircle.getBounds(), {padding: [30, 30]});
+  }
+}
+
+/* ─────────────────────────────────────────────
+   RADAR CHART LOGIC
+───────────────────────────────────────────── */
+function drawRadar() {
+  var svg = document.getElementById('radar-svg');
+  if (!svg) return;
+
+  var isLight = document.body.classList.contains('light');
+  var labelFill   = isLight ? 'rgba(10,14,26,0.90)'  : 'rgba(220,228,245,0.95)';
+  var ringFill    = isLight ? 'rgba(10,14,26,0.30)'  : 'rgba(200,208,224,0.35)';
+  var spokeFill   = isLight ? 'rgba(0,0,0,0.12)'     : 'rgba(255,255,255,0.12)';
+  var gridStroke  = isLight ? 'rgba(0,0,0,0.08)'     : 'rgba(255,255,255,0.07)';
+  var outerStroke = isLight ? 'rgba(0,0,0,0.20)'     : 'rgba(255,255,255,0.18)';
+  var bgFill      = isLight ? 'rgba(0,0,0,0.03)'     : 'rgba(255,255,255,0.025)';
+  var centreFill  = isLight ? 'rgba(0,0,0,0.25)'     : 'rgba(255,255,255,0.25)';
+  var dotStroke   = isLight ? '#ffffff'               : 'var(--s1)';
+
+  var W    = 600, H = 440;
+  var cx   = W / 2 + 30;  
+  var cy   = H / 2 + 6;
+  var maxR = 155;
+  var levels = 5;
+
+  var axes = [
+    'Performance', 'Range', 'Daily Use', 'Charging',
+    'Dynamics', 'Tech/SW', 'Comfort', 'Long Haul'
+  ];
+  var data = [
+    [10,  7,  7],
+    [ 6,  8, 10],
+    [ 7, 10,  8],
+    [ 7,  7, 10],
+    [10,  7,  8],
+    [ 8,  8, 10],
+    [ 8, 10,  6],
+    [ 7,  8, 10],
+  ];
+
+  var N     = axes.length;
+  var step  = (2 * Math.PI) / N;
+  var start = -Math.PI / 2;
+
+  function toXY(angle, r) { return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) }; }
+  var extraPad = [4, 8, 22, 6, 4, 6, 12, 10];
+  var h = '';
+
+  var outerPts = axes.map(function(_, i) {
+    var p = toXY(start + i * step, maxR); return p.x + ',' + p.y;
+  }).join(' ');
+  h += '<polygon points="' + outerPts + '" fill="' + bgFill + '" stroke="none"/>';
+
+  for (var l = 1; l <= levels; l++) {
+    var r   = (maxR / levels) * l;
+    var pts = axes.map(function(_, i) {
+      var p = toXY(start + i * step, r); return p.x + ',' + p.y;
+    }).join(' ');
+    var isOuter = (l === levels);
+    h += '<polygon points="' + pts + '" fill="none" stroke="' + (isOuter ? outerStroke : gridStroke) + '" stroke-width="' + (isOuter ? 1.5 : 1) + '"/>';
+    var score = (l / levels) * 10;
+    var tp    = toXY(start + 3 * step, r);
+    h += '<text x="' + (tp.x + 6) + '" y="' + (tp.y + 3) + '" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="' + ringFill + '">' + score + '</text>';
+  }
+
+  axes.forEach(function(_, i) {
+    var end = toXY(start + i * step, maxR);
+    h += '<line x1="' + cx + '" y1="' + cy + '" x2="' + end.x + '" y2="' + end.y + '" stroke="' + spokeFill + '" stroke-width="1.5"/>';
+  });
+
+  axes.forEach(function(label, i) {
+    var angle  = start + i * step;
+    var orbit  = maxR + 22 + extraPad[i];
+    var lp     = toXY(angle, orbit);
+    var anchor = 'middle';
+    if (lp.x < cx - 14) anchor = 'end';
+    if (lp.x > cx + 14) anchor = 'start';
+    var dy = 0;
+    if (lp.y < cy - 10) dy = -5;
+    if (lp.y > cy + 10) dy =  5;
+    h += '<text x="' + lp.x + '" y="' + (lp.y + dy) + '" text-anchor="' + anchor + '" dominant-baseline="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="' + labelFill + '">' + label + '</text>';
+  });
+
+  var colors = [
+    { stroke: '#00C2FF', fill: 'rgba(0,194,255,0.18)',   glow: '0,194,255'   },
+    { stroke: '#5B9BFF', fill: 'rgba(91,155,255,0.15)',  glow: '91,155,255'  },
+    { stroke: '#FF6B6B', fill: 'rgba(255,107,107,0.15)', glow: '255,107,107' }
+  ];
+  [0,1,2].forEach(function(v) {
+    var pts = data.map(function(row, i) {
+      var r = (row[v] / 10) * maxR;
+      var p = toXY(start + i * step, r);
+      return p.x + ',' + p.y;
+    }).join(' ');
+    h += '<polygon points="' + pts + '" fill="' + colors[v].fill + '" stroke="' + colors[v].stroke + '" stroke-width="2.5" stroke-linejoin="round" opacity="1"/>';
+  });
+
+  [0,1,2].forEach(function(v) {
+    data.forEach(function(row, i) {
+      var r = (row[v] / 10) * maxR;
+      var p = toXY(start + i * step, r);
+      h += '<circle cx="' + p.x + '" cy="' + p.y + '" r="7" fill="rgba(' + colors[v].glow + ',0.25)" stroke="none"/>';
+      h += '<circle cx="' + p.x + '" cy="' + p.y + '" r="4.5" fill="' + colors[v].stroke + '" stroke="' + dotStroke + '" stroke-width="1.5"/>';
+    });
+  });
+
+  h += '<circle cx="' + cx + '" cy="' + cy + '" r="3" fill="' + centreFill + '" stroke="none"/>';
+  svg.innerHTML = h;
+}
+
+/* Theme toggle */
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  var btn = document.getElementById('theme-btn');
+  btn.innerHTML = document.body.classList.contains('light') ? '&#9681; Dark' : '&#9680; Light';
+  drawRadar();
+}
+
+/* Init */
+drawRadar();
+animateBars(document.getElementById('slide-1'));
+updateCosts();
+</script>
+</body>
+</html>
