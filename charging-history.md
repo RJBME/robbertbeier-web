@@ -16,7 +16,7 @@ permalink: /charging-history/
   .filter-group label { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; color: #888; }
   select { padding: 8px; border-radius: 6px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
   .btn-reset { padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
-  
+
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
   .badge-work { background: #e3f2fd; color: #01579b; }
   .badge-home { background: #f3e5f5; color: #4a148c; }
@@ -29,6 +29,34 @@ permalink: /charging-history/
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--text) !important; margin-top: 10px; }
   th { background: var(--table-head); padding: 12px; border: 1px solid var(--dash-border); text-align: left; }
   td { padding: 12px; border: 1px solid var(--dash-border); }
+
+  .note-icon { position: relative; cursor: default; font-size: 1rem; }
+  .note-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2c3e50;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    white-space: normal;
+    max-width: 250px;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .note-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #2c3e50;
+  }
+  .note-icon:hover .note-tooltip { display: block; }
 </style>
 
 <div class="history-container">
@@ -39,7 +67,7 @@ permalink: /charging-history/
     <div class="summary-item"><span class="summary-label">Filtered Cost</span><span class="summary-value" id="sumCost">$0.00</span></div>
     <div class="summary-item"><span class="summary-label">Sessions</span><span class="summary-value" id="sumCount">0</span></div>
   </div>
-  
+
   <div class="filter-bar">
     <div class="filter-group"><label>Year</label><select id="yearFilter" onchange="applyFilters()"><option value="">All Years</option><option value="2025">2025</option><option value="2026">2026</option></select></div>
     <div class="filter-group"><label>Location</label><select id="locFilter" onchange="applyFilters()"><option value="">All Locations</option></select></div>
@@ -49,7 +77,16 @@ permalink: /charging-history/
   </div>
 
   <table id="history-table">
-    <thead><tr><th>Date</th><th>Location</th><th>Vehicle</th><th>Energy (kWh)</th><th>Cost</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Location</th>
+        <th>Vehicle</th>
+        <th>Energy (kWh)</th>
+        <th>Cost</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
     <tbody>
       {% assign all_logs = site.charging | sort: 'date' | reverse %}{% for log in all_logs %}
       <tr class="log-row" data-year="{{ log.date | date: '%Y' }}" data-loc="{{ log.location }}" data-veh="{{ log.vehicle }}" data-kwh="{{ log.energy_kwh }}" data-cost="{{ log.cost }}" data-type="{% if log.cost > 0 %}paid{% else %}free{% endif %}">
@@ -58,6 +95,13 @@ permalink: /charging-history/
         <td style="opacity: 0.6;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
         <td>{{ log.energy_kwh }}</td>
         <td>{% if log.cost == 0 %}Free{% else %}${{ log.cost | plus: 0.0001 | round: 2 }}{% endif %}</td>
+        <td>
+          {% if log.notes and log.notes != "" %}
+            <span class="note-icon">📝
+              <span class="note-tooltip">{{ log.notes }}</span>
+            </span>
+          {% endif %}
+        </td>
       </tr>{% endfor %}
     </tbody>
   </table>
@@ -84,7 +128,7 @@ function applyFilters() {
   const loc = document.getElementById('locFilter').value;
   const veh = document.getElementById('vehFilter').value;
   const costType = document.getElementById('costFilter').value;
-  
+
   let totalKwh = 0; let totalCost = 0; let count = 0;
 
   document.querySelectorAll('.log-row').forEach(row => {
