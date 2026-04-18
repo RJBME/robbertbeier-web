@@ -19,6 +19,8 @@ collections_config:
 _inputs:
   date:
     type: date
+    options:
+      time_format: false
   location:
     type: select
     options:
