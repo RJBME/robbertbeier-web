@@ -6,3 +6,14 @@ collections_config:
     schemas:
       default:
         path: .cloudcannon/schemas/charging.yaml
+
+# THIS ADDS THE DROPDOWN MENU
+_inputs:
+  location:
+    type: select
+    options:
+      values:
+        - Home
+        - Work
+        - Tesla
+        - ChargePoint
