@@ -1,33 +1,10 @@
 title: Robert Beier
 url: "https://www.robertbeier.com"
-# Sets the site to Eastern Time (US & Canada)
 timezone: America/New_York
-# Disables the default GitHub theme and its "Full Gallery" menu
 theme: minima
-# CloudCannon Configuration for Mach-E Charging
-cloudcannon:
-  _data:
-    charging:
-      # This tells CloudCannon how to display the list and the "Add" button
-      _array_structures:
-        new_charge:
-          values:
-            date: ''
-            location: ''
-            energy_kwh: 0
-            cost: 0
-            notes: ''
-      # This tells CloudCannon which fields to show in the UI for existing entries
-      _inputs:
-        date:
-          type: date
-        energy_kwh:
-          type: number
-          comment: "Energy added in kWh"
-        cost:
-          type: number
-          comment: "Total cost in USD"
-encoding: UTF-8
+
 collections:
   charging:
     output: false
+
+encoding: UTF-8
