@@ -1,0 +1,1120 @@
+---
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mach-E Charging Site — User Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:       #1a2332;
+    --navy-mid:   #243040;
+    --navy-light: #2c3e50;
+    --card-bg:    #1e2d3d;
+    --border:     rgba(255,255,255,0.08);
+    --text:       #e8eef4;
+    --muted:      #8a9bb0;
+    --work:       #0288d1;
+    --home:       #7b1fa2;
+    --tesla:      #CC0000;
+    --cp:         #FF7A14;
+    --blink:      #65A844;
+    --rivian:     #ffa500;
+    --other:      #616161;
+    --green:      #2ecc71;
+    --accent:     #3498db;
+    --accent2:    #5D3FD3;
+    --slide-w:    900px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d1520;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 80px;
+    min-height: 100vh;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent), var(--green));
+    transition: width 0.3s ease;
+    z-index: 1000;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 12px; right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 999;
+    background: rgba(13,21,32,0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 8px 16px;
+  }
+  nav button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+  }
+  nav button:hover { color: var(--text); background: var(--border); }
+  nav button:disabled { opacity: 0.25; cursor: default; }
+  #slide-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    min-width: 50px;
+    text-align: center;
+  }
+
+  /* ── SLIDE WRAPPER ── */
+  #deck {
+    width: 100%;
+    max-width: var(--slide-w);
+    position: relative;
+  }
+
+  .slide {
+    display: none;
+    width: 100%;
+    min-height: 580px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    animation: slideIn 0.35s cubic-bezier(0.22,1,0.36,1);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+  .slide.active { display: flex; flex-direction: column; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── SLIDE ACCENT BAR ── */
+  .slide-accent {
+    height: 4px;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  /* ── SLIDE BODY ── */
+  .slide-body {
+    padding: 44px 52px 40px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TITLE SLIDE ── */
+  .slide-title { padding: 0; }
+  .slide-title .hero {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 52px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide-title .hero::before {
+    content: '⚡';
+    position: absolute;
+    right: -20px; top: -20px;
+    font-size: 260px;
+    opacity: 0.04;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  h1.display {
+    font-family: 'DM Serif Display', serif;
+    font-size: 3.2rem;
+    line-height: 1.08;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+  h1.display em { font-style: italic; color: var(--accent); }
+  .subtitle {
+    font-size: 1.05rem;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 480px;
+    margin-bottom: 36px;
+  }
+  .toc-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border: 1px solid;
+  }
+
+  /* ── SECTION HEADING ── */
+  .slide-section-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  h2.slide-heading {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    color: #fff;
+    line-height: 1.15;
+    margin-bottom: 28px;
+  }
+  h2.slide-heading span { color: var(--accent); }
+
+  /* ── CONTENT BLOCKS ── */
+  .step-list { display: flex; flex-direction: column; gap: 14px; }
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    transition: background 0.2s;
+  }
+  .step:hover { background: rgba(255,255,255,0.07); }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-content h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 3px;
+  }
+  .step-content p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ── CODE BLOCKS ── */
+  .code-block {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 10px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.7;
+    color: #a8d8ff;
+    overflow-x: auto;
+    position: relative;
+  }
+  .code-block .comment { color: #4a6a7a; }
+  .code-block .key { color: #79c0ff; }
+  .code-block .val { color: #a5d6a7; }
+  .code-block .pipe { color: #ff8a65; }
+  .code-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  /* ── INFO BOXES ── */
+  .info-box {
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    border-left: 3px solid;
+    margin: 10px 0;
+  }
+  .info-box.tip   { background: rgba(52,152,219,0.1); border-color: var(--accent); color: #a8d8ff; }
+  .info-box.warn  { background: rgba(255,122,20,0.1);  border-color: var(--cp);     color: #ffc490; }
+  .info-box.green { background: rgba(46,204,113,0.1);  border-color: var(--green);  color: #a5d6a7; }
+
+  /* ── BADGE PILLS ── */
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .badge {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .b-work   { background: rgba(2,136,209,0.2);   color: #4fc3f7; border: 1px solid rgba(2,136,209,0.4); }
+  .b-home   { background: rgba(123,31,162,0.2);  color: #ce93d8; border: 1px solid rgba(123,31,162,0.4); }
+  .b-tesla  { background: rgba(204,0,0,0.2);     color: #ef9a9a; border: 1px solid rgba(204,0,0,0.4); }
+  .b-cp     { background: rgba(255,122,20,0.2);  color: #ffcc80; border: 1px solid rgba(255,122,20,0.4); }
+  .b-blink  { background: rgba(101,168,68,0.2);  color: #a5d6a7; border: 1px solid rgba(101,168,68,0.4); }
+  .b-rivian { background: rgba(255,165,0,0.2);   color: #ffe082; border: 1px solid rgba(255,165,0,0.4); }
+  .b-other  { background: rgba(97,97,97,0.2);    color: #bdbdbd; border: 1px solid rgba(97,97,97,0.4); }
+
+  /* ── 2-COL GRID ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* ── STAT CARDS ── */
+  .stat-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .stat-card .label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 6px; }
+  .stat-card .value { font-size: 1.3rem; font-weight: 700; color: #fff; }
+  .stat-card .sub   { font-size: 0.72rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+
+  /* ── NETWORK COLOR SWATCH ROW ── */
+  .swatch-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+  .swatch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+  }
+  .swatch-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .swatch-name { color: var(--text); font-weight: 500; }
+  .swatch-hex  { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; }
+
+  /* ── SLIDE FOOTER ── */
+  .slide-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 52px 28px;
+    flex-shrink: 0;
+  }
+  .slide-footer-label {
+    font-size: 0.62rem;
+    color: rgba(255,255,255,0.2);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .slide-dot-nav { display: flex; gap: 6px; }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dot.active { background: var(--accent); width: 18px; border-radius: 3px; }
+
+  /* ── KEYBOARD HINT ── */
+  #kbd-hint {
+    margin-top: 24px;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.2);
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.35);
+  }
+
+  /* ── DIVIDER ── */
+  hr.divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 18px 0;
+  }
+
+  /* ── INLINE HIGHLIGHT ── */
+  .hl { color: var(--accent); font-weight: 600; }
+  .hl-green { color: var(--green); font-weight: 600; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: #a8d8ff; }
+
+  /* ── CHECKLIST ── */
+  .checklist { display: flex; flex-direction: column; gap: 10px; }
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .check-icon { flex-shrink: 0; margin-top: 2px; font-size: 0.9rem; }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+  .flow-box {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text);
+    text-align: center;
+  }
+  .flow-arrow { color: var(--muted); font-size: 1rem; }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<nav>
+  <button id="btn-prev" onclick="changeSlide(-1)" title="Previous">←</button>
+  <span id="slide-counter">1 / 1</span>
+  <button id="btn-next" onclick="changeSlide(1)" title="Next">→</button>
+</nav>
+
+<div id="deck">
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 1 — TITLE
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide active">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #5D3FD3, #0288d1, #2ecc71);"></div>
+    <div class="hero">
+      <div class="eyebrow">robertbeier.com — Operations Guide</div>
+      <h1 class="display">Mach-E<br>Charging<br><em>Site Guide</em></h1>
+      <p class="subtitle">Everything you need to add sessions, update rates, maintain files, and understand how your Jekyll + CloudCannon charging tracker works.</p>
+      <div class="toc-chips">
+        <span class="chip" style="color:#4fc3f7; border-color:rgba(2,136,209,0.4);">Adding Sessions</span>
+        <span class="chip" style="color:#ce93d8; border-color:rgba(123,31,162,0.4);">Electricity Rates</span>
+        <span class="chip" style="color:#a5d6a7; border-color:rgba(46,204,113,0.4);">Gas Savings</span>
+        <span class="chip" style="color:#ffcc80; border-color:rgba(255,122,20,0.4);">Odometer / Cost-per-Mile</span>
+        <span class="chip" style="color:#ef9a9a; border-color:rgba(204,0,0,0.4);">File Cleanup</span>
+        <span class="chip" style="color:#a8d8ff; border-color:rgba(52,152,219,0.4);">CloudCannon</span>
+        <span class="chip" style="color:#ffe082; border-color:rgba(255,165,0,0.4);">Git & GitHub</span>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 01</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 2 — HOW IT WORKS (OVERVIEW)
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #0288d1, #5D3FD3);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Architecture Overview</div>
+      <h2 class="slide-heading">How the <span>whole thing</span> fits together</h2>
+
+      <div class="flow">
+        <div class="flow-box">You add session<br>in CloudCannon</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">CloudCannon commits<br>.md file to GitHub</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">GitHub Actions<br>triggers Jekyll build</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">Site rebuilds at<br>robertbeier.com</div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="two-col">
+        <div>
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">Each charging session is a separate <span class="mono">.md</span> file in <span class="mono">_charging/</span> with front matter like:</p>
+          <div class="code-block">
+<span class="comment">---</span>
+<span class="key">date</span>: <span class="val">"2026-04-18"</span>
+<span class="key">location</span>: <span class="val">"Work"</span>
+<span class="key">vehicle</span>: <span class="val">"2025 Mach-E GT"</span>
+<span class="key">energy_kwh</span>: <span class="val">29.3</span>
+<span class="key">cost</span>: <span class="val">0.0</span>
+<span class="key">notes</span>: <span class="val">""</span>
+<span class="comment">---</span>
+          </div>
+        </div>
+        <div class="step-list">
+          <div class="step">
+            <div class="step-num" style="background:rgba(2,136,209,0.2); color:#4fc3f7;">1</div>
+            <div class="step-content">
+              <h4>Jekyll reads _charging/</h4>
+              <p>All .md files are loaded as a collection called <span class="mono">site.charging</span> and iterated in your Liquid templates.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">2</div>
+            <div class="step-content">
+              <h4>Liquid does the math</h4>
+              <p>The dashboard and history pages loop over sessions, calculate costs, savings, and stats at build time.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">3</div>
+            <div class="step-content">
+              <h4>Static HTML is served</h4>
+              <p>No database, no server logic — GitHub Pages serves plain HTML files for free.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 02</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 3 — ADDING A SESSION VIA CLOUDCANNON
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #5D3FD3, #0288d1);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Day-to-Day Use</div>
+      <h2 class="slide-heading">Adding a <span>new session</span> in CloudCannon</h2>
+
+      <div class="two-col">
+        <div class="step-list">
+          <div class="step">
+            <div class="step-num" style="background:rgba(2,136,209,0.2); color:#4fc3f7;">1</div>
+            <div class="step-content">
+              <h4>Open CloudCannon</h4>
+              <p>Go to <span class="mono">app.cloudcannon.com</span> → your site → <strong>Charging Sessions</strong> in the left nav.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(2,136,209,0.2); color:#4fc3f7;">2</div>
+            <div class="step-content">
+              <h4>Click "+ Add" → Add Charging Session</h4>
+              <p>A blank form opens. Fill in Date first — this controls the filename.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(2,136,209,0.2); color:#4fc3f7;">3</div>
+            <div class="step-content">
+              <h4>Fill in all fields</h4>
+              <p>Location is a dropdown. Vehicle defaults to your current car. Cost = 0 for free charging. Add notes if relevant.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">4</div>
+            <div class="step-content">
+              <h4>Save → site rebuilds in ~2 min</h4>
+              <p>CloudCannon commits the file to GitHub. GitHub Actions builds the site automatically.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="info-box tip">
+            <strong>💡 Home charging cost</strong><br>
+            Leave cost as <span class="mono">0</span> for Home sessions — the dashboard calculates it automatically using your configured electricity rate.
+          </div>
+          <div class="info-box warn" style="margin-top:12px;">
+            <strong>⚠️ Date timezone</strong><br>
+            CloudCannon shows UTC time. If you charge after 8pm Eastern, the UTC date may show as the next day. Always verify the date matches your actual charge date and correct it if needed.
+          </div>
+          <div class="info-box green" style="margin-top:12px;">
+            <strong>✓ Notes field</strong><br>
+            Anything in Notes appears as a 📝 tooltip on the history page. Good for logging rate info, trip context, or unusual circumstances.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 03</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 4 — LOCATION BADGES & BRANDS
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #0288d1, #CC0000, #FF7A14, #65A844);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Location System</div>
+      <h2 class="slide-heading">Location <span>badges</span> & charging networks</h2>
+
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:14px;">The site detects the charging network from the location string and colors the badge accordingly. The detection is keyword-based — the location just needs to <em>contain</em> the keyword.</p>
+
+      <div class="swatch-row">
+        <div class="swatch"><div class="swatch-dot" style="background:#0288d1;"></div><span class="swatch-name">Work</span><span class="swatch-hex">contains "work"</span></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#7b1fa2;"></div><span class="swatch-name">Home</span><span class="swatch-hex">contains "home"</span></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#CC0000;"></div><span class="swatch-name">Tesla</span><span class="swatch-hex">contains "tesla"</span></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#FF7A14;"></div><span class="swatch-name">ChargePoint</span><span class="swatch-hex">contains "chargepoint"</span></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#65A844;"></div><span class="swatch-name">Blink</span><span class="swatch-hex">contains "blink"</span></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#ffa500;"></div><span class="swatch-name">Rivian</span><span class="swatch-hex">contains "rivian"</span></div>
+        <div class="swatch"><div class="swatch-dot" style="background:#616161;"></div><span class="swatch-name">Other</span><span class="swatch-hex">anything else</span></div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="two-col">
+        <div>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;"><strong style="color:var(--text);">Adding a new location</strong> to the CloudCannon dropdown:</p>
+          <div class="step-list">
+            <div class="step">
+              <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">1</div>
+              <div class="step-content"><h4>Open .cloudcannon/schemas/charging.yaml</h4><p>In VS Code, find the <span class="mono">values:</span> list under location.</p></div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">2</div>
+              <div class="step-content"><h4>Add a new line</h4><p>e.g. <span class="mono">- "Tesla, Ann Arbor"</span> — keep the quotes if the name has a comma.</p></div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">3</div>
+              <div class="step-content"><h4>Commit & push</h4><p>New location appears in the dropdown for all future sessions after CloudCannon rebuilds.</p></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="code-label">Example: adding a new Tesla location</div>
+          <div class="code-block">
+<span class="comment"># in .cloudcannon/schemas/charging.yaml</span>
+<span class="key">  location</span>:
+<span class="key">    type</span>: select
+<span class="key">    options</span>:
+<span class="key">      values</span>:
+        - Home
+        - Work
+        - <span class="val">"Tesla, Lansing"</span>
+        - <span class="val">"Tesla, Ohio"</span>
+        - <span class="val">"Tesla, Ann Arbor"</span>  <span class="comment">← new</span>
+          </div>
+          <div class="info-box tip" style="margin-top:10px;">
+            The badge color is automatic — "Tesla, Ann Arbor" contains "tesla" so it gets the red badge. No other changes needed.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 04</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 5 — ELECTRICITY RATE
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #7b1fa2, #5D3FD3);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Home Charging Cost</div>
+      <h2 class="slide-heading">Updating your <span>electricity rate</span></h2>
+
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:16px;">Home sessions have their cost <em>calculated automatically</em> — you don't enter a cost for them. The rate is set in <span class="mono">charging-dashboard.md</span> and <span class="mono">charging-history.md</span>. Both files must be updated together.</p>
+
+      <div class="code-label">The two lines to find near the top of each file</div>
+      <div class="code-block">
+<span class="comment">{% comment %} HOME ELECTRICITY RATE CONFIGURATION {% endcomment %}</span>
+<span class="key">{% assign home_rate_per_kwh</span>        = <span class="val">0.17</span> <span class="key">%}</span>   <span class="comment">← change this</span>
+<span class="key">{% assign home_rate_effective_date</span> = <span class="val">"2025-08-22"</span> <span class="key">%}</span>  <span class="comment">← and this</span>
+      </div>
+
+      <div class="two-col" style="margin-top:14px;">
+        <div class="step-list">
+          <div class="step">
+            <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">1</div>
+            <div class="step-content"><h4>Check your utility bill</h4><p>Find the "Energy Charge" per kWh. DTE and Consumers Energy list it clearly.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">2</div>
+            <div class="step-content"><h4>Note the date of your next Home session</h4><p>This is the effective date — sessions before it keep their old calculated cost.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">3</div>
+            <div class="step-content"><h4>Update both values in both files</h4><p>Edit <span class="mono">charging-dashboard.md</span> AND <span class="mono">charging-history.md</span> — same two lines in each.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">4</div>
+            <div class="step-content"><h4>Commit & push</h4><p>Site recalculates all Home session costs automatically on next build.</p></div>
+          </div>
+        </div>
+        <div>
+          <div class="info-box warn">
+            <strong>⚠️ Historical sessions are protected</strong><br>
+            Sessions before <span class="mono">home_rate_effective_date</span> are NOT recalculated. Their cost comes from whatever was stored in the file originally.
+          </div>
+          <div class="info-box tip" style="margin-top:10px;">
+            <strong>💡 Non-home sessions</strong><br>
+            Work, Tesla, ChargePoint etc. always use the <span class="mono">cost</span> field stored in the file. Enter those manually when you add the session.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 05</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 6 — GAS SAVINGS PERIODS
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #2ecc71, #0288d1);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Gas Savings Calculation</div>
+      <h2 class="slide-heading">Managing <span>gas savings</span> periods</h2>
+
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Gas savings use period-based rates in <span class="mono">charging-dashboard.md</span> — each session is calculated with the rates that were current when it happened.</p>
+
+      <div class="code-label">The period table — in charging-dashboard.md</div>
+      <div class="code-block">
+<span class="key">{% assign gas_periods</span> = <span class="val">"</span>
+<span class="val">2025-08-22</span> <span class="pipe">|</span> <span class="val">23</span> <span class="pipe">|</span> <span class="val">2.50</span> <span class="pipe">|</span> <span class="val">3.0</span> <span class="pipe">|</span>
+<span class="val">2025-11-01</span> <span class="pipe">|</span> <span class="val">23</span> <span class="pipe">|</span> <span class="val">2.75</span> <span class="pipe">|</span> <span class="val">2.5</span> <span class="pipe">|</span>   <span class="comment">← winter: higher gas, lower efficiency</span>
+<span class="val">2026-03-01</span> <span class="pipe">|</span> <span class="val">23</span> <span class="pipe">|</span> <span class="val">2.50</span> <span class="pipe">|</span> <span class="val">3.0</span> <span class="pipe">|</span>   <span class="comment">← spring: back to summer rates</span>
+<span class="val">"</span> <span class="pipe">| strip | split:</span> <span class="val">"</span>
+<span class="val">"</span> <span class="key">%}</span>
+      </div>
+
+      <div class="two-col" style="margin-top:14px;">
+        <div>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;"><strong style="color:var(--text);">Column meaning</strong></p>
+          <div class="three-col" style="gap:8px;">
+            <div class="stat-card"><div class="label">Column 1</div><div class="value" style="font-size:0.9rem;">Date</div><div class="sub">Period start YYYY-MM-DD</div></div>
+            <div class="stat-card"><div class="label">Column 2</div><div class="value" style="font-size:0.9rem;">MPG</div><div class="sub">Comparison gas car MPG</div></div>
+            <div class="stat-card"><div class="label">Column 3</div><div class="value" style="font-size:0.9rem;">$/gal</div><div class="sub">Gas price per gallon</div></div>
+          </div>
+          <div class="stat-card" style="margin-top:8px;"><div class="label">Column 4</div><div class="value" style="font-size:0.9rem;">mi/kWh</div><div class="sub">Mach-E efficiency. ~3.0 summer, ~2.5 winter</div></div>
+        </div>
+        <div>
+          <div class="info-box tip">
+            <strong>When to add a new period:</strong><br>
+            • Gas price shifts more than ~$0.25<br>
+            • Seasonal efficiency change (Nov → Mar)<br>
+            • You want to update comparison MPG
+          </div>
+          <div class="info-box green" style="margin-top:10px;">
+            <strong>✓ The "see assumptions" link</strong><br>
+            On the live charging page, click "see assumptions ↕" under the green Gas Savings number to expand a table showing all your periods.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 06</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 7 — ODOMETER / COST PER MILE
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #FF7A14, #7b1fa2);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Cost Per Mile Tracking</div>
+      <h2 class="slide-heading">Odometer & <span>cost-per-mile</span> config</h2>
+
+      <div class="code-label">The odometer table — in charging-dashboard.md</div>
+      <div class="code-block">
+<span class="key">{% assign odometer_entries</span> = <span class="val">"</span>
+<span class="val">2025 Mach-E GT</span> <span class="pipe">|</span> <span class="val">18500</span> <span class="pipe">|</span> <span class="val">2026-04-18</span> <span class="pipe">|</span> <span class="val">2025-08-22</span> <span class="pipe">|</span>
+<span class="val">"</span> <span class="pipe">| strip | split:</span> <span class="val">"</span>
+<span class="val">"</span> <span class="key">%}</span>
+      </div>
+
+      <div class="two-col" style="margin-top:14px;">
+        <div class="step-list">
+          <div class="step">
+            <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">→</div>
+            <div class="step-content"><h4>Column 1: Vehicle name</h4><p>Must EXACTLY match the <span class="mono">vehicle</span> field in your charging files. Case-sensitive.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">→</div>
+            <div class="step-content"><h4>Column 2: Odometer miles</h4><p>Current reading. Update this and column 3 regularly (monthly or whenever).</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">→</div>
+            <div class="step-content"><h4>Column 3: Reading date</h4><p>Only sessions ON OR BEFORE this date count toward this vehicle's cost/mile.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">→</div>
+            <div class="step-content"><h4>Column 4: First session date</h4><p>Date of your very first session for this vehicle. Set once, don't change.</p></div>
+          </div>
+        </div>
+        <div>
+          <div class="info-box warn">
+            <strong>⚠️ When your 2026 Mach-E arrives</strong><br>
+            1. Add a new line to the table for <span class="mono">2026 Mach-E GT</span><br>
+            2. Update the CloudCannon schema default vehicle<br>
+            3. An "Overall" row auto-appears once you have 2+ vehicles
+          </div>
+          <div class="info-box tip" style="margin-top:10px;">
+            <strong>💡 How to update monthly</strong><br>
+            Check FordPass or your dashboard, then update just two numbers: odometer miles and the date. Commit and push.
+          </div>
+          <div class="code-label" style="margin-top:12px;">Example with 2026 car added</div>
+          <div class="code-block" style="font-size:0.7rem;">
+<span class="val">2025 Mach-E GT</span> <span class="pipe">|</span> <span class="val">32000</span> <span class="pipe">|</span> <span class="val">2027-01-01</span> <span class="pipe">|</span> <span class="val">2025-08-22</span> <span class="pipe">|</span>
+<span class="val">2026 Mach-E GT</span> <span class="pipe">|</span> <span class="val">8500</span>  <span class="pipe">|</span> <span class="val">2027-01-01</span> <span class="pipe">|</span> <span class="val">2026-10-15</span> <span class="pipe">|</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 07</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 8 — FILE CLEANUP (Python Script)
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #CC0000, #FF7A14);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">File Maintenance</div>
+      <h2 class="slide-heading">Running the <span>cleanup script</span></h2>
+
+      <div class="two-col">
+        <div>
+          <p style="font-size:0.82rem; color:var(--muted); margin-bottom:14px;">The Python script <span class="mono">fix_charging_files.py</span> at the repo root handles two jobs:</p>
+
+          <div class="step-list">
+            <div class="step">
+              <div class="step-num" style="background:rgba(204,0,0,0.2); color:#ef9a9a;">🔧</div>
+              <div class="step-content">
+                <h4>Fix front matter</h4>
+                <p>Strips timestamps from dates, fixes null notes, adds missing vehicle field, removes any <span class="mono">_schema</span> or <span class="mono">_inputs</span> CloudCannon may have injected.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="background:rgba(204,0,0,0.2); color:#ef9a9a;">📁</div>
+              <div class="step-content">
+                <h4>Rename files (optional)</h4>
+                <p>Renames all files to the <span class="mono">YYYY-MM-DD-session-N.md</span> scheme, sorted chronologically. Shows a preview before doing anything.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="code-label" style="margin-top:16px;">Commands to run from repo root</div>
+          <div class="code-block">
+<span class="comment"># Fix front matter only (safe to run anytime)</span>
+python3 fix_charging_files.py
+
+<span class="comment"># Fix AND rename files (shows preview, asks to confirm)</span>
+python3 fix_charging_files.py --rename
+          </div>
+        </div>
+        <div>
+          <div class="info-box warn">
+            <strong>⚠️ When to run the fix script</strong><br>
+            • After adding sessions via CloudCannon if the date looks wrong<br>
+            • If any session shows a long timestamp instead of a clean date<br>
+            • As periodic housekeeping (monthly is fine)
+          </div>
+          <div class="info-box tip" style="margin-top:10px;">
+            <strong>💡 When to run --rename</strong><br>
+            Only when you want tidy sequential filenames. It's cosmetic — the site doesn't care what files are named. Run it a few times a year if you want.
+          </div>
+          <div class="info-box green" style="margin-top:10px;">
+            <strong>✓ After running, always commit</strong><br>
+            <span class="mono">git add _charging/</span><br>
+            <span class="mono">git commit -m "Cleanup charging files"</span><br>
+            <span class="mono">git push</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 08</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 9 — GIT WORKFLOW
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #ffa500, #2ecc71);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Git & GitHub</div>
+      <h2 class="slide-heading">The <span>git workflow</span> for file edits</h2>
+
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:16px;">CloudCannon handles git automatically when you save there. For edits you make directly in VS Code, you need to commit and push manually.</p>
+
+      <div class="two-col">
+        <div>
+          <div class="code-label">Typical workflow after editing files in VS Code</div>
+          <div class="code-block">
+<span class="comment"># 1. Always pull first (CloudCannon may have pushed)</span>
+git pull
+
+<span class="comment"># 2. Make your edits, then stage everything</span>
+git add .
+
+<span class="comment"># 3. Commit with a descriptive message</span>
+git commit -m <span class="val">"Update home rate to $0.19"</span>
+
+<span class="comment"># 4. Push to GitHub — triggers a site rebuild</span>
+git push
+          </div>
+
+          <div class="info-box tip" style="margin-top:12px;">
+            <strong>💡 Use GitHub Desktop if preferred</strong><br>
+            GitHub Desktop does all of the above with a GUI. Either tool works — they talk to the same repo. Just remember to always pull before editing.
+          </div>
+        </div>
+        <div>
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;"><strong style="color:var(--text);">Branch rule of thumb</strong></p>
+          <div class="step-list">
+            <div class="step">
+              <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">✓</div>
+              <div class="step-content"><h4>Commit to main directly</h4><p>Adding sessions, updating odometer, tweaking rates — small routine changes. Fine on main.</p></div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="background:rgba(255,165,0,0.2); color:#ffe082;">⚠</div>
+              <div class="step-content"><h4>Use a branch for big changes</h4><p>Restructuring pages, adding new features, changing config files significantly. Create a branch so main stays live while you experiment.</p></div>
+            </div>
+          </div>
+          <div class="code-label" style="margin-top:12px;">Creating and using a branch</div>
+          <div class="code-block" style="font-size:0.72rem;">
+<span class="comment"># Create and switch to new branch</span>
+git checkout -b feature/new-vehicle
+
+<span class="comment"># Work, commit as normal, then merge back</span>
+git checkout main
+git merge feature/new-vehicle
+git push
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 09</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 10 — CLOUDCANNON CONFIG FILES
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #5D3FD3, #CC0000);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">CloudCannon Configuration</div>
+      <h2 class="slide-heading">Key <span>config files</span> explained</h2>
+
+      <div class="two-col">
+        <div class="step-list">
+          <div class="step">
+            <div class="step-num" style="background:rgba(93,63,211,0.2); color:#b39ddb;">📄</div>
+            <div class="step-content">
+              <h4>cloudcannon.config.yml</h4>
+              <p>Master CloudCannon config. Defines the Charging Sessions collection, the location dropdown values, field types (date, number, textarea), and the file naming template.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(93,63,211,0.2); color:#b39ddb;">📄</div>
+            <div class="step-content">
+              <h4>.cloudcannon/schemas/charging.md</h4>
+              <p>Template for new session files. Must be a <span class="mono">.md</span> file (not .yaml) so CloudCannon creates <span class="mono">.md</span> sessions. Contains default field values.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(93,63,211,0.2); color:#b39ddb;">📄</div>
+            <div class="step-content">
+              <h4>_config.yml</h4>
+              <p>Jekyll-only config. Site title, URL, timezone, theme, and the charging collection definition. No CloudCannon config here — keep them separate.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="code-label">cloudcannon.config.yml — key sections</div>
+          <div class="code-block" style="font-size:0.7rem;">
+<span class="key">collections_config</span>:
+  <span class="key">charging</span>:
+    <span class="key">path</span>: <span class="val">_charging</span>
+    <span class="key">default_content_type</span>: <span class="val">md</span>
+    <span class="key">schemas</span>:
+      <span class="key">default</span>:
+        <span class="key">path</span>: <span class="val">.cloudcannon/schemas/charging.md</span>
+
+<span class="key">_inputs</span>:           <span class="comment">← field UI definitions</span>
+  <span class="key">date</span>:
+    <span class="key">type</span>: <span class="val">date</span>
+    <span class="key">options</span>:
+      <span class="key">time_format</span>: <span class="val">false</span>  <span class="comment">← no timestamp, plain date</span>
+  <span class="key">location</span>:
+    <span class="key">type</span>: <span class="val">select</span>   <span class="comment">← dropdown of locations</span>
+          </div>
+          <div class="info-box warn" style="margin-top:10px;">
+            <strong>⚠️ YAML indentation</strong><br>
+            These files are extremely sensitive to spaces. If CloudCannon stops working after an edit, check the indentation — use VS Code's yellow squiggles as a guide.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 10</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SLIDE 11 — QUICK REFERENCE CHEATSHEET
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #2ecc71, #5D3FD3, #CC0000);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Quick Reference</div>
+      <h2 class="slide-heading">The <span>cheatsheet</span></h2>
+
+      <div class="two-col">
+        <div>
+          <p style="font-size:0.75rem; font-weight:600; color:var(--text); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.08em;">Routine tasks</p>
+          <div class="checklist">
+            <div class="check-item"><span class="check-icon">⚡</span><span><strong>Add session:</strong> CloudCannon → Charging Sessions → + Add</span></div>
+            <div class="check-item"><span class="check-icon">🔌</span><span><strong>Update electricity rate:</strong> Edit both .md files, change 2 lines each, commit</span></div>
+            <div class="check-item"><span class="check-icon">⛽</span><span><strong>Update gas period:</strong> Add line to gas_periods in charging-dashboard.md, commit</span></div>
+            <div class="check-item"><span class="check-icon">🚗</span><span><strong>Update odometer:</strong> Change miles + date in odometer_entries in charging-dashboard.md</span></div>
+            <div class="check-item"><span class="check-icon">📍</span><span><strong>Add location:</strong> Edit .cloudcannon/schemas/charging.yaml values list, commit</span></div>
+            <div class="check-item"><span class="check-icon">🧹</span><span><strong>Cleanup files:</strong> <span class="mono">python3 fix_charging_files.py</span> then commit</span></div>
+          </div>
+        </div>
+        <div>
+          <p style="font-size:0.75rem; font-weight:600; color:var(--text); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.08em;">Files & their purpose</p>
+          <div class="checklist">
+            <div class="check-item"><span class="check-icon">📁</span><span><span class="mono">_charging/*.md</span> — one file per charging session</span></div>
+            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-dashboard.md</span> — main /charging/ page, all config</span></div>
+            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-history.md</span> — /charging-history/ full table page</span></div>
+            <div class="check-item"><span class="check-icon">⚙️</span><span><span class="mono">cloudcannon.config.yml</span> — CloudCannon UI settings</span></div>
+            <div class="check-item"><span class="check-icon">🗂</span><span><span class="mono">.cloudcannon/schemas/charging.md</span> — new session template</span></div>
+            <div class="check-item"><span class="check-icon">⚙️</span><span><span class="mono">_config.yml</span> — Jekyll site settings only</span></div>
+            <div class="check-item"><span class="check-icon">🐍</span><span><span class="mono">fix_charging_files.py</span> — cleanup/rename script</span></div>
+          </div>
+
+          <div class="info-box green" style="margin-top:14px;">
+            <strong>✓ Node.js update reminder</strong><br>
+            Before June 2026 — update GitHub Actions workflow to use <span class="mono">actions/checkout@v4.2.2</span> and <span class="mono">actions/upload-artifact@v4.6.0</span> to avoid build warnings.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 11</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="kbd-hint">
+  <span><span class="kbd">←</span><span class="kbd">→</span> arrow keys</span>
+  <span><span class="kbd">Space</span> next slide</span>
+  <span><span class="kbd">Home</span> first slide</span>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total  = slides.length;
+  let current  = 0;
+
+  function buildDots() {
+    document.querySelectorAll('.slide-dot-nav').forEach(nav => {
+      nav.innerHTML = '';
+      for (let i = 0; i < total; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot' + (i === current ? ' active' : '');
+        d.onclick = () => goTo(i);
+        nav.appendChild(d);
+      }
+    });
+  }
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, total - 1));
+    slides[current].classList.add('active');
+    document.getElementById('slide-counter').textContent = (current + 1) + ' / ' + total;
+    document.getElementById('btn-prev').disabled = current === 0;
+    document.getElementById('btn-next').disabled = current === total - 1;
+    document.getElementById('progress-bar').style.width = ((current + 1) / total * 100) + '%';
+    buildDots();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function changeSlide(dir) { goTo(current + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); changeSlide(1); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); changeSlide(-1); }
+    if (e.key === 'Home')       { e.preventDefault(); goTo(0); }
+    if (e.key === 'End')        { e.preventDefault(); goTo(total - 1); }
+  });
+
+  // Touch/swipe support
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) changeSlide(dx < 0 ? 1 : -1);
+  });
+
+  goTo(0);
+</script>
+</body>
+</html>
