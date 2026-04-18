@@ -9,3 +9,13 @@ _inputs:
     type: select
     options:
       values: [Home, Work, Tesla, ChargePoint, Rivian]
+      
+structures:
+      _structures:
+        values:
+          - value:
+              date: ''
+              location: ''
+              energy_kwh: 0.0
+              cost: 0.0
+              notes: null
