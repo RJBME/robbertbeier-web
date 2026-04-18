@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 - date: 2025-08-22
   location: " "Work""
   vehicle: "2025 Mustang Mach-e GT"
@@ -901,3 +902,9 @@
   vehicle: "2025 Mustang Mach-e GT"
   energy_kwh: 17.5
   cost: 0.0
+=======
+- date: 2026-04-17T13:00:00Z
+  location: Work
+  energy_kwh: 29.5
+  cost: 0
+>>>>>>> 66ffb0c7b544ec01d1fbcdaee0ae4934a884e299
