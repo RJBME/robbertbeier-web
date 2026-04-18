@@ -28,3 +28,6 @@ cloudcannon:
           type: number
           comment: "Total cost in USD"
 encoding: UTF-8
+collections:
+  charging:
+    output: false
