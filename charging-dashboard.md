@@ -7,18 +7,90 @@ permalink: /charging/
 {% comment %}
 =============================================================
   HOME ELECTRICITY RATE CONFIGURATION
-  Update the two values below when your rate changes:
-    home_rate_per_kwh : your current rate in dollars per kWh
-    home_rate_effective_date : the date (YYYY-MM-DD) from which
-      this rate applies. Sessions at Home BEFORE this date will
-      use the cost stored in the file. Sessions at Home ON OR
-      AFTER this date will have their cost calculated automatically.
-  When your rate changes again, update both values and set
-  home_rate_effective_date to the date of the first new session.
+  ─────────────────────────────────────────────────────────
+  Update the two values below when your electricity rate
+  changes (e.g. after a new utility bill cycle).
+
+  home_rate_per_kwh
+    Your current home electricity rate in dollars per kWh.
+    Check your DTE or Consumers Energy bill for the exact
+    rate. It's usually listed as "Energy Charge" per kWh.
+
+  home_rate_effective_date
+    The date (YYYY-MM-DD) of the FIRST charging session
+    that should use this new rate. Sessions at Home BEFORE
+    this date use the cost already stored in the file.
+    Sessions at Home ON OR AFTER this date have their cost
+    calculated automatically using home_rate_per_kwh.
+
+  HOW TO UPDATE WHEN YOUR RATE CHANGES:
+    1. Find the date of your next Home charging session.
+    2. Update home_rate_per_kwh to your new rate.
+    3. Update home_rate_effective_date to that session date.
+    4. Save, commit, and push. Done.
 =============================================================
 {% endcomment %}
-{% assign home_rate_per_kwh = 0.17 %}
+{% assign home_rate_per_kwh        = 0.17 %}
 {% assign home_rate_effective_date = "2025-08-22" %}
+
+{% comment %}
+=============================================================
+  GAS SAVINGS CALCULATION — PERIOD-BASED CONFIGURATION
+  ─────────────────────────────────────────────────────────
+  Gas savings are calculated per session using the rates
+  that were in effect on the date of that session. This
+  lets you reflect seasonal changes in gas prices and
+  Mach-E efficiency accurately over time.
+
+  FORMULA (per session):
+    gas_equivalent = kWh × miles_per_kwh ÷ mpg × gas_price
+    session_saving = gas_equivalent − actual_session_cost
+    total_savings  = sum of all session_savings
+
+  THE PERIOD TABLE — gas_periods:
+  ─────────────────────────────────────────────────────────
+  Each line in gas_periods defines one time period.
+  Format (one period per line, pipe-separated):
+    YYYY-MM-DD | mpg | gas_$/gal | mi/kWh |
+
+  RULES:
+    • List periods in CHRONOLOGICAL ORDER, earliest first.
+    • The first period covers all sessions from the very
+      beginning of your data up until the next period starts.
+    • Each session uses the LAST period whose start date is
+      on or before the session date — i.e. the most recent
+      applicable period.
+    • Always keep a trailing pipe | at the end of each line.
+
+  FIELD DESCRIPTIONS:
+    YYYY-MM-DD   Start date of this period (YYYY-MM-DD).
+    mpg          MPG of the gas car you're comparing against.
+                 23 = US average mid-size sedan.
+                 Use your old car's actual MPG for a personal
+                 comparison (e.g. 28 if your old car got 28).
+    gas_$/gal    Average gas price in dollars per gallon.
+                 Update seasonally or when prices shift.
+                 Check GasBuddy for current Michigan average.
+    mi/kWh       Your Mach-E GT's real-world efficiency.
+                 ~3.0 is a reasonable summer baseline.
+                 Drop to ~2.5 in winter (cold reduces range).
+                 Check FordPass for your rolling average.
+
+  HOW TO ADD A NEW PERIOD:
+    1. Decide the start date (first session under new rates).
+    2. Add a new line in date order using the format above.
+    3. Save, commit, push. The page recalculates automatically.
+
+  EXAMPLE — if gas jumps to $3.50 on June 1 2026:
+    2026-06-01 | 23 | 3.50 | 3.0 |
+=============================================================
+{% endcomment %}
+{% assign gas_periods = "
+2025-08-22 | 23 | 2.50 | 3.0 |
+2025-11-01 | 23 | 2.75 | 2.5 |
+2026-03-01 | 23 | 2.50 | 3.0 |
+" | strip | split: "
+" %}
 
 <style>
   .dash-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); }
@@ -29,32 +101,48 @@ permalink: /charging/
   .status-value { font-size: 1.5rem; font-weight: bold; display: block; margin-top: 5px; color: var(--text) !important; }
   .status-footnote { font-size: 0.65rem; color: #888; display: block; margin-top: 4px; line-height: 1.4; }
 
+  .assumptions-panel { display: none; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.78rem; color: #888; }
+  .assumptions-panel strong { color: var(--text); }
+  .assumptions-panel table { width: 100%; margin-top: 8px; font-size: 0.75rem; border-collapse: collapse; }
+  .assumptions-panel th { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--dash-border); color: var(--text); }
+  .assumptions-panel td { padding: 4px 8px; }
+  .assumptions-link { color: #888; font-size: 0.6rem; text-decoration: none; }
+
   .media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
   .card { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
-  .badge-work { background: #e3f2fd; color: #0288d1; }
-  .badge-home { background: #f3e5f5; color: #7b1fa2; }
-  .badge-tesla { background: #ffebee; color: #CC0000; }
-  .badge-cp { background: #fff3e0; color: #FF7A14; }
-  .badge-blink { background: #e8f5e9; color: #65A844; }
+  .badge-work   { background: #e3f2fd; color: #0288d1; }
+  .badge-home   { background: #f3e5f5; color: #7b1fa2; }
+  .badge-tesla  { background: #ffebee; color: #CC0000; }
+  .badge-cp     { background: #fff3e0; color: #FF7A14; }
+  .badge-blink  { background: #e8f5e9; color: #65A844; }
   .badge-rivian { background: #fffde7; color: #ffa500; }
-  .badge-other { background: #f5f5f5; color: #616161; }
+  .badge-other  { background: #f5f5f5; color: #616161; }
 
   .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; color: var(--text) !important; }
   .charging-table th { background: var(--table-head); padding: 12px; text-align: left; border-bottom: 2px solid var(--dash-border); }
   .charging-table td { padding: 12px; border-bottom: 1px solid var(--dash-border); }
 </style>
 
-{% assign total_cost = 0.0 %}{% assign total_kwh = 0.0 %}
-{% assign work_kwh = 0.0 %}{% assign home_kwh = 0.0 %}{% assign tesla_kwh = 0.0 %}{% assign cp_kwh = 0.0 %}{% assign blink_kwh = 0.0 %}{% assign rivian_kwh = 0.0 %}{% assign other_kwh = 0.0 %}
+{% comment %} ── Accumulate totals across all sessions ── {% endcomment %}
+{% assign total_cost  = 0.0 %}
+{% assign total_kwh   = 0.0 %}
+{% assign gas_savings = 0.0 %}
+{% assign work_kwh    = 0.0 %}
+{% assign home_kwh    = 0.0 %}
+{% assign tesla_kwh   = 0.0 %}
+{% assign cp_kwh      = 0.0 %}
+{% assign blink_kwh   = 0.0 %}
+{% assign rivian_kwh  = 0.0 %}
+{% assign other_kwh   = 0.0 %}
 
 {% for entry in site.charging %}
-  {% assign k = entry.energy_kwh | plus: 0 %}
-  {% assign loc = entry.location | downcase %}
+  {% assign k          = entry.energy_kwh | plus: 0 %}
+  {% assign loc        = entry.location | downcase %}
   {% assign entry_date = entry.date | date: "%Y-%m-%d" %}
 
-  {% comment %} Determine effective cost for this entry {% endcomment %}
+  {% comment %} ── Effective electricity cost for this session ── {% endcomment %}
   {% if loc contains "home" and entry_date >= home_rate_effective_date %}
     {% assign c = k | times: home_rate_per_kwh %}
   {% else %}
@@ -62,24 +150,47 @@ permalink: /charging/
   {% endif %}
 
   {% assign total_cost = total_cost | plus: c %}
-  {% assign total_kwh = total_kwh | plus: k %}
+  {% assign total_kwh  = total_kwh  | plus: k %}
 
-  {% if loc contains "work" %}{% assign work_kwh = work_kwh | plus: k %}
-  {% elsif loc contains "home" %}{% assign home_kwh = home_kwh | plus: k %}
-  {% elsif loc contains "tesla" %}{% assign tesla_kwh = tesla_kwh | plus: k %}
-  {% elsif loc contains "chargepoint" %}{% assign cp_kwh = cp_kwh | plus: k %}
-  {% elsif loc contains "blink" %}{% assign blink_kwh = blink_kwh | plus: k %}
-  {% elsif loc contains "rivian" %}{% assign rivian_kwh = rivian_kwh | plus: k %}
-  {% else %}{% assign other_kwh = other_kwh | plus: k %}{% endif %}
+  {% comment %} ── kWh by location bucket (for charts) ── {% endcomment %}
+  {% if loc contains "work" %}           {% assign work_kwh   = work_kwh   | plus: k %}
+  {% elsif loc contains "home" %}        {% assign home_kwh   = home_kwh   | plus: k %}
+  {% elsif loc contains "tesla" %}       {% assign tesla_kwh  = tesla_kwh  | plus: k %}
+  {% elsif loc contains "chargepoint" %} {% assign cp_kwh     = cp_kwh     | plus: k %}
+  {% elsif loc contains "blink" %}       {% assign blink_kwh  = blink_kwh  | plus: k %}
+  {% elsif loc contains "rivian" %}      {% assign rivian_kwh = rivian_kwh | plus: k %}
+  {% else %}                             {% assign other_kwh  = other_kwh  | plus: k %}
+  {% endif %}
+
+  {% comment %}
+    ── Per-session gas savings using period-aware rates ──
+    Walk the gas_periods list and keep updating the period
+    variables as long as the period start date <= session date.
+    After the loop the variables hold the correct period for
+    this session.
+  {% endcomment %}
+  {% assign p_mpg       = 23   %}
+  {% assign p_gas_price = 2.50 %}
+  {% assign p_mi_kwh    = 3.0  %}
+
+  {% for period in gas_periods %}
+    {% assign parts = period | strip | split: " | " %}
+    {% if parts[0] <= entry_date %}
+      {% assign p_mpg       = parts[1] | plus: 0 %}
+      {% assign p_gas_price = parts[2] | plus: 0 %}
+      {% assign p_mi_kwh    = parts[3] | plus: 0 %}
+    {% endif %}
+  {% endfor %}
+
+  {% assign gas_equiv      = k | times: p_mi_kwh | divided_by: p_mpg | times: p_gas_price %}
+  {% assign session_saving = gas_equiv | minus: c %}
+  {% assign gas_savings    = gas_savings | plus: session_saving %}
 {% endfor %}
 
-{% comment %} Gas savings calculation values {% endcomment %}
-{% assign mpg = 23 %}
-{% assign gas_price = 2.50 %}
-{% assign miles_per_kwh = 3.0 %}
-{% assign gas_savings = total_kwh | times: miles_per_kwh | divided_by: mpg | times: gas_price | minus: total_cost | round: 0 %}
+{% assign gas_savings = gas_savings | round: 0 %}
 
 <div class="dash-container">
+
   <div class="status-bar">
     <div class="status-item">
       <span class="status-label">Total Energy</span>
@@ -93,10 +204,35 @@ permalink: /charging/
       <span class="status-label">Gas Savings</span>
       <span class="status-value" style="color: #2ecc71 !important;">${{ gas_savings }}</span>
       <span class="status-footnote">
-        vs. {{ mpg }} MPG car @ ${{ gas_price }}/gal<br>
-        assuming {{ miles_per_kwh }} mi/kWh
+        vs. gas car — rates vary by season<br>
+        <a class="assumptions-link" href="#"
+           onclick="var p=document.getElementById('gas-assumptions');p.style.display=p.style.display==='none'?'block':'none';return false;">
+          see assumptions ↕
+        </a>
       </span>
     </div>
+  </div>
+
+  {% comment %} Expandable assumptions panel — lists every gas period {% endcomment %}
+  <div id="gas-assumptions" class="assumptions-panel">
+    <strong>Gas Savings Assumptions by Period</strong>
+    <table>
+      <tr>
+        <th>From date</th>
+        <th>vs. MPG</th>
+        <th>Gas $/gal</th>
+        <th>mi/kWh</th>
+      </tr>
+      {% for period in gas_periods %}
+        {% assign parts = period | strip | split: " | " %}
+        <tr>
+          <td>{{ parts[0] }}</td>
+          <td>{{ parts[1] }}</td>
+          <td>${{ parts[2] }}</td>
+          <td>{{ parts[3] }}</td>
+        </tr>
+      {% endfor %}
+    </table>
   </div>
 
   <div class="media-grid">
@@ -121,17 +257,30 @@ permalink: /charging/
         {% assign sorted = site.charging | reverse %}
         {% for log in sorted limit: 8 %}
           {% assign log_date = log.date | date: "%Y-%m-%d" %}
-          {% assign log_loc = log.location | downcase %}
+          {% assign log_loc  = log.location | downcase %}
           {% if log_loc contains "home" and log_date >= home_rate_effective_date %}
             {% assign display_cost = log.energy_kwh | times: home_rate_per_kwh %}
           {% else %}
             {% assign display_cost = log.cost | plus: 0 %}
           {% endif %}
+          {% assign cents = display_cost | round: 2 | times: 100 | round | modulo: 100 %}
         <tr>
           <td>{{ log.date | date: "%Y-%m-%d" }}</td>
-          <td><span class="badge {% assign l = log.location | downcase %}{% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">{{ log.location | truncate: 20 }}</span></td>
+          <td>
+            <span class="badge
+              {% assign l = log.location | downcase %}
+              {% if l contains 'work' %}badge-work
+              {% elsif l contains 'home' %}badge-home
+              {% elsif l contains 'tesla' %}badge-tesla
+              {% elsif l contains 'chargepoint' %}badge-cp
+              {% elsif l contains 'blink' %}badge-blink
+              {% elsif l contains 'rivian' %}badge-rivian
+              {% else %}badge-other{% endif %}">
+              {{ log.location | truncate: 20 }}
+            </span>
+          </td>
           <td>{{ log.energy_kwh }} kWh</td>
-          <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 | append: "" | split: "." | first }}{% assign cents = display_cost | round: 2 | times: 100 | round | modulo: 100 %}{% if cents < 10 %}.0{{ cents }}{% else %}.{{ cents }}{% endif %}{% endif %}</td>
+          <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 | split: "." | first }}.{% if cents < 10 %}0{{ cents }}{% else %}{{ cents }}{% endif %}{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -146,8 +295,6 @@ permalink: /charging/
   const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
   const getThemeColor = () => isDark() ? '#eee' : '#333';
 
-  // Donut chart — use dark labels on light bg, light labels on dark bg
-  // Also use a shadow/stroke so labels are readable over any slice color
   const donutChart = new Chart(document.getElementById('energyChart'), {
     type: 'doughnut',
     data: {
@@ -165,7 +312,6 @@ permalink: /charging/
           position: 'bottom',
           labels: {
             color: getThemeColor(),
-            // Square boxes so color is easy to see in both modes
             usePointStyle: false,
             boxWidth: 14,
             padding: 16
@@ -176,7 +322,6 @@ permalink: /charging/
           color: '#ffffff',
           formatter: (v) => v.toFixed(2) + ' MWh',
           font: { weight: 'bold', size: 13 },
-          // Text shadow to ensure readability in light mode
           textShadowColor: 'rgba(0,0,0,0.6)',
           textShadowBlur: 4
         }
@@ -198,7 +343,11 @@ permalink: /charging/
     type: 'bar',
     data: {
       labels: rawData.map(d => d.label),
-      datasets: [{ data: rawData.map(d => d.val), backgroundColor: rawData.map(d => d.color), borderRadius: 4 }]
+      datasets: [{
+        data: rawData.map(d => d.val),
+        backgroundColor: rawData.map(d => d.color),
+        borderRadius: 4
+      }]
     },
     options: {
       indexAxis: 'y',
@@ -210,13 +359,10 @@ permalink: /charging/
     }
   });
 
-  // Update both charts when theme switches
   window.addEventListener('themeChanged', () => {
     const color = getThemeColor();
-    // Donut legend
     donutChart.options.plugins.legend.labels.color = color;
     donutChart.update();
-    // Bar y-axis labels
     barChart.options.scales.y.ticks.color = color;
     barChart.options.scales.x.grid.color = isDark() ? '#444' : '#ddd';
     barChart.update();
