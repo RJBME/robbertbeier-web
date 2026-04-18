@@ -4,6 +4,22 @@ title: Charging History
 permalink: /charging-history/
 ---
 
+{% comment %}
+=============================================================
+  HOME ELECTRICITY RATE CONFIGURATION
+  Update the two values below when your rate changes:
+    home_rate_per_kwh : your current rate in dollars per kWh
+    home_rate_effective_date : the date (YYYY-MM-DD) from which
+      this rate applies. Sessions at Home BEFORE this date will
+      use the cost stored in the file. Sessions at Home ON OR
+      AFTER this date will have their cost calculated automatically.
+  When your rate changes again, update both values and set
+  home_rate_effective_date to the date of the first new session.
+=============================================================
+{% endcomment %}
+{% assign home_rate_per_kwh = 0.17 %}
+{% assign home_rate_effective_date = "2025-08-22" %}
+
 <style>
   .history-container { color: var(--text); }
   .summary-bar { display: flex; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -88,13 +104,32 @@ permalink: /charging-history/
       </tr>
     </thead>
     <tbody>
-      {% assign all_logs = site.charging | sort: 'date' | reverse %}{% for log in all_logs %}
-      <tr class="log-row" data-year="{{ log.date | date: '%Y' }}" data-loc="{{ log.location }}" data-veh="{{ log.vehicle }}" data-kwh="{{ log.energy_kwh }}" data-cost="{{ log.cost }}" data-type="{% if log.cost > 0 %}paid{% else %}free{% endif %}">
+      {% assign all_logs = site.charging | sort: 'date' | reverse %}
+      {% for log in all_logs %}
+        {% assign log_date = log.date | date: "%Y-%m-%d" %}
+        {% assign log_loc = log.location | downcase %}
+
+        {% comment %} Apply home rate for entries on or after the effective date, use stored cost for all others {% endcomment %}
+        {% if log_loc contains "home" and log_date >= home_rate_effective_date %}
+          {% assign display_cost = log.energy_kwh | times: home_rate_per_kwh %}
+          {% assign cost_data = display_cost %}
+        {% else %}
+          {% assign display_cost = log.cost | plus: 0 %}
+          {% assign cost_data = log.cost %}
+        {% endif %}
+
+      <tr class="log-row"
+        data-year="{{ log.date | date: '%Y' }}"
+        data-loc="{{ log.location }}"
+        data-veh="{{ log.vehicle }}"
+        data-kwh="{{ log.energy_kwh }}"
+        data-cost="{{ cost_data }}"
+        data-type="{% if cost_data > 0 %}paid{% else %}free{% endif %}">
         <td>{{ log.date | date: "%Y-%m-%d" }}</td>
         <td>{% assign l = log.location | downcase %}<span class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">{{ log.location }}</span></td>
         <td style="opacity: 0.6;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
         <td>{{ log.energy_kwh }}</td>
-        <td>{% if log.cost == 0 %}Free{% else %}${{ log.cost | plus: 0.0001 | round: 2 }}{% endif %}</td>
+        <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 }}{% endif %}</td>
         <td>
           {% if log.notes and log.notes != "" %}
             <span class="note-icon">📝
@@ -102,7 +137,8 @@ permalink: /charging-history/
             </span>
           {% endif %}
         </td>
-      </tr>{% endfor %}
+      </tr>
+      {% endfor %}
     </tbody>
   </table>
 </div>

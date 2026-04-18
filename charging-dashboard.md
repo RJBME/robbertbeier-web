@@ -4,6 +4,22 @@ title: Charging
 permalink: /charging/
 ---
 
+{% comment %}
+=============================================================
+  HOME ELECTRICITY RATE CONFIGURATION
+  Update the two values below when your rate changes:
+    home_rate_per_kwh : your current rate in dollars per kWh
+    home_rate_effective_date : the date (YYYY-MM-DD) from which
+      this rate applies. Sessions at Home BEFORE this date will
+      use the cost stored in the file. Sessions at Home ON OR
+      AFTER this date will have their cost calculated automatically.
+  When your rate changes again, update both values and set
+  home_rate_effective_date to the date of the first new session.
+=============================================================
+{% endcomment %}
+{% assign home_rate_per_kwh = 0.17 %}
+{% assign home_rate_effective_date = "2025-08-22" %}
+
 <style>
   .dash-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); }
   .status-bar { display: flex; background: var(--dash-card); color: var(--text); padding: 20px; border-radius: 12px; justify-content: space-around; text-align: center; margin-bottom: 25px; border: 1px solid var(--dash-border); }
@@ -11,10 +27,10 @@ permalink: /charging/
   .status-item:last-child { border-right: none; }
   .status-label { font-size: 0.7rem; text-transform: uppercase; color: #888; display: block; }
   .status-value { font-size: 1.5rem; font-weight: bold; display: block; margin-top: 5px; color: var(--text) !important; }
-  
+
   .media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
   .card { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  
+
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
   .badge-work { background: #e3f2fd; color: #0288d1; }
   .badge-home { background: #f3e5f5; color: #7b1fa2; }
@@ -33,9 +49,20 @@ permalink: /charging/
 {% assign work_kwh = 0.0 %}{% assign home_kwh = 0.0 %}{% assign tesla_kwh = 0.0 %}{% assign cp_kwh = 0.0 %}{% assign blink_kwh = 0.0 %}{% assign rivian_kwh = 0.0 %}{% assign other_kwh = 0.0 %}
 
 {% for entry in site.charging %}
-  {% assign c = entry.cost | plus: 0 %}{% assign k = entry.energy_kwh | plus: 0 %}
-  {% assign total_cost = total_cost | plus: c %}{% assign total_kwh = total_kwh | plus: k %}
+  {% assign k = entry.energy_kwh | plus: 0 %}
   {% assign loc = entry.location | downcase %}
+  {% assign entry_date = entry.date | date: "%Y-%m-%d" %}
+
+  {% comment %} Determine effective cost for this entry {% endcomment %}
+  {% if loc contains "home" and entry_date >= home_rate_effective_date %}
+    {% assign c = k | times: home_rate_per_kwh %}
+  {% else %}
+    {% assign c = entry.cost | plus: 0 %}
+  {% endif %}
+
+  {% assign total_cost = total_cost | plus: c %}
+  {% assign total_kwh = total_kwh | plus: k %}
+
   {% if loc contains "work" %}{% assign work_kwh = work_kwh | plus: k %}
   {% elsif loc contains "home" %}{% assign home_kwh = home_kwh | plus: k %}
   {% elsif loc contains "tesla" %}{% assign tesla_kwh = tesla_kwh | plus: k %}
@@ -72,11 +99,19 @@ permalink: /charging/
       <thead><tr><th>Date</th><th>Location</th><th>Energy</th><th>Cost</th></tr></thead>
       <tbody>
         {% assign sorted = site.charging | reverse %}{% for log in sorted limit: 8 %}
+        {% assign log_date = log.date | date: "%Y-%m-%d" %}
+        {% assign log_loc = log.location | downcase %}
+        {% comment %} Apply home rate calculation for recent entries {% endcomment %}
+        {% if log_loc contains "home" and log_date >= home_rate_effective_date %}
+          {% assign display_cost = log.energy_kwh | times: home_rate_per_kwh %}
+        {% else %}
+          {% assign display_cost = log.cost | plus: 0 %}
+        {% endif %}
         <tr>
           <td>{{ log.date | date: "%Y-%m-%d" }}</td>
           <td><span class="badge {% assign l = log.location | downcase %}{% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">{{ log.location | truncate: 15 }}</span></td>
           <td>{{ log.energy_kwh }} kWh</td>
-          <td>{% if log.cost == 0 %}Free{% else %}${{ log.cost | plus: 0.0001 | round: 2 }}{% endif %}</td>
+          <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 }}{% endif %}</td>
         </tr>{% endfor %}
       </tbody>
     </table>
@@ -118,7 +153,7 @@ permalink: /charging/
     options: {
       indexAxis: 'y',
       plugins: { legend: { display: false }, datalabels: { display: false } },
-      scales: { 
+      scales: {
         x: { grid: { color: '#444' }, ticks: { color: '#888' }, display: true },
         y: { grid: { display: false }, ticks: { color: getThemeColor() } }
       }
