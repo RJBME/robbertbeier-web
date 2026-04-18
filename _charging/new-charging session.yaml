@@ -1,0 +1,35 @@
+_schema: default
+date: 2026-03-19T00:00:00Z
+location: Work
+vehicle: 2025 Mach-E GT
+energy_kwh: 5.3
+cost: 0
+notes: I am guessing when this charge was made as my TCU died.
+_inputs:
+  date:
+    type: date
+  location:
+    type: select
+    options:
+      values:
+        - Home
+        - Work
+        - Tesla, Lansing
+        - Tesla, Ohio
+        - Tesla, Battle Creek
+        - ChargePoint, Muskegon
+        - ChargePoint, Clare, MI
+        - ChargePoint, Grand Rapids, MI
+        - ChargePoint, DIA, Detroit
+        - Rivian, Clare, MI
+        - MGM Grand, Detroit, MI
+        - Blink, BJ's Wholesale, Canton
+        - Paul & Carol's, Beulah, MI
+  energy_kwh:
+    type: number
+    comment: Energy added in kWh
+  cost:
+    type: number
+    comment: Total cost in USD
+  notes:
+    type: textarea
