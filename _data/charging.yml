@@ -1,5 +1,4 @@
-- date: 2026-04-18
-  location: Home
-  energy_kwh: 15.0
-  cost: 2.25
-  
+- date: 2026-04-17T13:00:00Z
+  location: Work
+  energy_kwh: 29.5
+  cost: 0
