@@ -86,20 +86,101 @@ permalink: /charging/
 =============================================================
 {% endcomment %}
 {% assign gas_periods = "
-2025-08-22 | 27 | 2.50 | 3.0 |
-2025-11-01 | 27 | 2.75 | 2.7 |
-2026-03-01 | 27 | 4.00 | 3.0 |
+2025-08-22 | 23 | 2.50 | 3.0 |
+2025-11-01 | 23 | 2.75 | 2.5 |
+2026-03-01 | 23 | 2.50 | 3.0 |
+" | strip | split: "
+" %}
+
+{% comment %}
+=============================================================
+  ODOMETER / COST-PER-MILE CONFIGURATION
+  ─────────────────────────────────────────────────────────
+  This section lets you track cost-per-mile and efficiency
+  for each vehicle separately, as well as an overall total.
+
+  HOW IT WORKS:
+    - You manually record each vehicle's current odometer
+      reading and the date you read it.
+    - The page sums all charging costs for that vehicle for
+      sessions ON OR BEFORE the odometer date, then divides
+      by the miles driven to get cost/mile and kWh/mile.
+    - When you get your 2026 Mach-E, add a new entry below.
+
+  ODOMETER TABLE FORMAT (one vehicle per line, pipe-separated):
+    vehicle_name | odometer_miles | odometer_date | first_session_date |
+
+  FIELD DESCRIPTIONS:
+    vehicle_name
+      Must EXACTLY match the vehicle field in your charging
+      files (e.g. "2025 Mach-E GT"). Case sensitive.
+
+    odometer_miles
+      Current odometer reading in miles. Update this each
+      time you want fresh cost-per-mile numbers — ideally
+      once a month or whenever you remember.
+
+    odometer_date
+      Date (YYYY-MM-DD) you took the odometer reading.
+      Only charging sessions ON OR BEFORE this date are
+      included in the cost/mile calculation for this vehicle.
+
+    first_session_date
+      Date (YYYY-MM-DD) of the very first charging session
+      for this vehicle. Used to calculate total miles driven
+      since you started tracking (odometer - first_odometer
+      is not tracked, so miles = odometer reading used as-is
+      for the denominator — see note below).
+
+  IMPORTANT NOTE ON MILES:
+    The odometer reading you enter IS the total miles on the
+    car, but cost/mile is calculated using all charging costs
+    on or before odometer_date divided by odometer_miles.
+    This means early miles before you started tracking are
+    included in the denominator. If you want cost/mile only
+    for miles driven while tracking, subtract your odometer
+    reading at your first session from odometer_miles and
+    enter that adjusted number instead.
+
+  HOW TO UPDATE:
+    1. Check your odometer (FordPass app or dashboard).
+    2. Update odometer_miles to the new reading.
+    3. Update odometer_date to today's date.
+    4. Save, commit, push.
+
+  WHEN YOU GET YOUR 2026 MACH-E:
+    1. Add a new line for "2026 Mach-E GT" (or whatever
+       the vehicle field will be in your charging files).
+    2. Set odometer_miles to your initial reading and
+       odometer_date to the date of your first charge.
+    3. Make sure your CloudCannon schema default vehicle
+       is updated too so new sessions tag the right car.
+=============================================================
+{% endcomment %}
+{% assign odometer_entries = "
+2025 Mach-E GT | 10640 | 2026-04-18 | 2025-08-22 |
 " | strip | split: "
 " %}
 
 <style>
   .dash-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); }
+
   .status-bar { display: flex; background: var(--dash-card); color: var(--text); padding: 20px; border-radius: 12px; justify-content: space-around; text-align: center; margin-bottom: 25px; border: 1px solid var(--dash-border); }
   .status-item { flex: 1; border-right: 1px solid var(--dash-border); }
   .status-item:last-child { border-right: none; }
   .status-label { font-size: 0.7rem; text-transform: uppercase; color: #888; display: block; }
   .status-value { font-size: 1.5rem; font-weight: bold; display: block; margin-top: 5px; color: var(--text) !important; }
   .status-footnote { font-size: 0.65rem; color: #888; display: block; margin-top: 4px; line-height: 1.4; }
+
+  /* Cost-per-mile section */
+  .cpm-grid { display: grid; gap: 16px; margin-bottom: 25px; }
+  .cpm-row { display: flex; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 12px; padding: 16px 20px; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .cpm-vehicle { font-weight: bold; font-size: 0.9rem; flex: 1 1 160px; }
+  .cpm-vehicle small { display: block; font-weight: normal; color: #888; font-size: 0.65rem; margin-top: 2px; }
+  .cpm-stat { text-align: center; flex: 1 1 100px; }
+  .cpm-stat-label { font-size: 0.6rem; text-transform: uppercase; color: #888; display: block; }
+  .cpm-stat-value { font-size: 1.1rem; font-weight: bold; display: block; margin-top: 3px; }
+  .cpm-overall { border-top: 2px solid var(--dash-border); }
 
   .assumptions-panel { display: none; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.78rem; color: #888; }
   .assumptions-panel strong { color: var(--text); }
@@ -137,12 +218,21 @@ permalink: /charging/
 {% assign rivian_kwh  = 0.0 %}
 {% assign other_kwh   = 0.0 %}
 
+{% comment %}
+  Build per-vehicle cost and kWh accumulators.
+  We use a pipe-delimited string to store running totals
+  keyed by vehicle name, since Liquid doesn't support hashes.
+  Format: "vehicle_name::cost::kwh" entries in an array.
+{% endcomment %}
+{% assign veh_totals = "" %}
+
 {% for entry in site.charging %}
   {% assign k          = entry.energy_kwh | plus: 0 %}
   {% assign loc        = entry.location | downcase %}
   {% assign entry_date = entry.date | date: "%Y-%m-%d" %}
+  {% assign veh        = entry.vehicle | default: "2025 Mach-E GT" %}
 
-  {% comment %} ── Effective electricity cost for this session ── {% endcomment %}
+  {% comment %} ── Effective electricity cost ── {% endcomment %}
   {% if loc contains "home" and entry_date >= home_rate_effective_date %}
     {% assign c = k | times: home_rate_per_kwh %}
   {% else %}
@@ -162,17 +252,10 @@ permalink: /charging/
   {% else %}                             {% assign other_kwh  = other_kwh  | plus: k %}
   {% endif %}
 
-  {% comment %}
-    ── Per-session gas savings using period-aware rates ──
-    Walk the gas_periods list and keep updating the period
-    variables as long as the period start date <= session date.
-    After the loop the variables hold the correct period for
-    this session.
-  {% endcomment %}
+  {% comment %} ── Per-session gas savings (period-aware) ── {% endcomment %}
   {% assign p_mpg       = 23   %}
   {% assign p_gas_price = 2.50 %}
   {% assign p_mi_kwh    = 3.0  %}
-
   {% for period in gas_periods %}
     {% assign parts = period | strip | split: " | " %}
     {% if parts[0] <= entry_date %}
@@ -181,13 +264,54 @@ permalink: /charging/
       {% assign p_mi_kwh    = parts[3] | plus: 0 %}
     {% endif %}
   {% endfor %}
-
   {% assign gas_equiv      = k | times: p_mi_kwh | divided_by: p_mpg | times: p_gas_price %}
   {% assign session_saving = gas_equiv | minus: c %}
   {% assign gas_savings    = gas_savings | plus: session_saving %}
+
+  {% comment %}
+    ── Per-vehicle cost/kWh accumulation ──
+    For each odometer entry, if this session's vehicle matches
+    and the session date is on or before the odometer date,
+    accumulate cost and kWh into that vehicle's running total.
+    We store results as Liquid variables named veh_cost_N and
+    veh_kwh_N where N matches the odometer_entries index.
+  {% endcomment %}
+  {% for odo in odometer_entries %}
+    {% assign op = odo | strip | split: " | " %}
+    {% assign odo_vehicle = op[0] %}
+    {% assign odo_date    = op[2] %}
+    {% if veh == odo_vehicle and entry_date <= odo_date %}
+      {% assign odo_idx = forloop.index0 %}
+      {% case odo_idx %}
+        {% when 0 %}
+          {% assign veh_cost_0 = veh_cost_0 | plus: c %}
+          {% assign veh_kwh_0  = veh_kwh_0  | plus: k %}
+        {% when 1 %}
+          {% assign veh_cost_1 = veh_cost_1 | plus: c %}
+          {% assign veh_kwh_1  = veh_kwh_1  | plus: k %}
+        {% when 2 %}
+          {% assign veh_cost_2 = veh_cost_2 | plus: c %}
+          {% assign veh_kwh_2  = veh_kwh_2  | plus: k %}
+        {% when 3 %}
+          {% assign veh_cost_3 = veh_cost_3 | plus: c %}
+          {% assign veh_kwh_3  = veh_kwh_3  | plus: k %}
+      {% endcase %}
+    {% endif %}
+  {% endfor %}
+
 {% endfor %}
 
 {% assign gas_savings = gas_savings | round: 0 %}
+
+{% comment %} ── Set default zero values for any unset vehicle accumulators ── {% endcomment %}
+{% unless veh_cost_0 %}{% assign veh_cost_0 = 0.0 %}{% endunless %}
+{% unless veh_kwh_0  %}{% assign veh_kwh_0  = 0.0 %}{% endunless %}
+{% unless veh_cost_1 %}{% assign veh_cost_1 = 0.0 %}{% endunless %}
+{% unless veh_kwh_1  %}{% assign veh_kwh_1  = 0.0 %}{% endunless %}
+{% unless veh_cost_2 %}{% assign veh_cost_2 = 0.0 %}{% endunless %}
+{% unless veh_kwh_2  %}{% assign veh_kwh_2  = 0.0 %}{% endunless %}
+{% unless veh_cost_3 %}{% assign veh_cost_3 = 0.0 %}{% endunless %}
+{% unless veh_kwh_3  %}{% assign veh_kwh_3  = 0.0 %}{% endunless %}
 
 <div class="dash-container">
 
@@ -213,26 +337,115 @@ permalink: /charging/
     </div>
   </div>
 
-  {% comment %} Expandable assumptions panel — lists every gas period {% endcomment %}
+  {% comment %} Expandable gas assumptions panel {% endcomment %}
   <div id="gas-assumptions" class="assumptions-panel">
     <strong>Gas Savings Assumptions by Period</strong>
     <table>
-      <tr>
-        <th>From date</th>
-        <th>vs. MPG</th>
-        <th>Gas $/gal</th>
-        <th>mi/kWh</th>
-      </tr>
+      <tr><th>From date</th><th>vs. MPG</th><th>Gas $/gal</th><th>mi/kWh</th></tr>
       {% for period in gas_periods %}
         {% assign parts = period | strip | split: " | " %}
         <tr>
-          <td>{{ parts[0] }}</td>
-          <td>{{ parts[1] }}</td>
-          <td>${{ parts[2] }}</td>
-          <td>{{ parts[3] }}</td>
+          <td>{{ parts[0] }}</td><td>{{ parts[1] }}</td>
+          <td>${{ parts[2] }}</td><td>{{ parts[3] }}</td>
         </tr>
       {% endfor %}
     </table>
+  </div>
+
+  {% comment %}
+    ── Cost per mile / efficiency cards ──
+    One row per vehicle in odometer_entries, plus an Overall row.
+    cost_per_mile = total_vehicle_cost / odometer_miles
+    kwh_per_mile  = total_vehicle_kwh  / odometer_miles
+    Overall uses total_cost / sum of all odometer miles.
+  {% endcomment %}
+  <div class="cpm-grid">
+    {% assign overall_odo_miles = 0 %}
+    {% assign veh_costs = veh_cost_0, veh_cost_1, veh_cost_2, veh_cost_3 %}
+    {% assign veh_kwhs  = veh_kwh_0,  veh_kwh_1,  veh_kwh_2,  veh_kwh_3  %}
+
+    {% for odo in odometer_entries %}
+      {% assign op          = odo | strip | split: " | " %}
+      {% assign odo_vehicle = op[0] %}
+      {% assign odo_miles   = op[1] | plus: 0 %}
+      {% assign odo_date    = op[2] %}
+      {% assign odo_first   = op[3] %}
+      {% assign idx         = forloop.index0 %}
+
+      {% assign overall_odo_miles = overall_odo_miles | plus: odo_miles %}
+
+      {% case idx %}
+        {% when 0 %}{% assign v_cost = veh_cost_0 %}{% assign v_kwh = veh_kwh_0 %}
+        {% when 1 %}{% assign v_cost = veh_cost_1 %}{% assign v_kwh = veh_kwh_1 %}
+        {% when 2 %}{% assign v_cost = veh_cost_2 %}{% assign v_kwh = veh_kwh_2 %}
+        {% when 3 %}{% assign v_cost = veh_cost_3 %}{% assign v_kwh = veh_kwh_3 %}
+      {% endcase %}
+
+      {% if odo_miles > 0 %}
+        {% assign cpm  = v_cost | divided_by: odo_miles %}
+        {% assign kpm  = v_kwh  | divided_by: odo_miles %}
+      {% else %}
+        {% assign cpm  = 0 %}
+        {% assign kpm  = 0 %}
+      {% endif %}
+
+      {% comment %} Format cents properly {% endcomment %}
+      {% assign cpm_cents = cpm | times: 100 | round | modulo: 100 %}
+
+      <div class="cpm-row">
+        <div class="cpm-vehicle">
+          {{ odo_vehicle }}
+          <small>{{ odo_miles | number_with_delimiter }} mi as of {{ odo_date }}</small>
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">Cost / Mile</span>
+          <span class="cpm-stat-value">${{ cpm | split: "." | first }}.{% if cpm_cents < 10 %}0{{ cpm_cents }}{% else %}{{ cpm_cents }}{% endif %}</span>
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">kWh / Mile</span>
+          <span class="cpm-stat-value">{{ kpm | round: 3 }}</span>
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">Total Charged</span>
+          <span class="cpm-stat-value">{{ v_kwh | round: 1 }} kWh</span>
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">Total Cost</span>
+          {% assign vc_cents = v_cost | times: 100 | round | modulo: 100 %}
+          <span class="cpm-stat-value">${{ v_cost | split: "." | first }}.{% if vc_cents < 10 %}0{{ vc_cents }}{% else %}{{ vc_cents }}{% endif %}</span>
+        </div>
+      </div>
+    {% endfor %}
+
+    {% comment %} Overall row — only shown if more than one vehicle {% endcomment %}
+    {% if odometer_entries.size > 1 and overall_odo_miles > 0 %}
+      {% assign overall_cpm = total_cost | divided_by: overall_odo_miles %}
+      {% assign overall_kpm = total_kwh  | divided_by: overall_odo_miles %}
+      {% assign overall_cpm_cents = overall_cpm | times: 100 | round | modulo: 100 %}
+      <div class="cpm-row cpm-overall">
+        <div class="cpm-vehicle">
+          Overall (all vehicles)
+          <small>{{ overall_odo_miles | number_with_delimiter }} combined miles</small>
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">Cost / Mile</span>
+          <span class="cpm-stat-value">${{ overall_cpm | split: "." | first }}.{% if overall_cpm_cents < 10 %}0{{ overall_cpm_cents }}{% else %}{{ overall_cpm_cents }}{% endif %}</span>
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">kWh / Mile</span>
+          <span class="cpm-stat-value">{{ overall_kpm | round: 3 }}</span>
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">Total Charged</span>
+          <span class="cpm-stat-value">{{ total_kwh | round: 1 }} kWh</span>
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">Total Cost</span>
+          {% assign tc_cents = total_cost | times: 100 | round | modulo: 100 %}
+          <span class="cpm-stat-value">${{ total_cost | split: "." | first }}.{% if tc_cents < 10 %}0{{ tc_cents }}{% else %}{{ tc_cents }}{% endif %}</span>
+        </div>
+      </div>
+    {% endif %}
   </div>
 
   <div class="media-grid">
@@ -310,12 +523,7 @@ permalink: /charging/
       plugins: {
         legend: {
           position: 'bottom',
-          labels: {
-            color: getThemeColor(),
-            usePointStyle: false,
-            boxWidth: 14,
-            padding: 16
-          }
+          labels: { color: getThemeColor(), usePointStyle: false, boxWidth: 14, padding: 16 }
         },
         datalabels: {
           display: true,
@@ -343,11 +551,7 @@ permalink: /charging/
     type: 'bar',
     data: {
       labels: rawData.map(d => d.label),
-      datasets: [{
-        data: rawData.map(d => d.val),
-        backgroundColor: rawData.map(d => d.color),
-        borderRadius: 4
-      }]
+      datasets: [{ data: rawData.map(d => d.val), backgroundColor: rawData.map(d => d.color), borderRadius: 4 }]
     },
     options: {
       indexAxis: 'y',
