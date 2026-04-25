@@ -3,15 +3,311 @@ layout: default
 title: Gallery
 ---
 
-<h1>Photo Archive</h1>
-<p>A collection of all images posted to the timeline.</p>
+<style>
+  .gallery-header {
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .gallery-header h1 { margin-bottom: 4px; }
+  .gallery-header p  { color: var(--post-meta); font-size: 0.9rem; margin: 0; }
 
-<div class="master-grid">
-  {% for post in site.posts %}
-    {% for img in post.images %}
-      <div class="gallery-item">
-        <img src="{{ img | relative_url }}" class="thumb-trigger" alt="{{ post.title }}">
+  /* Masonry-style grid */
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .photo-cell {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--border);
+    cursor: pointer;
+    aspect-ratio: 4/3;
+  }
+  .photo-cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease, filter 0.3s ease;
+  }
+  .photo-cell:hover img { transform: scale(1.05); filter: brightness(0.88); }
+
+  /* Hover overlay with post title */
+  .photo-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.25s;
+    display: flex;
+    align-items: flex-end;
+    padding: 10px;
+  }
+  .photo-cell:hover .photo-overlay { opacity: 1; }
+  .photo-overlay-title {
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.3;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
+
+  .gallery-empty {
+    text-align: center;
+    color: var(--post-meta);
+    padding: 60px 0;
+    font-size: 1rem;
+  }
+
+  /* ── Enhanced Lightbox (overrides base modal in default.html) ── */
+  #modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.96);
+    z-index: 99999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  #modal.open { display: flex; }
+
+  /* Close button */
+  #lb-close {
+    position: absolute;
+    top: 18px;
+    right: 24px;
+    color: rgba(255,255,255,0.8);
+    font-size: 2.2rem;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 10;
+    background: rgba(255,255,255,0.08);
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  #lb-close:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+  /* Arrow nav buttons */
+  .lb-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255,255,255,0.7);
+    font-size: 2rem;
+    cursor: pointer;
+    background: rgba(255,255,255,0.08);
+    border: none;
+    border-radius: 50%;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background 0.2s, color 0.2s;
+    user-select: none;
+  }
+  .lb-arrow:hover { background: rgba(255,255,255,0.2); color: #fff; }
+  #lb-prev { left: 16px; }
+  #lb-next { right: 16px; }
+  .lb-arrow:disabled { opacity: 0.2; cursor: default; }
+
+  /* Image area */
+  #lb-img-wrap {
+    max-width: 90vw;
+    max-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #lb-img {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    transition: opacity 0.2s;
+  }
+  #lb-img.loading { opacity: 0; }
+
+  /* Counter + post link bar at bottom */
+  #lb-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+  }
+  #lb-counter {
+    color: rgba(255,255,255,0.55);
+    font-size: 0.75rem;
+    font-family: -apple-system, sans-serif;
+    letter-spacing: 0.05em;
+  }
+  #lb-post-link {
+    color: rgba(255,255,255,0.75);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 5px 12px;
+    border-radius: 20px;
+    transition: background 0.2s, color 0.2s;
+  }
+  #lb-post-link:hover { background: rgba(255,255,255,0.22); color: #fff; }
+  #lb-post-link.hidden { display: none; }
+</style>
+
+{% comment %} Build a flat list of all images across all posts {% endcomment %}
+{% assign all_images = "" | split: "" %}
+{% for post in site.posts %}
+  {% for img in post.images %}
+    {% assign entry = img | append: "|||" | append: post.title | append: "|||" | append: post.url %}
+    {% assign all_images = all_images | push: entry %}
+  {% endfor %}
+{% endfor %}
+
+<div class="gallery-header">
+  <h1>Photo Archive</h1>
+  <p>{{ all_images.size }} photo{% if all_images.size != 1 %}s{% endif %} across {{ site.posts.size }} post{% if site.posts.size != 1 %}s{% endif %}</p>
+</div>
+
+{% if all_images.size == 0 %}
+  <div class="gallery-empty">No photos yet — add images to your posts to see them here.</div>
+{% else %}
+  <div class="photo-grid">
+    {% for entry in all_images %}
+      {% assign parts      = entry | split: "|||" %}
+      {% assign img_src    = parts[0] %}
+      {% assign post_title = parts[1] %}
+      {% assign post_url   = parts[2] %}
+      <div class="photo-cell"
+           onclick="openLightbox({{ forloop.index0 }})"
+           data-src="{{ img_src }}"
+           data-title="{{ post_title }}"
+           data-url="{{ post_url }}">
+        <img src="{{ img_src }}" alt="{{ post_title }}" loading="lazy">
+        <div class="photo-overlay">
+          <span class="photo-overlay-title">{{ post_title }}</span>
+        </div>
       </div>
     {% endfor %}
-  {% endfor %}
+  </div>
+{% endif %}
+
+<!-- Enhanced Lightbox (replaces the base one from default.html for this page) -->
+<div id="modal">
+  <button id="lb-close" onclick="closeLightbox()" aria-label="Close">✕</button>
+  <button class="lb-arrow" id="lb-prev" onclick="lbNav(-1)" aria-label="Previous">‹</button>
+
+  <div id="lb-img-wrap">
+    <img id="lb-img" src="" alt="">
+  </div>
+
+  <button class="lb-arrow" id="lb-next" onclick="lbNav(1)" aria-label="Next">›</button>
+
+  <div id="lb-footer">
+    <span id="lb-counter"></span>
+    <a id="lb-post-link" href="#" target="_blank">View post →</a>
+  </div>
 </div>
+
+<script>
+  // Collect all photo cells into an array
+  const cells   = Array.from(document.querySelectorAll('.photo-cell'));
+  const total   = cells.length;
+  let current   = 0;
+
+  const lbModal   = document.getElementById('modal');
+  const lbImg     = document.getElementById('lb-img');
+  const lbCounter = document.getElementById('lb-counter');
+  const lbLink    = document.getElementById('lb-post-link');
+  const lbPrev    = document.getElementById('lb-prev');
+  const lbNext    = document.getElementById('lb-next');
+
+  function openLightbox(idx) {
+    current = idx;
+    renderLightbox();
+    lbModal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lbModal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function renderLightbox() {
+    const cell     = cells[current];
+    const src      = cell.getAttribute('data-src');
+    const title    = cell.getAttribute('data-title');
+    const postUrl  = cell.getAttribute('data-url');
+
+    // Fade transition
+    lbImg.classList.add('loading');
+    lbImg.onload = () => lbImg.classList.remove('loading');
+    lbImg.src    = src;
+    lbImg.alt    = title;
+
+    // Counter
+    lbCounter.textContent = (current + 1) + ' / ' + total;
+
+    // Post link
+    if (postUrl) {
+      lbLink.href = postUrl;
+      lbLink.textContent = 'From: ' + title + ' →';
+      lbLink.classList.remove('hidden');
+    } else {
+      lbLink.classList.add('hidden');
+    }
+
+    // Arrow state
+    lbPrev.disabled = (current === 0);
+    lbNext.disabled = (current === total - 1);
+  }
+
+  function lbNav(dir) {
+    const next = current + dir;
+    if (next >= 0 && next < total) {
+      current = next;
+      renderLightbox();
+    }
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', e => {
+    if (!lbModal.classList.contains('open')) return;
+    if (e.key === 'Escape')      closeLightbox();
+    if (e.key === 'ArrowRight')  lbNav(1);
+    if (e.key === 'ArrowLeft')   lbNav(-1);
+  });
+
+  // Click backdrop to close
+  lbModal.addEventListener('click', e => {
+    if (e.target === lbModal) closeLightbox();
+  });
+
+  // Touch swipe support
+  let touchStartX = 0;
+  lbModal.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  lbModal.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) lbNav(dx < 0 ? 1 : -1);
+  });
+</script>

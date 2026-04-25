@@ -11,11 +11,19 @@
       --bg: #ffffff; --text: #333333; --link: #5D3FD3; --border: #eeeeee;
       --dash-card: #ffffff; --dash-border: #eaeaea; --table-head: #f9f9f9;
       --nav-bg: #ffffff;
+      --post-title: #111111;
+      --post-meta: #666666;
+      --post-body: #333333;
+      --post-hr: #eeeeee;
     }
     [data-theme="dark"] {
       --bg: #1a1a1a; --text: #f0f0f0; --link: #a389f4; --border: #333333;
       --dash-card: #252525; --dash-border: #444; --table-head: #2d2d2d;
       --nav-bg: #1a1a1a;
+      --post-title: #f0f0f0;
+      --post-meta: #aaaaaa;
+      --post-body: #d0d0d0;
+      --post-hr: #333333;
     }
 
     body {
@@ -40,7 +48,6 @@
       position: relative;
     }
 
-    /* Desktop link row */
     .nav-links {
       display: flex;
       align-items: center;
@@ -87,14 +94,8 @@
       gap: 4px;
       white-space: nowrap;
     }
-    .nav-dropdown-trigger::after {
-      content: '▾';
-      font-size: 0.7em;
-      transition: transform 0.2s;
-    }
-    .nav-dropdown.open .nav-dropdown-trigger::after {
-      transform: rotate(180deg);
-    }
+    .nav-dropdown-trigger::after { content: '▾'; font-size: 0.7em; transition: transform 0.2s; }
+    .nav-dropdown.open .nav-dropdown-trigger::after { transform: rotate(180deg); }
     .nav-dropdown-menu {
       display: none;
       position: absolute;
@@ -105,7 +106,7 @@
       border-radius: 10px;
       padding: 6px;
       min-width: 220px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
       z-index: 1000;
       animation: dropIn 0.18s cubic-bezier(0.22,1,0.36,1);
     }
@@ -128,29 +129,13 @@
       margin-right: 0;
     }
     .nav-dropdown-menu a:hover { background: var(--border); }
-    .nav-dropdown-menu .menu-icon {
-      font-size: 1rem;
-      width: 22px;
-      text-align: center;
-      flex-shrink: 0;
-    }
+    .nav-dropdown-menu .menu-icon { font-size: 1rem; width: 22px; text-align: center; flex-shrink: 0; }
     .nav-dropdown-menu .menu-label { flex: 1; }
-    .nav-dropdown-menu .menu-sub {
-      font-size: 0.7rem;
-      color: #999;
-      display: block;
-      font-weight: 400;
-    }
+    .nav-dropdown-menu .menu-sub { font-size: 0.7rem; color: #999; display: block; font-weight: 400; }
 
-    /* ── Nav right side (theme toggle + hamburger) ── */
-    .nav-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
-    }
+    /* ── Nav right ── */
+    .nav-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
-    /* ── Theme Toggle ── */
     #theme-toggle {
       background: var(--bg);
       border: 1px solid var(--border);
@@ -163,7 +148,6 @@
       white-space: nowrap;
     }
 
-    /* ── Hamburger button (mobile only) ── */
     #hamburger {
       display: none;
       background: none;
@@ -176,7 +160,7 @@
       line-height: 1;
     }
 
-    /* ── Mobile menu overlay ── */
+    /* ── Mobile menu ── */
     #mobile-menu {
       display: none;
       position: fixed;
@@ -184,15 +168,7 @@
       z-index: 9999;
     }
     #mobile-menu.open { display: block; }
-
-    /* Backdrop */
-    #mobile-menu-backdrop {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-    }
-
-    /* Drawer panel */
+    #mobile-menu-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); }
     #mobile-menu-panel {
       position: absolute;
       top: 0; right: 0;
@@ -211,8 +187,6 @@
       from { transform: translateX(100%); }
       to   { transform: translateX(0); }
     }
-
-    /* Mobile menu header */
     .mobile-menu-header {
       display: flex;
       justify-content: space-between;
@@ -221,25 +195,9 @@
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
     }
-    .mobile-menu-title {
-      font-weight: 700;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #999;
-    }
-    #mobile-menu-close {
-      background: none;
-      border: none;
-      font-size: 1.4rem;
-      cursor: pointer;
-      color: var(--text);
-      padding: 2px 6px;
-      border-radius: 6px;
-    }
+    .mobile-menu-title { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #999; }
+    #mobile-menu-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--text); padding: 2px 6px; border-radius: 6px; }
     #mobile-menu-close:hover { background: var(--border); }
-
-    /* Mobile nav links */
     .mobile-nav-link {
       display: flex;
       align-items: center;
@@ -253,16 +211,7 @@
     }
     .mobile-nav-link:hover,
     .mobile-nav-link.active { background: var(--border); color: var(--link); }
-
-    /* Mobile References section */
-    .mobile-section-label {
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #999;
-      padding: 16px 14px 6px;
-    }
+    .mobile-section-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #999; padding: 16px 14px 6px; }
     .mobile-ref-link {
       display: flex;
       align-items: center;
@@ -279,13 +228,7 @@
     .mobile-ref-icon { font-size: 1.1rem; width: 24px; text-align: center; flex-shrink: 0; }
     .mobile-ref-text { flex: 1; }
     .mobile-ref-sub  { font-size: 0.7rem; color: #999; font-weight: 400; }
-
-    /* Mobile theme toggle at bottom */
-    .mobile-theme-btn {
-      margin-top: auto;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-    }
+    .mobile-theme-btn { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); }
     .mobile-theme-btn button {
       width: 100%;
       background: var(--bg);
@@ -300,24 +243,32 @@
       transition: all 0.2s;
     }
 
-    /* ── Responsive breakpoint ── */
+    /* ── Responsive ── */
     @media (max-width: 600px) {
       body { padding: 1.2rem; }
       .nav-links { display: none; }
       #hamburger { display: block; }
-      #theme-toggle { display: none; } /* shown inside mobile menu instead */
+      #theme-toggle { display: none; }
     }
 
-    /* ── Everything else ── */
+    /* ── Global elements ── */
     a { color: var(--link); text-decoration: none; font-weight: bold; }
     h1, h2, h3 { color: var(--text); }
 
-    /* Gallery Grid */
+    /* ── Post timeline cards — theme-aware ── */
+    .post-card { margin-bottom: 50px; border-bottom: 1px solid var(--post-hr); padding-bottom: 30px; }
+    .post-card h2 a { color: var(--post-title) !important; text-decoration: none; font-weight: bold; }
+    .post-card h2 a:hover { color: var(--link) !important; }
+    .post-meta { color: var(--post-meta) !important; font-size: 0.9rem; }
+    .post-excerpt { color: var(--post-body); }
+    .post-read-more { color: #007aff; font-weight: bold; }
+
+    /* ── Gallery Grid ── */
     .master-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
     .gallery-item { position: relative; width: 100%; padding-top: 66.66%; overflow: hidden; border-radius: 6px; background: var(--border); }
     .gallery-item img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; cursor: pointer; }
 
-    /* Lightbox */
+    /* ── Lightbox (base — gallery.html extends this) ── */
     #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center; }
     #viewer { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
     #mimg { max-width: 90%; max-height: 90%; transition: transform 0.1s linear; cursor: zoom-in; }
@@ -328,15 +279,14 @@
 <body>
 
 <nav>
-  <!-- Desktop links -->
   <div class="nav-links">
     {% for item in site.data.navigation %}
-      <a href="{{ item.link }}" {% if page.url == item.link %}class="active"{% endif %}>
+      <a href="{{ item.link }}"
+         {% if page.url == item.link or page.url == item.link | remove: '.html' %}class="active"{% endif %}>
         {{ item.name }}
       </a>
     {% endfor %}
 
-    <!-- References dropdown (desktop) -->
     <div class="nav-dropdown" id="ref-dropdown">
       <button class="nav-dropdown-trigger" onclick="toggleRefDropdown(event)" aria-haspopup="true" aria-expanded="false">
         References
@@ -360,14 +310,12 @@
     </div>
   </div>
 
-  <!-- Right side: theme toggle + hamburger -->
   <div class="nav-right">
     <button id="theme-toggle">🌙 Dark Mode</button>
     <button id="hamburger" onclick="openMobileMenu()" aria-label="Open menu">☰</button>
   </div>
 </nav>
 
-<!-- Mobile slide-in menu -->
 <div id="mobile-menu" role="dialog" aria-modal="true" aria-label="Navigation menu">
   <div id="mobile-menu-backdrop" onclick="closeMobileMenu()"></div>
   <div id="mobile-menu-panel">
@@ -375,15 +323,11 @@
       <span class="mobile-menu-title">Menu</span>
       <button id="mobile-menu-close" onclick="closeMobileMenu()" aria-label="Close menu">&times;</button>
     </div>
-
-    <!-- Main nav links -->
     {% for item in site.data.navigation %}
       <a href="{{ item.link }}" class="mobile-nav-link {% if page.url == item.link %}active{% endif %}">
         {{ item.name }}
       </a>
     {% endfor %}
-
-    <!-- References section -->
     <div class="mobile-section-label">References</div>
     <a href="/charging-site-guide.html" target="_blank" class="mobile-ref-link" onclick="closeMobileMenu()">
       <span class="mobile-ref-icon">📋</span>
@@ -399,8 +343,6 @@
         <span class="mobile-ref-sub">EV deep dive visual analysis</span>
       </span>
     </a>
-
-    <!-- Theme toggle at bottom of drawer -->
     <div class="mobile-theme-btn">
       <button id="mobile-theme-toggle" onclick="mobileThemeToggle()">🌙 Dark Mode</button>
     </div>
@@ -421,8 +363,8 @@
 
 <script>
   /* ── Lightbox ── */
-  const modal = document.getElementById('modal'),
-        mimg  = document.getElementById('mimg'),
+  const modal  = document.getElementById('modal'),
+        mimg   = document.getElementById('mimg'),
         viewer = document.getElementById('viewer');
   let isPan = false, currentImages = [], currentIndex = 0;
 
@@ -439,10 +381,10 @@
   const closeModal = () => { modal.style.display = 'none'; resetPan(); };
   document.querySelector('.close-modal').onclick = closeModal;
   modal.onclick = e => { if (e.target === modal || e.target === viewer) closeModal(); };
+  mimg.onclick  = e => { e.stopPropagation(); isPan ? resetPan() : enterPan(); };
 
-  mimg.onclick = e => { e.stopPropagation(); isPan ? resetPan() : enterPan(); };
   function enterPan() { isPan = true; mimg.classList.add('panning'); mimg.style.maxWidth = mimg.style.maxHeight = 'none'; }
-  function resetPan() { isPan = false; mimg.classList.remove('panning'); mimg.style.maxWidth = mimg.style.maxHeight = '90%'; mimg.style.transform = 'translate(0,0)'; }
+  function resetPan()  { isPan = false; mimg.classList.remove('panning'); mimg.style.maxWidth = mimg.style.maxHeight = '90%'; mimg.style.transform = 'translate(0,0)'; }
 
   viewer.onmousemove = e => {
     if (!isPan) return;
@@ -452,11 +394,10 @@
 
   window.addEventListener('keydown', e => {
     if (modal.style.display === 'flex') {
-      if (e.key === 'Escape') closeModal();
+      if (e.key === 'Escape')      closeModal();
       if (e.key === 'ArrowRight') { currentIndex = (currentIndex + 1) % currentImages.length; mimg.src = currentImages[currentIndex].src; resetPan(); }
       if (e.key === 'ArrowLeft')  { currentIndex = (currentIndex - 1 + currentImages.length) % currentImages.length; mimg.src = currentImages[currentIndex].src; resetPan(); }
     }
-    // Close mobile menu on Escape
     if (e.key === 'Escape') closeMobileMenu();
   });
 
@@ -477,18 +418,11 @@
       d.querySelector('.nav-dropdown-trigger').setAttribute('aria-expanded', 'false');
     });
   }
-  // Close dropdown when clicking anywhere else
   document.addEventListener('click', closeAllDropdowns);
 
   /* ── Mobile Menu ── */
-  function openMobileMenu() {
-    document.getElementById('mobile-menu').classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeMobileMenu() {
-    document.getElementById('mobile-menu').classList.remove('open');
-    document.body.style.overflow = '';
-  }
+  function openMobileMenu()  { document.getElementById('mobile-menu').classList.add('open');    document.body.style.overflow = 'hidden'; }
+  function closeMobileMenu() { document.getElementById('mobile-menu').classList.remove('open'); document.body.style.overflow = ''; }
 
   /* ── Theme ── */
   const toggle       = document.getElementById('theme-toggle');
@@ -504,20 +438,15 @@
   };
 
   function mobileThemeToggle() {
-    const current = document.documentElement.getAttribute('data-theme');
-    setTheme(current === 'dark' ? 'light' : 'dark');
+    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
   }
 
-  // Apply saved or preferred theme on load
   if (localStorage.getItem('theme') === 'dark' ||
       (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     setTheme('dark');
   }
 
-  toggle.onclick = () => {
-    const current = document.documentElement.getAttribute('data-theme');
-    setTheme(current === 'dark' ? 'light' : 'dark');
-  };
+  toggle.onclick = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 </script>
 </body>
 </html>

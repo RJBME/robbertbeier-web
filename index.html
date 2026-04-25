@@ -4,12 +4,12 @@ title: Home
 ---
 
 <div class="posts-timeline">
-  {% for post in site.posts %}
-    <article style="margin-bottom: 50px; border-bottom: 1px solid #eee; padding-bottom: 30px;">
+  {% for post in site.posts limit: 5 %}
+    <article class="post-card">
       <h2 style="margin-bottom: 5px;">
-        <a href="{{ post.url }}" style="text-decoration: none; color: #000;">{{ post.title }}</a>
+        <a href="{{ post.url }}">{{ post.title }}</a>
       </h2>
-      <p style="color: #666; font-size: 0.9rem;">{{ post.date | date: "%B %-d, %Y" }}</p>
+      <p class="post-meta">{{ post.date | date: "%B %-d, %Y" }}</p>
 
       <div class="post-excerpt">
         {{ post.excerpt }}
@@ -17,17 +17,23 @@ title: Home
 
       {% if post.images %}
         <div class="mini-preview" style="display: flex; gap: 10px; margin-top: 15px;">
-          {% for img in post.images limit:4 %}
+          {% for img in post.images limit: 4 %}
             <div style="flex: 1;">
-               <img src="{{ img }}" style="max-width: 600px; width: 100%; height: auto; border-radius: 4px;">
+              <img src="{{ img }}" style="max-width: 600px; width: 100%; height: auto; border-radius: 4px;">
             </div>
           {% endfor %}
         </div>
       {% endif %}
 
       <p style="margin-top: 20px;">
-        <a href="{{ post.url }}" style="font-weight: bold; color: #007aff;">Read full post →</a>
+        <a href="{{ post.url }}" class="post-read-more">Read full post →</a>
       </p>
     </article>
   {% endfor %}
+
+  {% if site.posts.size > 5 %}
+    <p style="text-align: center; margin-top: 10px;">
+      <a href="/blog.html" style="font-weight: bold;">View all {{ site.posts.size }} posts →</a>
+    </p>
+  {% endif %}
 </div>
