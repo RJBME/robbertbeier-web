@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog Post Guide — robertbeier.com</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:        #0f1923;
+    --navy-mid:    #1a2535;
+    --card:        #1e2d3d;
+    --card-hover:  #243345;
+    --border:      rgba(255,255,255,0.08);
+    --border-soft: rgba(255,255,255,0.05);
+    --text:        #dde6f0;
+    --muted:       #7a90a8;
+    --link:        #a389f4;
+    --accent:      #5D3FD3;
+    --accent2:     #3498db;
+    --green:       #2ecc71;
+    --amber:       #f59e0b;
+    --red:         #e74c3c;
+    --code-bg:     rgba(0,0,0,0.45);
+    --code-text:   #a8d8ff;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--navy);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    min-height: 100vh;
+  }
+
+  /* ── Grain texture overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── Layout ── */
+  .page-wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 72px 0 56px;
+    position: relative;
+  }
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--accent2);
+    margin-bottom: 20px;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--accent2);
+  }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.4rem, 5vw, 3.6rem);
+    line-height: 1.07;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--link);
+  }
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.6;
+  }
+
+  /* Floating glow behind hero */
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: 40px;
+    right: -80px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(93,63,211,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: 50%;
+  }
+
+  /* ── Progress / TOC strip ── */
+  .toc-strip {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 52px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .toc-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    border: 1px solid;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .toc-pill:hover { transform: translateY(-1px); }
+  .toc-pill.purple { color: #c4b5fd; border-color: rgba(167,139,250,0.35); background: rgba(93,63,211,0.12); }
+  .toc-pill.blue   { color: #93c5fd; border-color: rgba(52,152,219,0.35); background: rgba(52,152,219,0.1); }
+  .toc-pill.green  { color: #86efac; border-color: rgba(46,204,113,0.35); background: rgba(46,204,113,0.1); }
+  .toc-pill.amber  { color: #fcd34d; border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.1); }
+
+  /* ── Section label ── */
+  .section-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Section heading ── */
+  h2.section-h {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.85rem;
+    color: #fff;
+    line-height: 1.15;
+    margin-bottom: 24px;
+  }
+  h2.section-h span { color: var(--accent2); }
+
+  /* ── Section spacing ── */
+  .section { margin-bottom: 64px; }
+
+  /* ── Step cards ── */
+  .steps { display: flex; flex-direction: column; gap: 12px; }
+  .step {
+    display: flex;
+    gap: 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .step:hover { background: var(--card-hover); border-color: rgba(255,255,255,0.13); }
+  .step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-body h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .step-body p, .step-body ul {
+    font-size: 0.83rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .step-body ul { padding-left: 16px; margin-top: 4px; }
+  .step-body li { margin-bottom: 3px; }
+
+  /* ── Two col ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 620px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Code blocks ── */
+  .code-wrap { margin: 14px 0; }
+  .code-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .code-label .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent2);
+    flex-shrink: 0;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 12px;
+    padding: 20px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.75;
+    color: var(--code-text);
+    overflow-x: auto;
+    position: relative;
+  }
+  .cm  { color: #4a6a7a; }   /* comment */
+  .ck  { color: #79c0ff; }   /* key */
+  .cv  { color: #a5d6a7; }   /* value / string */
+  .cp  { color: #ff8a65; }   /* punctuation / special */
+  .cb  { color: #f48fb1; }   /* bold/italic marker */
+  .cn  { color: #ffd54f; }   /* number */
+
+  /* ── Info boxes ── */
+  .box {
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    border-left: 3px solid;
+    margin: 12px 0;
+  }
+  .box strong { display: block; margin-bottom: 4px; font-size: 0.85rem; }
+  .box.tip    { background: rgba(52,152,219,0.1);  border-color: var(--accent2); color: #93c5fd; }
+  .box.tip strong { color: #bfdbfe; }
+  .box.warn   { background: rgba(245,158,11,0.1);  border-color: var(--amber);  color: #fcd34d; }
+  .box.warn strong { color: #fde68a; }
+  .box.green  { background: rgba(46,204,113,0.1);  border-color: var(--green);  color: #86efac; }
+  .box.green strong { color: #bbf7d0; }
+
+  /* ── Inline code ── */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    color: #a8d8ff;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+
+  /* ── Front matter anatomy card ── */
+  .anatomy-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .anatomy-header {
+    background: rgba(0,0,0,0.3);
+    padding: 10px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot-red    { width:10px; height:10px; border-radius:50%; background:#e74c3c; flex-shrink:0; }
+  .dot-amber  { width:10px; height:10px; border-radius:50%; background:#f59e0b; flex-shrink:0; }
+  .dot-green  { width:10px; height:10px; border-radius:50%; background:#2ecc71; flex-shrink:0; }
+  .anatomy-body { padding: 0; }
+  .anatomy-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .anatomy-row:last-child { border-bottom: none; }
+  .anatomy-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--code-text);
+    padding: 12px 20px;
+    border-right: 1px solid var(--border-soft);
+    background: rgba(0,0,0,0.2);
+    line-height: 1.5;
+  }
+  .anatomy-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    padding: 12px 20px;
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+  }
+  .anatomy-desc strong { color: var(--text); font-weight: 500; }
+
+  /* ── Photo flow diagram ── */
+  .photo-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 20px 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .pf-step {
+    flex: 1;
+    padding: 20px 18px;
+    background: var(--card);
+    text-align: center;
+    position: relative;
+  }
+  .pf-step + .pf-step {
+    border-left: 1px solid var(--border);
+  }
+  .pf-step + .pf-step::before {
+    content: '→';
+    position: absolute;
+    left: -14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 1.1rem;
+    background: var(--card);
+    padding: 2px 0;
+    z-index: 1;
+  }
+  .pf-icon { font-size: 1.6rem; margin-bottom: 8px; display: block; }
+  .pf-title { font-size: 0.78rem; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .pf-sub   { font-size: 0.68rem; color: var(--muted); line-height: 1.4; }
+
+  /* ── Markdown reference table ── */
+  .md-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin: 12px 0;
+  }
+  .md-table th {
+    text-align: left;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.3);
+    color: var(--muted);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  .md-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: top;
+  }
+  .md-table tr:last-child td { border-bottom: none; }
+  .md-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .md-table .syntax { font-family: 'JetBrains Mono', monospace; color: #a8d8ff; font-size: 0.78rem; }
+  .md-table .result { color: var(--text); }
+  .md-table .note   { color: var(--muted); font-size: 0.75rem; }
+
+  /* ── Where photos appear callout ── */
+  .appears-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  @media (max-width: 520px) { .appears-grid { grid-template-columns: 1fr; } }
+  .appears-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .appears-card .icon { font-size: 1.5rem; margin-bottom: 8px; display: block; }
+  .appears-card .name { font-size: 0.8rem; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .appears-card .desc { font-size: 0.7rem; color: var(--muted); line-height: 1.4; }
+
+  /* ── Checklist ── */
+  .checklist { display: flex; flex-direction: column; gap: 10px; }
+  .check {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 0.83rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .check-icon { flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 32px 0 0;
+    border-top: 1px solid var(--border);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  footer a { color: var(--link); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- ── HERO ── -->
+  <header class="hero">
+    <div class="hero-eyebrow">robertbeier.com — Author Guide</div>
+    <h1>Writing &amp; Publishing<br>a <em>Blog Post</em></h1>
+    <p class="hero-sub">Everything you need to create a post, add photos, and get it live on your site — from filename conventions to Markdown formatting.</p>
+  </header>
+
+  <!-- TOC -->
+  <div class="toc-strip">
+    <a href="#naming"   class="toc-pill purple">📁 File Naming</a>
+    <a href="#frontmatter" class="toc-pill blue">⚙️ Front Matter</a>
+    <a href="#photos"   class="toc-pill green">📸 Adding Photos</a>
+    <a href="#writing"  class="toc-pill amber">✍️ Writing & Markdown</a>
+    <a href="#upload"   class="toc-pill purple">🚀 Uploading</a>
+    <a href="#checklist" class="toc-pill blue">✅ Checklist</a>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       SECTION 1 — FILE NAMING
+  ══════════════════════════════════════════ -->
+  <section class="section" id="naming">
+    <div class="section-label">Step 1</div>
+    <h2 class="section-h">File <span>naming</span> convention</h2>
+
+    <p style="color:var(--muted); font-size:0.88rem; margin-bottom:18px;">Every post lives in the <code>_posts/</code> folder. The filename must follow this exact format or Jekyll will ignore it:</p>
+
+    <div class="code-wrap">
+      <div class="code-label"><span class="dot"></span>Required filename format</div>
+      <pre><span class="cv">YYYY-MM-DD</span><span class="cp">-</span><span class="ck">your-post-title</span><span class="cp">.md</span>
+
+<span class="cm"># Good examples:</span>
+<span class="cv">2026-04-25</span><span class="cp">-</span><span class="ck">weekend-drive-up-north</span><span class="cp">.md</span>
+<span class="cv">2026-05-10</span><span class="cp">-</span><span class="ck">first-road-trip-in-the-mach-e</span><span class="cp">.md</span>
+<span class="cv">2026-06-01</span><span class="cp">-</span><span class="ck">summer-charging-update</span><span class="cp">.md</span></pre>
+    </div>
+
+    <div class="two-col" style="margin-top:16px;">
+      <div class="box tip">
+        <strong>💡 Date in filename</strong>
+        Use the actual date you're writing the post. Jekyll uses this for sorting — newest posts appear first everywhere on the site.
+      </div>
+      <div class="box warn">
+        <strong>⚠️ Lowercase, hyphens only</strong>
+        Use only lowercase letters, numbers, and hyphens in the filename. No spaces, no underscores, no special characters.
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+       SECTION 2 — FRONT MATTER
+  ══════════════════════════════════════════ -->
+  <section class="section" id="frontmatter">
+    <div class="section-label">Step 2</div>
+    <h2 class="section-h">Front matter <span>anatomy</span></h2>
+
+    <p style="color:var(--muted); font-size:0.88rem; margin-bottom:18px;">Every post must start with a front matter block — three dashes, your metadata, three more dashes. Jekyll reads this before anything else.</p>
+
+    <div class="anatomy-card">
+      <div class="anatomy-header">
+        <span class="dot-red"></span>
+        <span class="dot-amber"></span>
+        <span class="dot-green"></span>
+        &nbsp;&nbsp;_posts/2026-04-25-weekend-drive-up-north.md
+      </div>
+      <div class="anatomy-body">
+        <div class="anatomy-row">
+          <div class="anatomy-code"><span class="cp">---</span></div>
+          <div class="anatomy-desc">Opens the front matter block</div>
+        </div>
+        <div class="anatomy-row">
+          <div class="anatomy-code"><span class="ck">layout</span>: <span class="cv">posts</span></div>
+          <div class="anatomy-desc"><strong>Required.</strong> Always use <code>posts</code> — this applies your site's post template.</div>
+        </div>
+        <div class="anatomy-row">
+          <div class="anatomy-code"><span class="ck">title</span>: <span class="cv">"Weekend Drive Up North"</span></div>
+          <div class="anatomy-desc"><strong>Required.</strong> Shown as the post headline everywhere. Keep quotes around it.</div>
+        </div>
+        <div class="anatomy-row">
+          <div class="anatomy-code"><span class="ck">date</span>: <span class="cv">2026-04-25 09:00:00 -0500</span></div>
+          <div class="anatomy-desc"><strong>Required.</strong> Use Eastern time offset <code>-0500</code> (winter) or <code>-0400</code> (summer/DST).</div>
+        </div>
+        <div class="anatomy-row">
+          <div class="anatomy-code"><span class="ck">images</span>:
+  - <span class="cv">/assets/images/photo1.jpg</span>
+  - <span class="cv">/assets/images/photo2.jpg</span></div>
+          <div class="anatomy-desc"><strong>Optional.</strong> List photos to include. Each starts with <code>  - </code> (two spaces, dash, space). Leave blank or omit entirely if no photos.</div>
+        </div>
+        <div class="anatomy-row">
+          <div class="anatomy-code"><span class="cp">---</span></div>
+          <div class="anatomy-desc">Closes the front matter block. Your post content starts immediately after.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-wrap" style="margin-top:8px;">
+      <div class="code-label"><span class="dot"></span>Complete example — copy and edit this</div>
+      <pre><span class="cp">---</span>
+<span class="ck">layout</span>: <span class="cv">posts</span>
+<span class="ck">title</span>: <span class="cv">"Weekend Drive Up North"</span>
+<span class="ck">date</span>: <span class="cn">2026-04-25</span> <span class="cn">09:00:00</span> <span class="cp">-0500</span>
+<span class="ck">images</span>:
+  - <span class="cv">/assets/images/drive-sunrise.jpg</span>
+  - <span class="cv">/assets/images/charging-stop.jpg</span>
+  - <span class="cv">/assets/images/destination.jpg</span>
+<span class="cp">---</span>
+
+Your post content starts here. This first paragraph
+becomes the excerpt shown on the Timeline and Blog pages.
+
+A blank line starts a new paragraph...</pre>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+       SECTION 3 — PHOTOS
+  ══════════════════════════════════════════ -->
+  <section class="section" id="photos">
+    <div class="section-label">Step 3</div>
+    <h2 class="section-h">Adding <span>photos</span></h2>
+
+    <!-- Flow diagram -->
+    <div class="photo-flow">
+      <div class="pf-step">
+        <span class="pf-icon">🖼️</span>
+        <div class="pf-title">Resize</div>
+        <div class="pf-sub">1200px wide<br>85% JPEG quality</div>
+      </div>
+      <div class="pf-step">
+        <span class="pf-icon">📁</span>
+        <div class="pf-title">Place in repo</div>
+        <div class="pf-sub">Drop into<br><code style="font-size:0.65rem;">assets/images/</code></div>
+      </div>
+      <div class="pf-step">
+        <span class="pf-icon">✍️</span>
+        <div class="pf-title">Reference in post</div>
+        <div class="pf-sub">Add path to<br><code style="font-size:0.65rem;">images:</code> list</div>
+      </div>
+      <div class="pf-step">
+        <span class="pf-icon">🚀</span>
+        <div class="pf-title">Commit &amp; push</div>
+        <div class="pf-sub">Site rebuilds<br>automatically</div>
+      </div>
+    </div>
+
+    <div class="steps" style="margin-top:20px;">
+      <div class="step">
+        <div class="step-num" style="background:rgba(46,204,113,0.15); color:#86efac;">1</div>
+        <div class="step-body">
+          <h4>Resize before uploading</h4>
+          <p>Your repo is public on GitHub — don't store huge files there. Target <strong style="color:var(--text);">1200px wide at 85% JPEG quality</strong>. That's sharp on any screen and stays under 300–400KB per image.</p>
+          <ul style="margin-top:8px;">
+            <li><strong style="color:var(--text);">Mac:</strong> Open in Preview → Tools → Adjust Size → set width to 1200px. Then File → Export → adjust quality slider.</li>
+            <li><strong style="color:var(--text);">Free online:</strong> squoosh.app — drag in your photo, set width and quality, download.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(46,204,113,0.15); color:#86efac;">2</div>
+        <div class="step-body">
+          <h4>Name your files clearly</h4>
+          <p>Use lowercase, hyphens, no spaces. Good names make the gallery easier to manage as it grows.</p>
+          <div class="code-wrap" style="margin-top:8px;">
+            <pre style="padding:10px 14px;"><span class="cm"># Good</span>
+<span class="cv">2026-04-25-sunrise-at-the-lake.jpg</span>
+<span class="cv">charging-stop-interstate-75.jpg</span>
+
+<span class="cm"># Avoid</span>
+<span class="cp">IMG_4521.JPG</span>   <span class="cm">← hard to find later</span>
+<span class="cp">my photo (1).jpg</span>  <span class="cm">← spaces break things</span></pre>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(46,204,113,0.15); color:#86efac;">3</div>
+        <div class="step-body">
+          <h4>Put images in assets/images/</h4>
+          <p>Drag them into <code>assets/images/</code> in VS Code's Explorer panel, or use GitHub's web interface to upload directly to that folder.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(46,204,113,0.15); color:#86efac;">4</div>
+        <div class="step-body">
+          <h4>Reference them in your post's front matter</h4>
+          <p>The order you list them is the order they appear. You can include as many as you want — the Timeline preview caps at 4, the post itself shows them all.</p>
+          <div class="code-wrap" style="margin-top:8px;">
+            <pre style="padding:10px 14px;"><span class="ck">images</span>:
+  - <span class="cv">/assets/images/sunrise-at-the-lake.jpg</span>
+  - <span class="cv">/assets/images/charging-stop.jpg</span>
+  - <span class="cv">/assets/images/destination-arrived.jpg</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Where photos appear -->
+    <p style="color:var(--muted); font-size:0.82rem; margin:24px 0 12px; font-weight:600; text-transform:uppercase; letter-spacing:0.1em;">Photos listed in a post automatically appear in:</p>
+    <div class="appears-grid">
+      <div class="appears-card">
+        <span class="icon">🏠</span>
+        <div class="name">Timeline</div>
+        <div class="desc">Up to 4 thumbnail previews below the excerpt on the home page</div>
+      </div>
+      <div class="appears-card">
+        <span class="icon">📄</span>
+        <div class="name">The Post</div>
+        <div class="desc">Full-width, stacked below your text — all clickable with the lightbox</div>
+      </div>
+      <div class="appears-card">
+        <span class="icon">🖼️</span>
+        <div class="name">Gallery</div>
+        <div class="desc">Auto-collected from all posts — shows post title on hover, links back to post in lightbox</div>
+      </div>
+    </div>
+
+    <div class="box tip" style="margin-top:12px;">
+      <strong>💡 No photos? That's fine</strong>
+      If a post has no images, just leave the <code>images:</code> line out of the front matter entirely. Nothing will break.
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+       SECTION 4 — WRITING & MARKDOWN
+  ══════════════════════════════════════════ -->
+  <section class="section" id="writing">
+    <div class="section-label">Step 4</div>
+    <h2 class="section-h">Writing <span>content</span> &amp; Markdown</h2>
+
+    <p style="color:var(--muted); font-size:0.88rem; margin-bottom:18px;">Your post content goes below the closing <code>---</code> of your front matter. You write in plain text with optional Markdown formatting. No HTML needed.</p>
+
+    <div class="box green" style="margin-bottom:20px;">
+      <strong>✓ The excerpt rule</strong>
+      Whatever you write in the <strong>first paragraph</strong> (before the first blank line) becomes the excerpt shown on the Timeline and Blog pages. Keep it punchy — one to three sentences that make someone want to read the rest.
+    </div>
+
+    <table class="md-table">
+      <thead>
+        <tr>
+          <th>What you type</th>
+          <th>What it renders as</th>
+          <th>When to use it</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="syntax">## Heading</td>
+          <td class="result"><strong>Large section heading</strong></td>
+          <td class="note">Break up long posts into sections</td>
+        </tr>
+        <tr>
+          <td class="syntax">### Sub-heading</td>
+          <td class="result"><strong>Smaller heading</strong></td>
+          <td class="note">Sub-sections within a section</td>
+        </tr>
+        <tr>
+          <td class="syntax">**bold text**</td>
+          <td class="result"><strong>Bold text</strong></td>
+          <td class="note">Emphasize key words or phrases</td>
+        </tr>
+        <tr>
+          <td class="syntax">*italic text*</td>
+          <td class="result"><em>Italic text</em></td>
+          <td class="note">Titles, subtle emphasis</td>
+        </tr>
+        <tr>
+          <td class="syntax">[link text](URL)</td>
+          <td class="result"><span style="color:#5D3FD3; text-decoration:underline;">link text</span></td>
+          <td class="note">Link to other sites or posts</td>
+        </tr>
+        <tr>
+          <td class="syntax">- item one<br>- item two</td>
+          <td class="result">• item one<br>• item two</td>
+          <td class="note">Unordered bullet list</td>
+        </tr>
+        <tr>
+          <td class="syntax">1. First<br>2. Second</td>
+          <td class="result">1. First<br>2. Second</td>
+          <td class="note">Numbered / ordered list</td>
+        </tr>
+        <tr>
+          <td class="syntax">&gt; blockquote</td>
+          <td class="result" style="border-left:3px solid #5D3FD3; padding-left:8px; font-style:italic;">blockquote</td>
+          <td class="note">Pull quotes, notable moments</td>
+        </tr>
+        <tr>
+          <td class="syntax">(blank line)</td>
+          <td class="result">New paragraph</td>
+          <td class="note">Most important — blank line = new paragraph</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="code-wrap" style="margin-top:20px;">
+      <div class="code-label"><span class="dot"></span>Full post example — copy and adapt</div>
+      <pre><span class="cp">---</span>
+<span class="ck">layout</span>: <span class="cv">posts</span>
+<span class="ck">title</span>: <span class="cv">"Weekend Drive Up North"</span>
+<span class="ck">date</span>: <span class="cn">2026-04-25</span> <span class="cn">09:00:00</span> <span class="cp">-0500</span>
+<span class="ck">images</span>:
+  - <span class="cv">/assets/images/sunrise-petoskey.jpg</span>
+  - <span class="cv">/assets/images/charging-gaylord.jpg</span>
+<span class="cp">---</span>
+
+Took the Mach-E up to Petoskey for the weekend — first long
+trip since getting the car back in August. Charged twice on
+the way up and arrived with 40% still in the bank.
+
+<span class="cb">## The Drive</span>
+
+Left home around 7am to beat traffic. The GT in Sport mode
+on the highway is genuinely fun — pulled past a few semis
+on US-131 without a second thought.
+
+Stopped at the ChargePoint in Gaylord for 25 minutes and
+grabbed coffee. Added about 60 miles of range. **Total trip
+was 4.5 hours including the stop.**
+
+<span class="cb">## Up North</span>
+
+Weather was perfect. Did a hike at Petoskey State Park and
+walked the Gaslight District in the evening.
+
+> "Should've done this months ago."
+
+The car drew the usual questions in the hotel parking lot —
+someone asked if it was a Mustang and seemed genuinely
+surprised it was electric.</pre>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+       SECTION 5 — UPLOADING
+  ══════════════════════════════════════════ -->
+  <section class="section" id="upload">
+    <div class="section-label">Step 5</div>
+    <h2 class="section-h">Uploading &amp; <span>publishing</span></h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:rgba(93,63,211,0.2); color:#c4b5fd;">1</div>
+        <div class="step-body">
+          <h4>Pull first — always</h4>
+          <p>Before touching anything in VS Code, pull from GitHub to make sure you have the latest. CloudCannon may have committed new charging sessions since your last edit.</p>
+          <div class="code-wrap" style="margin-top:8px;">
+            <pre style="padding:10px 14px;"><span class="cm"># In VS Code terminal or GitHub Desktop</span>
+git pull</pre>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(93,63,211,0.2); color:#c4b5fd;">2</div>
+        <div class="step-body">
+          <h4>Add your files</h4>
+          <ul>
+            <li>Copy your resized photos into <code>assets/images/</code></li>
+            <li>Create your <code>.md</code> post file in <code>_posts/</code></li>
+          </ul>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(93,63,211,0.2); color:#c4b5fd;">3</div>
+        <div class="step-body">
+          <h4>Commit and push</h4>
+          <div class="code-wrap" style="margin-top:8px;">
+            <pre style="padding:10px 14px;"><span class="cm"># Stage everything new</span>
+git add .
+
+<span class="cm"># Write a clear commit message</span>
+git commit -m <span class="cv">"Add post: Weekend Drive Up North"</span>
+
+<span class="cm"># Push to GitHub — triggers a site rebuild</span>
+git push</pre>
+          </div>
+          <p style="margin-top:8px;">Or do the same thing in <strong style="color:var(--text);">GitHub Desktop</strong>: stage all changed files → write message → Commit → Push.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:rgba(46,204,113,0.2); color:#86efac;">4</div>
+        <div class="step-body">
+          <h4>Wait ~2 minutes and check the live site</h4>
+          <p>GitHub Actions rebuilds the site automatically. Your new post should appear at the top of the Timeline and Blog pages, and all photos will show up in the Gallery.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-top:16px;">
+      <div class="box warn">
+        <strong>⚠️ Draft posts</strong>
+        If you want to write a post but not publish it yet, put it in the <code>_drafts/</code> folder instead of <code>_posts/</code>. It won't appear on the live site until you move it to <code>_posts/</code>.
+      </div>
+      <div class="box tip">
+        <strong>💡 Checking the build</strong>
+        Go to your repo on GitHub → Actions tab → you'll see the build running. A green checkmark means the site rebuilt successfully. Red means something broke — click in to see the error.
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+       SECTION 6 — QUICK CHECKLIST
+  ══════════════════════════════════════════ -->
+  <section class="section" id="checklist">
+    <div class="section-label">Quick Reference</div>
+    <h2 class="section-h">Pre-publish <span>checklist</span></h2>
+
+    <div class="two-col">
+      <div>
+        <p style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:12px;">Before you commit</p>
+        <div class="checklist">
+          <div class="check"><span class="check-icon">📁</span><span>File is in <code>_posts/</code> (not <code>_drafts/</code>)</span></div>
+          <div class="check"><span class="check-icon">📅</span><span>Filename is <code>YYYY-MM-DD-title.md</code></span></div>
+          <div class="check"><span class="check-icon">⚙️</span><span>Front matter has <code>layout: posts</code>, <code>title:</code>, and <code>date:</code></span></div>
+          <div class="check"><span class="check-icon">✍️</span><span>First paragraph is the excerpt you want shown on Timeline</span></div>
+          <div class="check"><span class="check-icon">🖼️</span><span>Photos resized to ~1200px before adding to repo</span></div>
+          <div class="check"><span class="check-icon">📸</span><span>Photo paths in <code>images:</code> match actual filenames in <code>assets/images/</code></span></div>
+          <div class="check"><span class="check-icon">⬇️</span><span>Pulled from GitHub before starting any edits</span></div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:12px;">Common mistakes</p>
+        <div class="checklist">
+          <div class="check"><span class="check-icon">❌</span><span>Spaces in the filename — use hyphens only</span></div>
+          <div class="check"><span class="check-icon">❌</span><span>Missing the closing <code>---</code> on the front matter block</span></div>
+          <div class="check"><span class="check-icon">❌</span><span>Photo path typo — paths are case-sensitive on GitHub</span></div>
+          <div class="check"><span class="check-icon">❌</span><span>Uploading original full-size photos — always resize first</span></div>
+          <div class="check"><span class="check-icon">❌</span><span>Forgetting to <code>git pull</code> before editing — causes merge conflicts</span></div>
+          <div class="check"><span class="check-icon">❌</span><span>Using wrong timezone offset — use <code>-0500</code> Nov–Mar, <code>-0400</code> Mar–Nov</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>robertbeier.com — Blog Author Guide &nbsp;·&nbsp; <a href="/charging-site-guide.html">Site Operations Guide →</a></p>
+    <p style="margin-top:6px; font-size:0.68rem;">Use arrow keys or click section links at the top to navigate</p>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -21,6 +21,7 @@ _inputs:
     type: date
     options:
       time_format: false
+      timezone: America/New_York
   location:
     type: select
     options:
