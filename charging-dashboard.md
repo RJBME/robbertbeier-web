@@ -6,91 +6,87 @@ permalink: /charging/
 
 {% comment %}
 =============================================================
-  HOME ELECTRICITY RATE CONFIGURATION
+  HOME ELECTRICITY RATE — PERIOD-BASED CONFIGURATION
   ─────────────────────────────────────────────────────────
-  Update the two values below when your electricity rate
-  changes (e.g. after a new utility bill cycle).
+  Each Home charging session automatically uses the rate
+  that was in effect on the date it occurred. Historical
+  sessions are never recalculated when you add a new period.
 
-  home_rate_per_kwh
-    Your current home electricity rate in dollars per kWh.
-    Check your DTE or Consumers Energy bill for the exact
-    rate. It's usually listed as "Energy Charge" per kWh.
+  FORMAT (one period per line, pipe-separated):
+    YYYY-MM-DD | rate_per_kwh |
 
-  home_rate_effective_date
-    The date (YYYY-MM-DD) of the FIRST charging session
-    that should use this new rate. Sessions at Home BEFORE
-    this date use the cost already stored in the file.
-    Sessions at Home ON OR AFTER this date have their cost
-    calculated automatically using home_rate_per_kwh.
+  RULES:
+    • List periods in CHRONOLOGICAL ORDER, earliest first.
+    • The first period covers ALL Home sessions from the
+      very beginning of your data up to the next period.
+    • Each session uses the LAST period whose start date
+      is on or before the session date.
+    • Always keep a trailing pipe | at the end of each line.
+    • Rate is in dollars per kWh. Check your DTE or
+      Consumers Energy bill — look for "Energy Charge per kWh".
+      If you have a tiered or time-of-use rate, use your
+      blended average (total bill cost ÷ total kWh used).
 
-  HOW TO UPDATE WHEN YOUR RATE CHANGES:
+  HOW TO ADD A NEW RATE PERIOD:
     1. Find the date of your next Home charging session.
-    2. Update home_rate_per_kwh to your new rate.
-    3. Update home_rate_effective_date to that session date.
-    4. Save, commit, and push. Done.
+    2. Add a new line at the bottom in date order.
+    3. Save, commit, push. All future Home sessions use
+       the new rate; all past ones stay unchanged.
+
+  EXAMPLE — if your rate goes up to $0.19 on June 1 2026:
+    2026-06-01 | 0.19 |
 =============================================================
 {% endcomment %}
-{% assign home_rate_per_kwh        = 0.17 %}
-{% assign home_rate_effective_date = "2025-08-22" %}
+{% assign home_rate_periods = "
+2025-08-22 | 0.17 |
+" | strip | split: "
+" %}
 
 {% comment %}
 =============================================================
   GAS SAVINGS CALCULATION — PERIOD-BASED CONFIGURATION
   ─────────────────────────────────────────────────────────
   Gas savings are calculated per session using the rates
-  that were in effect on the date of that session. This
-  lets you reflect seasonal changes in gas prices and
-  Mach-E efficiency accurately over time.
+  that were in effect on the date of that session.
 
   FORMULA (per session):
     gas_equivalent = kWh × miles_per_kwh ÷ mpg × gas_price
     session_saving = gas_equivalent − actual_session_cost
     total_savings  = sum of all session_savings
 
-  THE PERIOD TABLE — gas_periods:
-  ─────────────────────────────────────────────────────────
-  Each line in gas_periods defines one time period.
-  Format (one period per line, pipe-separated):
+  FORMAT (one period per line, pipe-separated):
     YYYY-MM-DD | mpg | gas_$/gal | mi/kWh |
 
   RULES:
     • List periods in CHRONOLOGICAL ORDER, earliest first.
-    • The first period covers all sessions from the very
-      beginning of your data up until the next period starts.
-    • Each session uses the LAST period whose start date is
-      on or before the session date — i.e. the most recent
-      applicable period.
+    • Each session uses the LAST period whose start date
+      is on or before the session date.
     • Always keep a trailing pipe | at the end of each line.
 
   FIELD DESCRIPTIONS:
-    YYYY-MM-DD   Start date of this period (YYYY-MM-DD).
+    YYYY-MM-DD   Start date of this period.
     mpg          MPG of the gas car you're comparing against.
-                 23 = US average mid-size sedan.
-                 Use your old car's actual MPG for a personal
-                 comparison (e.g. 28 if your old car got 28).
-    gas_$/gal    Average gas price in dollars per gallon.
-                 Update seasonally or when prices shift.
-                 Check GasBuddy for current Michigan average.
-    mi/kWh       Your Mach-E GT's real-world efficiency.
-                 ~3.0 is a reasonable summer baseline.
-                 Drop to ~2.5 in winter (cold reduces range).
+                 23 = US average mid-size sedan. Use your
+                 old car's actual MPG for a personal comparison.
+    gas_$/gal    Average gas price per gallon. Check GasBuddy
+                 for current Michigan average.
+    mi/kWh       Mach-E GT real-world efficiency.
+                 ~3.0 summer baseline, ~2.5 winter.
                  Check FordPass for your rolling average.
 
   HOW TO ADD A NEW PERIOD:
     1. Decide the start date (first session under new rates).
-    2. Add a new line in date order using the format above.
-    3. Save, commit, push. The page recalculates automatically.
+    2. Add a new line in date order.
+    3. Save, commit, push.
 
   EXAMPLE — if gas jumps to $3.50 on June 1 2026:
     2026-06-01 | 23 | 3.50 | 3.0 |
 =============================================================
 {% endcomment %}
 {% assign gas_periods = "
-2025-08-22 | 27 | 2.50 | 3.0 |
-2025-11-01 | 27 | 2.75 | 2.5 |
-2026-03-01 | 27 | 2.50 | 3.0 |
-2026-04-20 | 27 | 3.89 | 3.0 |
-2026-04-29 | 27 | 4.69 | 3.0 |
+2025-08-22 | 23 | 2.50 | 3.0 |
+2025-11-01 | 23 | 2.75 | 2.5 |
+2026-03-01 | 23 | 2.50 | 3.0 |
 " | strip | split: "
 " %}
 
@@ -98,69 +94,37 @@ permalink: /charging/
 =============================================================
   ODOMETER / COST-PER-MILE CONFIGURATION
   ─────────────────────────────────────────────────────────
-  This section lets you track cost-per-mile and efficiency
-  for each vehicle separately, as well as an overall total.
+  Tracks cost-per-mile and efficiency per vehicle.
 
-  HOW IT WORKS:
-    - You manually record each vehicle's current odometer
-      reading and the date you read it.
-    - The page sums all charging costs for that vehicle for
-      sessions ON OR BEFORE the odometer date, then divides
-      by the miles driven to get cost/mile and kWh/mile.
-    - When you get your 2026 Mach-E, add a new entry below.
-
-  ODOMETER TABLE FORMAT (one vehicle per line, pipe-separated):
+  FORMAT (one vehicle per line, pipe-separated):
     vehicle_name | odometer_miles | odometer_date | first_session_date |
 
   FIELD DESCRIPTIONS:
-    vehicle_name
-      Must EXACTLY match the vehicle field in your charging
-      files (e.g. "2025 Mach-E GT"). Case sensitive.
-
-    odometer_miles
-      Current odometer reading in miles. Update this each
-      time you want fresh cost-per-mile numbers — ideally
-      once a month or whenever you remember.
-
-    odometer_date
-      Date (YYYY-MM-DD) you took the odometer reading.
-      Only charging sessions ON OR BEFORE this date are
-      included in the cost/mile calculation for this vehicle.
-
-    first_session_date
-      Date (YYYY-MM-DD) of the very first charging session
-      for this vehicle. Used to calculate total miles driven
-      since you started tracking (odometer - first_odometer
-      is not tracked, so miles = odometer reading used as-is
-      for the denominator — see note below).
-
-  IMPORTANT NOTE ON MILES:
-    The odometer reading you enter IS the total miles on the
-    car, but cost/mile is calculated using all charging costs
-    on or before odometer_date divided by odometer_miles.
-    This means early miles before you started tracking are
-    included in the denominator. If you want cost/mile only
-    for miles driven while tracking, subtract your odometer
-    reading at your first session from odometer_miles and
-    enter that adjusted number instead.
+    vehicle_name       Must EXACTLY match the vehicle field in
+                       your charging files. Case sensitive.
+    odometer_miles     Current odometer reading in miles.
+                       Update this and odometer_date monthly
+                       or whenever you want fresh numbers.
+    odometer_date      Date (YYYY-MM-DD) of the odometer reading.
+                       Only sessions ON OR BEFORE this date count.
+    first_session_date Date of your very first session for this
+                       vehicle. Set once, don't change.
 
   HOW TO UPDATE:
-    1. Check your odometer (FordPass app or dashboard).
+    1. Check FordPass or your dashboard for current mileage.
     2. Update odometer_miles to the new reading.
     3. Update odometer_date to today's date.
     4. Save, commit, push.
 
   WHEN YOU GET YOUR 2026 MACH-E:
-    1. Add a new line for "2026 Mach-E GT" (or whatever
-       the vehicle field will be in your charging files).
-    2. Set odometer_miles to your initial reading and
-       odometer_date to the date of your first charge.
-    3. Make sure your CloudCannon schema default vehicle
-       is updated too so new sessions tag the right car.
+    1. Add a new line for "2026 Mach-E GT".
+    2. Update the CloudCannon schema default vehicle field.
+    3. An Overall row appears automatically once you have
+       more than one vehicle listed here.
 =============================================================
 {% endcomment %}
 {% assign odometer_entries = "
-2025 Mach-E GT | 11146 | 2026-04-30 | 2025-08-22 |
+2025 Mach-E GT | 18500 | 2026-04-18 | 2025-08-22 |
 " | strip | split: "
 " %}
 
@@ -174,7 +138,6 @@ permalink: /charging/
   .status-value { font-size: 1.5rem; font-weight: bold; display: block; margin-top: 5px; color: var(--text) !important; }
   .status-footnote { font-size: 0.65rem; color: #888; display: block; margin-top: 4px; line-height: 1.4; }
 
-  /* Cost-per-mile section */
   .cpm-grid { display: grid; gap: 16px; margin-bottom: 25px; }
   .cpm-row { display: flex; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 12px; padding: 16px 20px; align-items: center; gap: 20px; flex-wrap: wrap; }
   .cpm-vehicle { font-weight: bold; font-size: 0.9rem; flex: 1 1 160px; }
@@ -208,7 +171,7 @@ permalink: /charging/
   .charging-table td { padding: 12px; border-bottom: 1px solid var(--dash-border); }
 </style>
 
-{% comment %} ── Accumulate totals across all sessions ── {% endcomment %}
+{% comment %} ── Initialize all accumulators ── {% endcomment %}
 {% assign total_cost  = 0.0 %}
 {% assign total_kwh   = 0.0 %}
 {% assign gas_savings = 0.0 %}
@@ -220,23 +183,29 @@ permalink: /charging/
 {% assign rivian_kwh  = 0.0 %}
 {% assign other_kwh   = 0.0 %}
 
-{% comment %}
-  Build per-vehicle cost and kWh accumulators.
-  We use a pipe-delimited string to store running totals
-  keyed by vehicle name, since Liquid doesn't support hashes.
-  Format: "vehicle_name::cost::kwh" entries in an array.
-{% endcomment %}
-{% assign veh_totals = "" %}
-
 {% for entry in site.charging %}
   {% assign k          = entry.energy_kwh | plus: 0 %}
   {% assign loc        = entry.location | downcase %}
   {% assign entry_date = entry.date | date: "%Y-%m-%d" %}
   {% assign veh        = entry.vehicle | default: "2025 Mach-E GT" %}
 
-  {% comment %} ── Effective electricity cost ── {% endcomment %}
-  {% if loc contains "home" and entry_date >= home_rate_effective_date %}
-    {% assign c = k | times: home_rate_per_kwh %}
+  {% comment %}
+    ── Resolve home electricity rate for this session ──
+    Walk home_rate_periods and keep updating h_rate as long
+    as the period start date <= session date. After the loop
+    h_rate holds the correct rate for this session.
+  {% endcomment %}
+  {% assign h_rate = 0.17 %}
+  {% for hp in home_rate_periods %}
+    {% assign hp_parts = hp | strip | split: " | " %}
+    {% if hp_parts[0] <= entry_date %}
+      {% assign h_rate = hp_parts[1] | plus: 0 %}
+    {% endif %}
+  {% endfor %}
+
+  {% comment %} ── Effective cost for this session ── {% endcomment %}
+  {% if loc contains "home" %}
+    {% assign c = k | times: h_rate %}
   {% else %}
     {% assign c = entry.cost | plus: 0 %}
   {% endif %}
@@ -254,7 +223,11 @@ permalink: /charging/
   {% else %}                             {% assign other_kwh  = other_kwh  | plus: k %}
   {% endif %}
 
-  {% comment %} ── Per-session gas savings (period-aware) ── {% endcomment %}
+  {% comment %}
+    ── Per-session gas savings (period-aware) ──
+    Walk gas_periods and keep updating p_* variables as
+    long as the period start date <= session date.
+  {% endcomment %}
   {% assign p_mpg       = 23   %}
   {% assign p_gas_price = 2.50 %}
   {% assign p_mi_kwh    = 3.0  %}
@@ -274,12 +247,10 @@ permalink: /charging/
     ── Per-vehicle cost/kWh accumulation ──
     For each odometer entry, if this session's vehicle matches
     and the session date is on or before the odometer date,
-    accumulate cost and kWh into that vehicle's running total.
-    We store results as Liquid variables named veh_cost_N and
-    veh_kwh_N where N matches the odometer_entries index.
+    accumulate into that vehicle's running total.
   {% endcomment %}
   {% for odo in odometer_entries %}
-    {% assign op = odo | strip | split: " | " %}
+    {% assign op          = odo | strip | split: " | " %}
     {% assign odo_vehicle = op[0] %}
     {% assign odo_date    = op[2] %}
     {% if veh == odo_vehicle and entry_date <= odo_date %}
@@ -305,7 +276,7 @@ permalink: /charging/
 
 {% assign gas_savings = gas_savings | round: 0 %}
 
-{% comment %} ── Set default zero values for any unset vehicle accumulators ── {% endcomment %}
+{% comment %} ── Default zero values for unset vehicle accumulators ── {% endcomment %}
 {% unless veh_cost_0 %}{% assign veh_cost_0 = 0.0 %}{% endunless %}
 {% unless veh_kwh_0  %}{% assign veh_kwh_0  = 0.0 %}{% endunless %}
 {% unless veh_cost_1 %}{% assign veh_cost_1 = 0.0 %}{% endunless %}
@@ -339,7 +310,7 @@ permalink: /charging/
     </div>
   </div>
 
-  {% comment %} Expandable gas assumptions panel {% endcomment %}
+  {% comment %} Expandable assumptions panels {% endcomment %}
   <div id="gas-assumptions" class="assumptions-panel">
     <strong>Gas Savings Assumptions by Period</strong>
     <table>
@@ -352,26 +323,28 @@ permalink: /charging/
         </tr>
       {% endfor %}
     </table>
+    <br>
+    <strong>Home Electricity Rates by Period</strong>
+    <table>
+      <tr><th>From date</th><th>Rate ($/kWh)</th></tr>
+      {% for hp in home_rate_periods %}
+        {% assign hp_parts = hp | strip | split: " | " %}
+        <tr>
+          <td>{{ hp_parts[0] }}</td><td>${{ hp_parts[1] }}</td>
+        </tr>
+      {% endfor %}
+    </table>
   </div>
 
-  {% comment %}
-    ── Cost per mile / efficiency cards ──
-    One row per vehicle in odometer_entries, plus an Overall row.
-    cost_per_mile = total_vehicle_cost / odometer_miles
-    kwh_per_mile  = total_vehicle_kwh  / odometer_miles
-    Overall uses total_cost / sum of all odometer miles.
-  {% endcomment %}
+  {% comment %} ── Cost per mile / efficiency cards ── {% endcomment %}
   <div class="cpm-grid">
     {% assign overall_odo_miles = 0 %}
-    {% assign veh_costs = veh_cost_0, veh_cost_1, veh_cost_2, veh_cost_3 %}
-    {% assign veh_kwhs  = veh_kwh_0,  veh_kwh_1,  veh_kwh_2,  veh_kwh_3  %}
 
     {% for odo in odometer_entries %}
       {% assign op          = odo | strip | split: " | " %}
       {% assign odo_vehicle = op[0] %}
       {% assign odo_miles   = op[1] | plus: 0 %}
       {% assign odo_date    = op[2] %}
-      {% assign odo_first   = op[3] %}
       {% assign idx         = forloop.index0 %}
 
       {% assign overall_odo_miles = overall_odo_miles | plus: odo_miles %}
@@ -384,20 +357,18 @@ permalink: /charging/
       {% endcase %}
 
       {% if odo_miles > 0 %}
-        {% assign cpm  = v_cost | divided_by: odo_miles %}
-        {% assign kpm  = v_kwh  | divided_by: odo_miles %}
+        {% assign cpm = v_cost | divided_by: odo_miles %}
+        {% assign kpm = v_kwh  | divided_by: odo_miles %}
       {% else %}
-        {% assign cpm  = 0 %}
-        {% assign kpm  = 0 %}
+        {% assign cpm = 0 %}
+        {% assign kpm = 0 %}
       {% endif %}
-
-      {% comment %} Format cents properly {% endcomment %}
       {% assign cpm_cents = cpm | times: 100 | round | modulo: 100 %}
 
       <div class="cpm-row">
         <div class="cpm-vehicle">
           {{ odo_vehicle }}
-          <small>{{ odo_miles | number_with_delimiter }} mi as of {{ odo_date }}</small>
+          <small>{{ odo_miles }} mi as of {{ odo_date }}</small>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
@@ -427,7 +398,7 @@ permalink: /charging/
       <div class="cpm-row cpm-overall">
         <div class="cpm-vehicle">
           Overall (all vehicles)
-          <small>{{ overall_odo_miles | number_with_delimiter }} combined miles</small>
+          <small>{{ overall_odo_miles }} combined miles</small>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
@@ -473,8 +444,18 @@ permalink: /charging/
         {% for log in sorted limit: 8 %}
           {% assign log_date = log.date | date: "%Y-%m-%d" %}
           {% assign log_loc  = log.location | downcase %}
-          {% if log_loc contains "home" and log_date >= home_rate_effective_date %}
-            {% assign display_cost = log.energy_kwh | times: home_rate_per_kwh %}
+
+          {% comment %} ── Resolve home rate for this display row ── {% endcomment %}
+          {% assign h_rate = 0.17 %}
+          {% for hp in home_rate_periods %}
+            {% assign hp_parts = hp | strip | split: " | " %}
+            {% if hp_parts[0] <= log_date %}
+              {% assign h_rate = hp_parts[1] | plus: 0 %}
+            {% endif %}
+          {% endfor %}
+
+          {% if log_loc contains "home" %}
+            {% assign display_cost = log.energy_kwh | times: h_rate %}
           {% else %}
             {% assign display_cost = log.cost | plus: 0 %}
           {% endif %}

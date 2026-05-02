@@ -6,19 +6,42 @@ permalink: /charging-history/
 
 {% comment %}
 =============================================================
-  HOME ELECTRICITY RATE CONFIGURATION
-  Update the two values below when your rate changes:
-    home_rate_per_kwh : your current rate in dollars per kWh
-    home_rate_effective_date : the date (YYYY-MM-DD) from which
-      this rate applies. Sessions at Home BEFORE this date will
-      use the cost stored in the file. Sessions at Home ON OR
-      AFTER this date will have their cost calculated automatically.
-  When your rate changes again, update both values and set
-  home_rate_effective_date to the date of the first new session.
+  HOME ELECTRICITY RATE — PERIOD-BASED CONFIGURATION
+  ─────────────────────────────────────────────────────────
+  Each Home charging session automatically uses the rate
+  that was in effect on the date it occurred. Historical
+  sessions are never recalculated when you add a new period.
+
+  FORMAT (one period per line, pipe-separated):
+    YYYY-MM-DD | rate_per_kwh |
+
+  RULES:
+    • List periods in CHRONOLOGICAL ORDER, earliest first.
+    • The first period covers ALL Home sessions from the
+      very beginning of your data up to the next period.
+    • Each session uses the LAST period whose start date
+      is on or before the session date.
+    • Always keep a trailing pipe | at the end of each line.
+    • Rate is in dollars per kWh. Check your DTE or
+      Consumers Energy bill — look for "Energy Charge per kWh".
+
+  HOW TO ADD A NEW RATE PERIOD:
+    1. Find the date of your next Home charging session.
+    2. Add a new line at the bottom in date order.
+    3. Save, commit, push. All future Home sessions use
+       the new rate; all past ones stay unchanged.
+
+  KEEP THIS IN SYNC with charging-dashboard.md —
+  both files must have the same home_rate_periods table.
+
+  EXAMPLE — if your rate goes up to $0.19 on June 1 2026:
+    2026-06-01 | 0.19 |
 =============================================================
 {% endcomment %}
-{% assign home_rate_per_kwh = 0.17 %}
-{% assign home_rate_effective_date = "2025-08-22" %}
+{% assign home_rate_periods = "
+2025-08-22 | 0.17 |
+" | strip | split: "
+" %}
 
 <style>
   .history-container { color: var(--text); }
@@ -27,7 +50,6 @@ permalink: /charging-history/
   .summary-label { font-size: 0.6rem; text-transform: uppercase; color: #bdc3c7; }
   .summary-value { font-size: 1.2rem; font-weight: bold; display: block; }
 
-  /* Filter bar — two rows: top for brand, bottom for the rest */
   .filter-bar { background: var(--dash-card); padding: 16px 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--dash-border); }
   .filter-row { display: grid; gap: 12px; align-items: end; margin-bottom: 10px; }
   .filter-row:last-child { margin-bottom: 0; }
@@ -39,19 +61,18 @@ permalink: /charging-history/
   .btn-reset { padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; align-self: flex-end; }
 
   .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
-  .badge-work { background: #e3f2fd; color: #01579b; }
-  .badge-home { background: #f3e5f5; color: #4a148c; }
-  .badge-tesla { background: #ffebee; color: #CC0000; }
-  .badge-cp { background: #fff3e0; color: #e65100; }
-  .badge-blink { background: #e8f5e9; color: #65A844; }
+  .badge-work   { background: #e3f2fd; color: #01579b; }
+  .badge-home   { background: #f3e5f5; color: #4a148c; }
+  .badge-tesla  { background: #ffebee; color: #CC0000; }
+  .badge-cp     { background: #fff3e0; color: #e65100; }
+  .badge-blink  { background: #e8f5e9; color: #65A844; }
   .badge-rivian { background: #fffde7; color: #ff8f00; }
-  .badge-other { background: #f5f5f5; color: #424242; }
+  .badge-other  { background: #f5f5f5; color: #424242; }
 
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--text) !important; margin-top: 10px; }
   th { background: var(--table-head); padding: 12px; border: 1px solid var(--dash-border); text-align: left; }
   td { padding: 12px; border: 1px solid var(--dash-border); }
 
-  /* Notes tooltip — wider, shorter, horizontal */
   .note-icon { position: relative; cursor: default; font-size: 1rem; display: inline-block; }
   .note-tooltip {
     display: none;
@@ -94,7 +115,6 @@ permalink: /charging-history/
   </div>
 
   <div class="filter-bar">
-    <!-- Row 1: Brand + Location (nested under brand) + Reset -->
     <div class="filter-row filter-row-brand">
       <div class="filter-group">
         <label>Brand</label>
@@ -117,7 +137,6 @@ permalink: /charging-history/
       </div>
       <button class="btn-reset" onclick="resetFilters()">Reset All</button>
     </div>
-    <!-- Row 2: Year, Vehicle, Cost -->
     <div class="filter-row filter-row-other">
       <div class="filter-group">
         <label>Year</label>
@@ -157,25 +176,41 @@ permalink: /charging-history/
       {% assign all_logs = site.charging | sort: 'date' | reverse %}
       {% for log in all_logs %}
         {% assign log_date = log.date | date: "%Y-%m-%d" %}
-        {% assign log_loc = log.location | downcase %}
+        {% assign log_loc  = log.location | downcase %}
 
-        {% comment %} Apply home rate for entries on or after the effective date {% endcomment %}
-        {% if log_loc contains "home" and log_date >= home_rate_effective_date %}
-          {% assign display_cost = log.energy_kwh | times: home_rate_per_kwh %}
-          {% assign cost_data = display_cost %}
+        {% comment %}
+          ── Resolve home electricity rate for this session ──
+          Walk home_rate_periods and keep updating h_rate as
+          long as the period start date <= session date.
+        {% endcomment %}
+        {% assign h_rate = 0.17 %}
+        {% for hp in home_rate_periods %}
+          {% assign hp_parts = hp | strip | split: " | " %}
+          {% if hp_parts[0] <= log_date %}
+            {% assign h_rate = hp_parts[1] | plus: 0 %}
+          {% endif %}
+        {% endfor %}
+
+        {% comment %} ── Effective cost for display and filtering ── {% endcomment %}
+        {% if log_loc contains "home" %}
+          {% assign display_cost = log.energy_kwh | times: h_rate %}
+          {% assign cost_data    = display_cost %}
         {% else %}
           {% assign display_cost = log.cost | plus: 0 %}
-          {% assign cost_data = log.cost %}
+          {% assign cost_data    = log.cost %}
         {% endif %}
 
-        {% comment %} Determine brand for filtering {% endcomment %}
-        {% if log_loc contains "work" %}{% assign brand = "work" %}
-        {% elsif log_loc contains "home" %}{% assign brand = "home" %}
-        {% elsif log_loc contains "tesla" %}{% assign brand = "tesla" %}
-        {% elsif log_loc contains "chargepoint" %}{% assign brand = "chargepoint" %}
-        {% elsif log_loc contains "rivian" %}{% assign brand = "rivian" %}
-        {% elsif log_loc contains "blink" %}{% assign brand = "blink" %}
-        {% else %}{% assign brand = "other" %}{% endif %}
+        {% comment %} ── Brand for filter ── {% endcomment %}
+        {% if log_loc contains "work" %}           {% assign brand = "work" %}
+        {% elsif log_loc contains "home" %}        {% assign brand = "home" %}
+        {% elsif log_loc contains "tesla" %}       {% assign brand = "tesla" %}
+        {% elsif log_loc contains "chargepoint" %} {% assign brand = "chargepoint" %}
+        {% elsif log_loc contains "rivian" %}      {% assign brand = "rivian" %}
+        {% elsif log_loc contains "blink" %}       {% assign brand = "blink" %}
+        {% else %}                                 {% assign brand = "other" %}
+        {% endif %}
+
+        {% assign cents = display_cost | round: 2 | times: 100 | round | modulo: 100 %}
 
       <tr class="log-row"
         data-year="{{ log.date | date: '%Y' }}"
@@ -186,10 +221,15 @@ permalink: /charging-history/
         data-cost="{{ cost_data }}"
         data-type="{% if cost_data > 0 %}paid{% else %}free{% endif %}">
         <td>{{ log.date | date: "%Y-%m-%d" }}</td>
-        <td>{% assign l = log.location | downcase %}<span class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">{{ log.location }}</span></td>
+        <td>
+          {% assign l = log.location | downcase %}
+          <span class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">
+            {{ log.location }}
+          </span>
+        </td>
         <td style="opacity: 0.6;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
         <td>{{ log.energy_kwh }}</td>
-        <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 | append: "" | split: "." | first }}{% assign cents = display_cost | round: 2 | times: 100 | round | modulo: 100 %}{% if cents < 10 %}.0{{ cents }}{% else %}.{{ cents }}{% endif %}{% endif %}</td>
+        <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 | split: "." | first }}.{% if cents < 10 %}0{{ cents }}{% else %}{{ cents }}{% endif %}{% endif %}</td>
         <td>
           {% if log.notes and log.notes != "" %}
             <span class="note-icon">📝
@@ -204,7 +244,6 @@ permalink: /charging-history/
 </div>
 
 <script>
-// All unique locations keyed by brand — built from table rows
 const brandLocMap = {};
 
 function initFilters() {
@@ -227,10 +266,9 @@ function initFilters() {
 }
 
 function onBrandChange() {
-  const brand = document.getElementById('brandFilter').value;
+  const brand  = document.getElementById('brandFilter').value;
   const locSel = document.getElementById('locFilter');
 
-  // Reset location dropdown
   locSel.innerHTML = '<option value="">All Locations</option>';
 
   if (brand && brandLocMap[brand]) {
