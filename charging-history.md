@@ -34,8 +34,8 @@ permalink: /charging-history/
   KEEP THIS IN SYNC with charging-dashboard.md —
   both files must have the same home_rate_periods table.
 
-  EXAMPLE — if your rate goes up to $0.19 on June 1 2026:
-    2026-06-01 | 0.19 |
+  EXAMPLE — if your rate goes up to $0.21 on June 1 2026:
+    2026-06-01 | 0.21 |
 =============================================================
 {% endcomment %}
 {% assign home_rate_periods = "
@@ -183,29 +183,31 @@ permalink: /charging-history/
       {% for log in all_logs %}
         {% assign log_date = log.date | date: "%Y-%m-%d" %}
         {% assign log_loc  = log.location | downcase %}
+        {% assign log_kwh  = log.energy_kwh | times: 1.0 %}
 
         {% comment %}
           ── Resolve home electricity rate for this session ──
-          Walk home_rate_periods and keep updating h_rate as
-          long as the period start date <= session date.
+          IMPORTANT: Use | times: 1.0 (not | plus: 0) to preserve
+          decimal values. Liquid's | plus: 0 truncates "0.196" to 0,
+          making every home session calculate as $0.00 (Free).
         {% endcomment %}
-        {% assign h_rate = 0.17 %}
+        {% assign h_rate = 0.196 %}
         {% for hp in home_rate_periods %}
-          {% assign hp_parts = hp | strip | split: " | " %}
-          {% assign hp_date = hp_parts[0] | strip %}
+          {% assign hp_parts    = hp | strip | split: " | " %}
+          {% assign hp_date     = hp_parts[0] | strip %}
           {% assign hp_rate_str = hp_parts[1] | strip %}
-          {% if hp_date <= entry_date %}
+          {% if hp_date <= log_date %}
             {% assign h_rate = hp_rate_str | times: 1.0 %}
           {% endif %}
-  {% endfor %}
+        {% endfor %}
 
         {% comment %} ── Effective cost for display and filtering ── {% endcomment %}
         {% if log_loc contains "home" %}
-          {% assign display_cost = log.energy_kwh | times: h_rate %}
+          {% assign display_cost = log_kwh | times: h_rate %}
           {% assign cost_data    = display_cost %}
         {% else %}
-          {% assign display_cost = log.cost | plus: 0 %}
-          {% assign cost_data    = log.cost %}
+          {% assign display_cost = log.cost | times: 1.0 %}
+          {% assign cost_data    = log.cost | times: 1.0 %}
         {% endif %}
 
         {% comment %} ── Brand for filter ── {% endcomment %}

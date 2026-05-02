@@ -33,8 +33,11 @@ permalink: /charging/
     3. Save, commit, push. All future Home sessions use
        the new rate; all past ones stay unchanged.
 
-  EXAMPLE — if your rate goes up to $0.19 on June 1 2026:
-    2026-06-01 | 0.19 |
+  KEEP THIS IN SYNC with charging-history.md —
+  both files must have the same home_rate_periods table.
+
+  EXAMPLE — if your rate goes up to $0.21 on June 1 2026:
+    2026-06-01 | 0.21 |
 =============================================================
 {% endcomment %}
 {% assign home_rate_periods = "
@@ -72,8 +75,8 @@ permalink: /charging/
   FIELD DESCRIPTIONS:
     YYYY-MM-DD   Start date of this period.
     mpg          MPG of the gas car you're comparing against.
-                 23 = US average mid-size sedan. Use your
-                 old car's actual MPG for a personal comparison.
+                 Use your old car's actual MPG for a personal
+                 comparison.
     gas_$/gal    Average gas price per gallon. Check GasBuddy
                  for current Michigan average.
     mi/kWh       Mach-E GT real-world efficiency.
@@ -84,9 +87,6 @@ permalink: /charging/
     1. Decide the start date (first session under new rates).
     2. Add a new line in date order.
     3. Save, commit, push.
-
-  EXAMPLE — if gas jumps to $3.50 on June 1 2026:
-    2026-06-01 | 23 | 3.50 | 3.0 |
 =============================================================
 {% endcomment %}
 {% assign gas_periods = "
@@ -196,21 +196,20 @@ permalink: /charging/
 {% assign other_kwh   = 0.0 %}
 
 {% for entry in site.charging %}
-  {% assign k          = entry.energy_kwh | plus: 0 %}
+  {% assign k          = entry.energy_kwh | times: 1.0 %}
   {% assign loc        = entry.location | downcase %}
   {% assign entry_date = entry.date | date: "%Y-%m-%d" %}
   {% assign veh        = entry.vehicle | default: "2025 Mach-E GT" %}
 
   {% comment %}
     ── Resolve home electricity rate for this session ──
-    Walk home_rate_periods and keep updating h_rate as long
-    as the period start date <= session date. After the loop
-    h_rate holds the correct rate for this session.
+    IMPORTANT: Use | times: 1.0 (not | plus: 0) to preserve
+    decimal values. Liquid's | plus: 0 truncates "0.196" to 0.
   {% endcomment %}
-{% assign h_rate = 0.17 %}
+  {% assign h_rate = 0.196 %}
   {% for hp in home_rate_periods %}
-    {% assign hp_parts = hp | strip | split: " | " %}
-    {% assign hp_date = hp_parts[0] | strip %}
+    {% assign hp_parts    = hp | strip | split: " | " %}
+    {% assign hp_date     = hp_parts[0] | strip %}
     {% assign hp_rate_str = hp_parts[1] | strip %}
     {% if hp_date <= entry_date %}
       {% assign h_rate = hp_rate_str | times: 1.0 %}
@@ -221,7 +220,7 @@ permalink: /charging/
   {% if loc contains "home" %}
     {% assign c = k | times: h_rate %}
   {% else %}
-    {% assign c = entry.cost | plus: 0 %}
+    {% assign c = entry.cost | times: 1.0 %}
   {% endif %}
 
   {% assign total_cost = total_cost | plus: c %}
@@ -239,18 +238,22 @@ permalink: /charging/
 
   {% comment %}
     ── Per-session gas savings (period-aware) ──
-    Walk gas_periods and keep updating p_* variables as
-    long as the period start date <= session date.
+    IMPORTANT: Use | times: 1.0 for all decimal values to
+    prevent Liquid integer truncation of gas price and mi/kWh.
   {% endcomment %}
-  {% assign p_mpg       = 23   %}
-  {% assign p_gas_price = 2.50 %}
+  {% assign p_mpg       = 27   %}
+  {% assign p_gas_price = 3.26 %}
   {% assign p_mi_kwh    = 3.0  %}
   {% for period in gas_periods %}
-    {% assign parts = period | strip | split: " | " %}
-    {% if parts[0] <= entry_date %}
-      {% assign p_mpg       = parts[1] | plus: 0 %}
-      {% assign p_gas_price = parts[2] | plus: 0 %}
-      {% assign p_mi_kwh    = parts[3] | plus: 0 %}
+    {% assign parts      = period | strip | split: " | " %}
+    {% assign p_date     = parts[0] | strip %}
+    {% assign p_mpg_str  = parts[1] | strip %}
+    {% assign p_gas_str  = parts[2] | strip %}
+    {% assign p_mi_str   = parts[3] | strip %}
+    {% if p_date <= entry_date %}
+      {% assign p_mpg       = p_mpg_str | times: 1.0 %}
+      {% assign p_gas_price = p_gas_str | times: 1.0 %}
+      {% assign p_mi_kwh    = p_mi_str  | times: 1.0 %}
     {% endif %}
   {% endfor %}
   {% assign gas_equiv      = k | times: p_mi_kwh | divided_by: p_mpg | times: p_gas_price %}
@@ -259,14 +262,11 @@ permalink: /charging/
 
   {% comment %}
     ── Per-vehicle cost/kWh accumulation ──
-    For each odometer entry, if this session's vehicle matches
-    and the session date is on or before the odometer date,
-    accumulate into that vehicle's running total.
   {% endcomment %}
   {% for odo in odometer_entries %}
     {% assign op          = odo | strip | split: " | " %}
-    {% assign odo_vehicle = op[0] %}
-    {% assign odo_date    = op[2] %}
+    {% assign odo_vehicle = op[0] | strip %}
+    {% assign odo_date    = op[2] | strip %}
     {% if veh == odo_vehicle and entry_date <= odo_date %}
       {% assign odo_idx = forloop.index0 %}
       {% case odo_idx %}
@@ -332,8 +332,10 @@ permalink: /charging/
       {% for period in gas_periods %}
         {% assign parts = period | strip | split: " | " %}
         <tr>
-          <td>{{ parts[0] }}</td><td>{{ parts[1] }}</td>
-          <td>${{ parts[2] }}</td><td>{{ parts[3] }}</td>
+          <td>{{ parts[0] | strip }}</td>
+          <td>{{ parts[1] | strip }}</td>
+          <td>${{ parts[2] | strip }}</td>
+          <td>{{ parts[3] | strip }}</td>
         </tr>
       {% endfor %}
     </table>
@@ -344,7 +346,8 @@ permalink: /charging/
       {% for hp in home_rate_periods %}
         {% assign hp_parts = hp | strip | split: " | " %}
         <tr>
-          <td>{{ hp_parts[0] }}</td><td>${{ hp_parts[1] }}</td>
+          <td>{{ hp_parts[0] | strip }}</td>
+          <td>${{ hp_parts[1] | strip }}</td>
         </tr>
       {% endfor %}
     </table>
@@ -356,9 +359,9 @@ permalink: /charging/
 
     {% for odo in odometer_entries %}
       {% assign op          = odo | strip | split: " | " %}
-      {% assign odo_vehicle = op[0] %}
-      {% assign odo_miles   = op[1] | plus: 0 %}
-      {% assign odo_date    = op[2] %}
+      {% assign odo_vehicle = op[0] | strip %}
+      {% assign odo_miles   = op[1] | strip | times: 1.0 %}
+      {% assign odo_date    = op[2] | strip %}
       {% assign idx         = forloop.index0 %}
 
       {% assign overall_odo_miles = overall_odo_miles | plus: odo_miles %}
@@ -382,7 +385,7 @@ permalink: /charging/
       <div class="cpm-row">
         <div class="cpm-vehicle">
           {{ odo_vehicle }}
-          <small>{{ odo_miles }} mi as of {{ odo_date }}</small>
+          <small>{{ odo_miles | round: 0 }} mi as of {{ odo_date }}</small>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
@@ -412,7 +415,7 @@ permalink: /charging/
       <div class="cpm-row cpm-overall">
         <div class="cpm-vehicle">
           Overall (all vehicles)
-          <small>{{ overall_odo_miles }} combined miles</small>
+          <small>{{ overall_odo_miles | round: 0 }} combined miles</small>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
@@ -458,20 +461,23 @@ permalink: /charging/
         {% for log in sorted limit: 8 %}
           {% assign log_date = log.date | date: "%Y-%m-%d" %}
           {% assign log_loc  = log.location | downcase %}
+          {% assign log_kwh  = log.energy_kwh | times: 1.0 %}
 
           {% comment %} ── Resolve home rate for this display row ── {% endcomment %}
-          {% assign h_rate = 0.17 %}
+          {% assign h_rate = 0.196 %}
           {% for hp in home_rate_periods %}
-            {% assign hp_parts = hp | strip | split: " | " %}
-            {% if hp_parts[0] <= log_date %}
-              {% assign h_rate = hp_parts[1] | plus: 0 %}
+            {% assign hp_parts    = hp | strip | split: " | " %}
+            {% assign hp_date     = hp_parts[0] | strip %}
+            {% assign hp_rate_str = hp_parts[1] | strip %}
+            {% if hp_date <= log_date %}
+              {% assign h_rate = hp_rate_str | times: 1.0 %}
             {% endif %}
           {% endfor %}
 
           {% if log_loc contains "home" %}
-            {% assign display_cost = log.energy_kwh | times: h_rate %}
+            {% assign display_cost = log_kwh | times: h_rate %}
           {% else %}
-            {% assign display_cost = log.cost | plus: 0 %}
+            {% assign display_cost = log.cost | times: 1.0 %}
           {% endif %}
           {% assign cents = display_cost | round: 2 | times: 100 | round | modulo: 100 %}
         <tr>
