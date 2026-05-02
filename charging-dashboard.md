@@ -207,11 +207,13 @@ permalink: /charging/
     as the period start date <= session date. After the loop
     h_rate holds the correct rate for this session.
   {% endcomment %}
-  {% assign h_rate = 0.17 %}
+{% assign h_rate = 0.17 %}
   {% for hp in home_rate_periods %}
     {% assign hp_parts = hp | strip | split: " | " %}
-    {% if hp_parts[0] <= entry_date %}
-      {% assign h_rate = hp_parts[1] | plus: 0 %}
+    {% assign hp_date = hp_parts[0] | strip %}
+    {% assign hp_rate_str = hp_parts[1] | strip %}
+    {% if hp_date <= entry_date %}
+      {% assign h_rate = hp_rate_str | times: 1.0 %}
     {% endif %}
   {% endfor %}
 

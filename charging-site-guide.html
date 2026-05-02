@@ -1,5 +1,3 @@
----
----
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -615,7 +613,7 @@
           <div class="step-list">
             <div class="step">
               <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">1</div>
-              <div class="step-content"><h4>Open .cloudcannon/schemas/charging.yaml</h4><p>In VS Code, find the <span class="mono">values:</span> list under location.</p></div>
+              <div class="step-content"><h4>Open .cloudcannon/schemas/charging.md</h4><p>In VS Code, find the <span class="mono">values:</span> list under location.</p></div>
             </div>
             <div class="step">
               <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">2</div>
@@ -630,7 +628,7 @@
         <div>
           <div class="code-label">Example: adding a new Tesla location</div>
           <div class="code-block">
-<span class="comment"># in .cloudcannon/schemas/charging.yaml</span>
+<span class="comment"># in .cloudcannon/schemas/charging.md</span>
 <span class="key">  location</span>:
 <span class="key">    type</span>: select
 <span class="key">    options</span>:
@@ -654,50 +652,56 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════
-       SLIDE 5 — ELECTRICITY RATE
+       SLIDE 5 — ELECTRICITY RATE (PERIOD-BASED)
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
     <div class="slide-accent" style="background: linear-gradient(90deg, #7b1fa2, #5D3FD3);"></div>
     <div class="slide-body">
       <div class="slide-section-label">Home Charging Cost</div>
-      <h2 class="slide-heading">Updating your <span>electricity rate</span></h2>
+      <h2 class="slide-heading">Managing <span>electricity rate</span> periods</h2>
 
-      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:16px;">Home sessions have their cost <em>calculated automatically</em> — you don't enter a cost for them. The rate is set in <span class="mono">charging-dashboard.md</span> and <span class="mono">charging-history.md</span>. Both files must be updated together.</p>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Home session costs are calculated automatically using a <strong style="color:var(--text);">period-based rate table</strong> — just like gas savings. Each session uses whatever rate was in effect on its date. Historical sessions are never touched when you add a new period.</p>
 
-      <div class="code-label">The two lines to find near the top of each file</div>
+      <div class="code-label">The rate table — near the top of BOTH charging-dashboard.md AND charging-history.md</div>
       <div class="code-block">
-<span class="comment">{% comment %} HOME ELECTRICITY RATE CONFIGURATION {% endcomment %}</span>
-<span class="key">{% assign home_rate_per_kwh</span>        = <span class="val">0.17</span> <span class="key">%}</span>   <span class="comment">← change this</span>
-<span class="key">{% assign home_rate_effective_date</span> = <span class="val">"2025-08-22"</span> <span class="key">%}</span>  <span class="comment">← and this</span>
+<span class="key">{% assign home_rate_periods</span> = <span class="val">"</span>
+<span class="val">2025-08-22</span> <span class="pipe">|</span> <span class="val">0.17</span> <span class="pipe">|</span>   <span class="comment">← date | rate in $/kWh |</span>
+<span class="val">2026-06-01</span> <span class="pipe">|</span> <span class="val">0.19</span> <span class="pipe">|</span>   <span class="comment">← add a new line when your rate changes</span>
+<span class="val">"</span> <span class="pipe">| strip | split:</span> <span class="val">"</span>
+<span class="val">"</span> <span class="key">%}</span>
       </div>
 
       <div class="two-col" style="margin-top:14px;">
         <div class="step-list">
           <div class="step">
             <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">1</div>
-            <div class="step-content"><h4>Check your utility bill</h4><p>Find the "Energy Charge" per kWh. DTE and Consumers Energy list it clearly.</p></div>
+            <div class="step-content"><h4>Check your utility bill</h4><p>Find "Energy Charge per kWh" on your DTE or Consumers Energy bill. Use your blended average if you have a tiered rate (total cost ÷ total kWh).</p></div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">2</div>
-            <div class="step-content"><h4>Note the date of your next Home session</h4><p>This is the effective date — sessions before it keep their old calculated cost.</p></div>
+            <div class="step-content"><h4>Add a new line to BOTH files</h4><p>Format: <span class="mono">YYYY-MM-DD | rate |</span> — use the date of your next Home session as the start date. Must be updated in both <span class="mono">charging-dashboard.md</span> AND <span class="mono">charging-history.md</span>.</p></div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">3</div>
-            <div class="step-content"><h4>Update both values in both files</h4><p>Edit <span class="mono">charging-dashboard.md</span> AND <span class="mono">charging-history.md</span> — same two lines in each.</p></div>
+            <div class="step-content"><h4>Keep lines in date order</h4><p>Earliest period first. The site walks the list and applies the last period whose date is on or before each session date.</p></div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">4</div>
-            <div class="step-content"><h4>Commit & push</h4><p>Site recalculates all Home session costs automatically on next build.</p></div>
+            <div class="step-content"><h4>Commit & push both files</h4><p>The site recalculates automatically. The "see assumptions ↕" panel on the charging page shows all rate periods for reference.</p></div>
           </div>
         </div>
         <div>
           <div class="info-box warn">
-            <strong>⚠️ Historical sessions are protected</strong><br>
-            Sessions before <span class="mono">home_rate_effective_date</span> are NOT recalculated. Their cost comes from whatever was stored in the file originally.
+            <strong>⚠️ Must update BOTH files</strong><br>
+            <span class="mono">charging-dashboard.md</span> and <span class="mono">charging-history.md</span> each have their own copy of the rate table. Keep them in sync — if one is out of date the dashboard and history page will show different costs for the same session.
           </div>
           <div class="info-box tip" style="margin-top:10px;">
             <strong>💡 Non-home sessions</strong><br>
-            Work, Tesla, ChargePoint etc. always use the <span class="mono">cost</span> field stored in the file. Enter those manually when you add the session.
+            Work, Tesla, ChargePoint etc. always use the <span class="mono">cost</span> field stored in the file. Enter those manually when you add the session in CloudCannon.
+          </div>
+          <div class="info-box green" style="margin-top:10px;">
+            <strong>✓ Rate history is preserved</strong><br>
+            Never delete old periods — keep the full history. Sessions are always calculated against the rate that was in effect at the time, giving you accurate lifetime cost tracking.
           </div>
         </div>
       </div>
@@ -1028,10 +1032,10 @@ git push
           <p style="font-size:0.75rem; font-weight:600; color:var(--text); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.08em;">Routine tasks</p>
           <div class="checklist">
             <div class="check-item"><span class="check-icon">⚡</span><span><strong>Add session:</strong> CloudCannon → Charging Sessions → + Add</span></div>
-            <div class="check-item"><span class="check-icon">🔌</span><span><strong>Update electricity rate:</strong> Edit both .md files, change 2 lines each, commit</span></div>
+            <div class="check-item"><span class="check-icon">🔌</span><span><strong>Update electricity rate:</strong> Add new line to <span class="mono">home_rate_periods</span> in BOTH .md files, commit</span></div>
             <div class="check-item"><span class="check-icon">⛽</span><span><strong>Update gas period:</strong> Add line to gas_periods in charging-dashboard.md, commit</span></div>
             <div class="check-item"><span class="check-icon">🚗</span><span><strong>Update odometer:</strong> Change miles + date in odometer_entries in charging-dashboard.md</span></div>
-            <div class="check-item"><span class="check-icon">📍</span><span><strong>Add location:</strong> Edit .cloudcannon/schemas/charging.yaml values list, commit</span></div>
+            <div class="check-item"><span class="check-icon">📍</span><span><strong>Add location:</strong> Edit <span class="mono">.cloudcannon/schemas/charging.md</span> values list, commit</span></div>
             <div class="check-item"><span class="check-icon">🧹</span><span><strong>Cleanup files:</strong> <span class="mono">python3 fix_charging_files.py</span> then commit</span></div>
           </div>
         </div>
