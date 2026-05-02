@@ -6,133 +6,39 @@ permalink: /charging/
 
 {% comment %}
 =============================================================
-  HOME ELECTRICITY RATE — PERIOD-BASED CONFIGURATION
+  RATE CONFIGURATION — edit _data/rates.yml, NOT this file
   ─────────────────────────────────────────────────────────
-  Each Home charging session automatically uses the rate
-  that was in effect on the date it occurred. Historical
-  sessions are never recalculated when you add a new period.
+  All electricity rates and gas savings assumptions are now
+  managed in a single place: _data/rates.yml
 
-  FORMAT (one period per line, pipe-separated):
-    YYYY-MM-DD | rate_per_kwh |
-
-  RULES:
-    • List periods in CHRONOLOGICAL ORDER, earliest first.
-    • The first period covers ALL Home sessions from the
-      very beginning of your data up to the next period.
-    • Each session uses the LAST period whose start date
-      is on or before the session date.
-    • Always keep a trailing pipe | at the end of each line.
-    • Rate is in dollars per kWh. Check your DTE or
-      Consumers Energy bill — look for "Energy Charge per kWh".
-      If you have a tiered or time-of-use rate, use your
-      blended average (total bill cost ÷ total kWh used).
-
-  HOW TO ADD A NEW RATE PERIOD:
-    1. Find the date of your next Home charging session.
-    2. Add a new line at the bottom in date order.
-    3. Save, commit, push. All future Home sessions use
-       the new rate; all past ones stay unchanged.
-
-  KEEP THIS IN SYNC with charging-history.md —
-  both files must have the same home_rate_periods table.
-
-  EXAMPLE — if your rate goes up to $0.21 on June 1 2026:
-    2026-06-01 | 0.21 |
+  To update rates: open _data/rates.yml and add a new entry.
+  This file reads from that data automatically.
 =============================================================
 {% endcomment %}
-{% assign home_rate_periods = "
-2025-08-22 | 0.196 |
-2025-09-18 | 0.191 |
-2025-10-18 | 0.174 |
-2025-11-18 | 0.181 |
-2025-12-19 | 0.178 |
-2026-01-21 | 0.181 |
-2026-02-19 | 0.204 |
-" | strip | split: "
-" %}
-
-{% comment %}
-=============================================================
-  GAS SAVINGS CALCULATION — PERIOD-BASED CONFIGURATION
-  ─────────────────────────────────────────────────────────
-  Gas savings are calculated per session using the rates
-  that were in effect on the date of that session.
-
-  FORMULA (per session):
-    gas_equivalent = kWh × miles_per_kwh ÷ mpg × gas_price
-    session_saving = gas_equivalent − actual_session_cost
-    total_savings  = sum of all session_savings
-
-  FORMAT (one period per line, pipe-separated):
-    YYYY-MM-DD | mpg | gas_$/gal | mi/kWh |
-
-  RULES:
-    • List periods in CHRONOLOGICAL ORDER, earliest first.
-    • Each session uses the LAST period whose start date
-      is on or before the session date.
-    • Always keep a trailing pipe | at the end of each line.
-
-  FIELD DESCRIPTIONS:
-    YYYY-MM-DD   Start date of this period.
-    mpg          MPG of the gas car you're comparing against.
-                 Use your old car's actual MPG for a personal
-                 comparison.
-    gas_$/gal    Average gas price per gallon. Check GasBuddy
-                 for current Michigan average.
-    mi/kWh       Mach-E GT real-world efficiency.
-                 ~3.0 summer baseline, ~2.5 winter.
-                 Check FordPass for your rolling average.
-
-  HOW TO ADD A NEW PERIOD:
-    1. Decide the start date (first session under new rates).
-    2. Add a new line in date order.
-    3. Save, commit, push.
-=============================================================
-{% endcomment %}
-{% assign gas_periods = "
-2025-08-22 | 27 | 3.26 | 3.0 |
-2025-09-01 | 27 | 3.29 | 2.5 |
-2025-10-01 | 27 | 3.19 | 3.0 |
-2025-11-01 | 27 | 3.04 | 3.0 |
-2025-12-01 | 27 | 2.84 | 3.0 |
-2026-01-01 | 27 | 2.80 | 3.0 |
-2026-02-01 | 27 | 2.89 | 3.0 |
-2026-03-01 | 27 | 3.60 | 3.0 |
-2026-04-01 | 27 | 4.24 | 3.0 |
-" | strip | split: "
-" %}
 
 {% comment %}
 =============================================================
   ODOMETER / COST-PER-MILE CONFIGURATION
   ─────────────────────────────────────────────────────────
-  Tracks cost-per-mile and efficiency per vehicle.
+  FORMAT: vehicle_name | odometer_miles | odometer_date | first_session_date |
 
-  FORMAT (one vehicle per line, pipe-separated):
-    vehicle_name | odometer_miles | odometer_date | first_session_date |
-
-  FIELD DESCRIPTIONS:
-    vehicle_name       Must EXACTLY match the vehicle field in
-                       your charging files. Case sensitive.
-    odometer_miles     Current odometer reading in miles.
-                       Update this and odometer_date monthly
-                       or whenever you want fresh numbers.
-    odometer_date      Date (YYYY-MM-DD) of the odometer reading.
-                       Only sessions ON OR BEFORE this date count.
-    first_session_date Date of your very first session for this
-                       vehicle. Set once, don't change.
+  vehicle_name    Must EXACTLY match the vehicle field in your
+                  charging files. Case sensitive.
+  odometer_miles  Current odometer reading in miles.
+  odometer_date   Date (YYYY-MM-DD) you took the reading.
+                  Only sessions ON OR BEFORE this date count.
+  first_session_date  Date of your very first session for this
+                  vehicle. Set once, never change.
 
   HOW TO UPDATE:
-    1. Check FordPass or your dashboard for current mileage.
-    2. Update odometer_miles to the new reading.
-    3. Update odometer_date to today's date.
-    4. Save, commit, push.
+    1. Check FordPass or dashboard for current mileage.
+    2. Update odometer_miles and odometer_date.
+    3. Save, commit, push.
 
   WHEN YOU GET YOUR 2026 MACH-E:
-    1. Add a new line for "2026 Mach-E GT".
-    2. Update the CloudCannon schema default vehicle field.
-    3. An Overall row appears automatically once you have
-       more than one vehicle listed here.
+    Add a new line for "2026 Mach-E GT" and update the
+    CloudCannon schema default vehicle field.
+    An Overall row appears automatically with 2+ vehicles.
 =============================================================
 {% endcomment %}
 {% assign odometer_entries = "
@@ -202,17 +108,13 @@ permalink: /charging/
   {% assign veh        = entry.vehicle | default: "2025 Mach-E GT" %}
 
   {% comment %}
-    ── Resolve home electricity rate for this session ──
-    IMPORTANT: Use | times: 1.0 (not | plus: 0) to preserve
-    decimal values. Liquid's | plus: 0 truncates "0.196" to 0.
+    ── Resolve home electricity rate from _data/rates.yml ──
+    period.rate is a Ruby float — no string conversion needed.
   {% endcomment %}
   {% assign h_rate = 0.196 %}
-  {% for hp in home_rate_periods %}
-    {% assign hp_parts    = hp | strip | split: " | " %}
-    {% assign hp_date     = hp_parts[0] | strip %}
-    {% assign hp_rate_str = hp_parts[1] | strip %}
-    {% if hp_date <= entry_date %}
-      {% assign h_rate = hp_rate_str | times: 1.0 %}
+  {% for period in site.data.rates.home_electricity %}
+    {% if period.date <= entry_date %}
+      {% assign h_rate = period.rate %}
     {% endif %}
   {% endfor %}
 
@@ -237,32 +139,24 @@ permalink: /charging/
   {% endif %}
 
   {% comment %}
-    ── Per-session gas savings (period-aware) ──
-    IMPORTANT: Use | times: 1.0 for all decimal values to
-    prevent Liquid integer truncation of gas price and mi/kWh.
+    ── Per-session gas savings from _data/rates.yml ──
+    All values are Ruby floats — math works cleanly.
   {% endcomment %}
   {% assign p_mpg       = 27   %}
   {% assign p_gas_price = 3.26 %}
   {% assign p_mi_kwh    = 3.0  %}
-  {% for period in gas_periods %}
-    {% assign parts      = period | strip | split: " | " %}
-    {% assign p_date     = parts[0] | strip %}
-    {% assign p_mpg_str  = parts[1] | strip %}
-    {% assign p_gas_str  = parts[2] | strip %}
-    {% assign p_mi_str   = parts[3] | strip %}
-    {% if p_date <= entry_date %}
-      {% assign p_mpg       = p_mpg_str | times: 1.0 %}
-      {% assign p_gas_price = p_gas_str | times: 1.0 %}
-      {% assign p_mi_kwh    = p_mi_str  | times: 1.0 %}
+  {% for period in site.data.rates.gas_savings %}
+    {% if period.date <= entry_date %}
+      {% assign p_mpg       = period.mpg %}
+      {% assign p_gas_price = period.gas_price %}
+      {% assign p_mi_kwh    = period.mi_per_kwh %}
     {% endif %}
   {% endfor %}
   {% assign gas_equiv      = k | times: p_mi_kwh | divided_by: p_mpg | times: p_gas_price %}
   {% assign session_saving = gas_equiv | minus: c %}
   {% assign gas_savings    = gas_savings | plus: session_saving %}
 
-  {% comment %}
-    ── Per-vehicle cost/kWh accumulation ──
-  {% endcomment %}
+  {% comment %} ── Per-vehicle cost/kWh accumulation ── {% endcomment %}
   {% for odo in odometer_entries %}
     {% assign op          = odo | strip | split: " | " %}
     {% assign odo_vehicle = op[0] | strip %}
@@ -290,7 +184,6 @@ permalink: /charging/
 
 {% assign gas_savings = gas_savings | round: 0 %}
 
-{% comment %} ── Default zero values for unset vehicle accumulators ── {% endcomment %}
 {% unless veh_cost_0 %}{% assign veh_cost_0 = 0.0 %}{% endunless %}
 {% unless veh_kwh_0  %}{% assign veh_kwh_0  = 0.0 %}{% endunless %}
 {% unless veh_cost_1 %}{% assign veh_cost_1 = 0.0 %}{% endunless %}
@@ -309,7 +202,8 @@ permalink: /charging/
     </div>
     <div class="status-item">
       <span class="status-label">Actual Cost</span>
-      <span class="status-value">${{ total_cost | round: 2 }}</span>
+      {% assign tc_cents = total_cost | times: 100 | round | modulo: 100 %}
+      <span class="status-value">${{ total_cost | split: "." | first }}.{% if tc_cents < 10 %}0{{ tc_cents }}{% else %}{{ tc_cents }}{% endif %}</span>
     </div>
     <div class="status-item">
       <span class="status-label">Gas Savings</span>
@@ -324,18 +218,16 @@ permalink: /charging/
     </div>
   </div>
 
-  {% comment %} Expandable assumptions panels {% endcomment %}
   <div id="gas-assumptions" class="assumptions-panel">
     <strong>Gas Savings Assumptions by Period</strong>
     <table>
       <tr><th>From date</th><th>vs. MPG</th><th>Gas $/gal</th><th>mi/kWh</th></tr>
-      {% for period in gas_periods %}
-        {% assign parts = period | strip | split: " | " %}
+      {% for period in site.data.rates.gas_savings %}
         <tr>
-          <td>{{ parts[0] | strip }}</td>
-          <td>{{ parts[1] | strip }}</td>
-          <td>${{ parts[2] | strip }}</td>
-          <td>{{ parts[3] | strip }}</td>
+          <td>{{ period.date }}</td>
+          <td>{{ period.mpg }}</td>
+          <td>${{ period.gas_price }}</td>
+          <td>{{ period.mi_per_kwh }}</td>
         </tr>
       {% endfor %}
     </table>
@@ -343,11 +235,10 @@ permalink: /charging/
     <strong>Home Electricity Rates by Period</strong>
     <table>
       <tr><th>From date</th><th>Rate ($/kWh)</th></tr>
-      {% for hp in home_rate_periods %}
-        {% assign hp_parts = hp | strip | split: " | " %}
+      {% for period in site.data.rates.home_electricity %}
         <tr>
-          <td>{{ hp_parts[0] | strip }}</td>
-          <td>${{ hp_parts[1] | strip }}</td>
+          <td>{{ period.date }}</td>
+          <td>${{ period.rate }}</td>
         </tr>
       {% endfor %}
     </table>
@@ -360,7 +251,7 @@ permalink: /charging/
     {% for odo in odometer_entries %}
       {% assign op          = odo | strip | split: " | " %}
       {% assign odo_vehicle = op[0] | strip %}
-      {% assign odo_miles   = op[1] | strip | times: 1.0 %}
+      {% assign odo_miles   = op[1] | strip | plus: 0 %}
       {% assign odo_date    = op[2] | strip %}
       {% assign idx         = forloop.index0 %}
 
@@ -377,15 +268,15 @@ permalink: /charging/
         {% assign cpm = v_cost | divided_by: odo_miles %}
         {% assign kpm = v_kwh  | divided_by: odo_miles %}
       {% else %}
-        {% assign cpm = 0 %}
-        {% assign kpm = 0 %}
+        {% assign cpm = 0 %}{% assign kpm = 0 %}
       {% endif %}
       {% assign cpm_cents = cpm | times: 100 | round | modulo: 100 %}
+      {% assign vc_cents  = v_cost | times: 100 | round | modulo: 100 %}
 
       <div class="cpm-row">
         <div class="cpm-vehicle">
           {{ odo_vehicle }}
-          <small>{{ odo_miles | round: 0 }} mi as of {{ odo_date }}</small>
+          <small>{{ odo_miles }} mi as of {{ odo_date }}</small>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
@@ -401,13 +292,11 @@ permalink: /charging/
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Cost</span>
-          {% assign vc_cents = v_cost | times: 100 | round | modulo: 100 %}
           <span class="cpm-stat-value">${{ v_cost | split: "." | first }}.{% if vc_cents < 10 %}0{{ vc_cents }}{% else %}{{ vc_cents }}{% endif %}</span>
         </div>
       </div>
     {% endfor %}
 
-    {% comment %} Overall row — only shown if more than one vehicle {% endcomment %}
     {% if odometer_entries.size > 1 and overall_odo_miles > 0 %}
       {% assign overall_cpm = total_cost | divided_by: overall_odo_miles %}
       {% assign overall_kpm = total_kwh  | divided_by: overall_odo_miles %}
@@ -415,7 +304,7 @@ permalink: /charging/
       <div class="cpm-row cpm-overall">
         <div class="cpm-vehicle">
           Overall (all vehicles)
-          <small>{{ overall_odo_miles | round: 0 }} combined miles</small>
+          <small>{{ overall_odo_miles }} combined miles</small>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
@@ -431,8 +320,8 @@ permalink: /charging/
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Cost</span>
-          {% assign tc_cents = total_cost | times: 100 | round | modulo: 100 %}
-          <span class="cpm-stat-value">${{ total_cost | split: "." | first }}.{% if tc_cents < 10 %}0{{ tc_cents }}{% else %}{{ tc_cents }}{% endif %}</span>
+          {% assign tc_cents2 = total_cost | times: 100 | round | modulo: 100 %}
+          <span class="cpm-stat-value">${{ total_cost | split: "." | first }}.{% if tc_cents2 < 10 %}0{{ tc_cents2 }}{% else %}{{ tc_cents2 }}{% endif %}</span>
         </div>
       </div>
     {% endif %}
@@ -461,25 +350,20 @@ permalink: /charging/
         {% for log in sorted limit: 8 %}
           {% assign log_date = log.date | date: "%Y-%m-%d" %}
           {% assign log_loc  = log.location | downcase %}
-          {% assign log_kwh  = log.energy_kwh | times: 1.0 %}
 
-          {% comment %} ── Resolve home rate for this display row ── {% endcomment %}
           {% assign h_rate = 0.196 %}
-          {% for hp in home_rate_periods %}
-            {% assign hp_parts    = hp | strip | split: " | " %}
-            {% assign hp_date     = hp_parts[0] | strip %}
-            {% assign hp_rate_str = hp_parts[1] | strip %}
-            {% if hp_date <= log_date %}
-              {% assign h_rate = hp_rate_str | times: 1.0 %}
+          {% for period in site.data.rates.home_electricity %}
+            {% if period.date <= log_date %}
+              {% assign h_rate = period.rate %}
             {% endif %}
           {% endfor %}
 
           {% if log_loc contains "home" %}
-            {% assign display_cost = log_kwh | times: h_rate %}
+            {% assign display_cost = log.energy_kwh | times: h_rate %}
           {% else %}
             {% assign display_cost = log.cost | times: 1.0 %}
           {% endif %}
-          {% assign cents = display_cost | round: 2 | times: 100 | round | modulo: 100 %}
+          {% assign cents = display_cost | times: 100 | round | modulo: 100 %}
         <tr>
           <td>{{ log.date | date: "%Y-%m-%d" }}</td>
           <td>
@@ -496,7 +380,7 @@ permalink: /charging/
             </span>
           </td>
           <td>{{ log.energy_kwh }} kWh</td>
-          <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 | split: "." | first }}.{% if cents < 10 %}0{{ cents }}{% else %}{{ cents }}{% endif %}{% endif %}</td>
+          <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | split: "." | first }}.{% if cents < 10 %}0{{ cents }}{% else %}{{ cents }}{% endif %}{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>

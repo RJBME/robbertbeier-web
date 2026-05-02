@@ -6,48 +6,13 @@ permalink: /charging-history/
 
 {% comment %}
 =============================================================
-  HOME ELECTRICITY RATE — PERIOD-BASED CONFIGURATION
+  RATE CONFIGURATION — edit _data/rates.yml, NOT this file
   ─────────────────────────────────────────────────────────
-  Each Home charging session automatically uses the rate
-  that was in effect on the date it occurred. Historical
-  sessions are never recalculated when you add a new period.
-
-  FORMAT (one period per line, pipe-separated):
-    YYYY-MM-DD | rate_per_kwh |
-
-  RULES:
-    • List periods in CHRONOLOGICAL ORDER, earliest first.
-    • The first period covers ALL Home sessions from the
-      very beginning of your data up to the next period.
-    • Each session uses the LAST period whose start date
-      is on or before the session date.
-    • Always keep a trailing pipe | at the end of each line.
-    • Rate is in dollars per kWh. Check your DTE or
-      Consumers Energy bill — look for "Energy Charge per kWh".
-
-  HOW TO ADD A NEW RATE PERIOD:
-    1. Find the date of your next Home charging session.
-    2. Add a new line at the bottom in date order.
-    3. Save, commit, push. All future Home sessions use
-       the new rate; all past ones stay unchanged.
-
-  KEEP THIS IN SYNC with charging-dashboard.md —
-  both files must have the same home_rate_periods table.
-
-  EXAMPLE — if your rate goes up to $0.21 on June 1 2026:
-    2026-06-01 | 0.21 |
+  All electricity rates are managed in a single place:
+  _data/rates.yml — open that file to add or update rates.
+  This file reads from it automatically.
 =============================================================
 {% endcomment %}
-{% assign home_rate_periods = "
-2025-08-22 | 0.196 |
-2025-09-18 | 0.191 |
-2025-10-18 | 0.174 |
-2025-11-18 | 0.181 |
-2025-12-19 | 0.178 |
-2026-01-21 | 0.181 |
-2026-02-19 | 0.204 |
-" | strip | split: "
-" %}
 
 <style>
   .history-container { color: var(--text); }
@@ -183,32 +148,29 @@ permalink: /charging-history/
       {% for log in all_logs %}
         {% assign log_date = log.date | date: "%Y-%m-%d" %}
         {% assign log_loc  = log.location | downcase %}
-        {% assign log_kwh  = log.energy_kwh | times: 1.0 %}
 
         {% comment %}
-          ── Resolve home electricity rate for this session ──
-          IMPORTANT: Use | times: 1.0 (not | plus: 0) to preserve
-          decimal values. Liquid's | plus: 0 truncates "0.196" to 0,
-          making every home session calculate as $0.00 (Free).
+          ── Resolve home rate from _data/rates.yml ──
+          period.rate is a Ruby float — no conversion needed.
+          Walk the list; last matching period wins.
         {% endcomment %}
         {% assign h_rate = 0.196 %}
-        {% for hp in home_rate_periods %}
-          {% assign hp_parts    = hp | strip | split: " | " %}
-          {% assign hp_date     = hp_parts[0] | strip %}
-          {% assign hp_rate_str = hp_parts[1] | strip %}
-          {% if hp_date <= log_date %}
-            {% assign h_rate = hp_rate_str | times: 1.0 %}
+        {% for period in site.data.rates.home_electricity %}
+          {% if period.date <= log_date %}
+            {% assign h_rate = period.rate %}
           {% endif %}
         {% endfor %}
 
-        {% comment %} ── Effective cost for display and filtering ── {% endcomment %}
+        {% comment %} ── Effective cost for display and JS filtering ── {% endcomment %}
         {% if log_loc contains "home" %}
-          {% assign display_cost = log_kwh | times: h_rate %}
+          {% assign display_cost = log.energy_kwh | times: h_rate %}
           {% assign cost_data    = display_cost %}
         {% else %}
           {% assign display_cost = log.cost | times: 1.0 %}
           {% assign cost_data    = log.cost | times: 1.0 %}
         {% endif %}
+
+        {% assign cents = display_cost | times: 100 | round | modulo: 100 %}
 
         {% comment %} ── Brand for filter ── {% endcomment %}
         {% if log_loc contains "work" %}           {% assign brand = "work" %}
@@ -219,8 +181,6 @@ permalink: /charging-history/
         {% elsif log_loc contains "blink" %}       {% assign brand = "blink" %}
         {% else %}                                 {% assign brand = "other" %}
         {% endif %}
-
-        {% assign cents = display_cost | round: 2 | times: 100 | round | modulo: 100 %}
 
       <tr class="log-row"
         data-year="{{ log.date | date: '%Y' }}"
@@ -239,7 +199,7 @@ permalink: /charging-history/
         </td>
         <td style="opacity: 0.6;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
         <td>{{ log.energy_kwh }}</td>
-        <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | round: 2 | split: "." | first }}.{% if cents < 10 %}0{{ cents }}{% else %}{{ cents }}{% endif %}{% endif %}</td>
+        <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | split: "." | first }}.{% if cents < 10 %}0{{ cents }}{% else %}{{ cents }}{% endif %}{% endif %}</td>
         <td>
           {% if log.notes and log.notes != "" %}
             <span class="note-icon">📝
@@ -258,35 +218,26 @@ const brandLocMap = {};
 
 function initFilters() {
   const vehicles = new Set();
-
   document.querySelectorAll('.log-row').forEach(row => {
     const brand = row.getAttribute('data-brand');
     const loc   = row.getAttribute('data-loc');
     const veh   = row.getAttribute('data-veh');
-
     if (!brandLocMap[brand]) brandLocMap[brand] = new Set();
     brandLocMap[brand].add(loc);
     vehicles.add(veh);
   });
-
   const vehSel = document.getElementById('vehFilter');
   Array.from(vehicles).sort().forEach(v => vehSel.add(new Option(v, v)));
-
   applyFilters();
 }
 
 function onBrandChange() {
   const brand  = document.getElementById('brandFilter').value;
   const locSel = document.getElementById('locFilter');
-
   locSel.innerHTML = '<option value="">All Locations</option>';
-
   if (brand && brandLocMap[brand]) {
-    Array.from(brandLocMap[brand]).sort().forEach(loc => {
-      locSel.add(new Option(loc, loc));
-    });
+    Array.from(brandLocMap[brand]).sort().forEach(loc => locSel.add(new Option(loc, loc)));
   }
-
   applyFilters();
 }
 
