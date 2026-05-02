@@ -15,6 +15,49 @@ collections_config:
     add_options:
       - name: Add Charging Session
         schema: default
+    _inputs:
+      date:
+        type: date
+        options:
+          time_format: false
+          timezone: America/New_York
+      location:
+        type: select
+        options:
+          values:
+            - Home
+            - Work
+            - "Tesla, Lansing"
+            - "Tesla, Blue Heron Service Plaza, Genoa, OH"
+            - "Tesla, North Canton, OH"
+            - "Tesla, Wyondot Plaza, Genoa, OH"
+            - "Tesla, Battle Creek"
+            - "Tesla, Stevensville, MI"
+            - "Tesla, Des Plains, IL"
+            - "ChargePoint, Muskegon"
+            - "ChargePoint, Clare, MI"
+            - "ChargePoint, BP Gas Station, Grand Rapids, MI"
+            - "ChargePoint, DIA, Detroit"
+            - "Rivian, Clare, MI"
+            - "MGM Grand, Detroit, MI"
+            - "Blink, BJ's Wholesale, Canton"
+            - "Paul & Carol's, Beulah, MI"
+      energy_kwh:
+        type: number
+        comment: "Energy added in kWh"
+      vehicle:
+        type: select
+        options:
+          values:
+            - "2025 Mach-E GT"
+            - "2026 SR LFP AWD"
+            - "LRB's 2025 Mach-E GT"
+            - "LRB's SR LFP AWD"
+      cost:
+        type: number
+        comment: "Total cost in USD"
+      notes:
+        type: textarea
 
 _inputs:
   date:
