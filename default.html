@@ -26,8 +26,6 @@
       --post-hr: #333333;
     }
 
-    html { background-color: var(--bg); }
-
     body {
       background-color: var(--bg);
       color: var(--text);
@@ -245,22 +243,8 @@
       transition: all 0.2s;
     }
 
-    /* ── Sticky nav (desktop / tablet ≥ 768 px) ── */
-    @media (min-width: 768px) {
-      nav {
-        position: sticky;
-        top: 0;
-        z-index: 500;
-        background: var(--nav-bg);
-        margin: -2rem -2rem 2rem -2rem;
-        padding: 0.8rem 2rem;
-        border-bottom: 1px solid var(--border);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      }
-    }
-
-    /* ── Responsive (phones < 768 px) ── */
-    @media (max-width: 767px) {
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
       body { padding: 1.2rem; }
       .nav-links { display: none; }
       #hamburger { display: block; }
@@ -308,18 +292,18 @@
         References
       </button>
       <div class="nav-dropdown-menu" role="menu">
+        <a href="/charging-analytics/" role="menuitem">
+          <span class="menu-icon">📊</span>
+          <span class="menu-label">
+            EV Analytics
+            <span class="menu-sub">Full charging data dashboard</span>
+          </span>
+        </a>
         <a href="/charging-site-guide.html" target="_blank" role="menuitem">
           <span class="menu-icon">📋</span>
           <span class="menu-label">
             Site Guide
             <span class="menu-sub">How to update rates, sessions & config</span>
-          </span>
-        </a>
-        <a href="/charging-analytics/" role="menuitem">
-          <span class="menu-icon">📊</span>
-          <span class="menu-label">
-            EV Analytics
-            <span class="menu-sub">Data nerd's paradise — 17 charts</span>
           </span>
         </a>
         <a href="/mache-gemini.html" target="_blank" role="menuitem">
@@ -352,18 +336,18 @@
       </a>
     {% endfor %}
     <div class="mobile-section-label">References</div>
+    <a href="/charging-analytics/" class="mobile-ref-link" onclick="closeMobileMenu()">
+      <span class="mobile-ref-icon">📊</span>
+      <span class="mobile-ref-text">
+        EV Analytics
+        <span class="mobile-ref-sub">Full charging data dashboard</span>
+      </span>
+    </a>
     <a href="/charging-site-guide.html" target="_blank" class="mobile-ref-link" onclick="closeMobileMenu()">
       <span class="mobile-ref-icon">📋</span>
       <span class="mobile-ref-text">
         Site Guide
         <span class="mobile-ref-sub">How to update rates, sessions & config</span>
-      </span>
-    </a>
-    <a href="/charging-analytics/" class="mobile-ref-link" onclick="closeMobileMenu()">
-      <span class="mobile-ref-icon">📊</span>
-      <span class="mobile-ref-text">
-        EV Analytics
-        <span class="mobile-ref-sub">Data nerd's paradise — 17 charts</span>
       </span>
     </a>
     <a href="/mache-gemini.html" target="_blank" class="mobile-ref-link" onclick="closeMobileMenu()">

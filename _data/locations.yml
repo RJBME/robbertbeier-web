@@ -1,0 +1,95 @@
+# Charging location coordinates for the EV Analytics map.
+#
+# The 'location' value must EXACTLY match the location strings in cloudcannon.config.yml.
+# The map shows one pin per distinct location; color is derived automatically from the bucket
+# (Tesla → purple, ChargePoint → blue, Home → purple, Work → blue, etc.).
+#
+# Fill in lat/lng (decimal degrees) to show a pin. Leave blank to hide that location.
+# 'city' is optional — shown in the map popup subtitle.
+#
+# Add a new entry here whenever you add a new location to cloudcannon.config.yml.
+
+- location: "Home"
+  lat: 42.3714
+  lng: -83.4702
+  city: "Plymouth, MI"
+
+- location: "Work"
+  lat: 42.3023
+  lng: -83.2327
+  city: ""
+
+- location: "Tesla, Lansing"
+  lat: 42.6671
+  lng: -84.5402
+  city: "Lansing, MI"
+
+- location: "Tesla, Blue Heron Service Plaza, Genoa, OH"
+  lat: 41.4906
+  lng: -83.3672
+  city: "Genoa, OH"
+
+- location: "Tesla, Wyondot Plaza, Genoa, OH"
+  lat: 41.4901
+  lng: -83.3706
+  city: "Genoa, OH"
+
+- location: "Tesla, North Canton, OH"
+  lat: 40.8718
+  lng: -81.4223
+  city: "North Canton, OH"
+
+- location: "Tesla, Battle Creek"
+  lat: 42.2471
+  lng: -85.2015
+  city: "Battle Creek, MI"
+
+- location: "Tesla, Stevensville, MI"
+  lat: 42.0271
+  lng: -86.5177
+  city: "Stevensville, MI"
+
+- location: "Tesla, Des Plains, IL"
+  lat: 41.9990
+  lng: -87.8841
+  city: "Des Plaines, IL"
+
+- location: "ChargePoint, Muskegon"
+  lat: 43.2342
+  lng: -86.2484
+  city: "Muskegon, MI"
+
+- location: "ChargePoint, Clare, MI"
+  lat: 43.8377
+  lng: -84.7694
+  city: "Clare, MI"
+
+- location: "ChargePoint, BP Gas Station, Grand Rapids, MI"
+  lat: 43.01832
+  lng: -85.6385
+  city: "Grand Rapids, MI"
+
+- location: "ChargePoint, DIA, Detroit"
+  lat: 42.3594
+  lng: -83.0645
+  city: "Detroit, MI"
+
+- location: "Rivian, Clare, MI"
+  lat: 43.8377
+  lng: -84.7673
+  city: "Clare, MI"
+
+- location: "MGM Grand, Detroit, MI"
+  lat: 42.3335
+  lng: -83.0602
+  city: "Detroit, MI"
+
+- location: "Blink, BJ's Wholesale, Canton"
+  lat: 42.3251
+  lng: -83.4725
+  city: "Canton, MI"
+
+- location: "Paul & Carol's, Beulah, MI"
+  lat: 44.6319
+  lng: -86.0909
+  city: "Beulah, MI"

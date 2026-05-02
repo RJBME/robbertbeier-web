@@ -216,6 +216,11 @@ permalink: /charging/
         </a>
       </span>
     </div>
+    <div class="status-item">
+      <span class="status-label">Analytics</span>
+      <span class="status-value" style="font-size:1.4rem;">📊</span>
+      <span class="status-footnote"><a href="/charging-analytics/" style="color:#3498db;font-weight:bold;text-decoration:none;">Full Analytics →</a><br>charts, maps, trends</span>
+    </div>
   </div>
 
   <div id="gas-assumptions" class="assumptions-panel">
@@ -413,12 +418,12 @@ permalink: /charging/
           labels: { color: getThemeColor(), usePointStyle: false, boxWidth: 14, padding: 16 }
         },
         datalabels: {
-          display: true,
+          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
           color: '#ffffff',
           formatter: (v) => v.toFixed(2) + ' MWh',
           font: { weight: 'bold', size: 13 },
           textShadowColor: 'rgba(0,0,0,0.6)',
-          textShadowBlur: 4
+          textShadowBlur: 5
         }
       }
     }

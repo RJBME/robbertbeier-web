@@ -40,9 +40,17 @@ permalink: /charging-history/
   .badge-rivian { background: #fffde7; color: #ff8f00; }
   .badge-other  { background: #f5f5f5; color: #424242; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--text) !important; margin-top: 10px; }
-  th { background: var(--table-head); padding: 12px; border: 1px solid var(--dash-border); text-align: left; }
-  td { padding: 12px; border: 1px solid var(--dash-border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--text) !important; margin-top: 10px; table-layout: fixed; }
+  th { background: var(--table-head); padding: 10px 12px; border: 1px solid var(--dash-border); text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #888; }
+  td { padding: 10px 12px; border: 1px solid var(--dash-border); vertical-align: middle; }
+
+  /* Fixed column widths — prevents wrapping */
+  #history-table th:nth-child(1), #history-table td:nth-child(1) { width: 100px; white-space: nowrap; }
+  #history-table th:nth-child(2), #history-table td:nth-child(2) { width: auto; }
+  #history-table th:nth-child(3), #history-table td:nth-child(3) { width: 130px; white-space: nowrap; font-size: 0.78rem; }
+  #history-table th:nth-child(4), #history-table td:nth-child(4) { width: 100px; white-space: nowrap; text-align: right; }
+  #history-table th:nth-child(5), #history-table td:nth-child(5) { width: 80px;  white-space: nowrap; text-align: right; }
+  #history-table th:nth-child(6), #history-table td:nth-child(6) { width: 50px;  text-align: center; }
 
   .note-icon { position: relative; cursor: default; font-size: 1rem; display: inline-block; }
   .note-tooltip {
@@ -77,7 +85,10 @@ permalink: /charging-history/
 </style>
 
 <div class="history-container">
-  <h1>Full Charging History</h1>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+    <h1 style="margin:0;">Full Charging History</h1>
+    <a href="/charging-analytics/" style="font-size:0.82rem;font-weight:bold;color:#3498db;text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid #3498db;border-radius:20px;transition:all 0.15s;" onmouseover="this.style.background='#3498db';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='#3498db'">📊 Full Analytics →</a>
+  </div>
 
   <div class="summary-bar" id="filterSummary">
     <div class="summary-item"><span class="summary-label">Filtered Energy</span><span class="summary-value" id="sumEnergy">0 kWh</span></div>
