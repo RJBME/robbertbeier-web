@@ -652,56 +652,58 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════
-       SLIDE 5 — ELECTRICITY RATE (PERIOD-BASED)
+       SLIDE 5 — ELECTRICITY RATE (_data/rates.yml)
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
     <div class="slide-accent" style="background: linear-gradient(90deg, #7b1fa2, #5D3FD3);"></div>
     <div class="slide-body">
       <div class="slide-section-label">Home Charging Cost</div>
-      <h2 class="slide-heading">Managing <span>electricity rate</span> periods</h2>
+      <h2 class="slide-heading">Updating electricity rates in <span>rates.yml</span></h2>
 
-      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Home session costs are calculated automatically using a <strong style="color:var(--text);">period-based rate table</strong> — just like gas savings. Each session uses whatever rate was in effect on its date. Historical sessions are never touched when you add a new period.</p>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">All electricity rates and gas savings assumptions now live in one place: <span class="mono">_data/rates.yml</span>. You never touch the charging .md pages for rate changes. Jekyll reads this file as real numbers so decimal rates work perfectly.</p>
 
-      <div class="code-label">The rate table — near the top of BOTH charging-dashboard.md AND charging-history.md</div>
+      <div class="code-label">_data/rates.yml — the home_electricity section</div>
       <div class="code-block">
-<span class="key">{% assign home_rate_periods</span> = <span class="val">"</span>
-<span class="val">2025-08-22</span> <span class="pipe">|</span> <span class="val">0.17</span> <span class="pipe">|</span>   <span class="comment">← date | rate in $/kWh |</span>
-<span class="val">2026-06-01</span> <span class="pipe">|</span> <span class="val">0.19</span> <span class="pipe">|</span>   <span class="comment">← add a new line when your rate changes</span>
-<span class="val">"</span> <span class="pipe">| strip | split:</span> <span class="val">"</span>
-<span class="val">"</span> <span class="key">%}</span>
+<span class="key">home_electricity</span>:
+  - <span class="key">date</span>: <span class="val">"2025-08-22"</span>
+    <span class="key">rate</span>: <span class="val">0.196</span>   <span class="comment">← first period</span>
+  - <span class="key">date</span>: <span class="val">"2025-09-18"</span>
+    <span class="key">rate</span>: <span class="val">0.191</span>
+  - <span class="key">date</span>: <span class="val">"2026-02-19"</span>
+    <span class="key">rate</span>: <span class="val">0.204</span>   <span class="comment">← most recent — add new entries below this</span>
       </div>
 
       <div class="two-col" style="margin-top:14px;">
         <div class="step-list">
           <div class="step">
             <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">1</div>
-            <div class="step-content"><h4>Check your utility bill</h4><p>Find "Energy Charge per kWh" on your DTE or Consumers Energy bill. Use your blended average if you have a tiered rate (total cost ÷ total kWh).</p></div>
+            <div class="step-content"><h4>Check your utility bill</h4><p>Find "Energy Charge per kWh" on your DTE or Consumers Energy statement. Use your blended rate (total cost ÷ total kWh) if you have a tiered plan.</p></div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">2</div>
-            <div class="step-content"><h4>Add a new line to BOTH files</h4><p>Format: <span class="mono">YYYY-MM-DD | rate |</span> — use the date of your next Home session as the start date. Must be updated in both <span class="mono">charging-dashboard.md</span> AND <span class="mono">charging-history.md</span>.</p></div>
+            <div class="step-content"><h4>Open _data/rates.yml</h4><p>Find the <span class="mono">home_electricity:</span> section. Add a new entry at the bottom with the date of your next Home session and the new rate.</p></div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">3</div>
-            <div class="step-content"><h4>Keep lines in date order</h4><p>Earliest period first. The site walks the list and applies the last period whose date is on or before each session date.</p></div>
+            <div class="step-content"><h4>Keep entries in date order</h4><p>Always add at the bottom — earliest first. Each session uses the last entry whose date is on or before the session date. Never delete old entries.</p></div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">4</div>
-            <div class="step-content"><h4>Commit & push both files</h4><p>The site recalculates automatically. The "see assumptions ↕" panel on the charging page shows all rate periods for reference.</p></div>
+            <div class="step-content"><h4>Commit & push — one file only</h4><p>Unlike before, you only edit <span class="mono">_data/rates.yml</span>. Both the dashboard and history page update automatically on the next build.</p></div>
           </div>
         </div>
         <div>
-          <div class="info-box warn">
-            <strong>⚠️ Must update BOTH files</strong><br>
-            <span class="mono">charging-dashboard.md</span> and <span class="mono">charging-history.md</span> each have their own copy of the rate table. Keep them in sync — if one is out of date the dashboard and history page will show different costs for the same session.
+          <div class="info-box green">
+            <strong>✓ One file replaces two</strong><br>
+            Previously you had to update both <span class="mono">charging-dashboard.md</span> AND <span class="mono">charging-history.md</span> in sync. Now you only edit <span class="mono">_data/rates.yml</span> — both pages read from it automatically.
           </div>
           <div class="info-box tip" style="margin-top:10px;">
             <strong>💡 Non-home sessions</strong><br>
-            Work, Tesla, ChargePoint etc. always use the <span class="mono">cost</span> field stored in the file. Enter those manually when you add the session in CloudCannon.
+            Work, Tesla, ChargePoint etc. always use the <span class="mono">cost</span> field stored in the session file. Enter those manually when you add the session in CloudCannon.
           </div>
-          <div class="info-box green" style="margin-top:10px;">
-            <strong>✓ Rate history is preserved</strong><br>
-            Never delete old periods — keep the full history. Sessions are always calculated against the rate that was in effect at the time, giving you accurate lifetime cost tracking.
+          <div class="info-box warn" style="margin-top:10px;">
+            <strong>⚠️ Gas savings are here too</strong><br>
+            The <span class="mono">gas_savings:</span> section in the same file controls the gas comparison assumptions. Same pattern — add entries at the bottom when anything changes. See slide 6.
           </div>
         </div>
       </div>
@@ -721,38 +723,59 @@
       <div class="slide-section-label">Gas Savings Calculation</div>
       <h2 class="slide-heading">Managing <span>gas savings</span> periods</h2>
 
-      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Gas savings use period-based rates in <span class="mono">charging-dashboard.md</span> — each session is calculated with the rates that were current when it happened.</p>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Gas savings use period-based rates from <span class="mono">_data/rates.yml</span> — each session is calculated with the rates that were current when it happened. Edit only that one file.</p>
 
-      <div class="code-label">The period table — in charging-dashboard.md</div>
+      <div class="code-label">_data/rates.yml — the gas_savings section</div>
       <div class="code-block">
-<span class="key">{% assign gas_periods</span> = <span class="val">"</span>
-<span class="val">2025-08-22</span> <span class="pipe">|</span> <span class="val">23</span> <span class="pipe">|</span> <span class="val">2.50</span> <span class="pipe">|</span> <span class="val">3.0</span> <span class="pipe">|</span>
-<span class="val">2025-11-01</span> <span class="pipe">|</span> <span class="val">23</span> <span class="pipe">|</span> <span class="val">2.75</span> <span class="pipe">|</span> <span class="val">2.5</span> <span class="pipe">|</span>   <span class="comment">← winter: higher gas, lower efficiency</span>
-<span class="val">2026-03-01</span> <span class="pipe">|</span> <span class="val">23</span> <span class="pipe">|</span> <span class="val">2.50</span> <span class="pipe">|</span> <span class="val">3.0</span> <span class="pipe">|</span>   <span class="comment">← spring: back to summer rates</span>
+<span class="key">gas_savings</span>:
+  - <span class="key">date</span>: <span class="val">"2025-08-22"</span>
+    <span class="key">mpg</span>: <span class="val">27</span>
+    <span class="key">gas_price</span>: <span class="val">3.26</span>
+    <span class="key">mi_per_kwh</span>: <span class="val">3.0</span>
+  - <span class="key">date</span>: <span class="val">"2025-09-01"</span>    <span class="comment">← winter: lower efficiency</span>
+    <span class="key">mpg</span>: <span class="val">27</span>
+    <span class="key">gas_price</span>: <span class="val">3.29</span>
+    <span class="key">mi_per_kwh</span>: <span class="val">2.5</span>
+  - <span class="key">date</span>: <span class="val">"2026-04-01"</span>    <span class="comment">← most recent — add new entries below</span>
+    <span class="key">mpg</span>: <span class="val">27</span>
+    <span class="key">gas_price</span>: <span class="val">4.24</span>
+    <span class="key">mi_per_kwh</span>: <span class="val">3.0</span>
 <span class="val">"</span> <span class="pipe">| strip | split:</span> <span class="val">"</span>
 <span class="val">"</span> <span class="key">%}</span>
       </div>
 
       <div class="two-col" style="margin-top:14px;">
         <div>
-          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;"><strong style="color:var(--text);">Column meaning</strong></p>
-          <div class="three-col" style="gap:8px;">
-            <div class="stat-card"><div class="label">Column 1</div><div class="value" style="font-size:0.9rem;">Date</div><div class="sub">Period start YYYY-MM-DD</div></div>
-            <div class="stat-card"><div class="label">Column 2</div><div class="value" style="font-size:0.9rem;">MPG</div><div class="sub">Comparison gas car MPG</div></div>
-            <div class="stat-card"><div class="label">Column 3</div><div class="value" style="font-size:0.9rem;">$/gal</div><div class="sub">Gas price per gallon</div></div>
+          <p style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;"><strong style="color:var(--text);">Field meaning</strong></p>
+          <div class="step-list">
+            <div class="step">
+              <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">→</div>
+              <div class="step-content"><h4>date</h4><p>Start date of this period (YYYY-MM-DD). Each session uses the last entry whose date is on or before it.</p></div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">→</div>
+              <div class="step-content"><h4>mpg</h4><p>MPG of the gas car you're comparing against. 27 = your previous car. 23 = US average sedan.</p></div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">→</div>
+              <div class="step-content"><h4>gas_price</h4><p>Average gas price per gallon in dollars. Check GasBuddy for current Michigan average.</p></div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">→</div>
+              <div class="step-content"><h4>mi_per_kwh</h4><p>Mach-E GT real-world efficiency. ~3.0 summer, ~2.5 winter. Check FordPass for your rolling average.</p></div>
+            </div>
           </div>
-          <div class="stat-card" style="margin-top:8px;"><div class="label">Column 4</div><div class="value" style="font-size:0.9rem;">mi/kWh</div><div class="sub">Mach-E efficiency. ~3.0 summer, ~2.5 winter</div></div>
         </div>
         <div>
           <div class="info-box tip">
             <strong>When to add a new period:</strong><br>
-            • Gas price shifts more than ~$0.25<br>
+            • Gas price shifts more than ~$0.25/gal<br>
             • Seasonal efficiency change (Nov → Mar)<br>
             • You want to update comparison MPG
           </div>
           <div class="info-box green" style="margin-top:10px;">
             <strong>✓ The "see assumptions" link</strong><br>
-            On the live charging page, click "see assumptions ↕" under the green Gas Savings number to expand a table showing all your periods.
+            On the live charging page, click "see assumptions ↕" under the green Gas Savings number to expand a table showing all periods from <span class="mono">_data/rates.yml</span>.
           </div>
         </div>
       </div>
@@ -1032,8 +1055,8 @@ git push
           <p style="font-size:0.75rem; font-weight:600; color:var(--text); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.08em;">Routine tasks</p>
           <div class="checklist">
             <div class="check-item"><span class="check-icon">⚡</span><span><strong>Add session:</strong> CloudCannon → Charging Sessions → + Add</span></div>
-            <div class="check-item"><span class="check-icon">🔌</span><span><strong>Update electricity rate:</strong> Add new line to <span class="mono">home_rate_periods</span> in BOTH .md files, commit</span></div>
-            <div class="check-item"><span class="check-icon">⛽</span><span><strong>Update gas period:</strong> Add line to gas_periods in charging-dashboard.md, commit</span></div>
+            <div class="check-item"><span class="check-icon">🔌</span><span><strong>Update electricity rate:</strong> Add new entry to <span class="mono">_data/rates.yml</span> → <span class="mono">home_electricity:</span> section, commit</span></div>
+            <div class="check-item"><span class="check-icon">⛽</span><span><strong>Update gas period:</strong> Add new entry to <span class="mono">_data/rates.yml</span> → <span class="mono">gas_savings:</span> section, commit</span></div>
             <div class="check-item"><span class="check-icon">🚗</span><span><strong>Update odometer:</strong> Change miles + date in odometer_entries in charging-dashboard.md</span></div>
             <div class="check-item"><span class="check-icon">📍</span><span><strong>Add location:</strong> Edit <span class="mono">.cloudcannon/schemas/charging.md</span> values list, commit</span></div>
             <div class="check-item"><span class="check-icon">🧹</span><span><strong>Cleanup files:</strong> <span class="mono">python3 fix_charging_files.py</span> then commit</span></div>
@@ -1043,7 +1066,8 @@ git push
           <p style="font-size:0.75rem; font-weight:600; color:var(--text); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.08em;">Files & their purpose</p>
           <div class="checklist">
             <div class="check-item"><span class="check-icon">📁</span><span><span class="mono">_charging/*.md</span> — one file per charging session</span></div>
-            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-dashboard.md</span> — main /charging/ page, all config</span></div>
+            <div class="check-item"><span class="check-icon">📊</span><span><span class="mono">_data/rates.yml</span> — ALL electricity rates &amp; gas savings assumptions</span></div>
+            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-dashboard.md</span> — main /charging/ page (odometer config only)</span></div>
             <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-history.md</span> — /charging-history/ full table page</span></div>
             <div class="check-item"><span class="check-icon">⚙️</span><span><span class="mono">cloudcannon.config.yml</span> — CloudCannon UI settings</span></div>
             <div class="check-item"><span class="check-icon">🗂</span><span><span class="mono">.cloudcannon/schemas/charging.md</span> — new session template</span></div>

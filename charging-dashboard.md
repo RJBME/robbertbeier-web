@@ -386,6 +386,12 @@ permalink: /charging/
       </tbody>
     </table>
   </div>
+
+  <div style="background: linear-gradient(135deg, var(--dash-card) 0%, rgba(2, 136, 209, 0.1) 100%); border: 2px solid #0288d1; border-radius: 12px; padding: 25px; margin-top: 30px; text-align: center;">
+    <h3 style="margin-top: 0; margin-bottom: 10px; font-size: 1.1rem;">Want deeper insights?</h3>
+    <p style="margin-bottom: 15px; color: #888; font-size: 0.9rem;">Explore monthly trends, charger breakdowns, gas price comparisons, and much more in our comprehensive analytics dashboard.</p>
+    <a href="/charging-analytics/" style="display: inline-block; background: #0288d1; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 0.9rem;">Explore Full Analytics →</a>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
