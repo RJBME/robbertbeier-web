@@ -3277,6 +3277,7 @@ function injectTabButtons() {
 }
 
 window.addEventListener('load', function() {
+  // Initialise Leaflet map after DOM is fully painted
   var geoLocs  = Array.isArray(locationData) ? locationData.filter(function(l){ return l.lat && l.lng; }) : [];
   var noCoords = document.getElementById('mapNoCoords');
   var mapEl    = document.getElementById('chargingMap');
@@ -3493,9 +3494,6 @@ function buildRecords(sl, allMonths, monthly, bucketEntries) {
       + '<span class="record-value">' + r.value + '</span>'
       + '<span class="record-sub">'   + r.sub   + '</span>'
       + '</div>'
-      + '</div>';
-  }).join('');
-      + '<span class="record-sub">'   + r.sub   + '</span>'
       + '</div>';
   }).join('');
 }
