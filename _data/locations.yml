@@ -93,3 +93,18 @@
   lat: 44.6319
   lng: -86.0909
   city: "Beulah, MI"
+
+- location: "Tesla, The Arboretum, South Barrington, IL"
+  lat: 42.0751
+  lng: -88.1865
+  city: "South Barrington, IL"
+
+- location: "Tesla, South Livingston, Madison, WI"
+  lat: 43.0805
+  lng: -89.3751
+  city: "Madison, WI"
+
+- location: "ChargePoint, UW Lot 46, Madison, WI"
+  lat: 43.0728
+  lng: -89.3959
+  city: "Madison, WI"

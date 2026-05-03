@@ -43,6 +43,9 @@ _inputs:
         - "MGM Grand, Detroit, MI"
         - "Blink, BJ's Wholesale, Canton"
         - "Paul & Carol's, Beulah, MI"
+        - "Tesla, The Arboretum, South Barrington, IL"
+        - "Tesla, South Livingston, Madison, WI"
+        - "ChargePoint, UW Lot 46, Madison, WI"
   energy_kwh:
     type: number
     comment: "Energy added in kWh"
