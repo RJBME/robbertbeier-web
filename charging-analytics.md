@@ -130,7 +130,7 @@ permalink: /charging-analytics/
 
   /* ── Sticky vehicle filter bar ── */
   #vehicleFilterSticky {
-    display: none; /* JS shows this when scrolled past inline filter */
+    display: none; /* JS shows this when scrolled past page header */
     position: fixed;
     top: 0; left: 0; right: 0;
     z-index: 500;
@@ -139,7 +139,7 @@ permalink: /charging-analytics/
     box-shadow: 0 3px 16px rgba(0,0,0,0.12);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    transform: translateY(-100%);
+    transform: translateY(-110%);
     transition: transform 0.22s ease;
     flex-direction: column;
     gap: 0;
@@ -1123,17 +1123,16 @@ function buildVehicleFilter() {
     }
   }
 
-  // Show sticky bar when scrolled past the page header
-  const sentinel = document.getElementById('top');
-  if (sentinel && stickyBar) {
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        stickyBar.classList.remove('visible');
-      } else {
+  // Show sticky bar after scrolling 120px — scroll event is more reliable
+  // than IntersectionObserver for this use case across browsers
+  if (stickyBar) {
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 120) {
         stickyBar.classList.add('visible');
+      } else {
+        stickyBar.classList.remove('visible');
       }
-    }, { threshold: 0, rootMargin: '-60px 0px 0px 0px' });
-    observer.observe(sentinel);
+    }, { passive: true });
   }
 }
 
@@ -2924,7 +2923,7 @@ mkChart('chartHistogram', {
         },
         scales: {
           x:{grid:{display:false},ticks:{color:tc(),maxTicksLimit:10,maxRotation:45}},
-          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>parseFloat(v).toFixed(2)+' mi/kWh'},
              title:{display:true,text:'mi/kWh',color:'#888'},beginAtZero:false}
         }
       }
@@ -3028,7 +3027,7 @@ mkChart('chartHistogram', {
           tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y?.toFixed(2)} mi/kWh avg`}}},
         scales:{
           x:{grid:{display:false},ticks:{color:tc()}},
-          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>parseFloat(v).toFixed(2)+' mi/kWh'},beginAtZero:false,
              title:{display:true,text:'Avg mi/kWh',color:'#888'}}
         }
       }
@@ -3053,7 +3052,7 @@ mkChart('chartHistogram', {
         plugins:{legend:{display:false},datalabels:{display:false},
           tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x?.toFixed(2)} mi/kWh avg`}}},
         scales:{
-          x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+          x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>parseFloat(v).toFixed(2)+' mi/kWh'},beginAtZero:false,
              title:{display:true,text:'Avg mi/kWh',color:'#888'}},
           y:{grid:{display:false},ticks:{color:tc()}}
         }
@@ -3112,7 +3111,7 @@ mkChart('chartHistogram', {
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tc(),maxTicksLimit:8,maxRotation:45}},
-          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>parseFloat(v).toFixed(2)+' mi/kWh'},beginAtZero:false,
              title:{display:true,text:'mi/kWh',color:'#888'}}
         }
       }
@@ -3135,7 +3134,7 @@ mkChart('chartHistogram', {
           scales:{
             x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+'%'},min:0,max:100,
                title:{display:true,text:'SOC at Plug-in (%)',color:'#888'}},
-            y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+            y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>parseFloat(v).toFixed(2)+' mi/kWh'},beginAtZero:false,
                title:{display:true,text:'Real mi/kWh',color:'#888'}}
           }
         }
@@ -3157,7 +3156,7 @@ mkChart('chartHistogram', {
         scales:{
           x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' kWh'},beginAtZero:true,
              title:{display:true,text:'kWh Added',color:'#888'}},
-          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>parseFloat(v).toFixed(2)+' mi/kWh'},beginAtZero:false,
              title:{display:true,text:'Real mi/kWh',color:'#888'}}
         }
       }
