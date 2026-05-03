@@ -35,7 +35,7 @@ permalink: /charging-history/
   select { padding: 8px; border-radius: 6px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
   .btn-reset { padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; align-self: flex-end; }
 
-  .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
+  .badge { padding: 3px 8px; border-radius: 20px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; display: inline-block; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
   .badge-work   { background: #e3f2fd; color: #01579b; }
   .badge-home   { background: #f3e5f5; color: #4a148c; }
   .badge-tesla  { background: #ffebee; color: #CC0000; }
@@ -44,18 +44,21 @@ permalink: /charging-history/
   .badge-rivian { background: #fffde7; color: #ff8f00; }
   .badge-other  { background: #f5f5f5; color: #424242; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--text) !important; margin-top: 10px; table-layout: fixed; }
-  th { background: var(--table-head); padding: 10px 12px; border: 1px solid var(--dash-border); text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #888; }
-  td { padding: 10px 12px; border: 1px solid var(--dash-border); vertical-align: middle; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--text) !important; margin-top: 10px; }
+  th { background: var(--table-head); padding: 10px 12px; border: 1px solid var(--dash-border); text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #888; white-space: nowrap; }
+  td { padding: 8px 12px; border: 1px solid var(--dash-border); vertical-align: middle; }
 
-  /* Fixed column widths — prevents wrapping */
-  #history-table th:nth-child(1), #history-table td:nth-child(1) { width: 100px; white-space: nowrap; }
-  #history-table th:nth-child(2), #history-table td:nth-child(2) { width: auto; }
-  #history-table th:nth-child(3), #history-table td:nth-child(3) { width: 130px; white-space: nowrap; font-size: 0.78rem; }
-  #history-table th:nth-child(4), #history-table td:nth-child(4) { width: 100px; white-space: nowrap; text-align: right; }
-  #history-table th:nth-child(5), #history-table td:nth-child(5) { width: 90px;  white-space: nowrap; text-align: right; }
-  #history-table th:nth-child(6), #history-table td:nth-child(6) { width: 80px;  white-space: nowrap; text-align: right; }
-  #history-table th:nth-child(7), #history-table td:nth-child(7) { width: 50px;  text-align: center; }
+  /* Column widths */
+  #history-table td:nth-child(1) { white-space: nowrap; font-size: 0.82rem; }
+  #history-table td:nth-child(2) { max-width: 180px; }
+  #history-table td:nth-child(3) { white-space: nowrap; font-size: 0.72rem; opacity: 0.55; }
+  #history-table td:nth-child(4) { white-space: nowrap; text-align: right; }
+  #history-table td:nth-child(5) { white-space: nowrap; text-align: right; }
+  #history-table td:nth-child(6) { white-space: nowrap; text-align: right; }
+  #history-table td:nth-child(7) { text-align: center; width: 44px; }
+  #history-table th:nth-child(4),
+  #history-table th:nth-child(5),
+  #history-table th:nth-child(6) { text-align: right; }
 
   .note-icon { position: relative; cursor: default; font-size: 1rem; display: inline-block; }
   .note-tooltip {
@@ -215,11 +218,11 @@ permalink: /charging-history/
         <td>{{ log.date | date: "%Y-%m-%d" }}</td>
         <td>
           {% assign l = log.location | downcase %}
-          <span class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">
+          <span title="{{ log.location }}" class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% else %}badge-other{% endif %}">
             {{ log.location }}
           </span>
         </td>
-        <td style="opacity: 0.6;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
+        <td>{% assign veh = log.vehicle | default: "2025 Mach-E GT" %}{% if veh contains "LRB" %}LRB {% endif %}{% if veh contains "2025" %}'25{% elsif veh contains "2026" %}'26{% endif %} {% if veh contains "GT" %}GT{% elsif veh contains "SR" %}SR{% endif %}</td>
         <td>{{ log.energy_kwh }}</td>
         <td>{% if log.miles_added and log.miles_added != 0 and log.miles_added != "" %}{{ log.miles_added }}{% endif %}</td>
         <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | split: "." | first }}.{% if cents < 10 %}0{{ cents }}{% else %}{{ cents }}{% endif %}{% endif %}</td>

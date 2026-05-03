@@ -108,3 +108,28 @@
   lat: 43.0728
   lng: -89.3959
   city: "Madison, WI"
+
+- location: "Tesla, Tomah, WI"
+  lat: 44.0189
+  lng: -90.5074
+  city: "Tomah, WI"
+
+- location: "Tesla, Menomonie, WI"
+  lat: 44.9016
+  lng: -91.9335
+  city: "Menomonie, WI"
+
+- location: "Tesla, Bloomington, MN"
+  lat: 44.8611
+  lng: -93.3121
+  city: "Bloomington, MN"
+
+- location: "Tesla, Janesville, WI"
+  lat: 42.7179
+  lng: -88.9948
+  city: "Janesville, WI"
+
+- location: "Tesla, Culver's, Chicago, IL"
+  lat: 41.6937
+  lng: -87.6012
+  city: "Chicago, IL"
