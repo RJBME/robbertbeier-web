@@ -182,6 +182,14 @@ permalink: /charging-analytics/
     align-self: center;
   }
   .back-top-pill:hover { color: var(--link); border-color: var(--link); }
+  .open-tab-btn {
+    font-size: 0.65rem; font-weight: 600; color: #888;
+    text-decoration: none; padding: 3px 9px;
+    border: 1px solid var(--dash-border); border-radius: 20px;
+    transition: all 0.15s; white-space: nowrap; cursor: pointer;
+    background: transparent; align-self: center;
+  }
+  .open-tab-btn:hover { border-color: var(--link); color: var(--link); }
 
   /* ── Responsive ── */
   @media (max-width: 767px) {
@@ -200,15 +208,19 @@ permalink: /charging-analytics/
   @media (max-width: 420px) { .records-grid { grid-template-columns: 1fr; } }
   .record-card {
     background: var(--dash-card); border: 1px solid var(--dash-border);
-    border-radius: 12px; padding: 20px 18px;
-    display: flex; flex-direction: column; gap: 6px;
-    transition: box-shadow 0.2s, border-color 0.2s;
+    border-radius: 12px; padding: 18px 16px;
+    display: flex; flex-direction: row; align-items: flex-start;
+    gap: 14px; transition: box-shadow 0.2s, border-color 0.2s;
   }
   .record-card:hover { border-color: var(--link); box-shadow: 0 4px 16px rgba(93,63,211,0.12); }
-  .record-icon  { font-size: 1.6rem; line-height: 1; }
-  .record-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin-top: 2px; }
-  .record-value { font-size: 1.6rem; font-weight: 900; color: var(--link); line-height: 1.1; }
-  .record-sub   { font-size: 0.75rem; color: #888; margin-top: 2px; }
+  .record-icon  {
+    font-size: 1.4rem; line-height: 1; flex-shrink: 0;
+    width: 2rem; text-align: center; padding-top: 2px;
+  }
+  .record-body  { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .record-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: #888; }
+  .record-value { font-size: 1.5rem; font-weight: 900; color: var(--link); line-height: 1.1; }
+  .record-sub   { font-size: 0.75rem; color: #888; }
 
   /* ── Location stats table ── */
   .loc-sort-hdr { cursor: pointer; user-select: none; white-space: nowrap; }
@@ -246,7 +258,12 @@ permalink: /charging-analytics/
 
 <div class="analytics-container" id="top">
 
-  <a href="/charging/" class="back-link">← Charging Dashboard</a>
+  <!-- Cross-page charging nav -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);">
+    <a href="/charging/"         style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">⚡ Dashboard</a>
+    <a href="/charging-history/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📋 History</a>
+    <a href="/charging-analytics/" style="font-size:0.78rem;font-weight:700;color:#fff;text-decoration:none;padding:5px 14px;border:1px solid var(--link);border-radius:20px;background:var(--link)">📊 Analytics</a>
+  </div>
 
   <div class="analytics-header">
     <h1>⚡ EV Analytics</h1>
@@ -3219,10 +3236,46 @@ let _leafletMap = null;
 let _lastSl     = sessions;
 
 buildVehicleFilter();
+injectTabButtons();
 rebuild(sessions);
 
 // Use window.onload so all external scripts (Leaflet) are guaranteed loaded
 // and the DOM is fully painted with real dimensions before we call L.map()
+// ── Inject "↗ tab" buttons into every section header ──
+// Clicking opens that section in a new tab with the current vehicle filter preserved
+function injectTabButtons() {
+  document.querySelectorAll('.section-header[id]').forEach(hdr => {
+    const sectionId = hdr.id;
+    const btn = document.createElement('a');
+    btn.className = 'open-tab-btn';
+    btn.textContent = '↗ tab';
+    btn.title = 'Open this section in a new tab';
+    btn.target = '_blank';
+    btn.rel = 'noopener';
+    // Build URL: current page + #sectionId + vehicle param if filtered
+    btn.href = '#'; // set dynamically on click so vehicle filter is current
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const v = activeVehicle !== 'all' ? '?vehicle=' + encodeURIComponent(activeVehicle) : '';
+      window.open(window.location.pathname + v + '#' + sectionId, '_blank');
+    });
+    // Insert before the ↑ top pill if present, otherwise append
+    const topPill = hdr.querySelector('.back-top-pill');
+    if (topPill) {
+      hdr.insertBefore(btn, topPill);
+    } else {
+      hdr.appendChild(btn);
+    }
+  });
+
+  // On page load, if ?vehicle= param is in URL, apply that filter
+  const urlParams = new URLSearchParams(window.location.search);
+  const vParam = urlParams.get('vehicle');
+  if (vParam && allVehicles.includes(vParam)) {
+    setVehicle(vParam);
+  }
+}
+
 window.addEventListener('load', function() {
   var geoLocs  = Array.isArray(locationData) ? locationData.filter(function(l){ return l.lat && l.lng; }) : [];
   var noCoords = document.getElementById('mapNoCoords');
@@ -3424,19 +3477,24 @@ function buildRecords(sl, allMonths, monthly, bucketEntries) {
   var streakSub = fmtD(streakStartDt) + ' – ' + fmtD(streakEndDt) + ', ' + streakEndDt.getFullYear();
 
   var recs = [
-    { icon:'🔋', label:'Biggest Session',         value: fmtKwh(bigSession.kwh),                          sub: bigSession.date + ' · ' + bigSession.bucket },
-    { icon:'📅', label:'Peak Energy Month',        value: fmtKwh(monthly[bestMonthKwh].kwh),               sub: monthLabel(bestMonthKwh) },
-    { icon:'💰', label:'Largest Monthly Savings',  value: fmtUSD(monthly[bestMonthSaving].saving),         sub: monthLabel(bestMonthSaving) },
-    { icon:'📆', label:'Busiest Month',            value: monthly[mostSessionsMo].sessions + ' sessions',  sub: monthLabel(mostSessionsMo) },
-    { icon:'🔌', label:'Longest Streak',           value: maxStreak + (maxStreak === 1 ? ' day' : ' days'), sub: streakSub },
-    { icon:'⚡', label:'Favorite Spot',            value: bucketEntries[0][0],                             sub: fmtKwh(bucketEntries[0][1]) + ' all-time' },
+    { icon:'🔋', label:'Biggest Session',        value: fmtKwh(bigSession.kwh),                         sub: bigSession.date + ' · ' + bigSession.bucket },
+    { icon:'📅', label:'Peak Energy Month',       value: fmtKwh(monthly[bestMonthKwh].kwh),              sub: monthLabel(bestMonthKwh) },
+    { icon:'💰', label:'Largest Monthly Savings', value: fmtUSD(monthly[bestMonthSaving].saving),        sub: monthLabel(bestMonthSaving) },
+    { icon:'📅', label:'Busiest Month',           value: monthly[mostSessionsMo].sessions + ' sessions', sub: monthLabel(mostSessionsMo) },
+    { icon:'🔌', label:'Longest Streak',          value: maxStreak + (maxStreak === 1 ? ' day' : ' days'), sub: streakSub },
+    { icon:'⚡', label:'Favorite Spot',           value: bucketEntries[0][0],                            sub: fmtKwh(bucketEntries[0][1]) + ' all-time' },
   ];
 
   document.getElementById('recordsGrid').innerHTML = recs.map(function(r){
     return '<div class="record-card">'
       + '<span class="record-icon">'  + r.icon  + '</span>'
+      + '<div class="record-body">'
       + '<span class="record-label">' + r.label + '</span>'
       + '<span class="record-value">' + r.value + '</span>'
+      + '<span class="record-sub">'   + r.sub   + '</span>'
+      + '</div>'
+      + '</div>';
+  }).join('');
       + '<span class="record-sub">'   + r.sub   + '</span>'
       + '</div>';
   }).join('');

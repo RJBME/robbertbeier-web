@@ -35,14 +35,13 @@ permalink: /charging/
     2. Update odometer_miles and odometer_date.
     3. Save, commit, push.
 
-  WHEN YOU GET YOUR 2026 MACH-E:
-    Add a new line for "2026 Mach-E GT" and update the
-    CloudCannon schema default vehicle field.
+  WHEN YOU ADD A NEW VEHICLE:
+    Add a new line and update the CloudCannon schema default.
     An Overall row appears automatically with 2+ vehicles.
 =============================================================
 {% endcomment %}
 {% assign odometer_entries = "
-2025 Mach-E GT | 11195 | 2026-05-02 | 2025-08-22 |
+RLB's 2025 Mach-E GT | 11195 | 2026-05-02 | 2025-08-22 |
 LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
 " | strip | split: "
 " %}
@@ -142,6 +141,8 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
   {% comment %}
     ── Per-session gas savings from _data/rates.yml ──
     All values are Ruby floats — math works cleanly.
+    MPG is then overridden per vehicle so LRB's 23mpg car
+    is compared correctly vs RJB's 27mpg baseline.
   {% endcomment %}
   {% assign p_mpg       = 27   %}
   {% assign p_gas_price = 3.26 %}
@@ -153,6 +154,10 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
       {% assign p_mi_kwh    = period.mi_per_kwh %}
     {% endif %}
   {% endfor %}
+  {% comment %} Per-vehicle MPG override {% endcomment %}
+  {% if veh contains "LRB" %}
+    {% assign p_mpg = 23 %}
+  {% endif %}
   {% assign gas_equiv      = k | times: p_mi_kwh | divided_by: p_mpg | times: p_gas_price %}
   {% assign session_saving = gas_equiv | minus: c %}
   {% assign gas_savings    = gas_savings | plus: session_saving %}
@@ -196,6 +201,13 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
 
 <div class="dash-container">
 
+  <!-- Cross-page charging nav -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);">
+    <a href="/charging/"         style="font-size:0.78rem;font-weight:700;color:#fff;text-decoration:none;padding:5px 14px;border:1px solid var(--link);border-radius:20px;background:var(--link)">⚡ Dashboard</a>
+    <a href="/charging-history/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📋 History</a>
+    <a href="/charging-analytics/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📊 Analytics</a>
+  </div>
+
   <div class="status-bar">
     <div class="status-item">
       <span class="status-label">Total Energy</span>
@@ -226,12 +238,13 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
 
   <div id="gas-assumptions" class="assumptions-panel">
     <strong>Gas Savings Assumptions by Period</strong>
+    <p style="font-size:0.78rem;color:#888;margin:4px 0 8px">The <em>mpg</em> column is the baseline for your car (27 mpg). LRB's sessions automatically use <strong>23 mpg</strong> regardless of this table — that override is hardcoded per-vehicle in the analytics and dashboard code.</p>
     <table>
-      <tr><th>From date</th><th>vs. MPG</th><th>Gas $/gal</th><th>mi/kWh</th></tr>
+      <tr><th>From date</th><th>Baseline MPG</th><th>Gas $/gal</th><th>mi/kWh</th></tr>
       {% for period in site.data.rates.gas_savings %}
         <tr>
           <td>{{ period.date }}</td>
-          <td>{{ period.mpg }}</td>
+          <td>{{ period.mpg }} <small style="color:#888">(LRB's: 23)</small></td>
           <td>${{ period.gas_price }}</td>
           <td>{{ period.mi_per_kwh }}</td>
         </tr>
@@ -247,6 +260,15 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
           <td>${{ period.rate }}</td>
         </tr>
       {% endfor %}
+    </table>
+    <br>
+    <strong>Per-Vehicle Battery Capacity (Usable kWh)</strong>
+    <table>
+      <tr><th>Vehicle</th><th>Usable kWh</th><th>Chemistry</th></tr>
+      <tr><td>2025 Mach-E GT</td><td>91.7 kWh</td><td>NCM Extended Range</td></tr>
+      <tr><td>2026 Mach-E SR</td><td>72.6 kWh</td><td>LFP Standard Range</td></tr>
+      <tr><td>LRB's 2025 Mach-E GT</td><td>91.7 kWh</td><td>NCM Extended Range</td></tr>
+      <tr><td>LRB's 2026 Mach-E SR</td><td>72.6 kWh</td><td>LFP Standard Range</td></tr>
     </table>
   </div>
 
@@ -279,10 +301,20 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
       {% assign cpm_cents = cpm | times: 100 | round | modulo: 100 %}
       {% assign vc_cents  = v_cost | times: 100 | round | modulo: 100 %}
 
-      <div class="cpm-row">
-        <div class="cpm-vehicle">
+      {% assign is_lrb = false %}
+      {% if odo_vehicle contains "LRB" %}{% assign is_lrb = true %}{% endif %}
+      {% if is_lrb %}
+        {% assign row_accent = "border-left: 4px solid #f39c12;" %}
+        {% assign veh_color  = "color: #f39c12;" %}
+      {% else %}
+        {% assign row_accent = "border-left: 4px solid #7b1fa2;" %}
+        {% assign veh_color  = "color: #7b1fa2;" %}
+      {% endif %}
+
+      <div class="cpm-row" style="{{ row_accent }}">
+        <div class="cpm-vehicle" style="{{ veh_color }}">
           {{ odo_vehicle }}
-          <small>{{ odo_miles }} mi as of {{ odo_date }}</small>
+          <small style="color:#888">{{ odo_miles }} mi as of {{ odo_date }}</small>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>

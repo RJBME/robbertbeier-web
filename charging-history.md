@@ -85,9 +85,12 @@ permalink: /charging-history/
 </style>
 
 <div class="history-container">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
-    <h1 style="margin:0;">Full Charging History</h1>
-    <a href="/charging-analytics/" style="font-size:0.82rem;font-weight:bold;color:#3498db;text-decoration:none;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid #3498db;border-radius:20px;transition:all 0.15s;" onmouseover="this.style.background='#3498db';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='#3498db'">📊 Full Analytics →</a>
+
+  <!-- Cross-page charging nav -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);">
+    <a href="/charging/"         style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">⚡ Dashboard</a>
+    <a href="/charging-history/" style="font-size:0.78rem;font-weight:700;color:#fff;text-decoration:none;padding:5px 14px;border:1px solid var(--link);border-radius:20px;background:var(--link)">📋 History</a>
+    <a href="/charging-analytics/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📊 Analytics</a>
   </div>
 
   <div class="summary-bar" id="filterSummary">
