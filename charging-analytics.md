@@ -123,10 +123,35 @@ permalink: /charging-analytics/
     background: var(--dash-card); border: 1px solid var(--dash-border);
     padding: 5px 14px; border-radius: 20px; font-size: 0.76rem;
     color: var(--text); cursor: pointer; font-weight: 600;
-    font-family: inherit; transition: all 0.15s;
+    font-family: inherit; transition: all 0.15s; white-space: nowrap;
   }
   .vf-btn:hover { border-color: var(--link); color: var(--link); }
   .vf-btn.active { background: var(--link); color: #fff; border-color: var(--link); }
+
+  /* ── Sticky vehicle filter bar ── */
+  #vehicleFilterSticky {
+    display: none; /* JS shows this when 2+ vehicles exist */
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 500;
+    background: var(--bg);
+    border-bottom: 2px solid var(--dash-border);
+    padding: 8px 24px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    box-shadow: 0 3px 16px rgba(0,0,0,0.12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transform: translateY(-100%);
+    transition: transform 0.22s ease;
+  }
+  #vehicleFilterSticky.visible { transform: translateY(0); }
+  #vehicleFilterSticky .vf-sticky-label {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: #888; margin-right: 4px; white-space: nowrap;
+  }
 
   /* ── Back-to-top pill ── */
   .back-top-pill {
@@ -228,6 +253,11 @@ permalink: /charging-analytics/
     <a href="#sessiondetail" id="navSessionDetail">Detail</a>
     <a href="#vehiclecomp" id="navVehicleComp" style="display:none">Vehicles</a>
     <a href="#map">Map</a>
+  </div>
+
+  <!-- Sticky vehicle filter — floats at top when scrolled past inline filter -->
+  <div id="vehicleFilterSticky">
+    <span class="vf-sticky-label">Vehicle</span>
   </div>
 
   <div id="vehicleFilterBtns" style="display:none"></div>
@@ -927,28 +957,64 @@ function mkChart(id, config) {
    VEHICLE FILTER
    ════════════════════════════════════════════════════════ */
 function buildVehicleFilter() {
-  const el = document.getElementById('vehicleFilterBtns');
+  const el       = document.getElementById('vehicleFilterBtns');
+  const stickyEl = document.getElementById('vehicleFilterSticky');
   if (!el) return;
-  if (allVehicles.length < 2) { el.style.display = 'none'; return; }
+  if (allVehicles.length < 2) {
+    el.style.display = 'none';
+    if (stickyEl) stickyEl.style.display = 'none';
+    return;
+  }
+
+  // Build inline buttons
   el.style.display = 'flex';
   el.innerHTML = '';
   ['all', ...allVehicles].forEach(v => {
     const btn = document.createElement('button');
     btn.className = 'vf-btn' + (v === activeVehicle ? ' active' : '');
     btn.textContent = v === 'all' ? 'All Vehicles' : v;
+    btn.dataset.vehicle = v;
     btn.onclick = () => setVehicle(v);
     el.appendChild(btn);
   });
+
+  // Build sticky bar buttons (same set, different container)
+  if (stickyEl) {
+    stickyEl.style.display = 'flex';
+    // Remove old buttons but keep the label span
+    stickyEl.querySelectorAll('.vf-btn').forEach(b => b.remove());
+    ['all', ...allVehicles].forEach(v => {
+      const btn = document.createElement('button');
+      btn.className = 'vf-btn' + (v === activeVehicle ? ' active' : '');
+      btn.textContent = v === 'all' ? 'All Vehicles' : v;
+      btn.dataset.vehicle = v;
+      btn.onclick = () => setVehicle(v);
+      stickyEl.appendChild(btn);
+    });
+  }
+
+  // Show sticky bar only when scrolled past the inline filter
+  const observer = new IntersectionObserver(entries => {
+    const sticky = document.getElementById('vehicleFilterSticky');
+    if (!sticky) return;
+    if (entries[0].isIntersecting) {
+      sticky.classList.remove('visible'); // inline visible → hide sticky
+    } else {
+      sticky.classList.add('visible');    // inline scrolled away → show sticky
+    }
+  }, { threshold: 0, rootMargin: '-10px 0px 0px 0px' });
+  observer.observe(el);
 }
 
 function setVehicle(v) {
   activeVehicle = v;
+  // Sync active state on ALL .vf-btn elements (inline + sticky)
   document.querySelectorAll('.vf-btn').forEach(b => {
-    b.classList.toggle('active', b.textContent === (v === 'all' ? 'All Vehicles' : v));
+    const label = v === 'all' ? 'All Vehicles' : v;
+    b.classList.toggle('active', b.textContent === label);
   });
   _lastSl = v === 'all' ? sessions : sessions.filter(s => s.vehicle === v);
   rebuild(_lastSl);
-  // Refresh map markers if Leaflet is already up
   if (_leafletMap) buildMap(_lastSl);
 }
 
