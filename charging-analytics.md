@@ -7,13 +7,16 @@ permalink: /charging-analytics/
 
 <style>
   /* ── Page-level overrides ── */
-  body { max-width: 1100px !important; }
+  body { max-width: 1100px !important; overflow-x: hidden; }
+  html { overflow-x: hidden; }
 
   .analytics-container {
     font-family: -apple-system, sans-serif;
     max-width: 1060px;
+    width: 100%;
     margin: auto;
     color: var(--text);
+    box-sizing: border-box;
   }
 
   /* ── Back link ── */
@@ -79,6 +82,7 @@ permalink: /charging-analytics/
     background: var(--dash-card); border: 1px solid var(--dash-border);
     border-radius: 12px; padding: 18px 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    max-width: 100%; box-sizing: border-box;
   }
   .chart-title {
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
@@ -251,11 +255,33 @@ permalink: /charging-analytics/
 <div class="analytics-container" id="top">
 
   <!-- Cross-page charging nav -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);align-items:center;">
     <a href="/charging/"         style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">⚡ Dashboard</a>
     <a href="/charging-history/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📋 History</a>
     <a href="/charging-analytics/" style="font-size:0.78rem;font-weight:700;color:#fff;text-decoration:none;padding:5px 14px;border:1px solid var(--link);border-radius:20px;background:var(--link)">📊 Analytics</a>
+    <button id="themeToggleLocal" onclick="toggleThemeLocal()" style="margin-left:auto;font-size:0.78rem;font-weight:600;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);color:var(--text);cursor:pointer;transition:all 0.15s">🌙 Dark</button>
   </div>
+  <script>
+    (function(){
+      var stored = localStorage.getItem('theme');
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var dark = stored ? stored === 'dark' : prefersDark;
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      function updateBtn(){
+        var btn = document.getElementById('themeToggleLocal');
+        if(btn){ var d = document.documentElement.getAttribute('data-theme')==='dark'; btn.textContent = d ? '☀️ Light' : '🌙 Dark'; }
+      }
+      window.toggleThemeLocal = function(){
+        var d = document.documentElement.getAttribute('data-theme')==='dark';
+        var next = d ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateBtn();
+        window.dispatchEvent(new Event('themeChanged'));
+      };
+      document.addEventListener('DOMContentLoaded', updateBtn);
+    })();
+  </script>
 
   <div class="analytics-header">
     <h1>⚡ EV Analytics</h1>

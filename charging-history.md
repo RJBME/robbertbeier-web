@@ -16,8 +16,8 @@ permalink: /charging-history/
 
 <style>
   .history-container { color: var(--text); }
-  .summary-bar { display: flex; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-  .summary-item { flex: 1; text-align: center; }
+  .summary-bar { display: flex; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex-wrap: wrap; }
+  .summary-item { flex: 1; text-align: center; min-width: 80px; }
   .summary-label { font-size: 0.6rem; text-transform: uppercase; color: #bdc3c7; }
   .summary-value { font-size: 1.2rem; font-weight: bold; display: block; }
 
@@ -26,6 +26,10 @@ permalink: /charging-history/
   .filter-row:last-child { margin-bottom: 0; }
   .filter-row-brand { grid-template-columns: 1fr 1fr auto; }
   .filter-row-other  { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  @media (max-width: 520px) {
+    .filter-row-brand { grid-template-columns: 1fr 1fr; }
+    .filter-row-brand .btn-reset { grid-column: 1 / -1; }
+  }
   .filter-group { display: flex; flex-direction: column; gap: 5px; }
   .filter-group label { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; color: #888; }
   select { padding: 8px; border-radius: 6px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
@@ -49,8 +53,9 @@ permalink: /charging-history/
   #history-table th:nth-child(2), #history-table td:nth-child(2) { width: auto; }
   #history-table th:nth-child(3), #history-table td:nth-child(3) { width: 130px; white-space: nowrap; font-size: 0.78rem; }
   #history-table th:nth-child(4), #history-table td:nth-child(4) { width: 100px; white-space: nowrap; text-align: right; }
-  #history-table th:nth-child(5), #history-table td:nth-child(5) { width: 80px;  white-space: nowrap; text-align: right; }
-  #history-table th:nth-child(6), #history-table td:nth-child(6) { width: 50px;  text-align: center; }
+  #history-table th:nth-child(5), #history-table td:nth-child(5) { width: 90px;  white-space: nowrap; text-align: right; }
+  #history-table th:nth-child(6), #history-table td:nth-child(6) { width: 80px;  white-space: nowrap; text-align: right; }
+  #history-table th:nth-child(7), #history-table td:nth-child(7) { width: 50px;  text-align: center; }
 
   .note-icon { position: relative; cursor: default; font-size: 1rem; display: inline-block; }
   .note-tooltip {
@@ -87,7 +92,7 @@ permalink: /charging-history/
 <div class="history-container">
 
   <!-- Cross-page charging nav -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);align-items:center;">
     <a href="/charging/"         style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">⚡ Dashboard</a>
     <a href="/charging-history/" style="font-size:0.78rem;font-weight:700;color:#fff;text-decoration:none;padding:5px 14px;border:1px solid var(--link);border-radius:20px;background:var(--link)">📋 History</a>
     <a href="/charging-analytics/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📊 Analytics</a>
@@ -146,6 +151,7 @@ permalink: /charging-history/
     </div>
   </div>
 
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
   <table id="history-table">
     <thead>
       <tr>
@@ -153,6 +159,7 @@ permalink: /charging-history/
         <th>Location</th>
         <th>Vehicle</th>
         <th>Energy (kWh)</th>
+        <th>Miles Added</th>
         <th>Cost</th>
         <th>Notes</th>
       </tr>
@@ -203,6 +210,7 @@ permalink: /charging-history/
         data-veh="{{ log.vehicle }}"
         data-kwh="{{ log.energy_kwh }}"
         data-cost="{{ cost_data }}"
+        data-miles="{{ log.miles_added }}"
         data-type="{% if cost_data > 0 %}paid{% else %}free{% endif %}">
         <td>{{ log.date | date: "%Y-%m-%d" }}</td>
         <td>
@@ -213,6 +221,7 @@ permalink: /charging-history/
         </td>
         <td style="opacity: 0.6;">{{ log.vehicle | default: "2025 Mach-E GT" }}</td>
         <td>{{ log.energy_kwh }}</td>
+        <td>{% if log.miles_added and log.miles_added != 0 and log.miles_added != "" %}{{ log.miles_added }}{% endif %}</td>
         <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | split: "." | first }}.{% if cents < 10 %}0{{ cents }}{% else %}{{ cents }}{% endif %}{% endif %}</td>
         <td>
           {% if log.notes and log.notes != "" %}
@@ -225,6 +234,7 @@ permalink: /charging-history/
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 
 <script>
