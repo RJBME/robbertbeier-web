@@ -240,6 +240,62 @@ permalink: /charging-analytics/
   .trip-card { transition: box-shadow 0.2s; }
   .trip-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
 
+  /* ── CO2 Avoidance section ── */
+  .co2-hero {
+    background: linear-gradient(135deg, #0d2b1a 0%, #1a3d2b 50%, #0d2b1a 100%);
+    border: 1px solid #2ecc7155;
+    border-radius: 16px; padding: 28px 28px 24px; margin-bottom: 18px;
+    position: relative; overflow: hidden;
+  }
+  .co2-hero::before {
+    content: '🌿'; position: absolute; right: 24px; top: 16px;
+    font-size: 4rem; opacity: 0.12; pointer-events: none;
+  }
+  [data-theme="dark"] .co2-hero { background: linear-gradient(135deg, #0a1f12 0%, #142b1e 50%, #0a1f12 100%); }
+  .co2-headline {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.14em;
+    color: #2ecc71; margin-bottom: 6px; font-weight: 700;
+  }
+  .co2-number {
+    font-size: 3rem; font-weight: 900; color: #2ecc71; line-height: 1;
+    margin-bottom: 4px; font-variant-numeric: tabular-nums;
+  }
+  .co2-unit { font-size: 1rem; font-weight: 400; opacity: 0.7; margin-left: 4px; }
+  .co2-sub { font-size: 0.8rem; color: #86efac; opacity: 0.8; margin-bottom: 20px; }
+  .co2-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin-bottom: 0;
+  }
+  @media (max-width: 767px) { .co2-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px)  { .co2-grid { grid-template-columns: 1fr 1fr; } }
+  .co2-stat {
+    background: rgba(46,204,113,0.08); border: 1px solid rgba(46,204,113,0.2);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .co2-stat-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.09em; color: #86efac; opacity: 0.75; display: block; margin-bottom: 4px; }
+  .co2-stat-value { font-size: 1.15rem; font-weight: 800; color: #fff; display: block; line-height: 1.15; }
+  .co2-stat-sub   { font-size: 0.65rem; color: #86efac; opacity: 0.65; display: block; margin-top: 2px; }
+
+  .co2-honesty {
+    background: rgba(243,156,18,0.08); border: 1px solid rgba(243,156,18,0.25);
+    border-radius: 10px; padding: 12px 16px; margin-top: 14px;
+    font-size: 0.75rem; color: #f39c12; line-height: 1.5;
+  }
+  .co2-honesty strong { color: #f5c842; }
+
+  .co2-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  @media (max-width: 767px) { .co2-chart-row { grid-template-columns: 1fr; } }
+
+  /* CO2 badge on trip cards */
+  .co2-trip-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.3);
+    border-radius: 8px; padding: 5px 10px; font-size: 0.72rem; color: #2ecc71;
+    font-weight: 700;
+  }
+  .co2-trip-badge .co2-trip-num { font-size: 1rem; font-weight: 900; }
+
   /* ── Charging locations map ── */
   .ev-map-icon { background: transparent !important; border: none !important; overflow: visible !important; }
   .ev-pulse { position: relative; overflow: visible; }
@@ -298,6 +354,7 @@ permalink: /charging-analytics/
     <a href="#sessions">Session Dive</a>
     <a href="#seasonal">Season/Year</a>
     <a href="#economics2">Break-Even</a>
+    <a href="#co2">🌿 CO₂</a>
     <a href="#roadtrips">Road Trips</a>
     <a href="#sessiondetail" id="navSessionDetail">Detail</a>
     <a href="#efficiency" id="navEfficiency">Efficiency</a>
@@ -317,6 +374,7 @@ permalink: /charging-analytics/
       <a href="#sessions">Sessions</a>
       <a href="#seasonal">Season/Year</a>
       <a href="#economics2">Break-Even</a>
+      <a href="#co2">🌿 CO₂</a>
       <a href="#roadtrips">Road Trips</a>
       <a href="#sessiondetail" id="stickyNavDetail">Detail</a>
       <a href="#efficiency" id="stickyNavEff">Efficiency</a>
@@ -675,6 +733,62 @@ permalink: /charging-analytics/
   </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
+  <!--  SECTION CO2: EMISSIONS AVOIDANCE                  -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="section-header" id="co2">
+    <h2>🌿 CO₂ Avoidance</h2>
+    <span>net emissions avoided vs. your gas car — Michigan grid honest</span>
+    <a href="#top" class="back-top-pill">↑ top</a>
+  </div>
+
+  <!-- Hero card -->
+  <div class="co2-hero">
+    <div class="co2-headline">Net CO₂ Avoided vs. Gas</div>
+    <div class="co2-number" id="co2HeroNum">—<span class="co2-unit">kg</span></div>
+    <div class="co2-sub" id="co2HeroSub">calculating…</div>
+    <div class="co2-grid" id="co2StatGrid">
+      <div class="co2-stat"><span class="co2-stat-label">Gallons Not Burned</span><span class="co2-stat-value" id="co2Gallons">—</span><span class="co2-stat-sub">equivalent</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Trees Absorbing 1 Year</span><span class="co2-stat-value" id="co2Trees">—</span><span class="co2-stat-sub">@ 21 kg CO₂/tree/yr</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Gas Car Miles Avoided</span><span class="co2-stat-value" id="co2Miles">—</span><span class="co2-stat-sub">equivalent distance</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Barrels of Oil</span><span class="co2-stat-value" id="co2Barrels">—</span><span class="co2-stat-sub">not refined for fuel</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Homes Powered</span><span class="co2-stat-value" id="co2Homes">—</span><span class="co2-stat-sub">days of avg US home</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Grid CO₂ Emitted</span><span class="co2-stat-value" id="co2GridEmit">—</span><span class="co2-stat-sub">indirect, via Michigan grid</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Gas CO₂ Would Have Been</span><span class="co2-stat-value" id="co2GasWould">—</span><span class="co2-stat-sub">if still driving gas car</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Emission Reduction</span><span class="co2-stat-value" id="co2Pct">—</span><span class="co2-stat-sub">vs. gas baseline</span></div>
+    </div>
+    <div class="co2-honesty" id="co2Honesty">
+      ⚡ <strong>Michigan-honest calculation:</strong> Grid CO₂ subtracted using eGRID 2023 subregion rates.
+      Road trip sessions use location-specific grid factors where available — Madison WI (MROE) charges at
+      <strong>1,397 lbs/MWh</strong>, nearly 44% dirtier than home (RFCM, 971 lbs/MWh).
+      Comparison vehicle: <span id="co2BaselineNote">RJB → 2023 Escape (24.8 MPG actual) · LRB → 2016 Explorer (23.0 MPG)</span>.
+    </div>
+  </div>
+
+  <!-- Monthly CO2 chart + grid factor breakdown -->
+  <div class="co2-chart-row">
+    <div class="chart-card">
+      <p class="chart-title">Monthly CO₂ Avoided (net kg)</p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartCo2Monthly"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Grid CO₂ Emitted vs. Gas CO₂ Avoided — by Month</p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartCo2GrossNet"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Cumulative CO2 + per-location grid factor breakdown -->
+  <div class="co2-chart-row">
+    <div class="chart-card">
+      <p class="chart-title">Cumulative CO₂ Avoided Over Time</p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartCo2Cumulative"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">CO₂ by Charging Location — grid intensity matters</p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartCo2ByLocation"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
   <!--  SECTION 8: ROAD TRIPS                             -->
   <!-- ═══════════════════════════════════════════════════ -->
   <div class="section-header" id="roadtrips">
@@ -982,11 +1096,72 @@ function getStepRate(arr, date, field, fallback) {
 // Keys must exactly match vehicle field values in session files.
 // If a vehicle isn't listed here, the mpg from rates.yml is used.
 const VEHICLE_MPG = {
-  '2025 Mach-E GT':        27,
-  '2026 Mach-E SR':        27,
-  "LRB's 2025 Mach-E GT":  23,
-  "LRB's 2026 Mach-E SR":  23,
+  '2025 Mach-E GT':        24.8,   // RJB real-world from Fuelly (2023 Escape, 26 fill-ups)
+  '2026 Mach-E SR':        24.8,
+  "LRB's 2025 Mach-E GT":  23.0,   // LRB real-world (2016 Explorer 2.3L EcoBoost, per dash computer)
+  "LRB's 2026 Mach-E SR":  23.0,
 };
+
+/* ════════════════════════════════════════════════════════
+   CO2 CONSTANTS — eGRID 2023, EPA sources
+   ════════════════════════════════════════════════════════
+   Grid factors: lbs CO2/MWh → kg CO2/kWh = lbs/MWh × 0.4536 / 1000
+   Gas:  8.887 kg CO2/gallon (EPA)
+   Tree: 21 kg CO2/year absorption (EPA equivalencies)
+   Home: 10,649 kWh/year avg US home (EIA 2022)
+   Barrel of oil: ~42 gallons → ~131 kg CO2 when burned for fuel
+*/
+const CO2_GAS_KG_PER_GAL   = 8.887;
+const CO2_TREE_KG_PER_YEAR = 21;
+const CO2_HOME_KWH_YEAR    = 10649;
+const CO2_BARREL_KG        = 131;   // kg CO2 per barrel of crude → gasoline
+
+// eGRID 2023 subregion factors (kg CO2/kWh)
+// Source: EPA eGRID 2023 Summary Tables Rev2, June 2025
+const EGRID_FACTORS = {
+  RFCM: 970.6  * 0.4536 / 1000,   // Michigan (Lower Peninsula) — 0.4402 kg/kWh
+  MROE: 1397.3 * 0.4536 / 1000,   // MRO East (E. Wisconsin/Madison) — 0.6338 kg/kWh
+  MROW: 920.1  * 0.4536 / 1000,   // MRO West (Minnesota/Bloomington) — 0.4173 kg/kWh
+  RFCW: 911.4  * 0.4536 / 1000,   // RFC West (Illinois/Ohio) — 0.4134 kg/kWh
+  RFCE: 596.9  * 0.4536 / 1000,   // RFC East (Mid-Atlantic) — 0.2707 kg/kWh
+};
+const EGRID_DEFAULT = EGRID_FACTORS.RFCM; // fallback = home grid
+
+// State → eGRID subregion mapping (dominant subregion for each state)
+const STATE_TO_EGRID = {
+  MI: 'RFCM', WI: 'MROE', MN: 'MROW', IL: 'RFCW',
+  OH: 'RFCW', IN: 'RFCW', PA: 'RFCE', NY: 'RFCE',
+};
+
+// Derive eGRID factor from a session location string
+// 1. Check locationData for explicit egrid_region field
+// 2. Try to infer state from location string (e.g. "Tesla, Madison WI" → WI)
+// 3. Fall back to RFCM (home grid)
+function getEgridFactor(locationStr) {
+  // Check explicit override in _data/locations.yml
+  const locEntry = (locationData || []).find(l =>
+    l.name && l.name.toLowerCase() === locationStr.toLowerCase()
+  );
+  if (locEntry && locEntry.egrid_region && EGRID_FACTORS[locEntry.egrid_region]) {
+    return EGRID_FACTORS[locEntry.egrid_region];
+  }
+  // Infer state from two-letter abbreviation at end of location string
+  const stateMatch = locationStr.match(/\b([A-Z]{2})\s*$/);
+  if (stateMatch && STATE_TO_EGRID[stateMatch[1]]) {
+    return EGRID_FACTORS[STATE_TO_EGRID[stateMatch[1]]];
+  }
+  // Also try "City ST" pattern mid-string
+  const stateMatch2 = locationStr.match(/,\s*([A-Z]{2})\b/);
+  if (stateMatch2 && STATE_TO_EGRID[stateMatch2[1]]) {
+    return EGRID_FACTORS[STATE_TO_EGRID[stateMatch2[1]]];
+  }
+  return EGRID_DEFAULT;
+}
+
+// Get baseline MPG for a vehicle (for CO2 comparison)
+function getBaselineMpg(vehicle) {
+  return VEHICLE_MPG[vehicle] || 24.8;
+}
 
 function getGasSavingsObj(date, vehicle) {
   if (!Array.isArray(gasSavingsRates) || !gasSavingsRates.length) {
@@ -1078,6 +1253,15 @@ sessions.forEach(s => {
     s.isFree    = s.cost < 0.005;
     s.month     = s.date.substring(0, 7);
     s.dow       = new Date(s.date + 'T12:00:00').getDay();
+
+    // CO2 calculations
+    const mpg        = getBaselineMpg(s.vehicle);
+    const effMiKwh   = s.hasRealEff ? s.realMiPerKwh : (getGasSavingsObj(s.date, s.vehicle).mi_per_kwh || 3.0);
+    const estMiles   = s.kwh * effMiKwh;
+    s.co2GasCould    = (estMiles / mpg) * CO2_GAS_KG_PER_GAL;   // kg CO2 if driven on gas
+    s.co2GridEmit    = s.kwh * getEgridFactor(s.location);        // kg CO2 from grid
+    s.co2NetAvoided  = s.co2GasCould - s.co2GridEmit;             // net kg CO2 avoided
+    s.egridFactor    = getEgridFactor(s.location);                 // store for display
   } catch(e) {
     console.error('[EV] Session enrichment failed for', s.date, s.location, e);
     s.cost     = s.rawCost || 0;
@@ -2218,6 +2402,194 @@ mkChart('chartHistogram', {
   });
 
   /* ════════════════════════════════════════
+     CO2 AVOIDANCE SECTION
+  ════════════════════════════════════════ */
+  (function buildCo2Section(sl) {
+    const totalNetAvoided = sl.reduce((a, s) => a + (s.co2NetAvoided || 0), 0);
+    const totalGasCould   = sl.reduce((a, s) => a + (s.co2GasCould   || 0), 0);
+    const totalGridEmit   = sl.reduce((a, s) => a + (s.co2GridEmit    || 0), 0);
+
+    // Hero number
+    const heroEl = document.getElementById('co2HeroNum');
+    if (heroEl) heroEl.innerHTML = totalNetAvoided.toFixed(0) + '<span class="co2-unit">kg</span>';
+    const subEl = document.getElementById('co2HeroSub');
+    if (subEl) subEl.textContent = `≈ ${(totalNetAvoided / 1000).toFixed(2)} metric tons of CO₂ not released into the atmosphere`;
+
+    // Stat cards
+    const effTotalMiles = sl.reduce((a,s) => {
+      const eff = s.hasRealEff ? s.realMiPerKwh : (getGasSavingsObj(s.date, s.vehicle).mi_per_kwh || 3.0);
+      return a + s.kwh * eff;
+    }, 0);
+    const gallons = totalGasCould / CO2_GAS_KG_PER_GAL;
+    const trees   = totalNetAvoided / CO2_TREE_KG_PER_YEAR;
+    const barrels = gallons / 42;
+    const homeDays = (sl.reduce((a,s) => a + s.kwh, 0) / CO2_HOME_KWH_YEAR) * 365;
+    const pct = totalGasCould > 0 ? (totalNetAvoided / totalGasCould * 100) : 0;
+
+    function setStatEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+    setStatEl('co2Gallons',  gallons.toFixed(0));
+    setStatEl('co2Trees',    trees.toFixed(1));
+    setStatEl('co2Miles',    Math.round(effTotalMiles).toLocaleString());
+    setStatEl('co2Barrels',  barrels.toFixed(1));
+    setStatEl('co2Homes',    homeDays.toFixed(0) + ' days');
+    setStatEl('co2GridEmit', totalGridEmit.toFixed(0) + ' kg');
+    setStatEl('co2GasWould', totalGasCould.toFixed(0) + ' kg');
+    setStatEl('co2Pct',      pct.toFixed(0) + '%');
+
+    // Baseline note
+    const isLRB   = activeVehicle && activeVehicle.includes('LRB');
+    const isMixed = !activeVehicle || activeVehicle === 'all';
+    const baseNote = document.getElementById('co2BaselineNote');
+    if (baseNote) {
+      if (isMixed)    baseNote.textContent = 'RJB → 2023 Escape (24.8 MPG actual) · LRB → 2016 Explorer (23.0 MPG)';
+      else if (isLRB) baseNote.textContent = 'LRB → 2016 Explorer 2.3L EcoBoost (23.0 MPG real-world)';
+      else            baseNote.textContent = 'RJB → 2023 Ford Escape (24.8 MPG actual — 26 Fuelly fill-ups)';
+    }
+
+    // Monthly buckets
+    const co2Monthly = {};
+    sl.forEach(s => {
+      if (!co2Monthly[s.month]) co2Monthly[s.month] = { net: 0, gas: 0, grid: 0 };
+      co2Monthly[s.month].net  += s.co2NetAvoided || 0;
+      co2Monthly[s.month].gas  += s.co2GasCould   || 0;
+      co2Monthly[s.month].grid += s.co2GridEmit    || 0;
+    });
+    const co2Months = Object.keys(co2Monthly).sort();
+
+    // Chart: Monthly net avoided
+    if (document.getElementById('chartCo2Monthly')) {
+      mkChart('chartCo2Monthly', {
+        type: 'bar',
+        data: {
+          labels: co2Months.map(monthLabel),
+          datasets: [{
+            label: 'Net CO₂ Avoided (kg)',
+            data: co2Months.map(m => +co2Monthly[m].net.toFixed(1)),
+            backgroundColor: '#2ecc7188', borderColor: '#2ecc71',
+            borderWidth: 1.5, borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }, datalabels: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(1)} kg CO₂ avoided` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+            y: { grid: { color: gc() }, ticks: { color: tc() }, beginAtZero: true,
+                 title: { display: true, text: 'kg CO₂', color: '#888' } }
+          }
+        }
+      });
+    }
+
+    // Chart: Grid emitted vs Gas avoided
+    if (document.getElementById('chartCo2GrossNet')) {
+      mkChart('chartCo2GrossNet', {
+        type: 'bar',
+        data: {
+          labels: co2Months.map(monthLabel),
+          datasets: [
+            { label: 'Grid CO₂ Emitted', data: co2Months.map(m => +co2Monthly[m].grid.toFixed(1)),
+              backgroundColor: '#e74c3c99', borderColor: '#e74c3c', borderWidth: 1, borderRadius: 4 },
+            { label: 'Gas CO₂ Avoided', data: co2Months.map(m => +co2Monthly[m].gas.toFixed(1)),
+              type: 'line', borderColor: '#2ecc71', backgroundColor: '#2ecc7120',
+              borderWidth: 2, fill: false, tension: 0.35, pointRadius: 3 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
+            datalabels: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} kg` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+            y: { grid: { color: gc() }, ticks: { color: tc() }, beginAtZero: true,
+                 title: { display: true, text: 'kg CO₂', color: '#888' } }
+          }
+        }
+      });
+    }
+
+    // Chart: Cumulative
+    if (document.getElementById('chartCo2Cumulative')) {
+      let cumCo2 = 0;
+      const cumData = co2Months.map(m => { cumCo2 += co2Monthly[m].net; return +cumCo2.toFixed(1); });
+      mkChart('chartCo2Cumulative', {
+        type: 'line',
+        data: {
+          labels: co2Months.map(monthLabel),
+          datasets: [{
+            label: 'Cumulative kg CO₂ Avoided',
+            data: cumData, borderColor: '#2ecc71', backgroundColor: '#2ecc7120',
+            borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }, datalabels: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(0)} kg CO₂ avoided to date` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+            y: { grid: { color: gc() }, ticks: { color: tc() }, beginAtZero: true,
+                 title: { display: true, text: 'kg CO₂', color: '#888' } }
+          }
+        }
+      });
+    }
+
+    // Chart: By location (colored by grid intensity)
+    if (document.getElementById('chartCo2ByLocation')) {
+      const locCo2 = {};
+      sl.forEach(s => {
+        if (!locCo2[s.location]) locCo2[s.location] = { net: 0, grid: 0, kwh: 0, factor: s.egridFactor };
+        locCo2[s.location].net  += s.co2NetAvoided || 0;
+        locCo2[s.location].grid += s.co2GridEmit    || 0;
+        locCo2[s.location].kwh  += s.kwh;
+      });
+      const locSorted = Object.entries(locCo2).sort((a,b) => b[1].net - a[1].net).slice(0, 10);
+      const maxFactor = Math.max(...locSorted.map(([,v]) => v.factor));
+      const locColors = locSorted.map(([,v]) => {
+        const t = v.factor / maxFactor;
+        return `rgba(${Math.round(46 + 185*t)},${Math.round(204 - 128*t)},${Math.round(113 - 53*t)},0.78)`;
+      });
+      mkChart('chartCo2ByLocation', {
+        type: 'bar',
+        data: {
+          labels: locSorted.map(([loc]) => loc.length > 22 ? loc.slice(0,20)+'…' : loc),
+          datasets: [{
+            label: 'Net CO₂ Avoided (kg)',
+            data: locSorted.map(([,v]) => +v.net.toFixed(1)),
+            backgroundColor: locColors, borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }, datalabels: { display: false },
+            tooltip: { callbacks: { label: (ctx) => {
+              const [,v] = locSorted[ctx.dataIndex];
+              return [` ${v.net.toFixed(1)} kg net avoided`,
+                      ` Grid: ${(v.factor*1000).toFixed(0)} g CO₂/kWh`,
+                      ` ${v.kwh.toFixed(1)} kWh charged`];
+            }}}
+          },
+          scales: {
+            x: { grid: { color: gc() }, ticks: { color: tc() }, beginAtZero: true,
+                 title: { display: true, text: 'kg CO₂ avoided', color: '#888' } },
+            y: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } }
+          }
+        }
+      });
+    }
+  })(sl);
+
+  /* ════════════════════════════════════════
      NEW SECTION 8 — ROAD TRIP DETECTION
   ════════════════════════════════════════ */
   (function buildRoadTrips(sl) {
@@ -2406,6 +2778,19 @@ mkChart('chartHistogram', {
             : `${totalChargeMins} min`)
           + (hasUnknownTimes ? '*' : '');
 
+      // CO2 for this trip
+      const tripMpg         = getBaselineMpg(tripVehicle);
+      const tripNetAvoided  = trip.reduce((a,s) => a + (s.co2NetAvoided || 0), 0);
+      const tripGridEmit    = trip.reduce((a,s) => a + (s.co2GridEmit    || 0), 0);
+      const tripGasCould    = trip.reduce((a,s) => a + (s.co2GasCould    || 0), 0);
+      const co2BadgeHtml = tripNetAvoided > 0.5 ? `
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <span class="co2-trip-badge">
+            🌿 <span class="co2-trip-num">${tripNetAvoided.toFixed(1)}</span> kg CO₂ avoided
+          </span>
+          <span style="font-size:0.68rem;color:#888">(grid emitted: ${tripGridEmit.toFixed(1)} kg · gas would have been: ${tripGasCould.toFixed(1)} kg)</span>
+        </div>` : '';
+
       const vehBadgeColor = isLRB ? '#f39c12' : '#7b1fa2';
 
       return `<div style="background:var(--dash-card);border:1px solid var(--dash-border);border-left:4px solid ${vehBadgeColor};border-radius:12px;padding:16px 20px;margin-bottom:14px;transition:box-shadow 0.2s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow=''">
@@ -2451,6 +2836,9 @@ mkChart('chartHistogram', {
             `).join('')}
           </div>
         </details>` : ''}
+
+        <!-- CO2 badge -->
+        ${co2BadgeHtml}
 
         <!-- Location badges -->
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">
