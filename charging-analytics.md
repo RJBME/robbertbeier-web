@@ -225,6 +225,7 @@ permalink: /charging-analytics/
     <a href="#seasonal">Season/Year</a>
     <a href="#economics2">Break-Even</a>
     <a href="#roadtrips">Road Trips</a>
+    <a href="#sessiondetail" id="navSessionDetail">Detail</a>
     <a href="#vehiclecomp" id="navVehicleComp" style="display:none">Vehicles</a>
     <a href="#map">Map</a>
   </div>
@@ -631,6 +632,97 @@ permalink: /charging-analytics/
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!--  SECTION 10: SESSION DETAIL ANALYTICS              -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="detailSection">
+    <div class="section-header" id="sessiondetail">
+      <h2>Session Detail</h2>
+      <span id="detailSessionCount">charging behavior — timing, SOC &amp; battery health</span>
+      <a href="#top" class="back-top-pill">↑ top</a>
+    </div>
+
+    <!-- SOC behaviour row -->
+    <div class="chart-grid-3" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-title">Plug-in SOC Distribution</p>
+        <span class="chart-sub">How depleted before you charge</span>
+        <div class="chart-wrap" style="height:220px"><canvas id="chartSocStart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">Unplug SOC Distribution</p>
+        <span class="chart-sub">How full when you leave</span>
+        <div class="chart-wrap" style="height:220px"><canvas id="chartSocEnd"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">SOC Added Distribution</p>
+        <span class="chart-sub">How much % added per session</span>
+        <div class="chart-wrap" style="height:220px"><canvas id="chartSocAdded"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Duration & rate row -->
+    <div class="chart-grid-2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-title">Charge Duration Distribution</p>
+        <span class="chart-sub">How long sessions typically run (hours)</span>
+        <div class="chart-wrap" style="height:230px"><canvas id="chartDuration"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">Avg Charge Rate by Location (kW)</p>
+        <span class="chart-sub">energy_kwh ÷ duration — includes idle time for Work &amp; Home overnight</span>
+        <div class="chart-wrap" style="height:230px"><canvas id="chartAvgRate"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Time of day -->
+    <div class="chart-grid-2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-title">Plug-in Time of Day</p>
+        <span class="chart-sub">What hour you typically start charging</span>
+        <div class="chart-wrap" style="height:250px"><canvas id="chartPluginHour"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">SOC at Plug-in vs kWh Added</p>
+        <span class="chart-sub">Lower SOC → bigger charge — scatter plot</span>
+        <div class="chart-wrap" style="height:250px"><canvas id="chartSocScatter"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Battery health -->
+    <div class="chart-full chart-card" style="margin-bottom:18px">
+      <p class="chart-title">Estimated Usable Battery — Session by Session</p>
+      <span class="chart-sub">energy_kwh ÷ (soc_added ÷ 100) — should stay near rated UBE. Downward drift = degradation. ⚠ Noise expected; trend matters more than individual points.</span>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin:12px 0 16px">
+        <div id="ubeCardGT" style="display:none;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 18px;min-width:180px">
+          <div style="font-size:0.6rem;text-transform:uppercase;color:#888;margin-bottom:4px">GT Rated UBE</div>
+          <div style="font-size:1.4rem;font-weight:900;color:#0288d1">91.7 kWh</div>
+          <div style="font-size:0.68rem;color:#888;margin-top:2px">NCM extended range</div>
+        </div>
+        <div id="ubeCardSR" style="display:none;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 18px;min-width:180px">
+          <div style="font-size:0.6rem;text-transform:uppercase;color:#888;margin-bottom:4px">SR Rated UBE</div>
+          <div style="font-size:1.4rem;font-weight:900;color:#7b1fa2">72.6 kWh</div>
+          <div style="font-size:0.68rem;color:#888;margin-top:2px">LFP 2026</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:280px"><canvas id="chartBatteryHealth"></canvas></div>
+    </div>
+
+    <!-- Avg SOC start/end by location -->
+    <div class="chart-grid-2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-title">Avg Plug-in vs Unplug SOC by Location</p>
+        <span class="chart-sub">Where do you charge hardest?</span>
+        <div class="chart-wrap" style="height:240px"><canvas id="chartSocByLoc"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">SOC Start Over Time</p>
+        <span class="chart-sub">Are you letting it get lower over time?</span>
+        <div class="chart-wrap" style="height:240px"><canvas id="chartSocStartTrend"></canvas></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ─── existing hm-tip tooltip ─── -->
   <div id="hm-tip" style="position:fixed;background:rgba(0,0,0,0.82);color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;pointer-events:none;display:none;z-index:9999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);"></div>
 
@@ -668,9 +760,19 @@ permalink: /charging-analytics/
    RAW DATA FROM JEKYLL LIQUID
    ════════════════════════════════════════════════════════ */
 const sessions = [
-  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }} }{% unless forloop.last %},{% endunless %}
+  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }} }{% unless forloop.last %},{% endunless %}
   {% endfor %}
 ];
+
+// Usable battery capacity by vehicle (kWh) — corrected specs
+// GT (NCM extended range): 91.7 kWh usable
+// SR LFP (2026): 72.6 kWh usable
+const VEHICLE_UBE = {
+  '2025 Mach-E GT':        91.7,
+  '2026 Mach-E GT':        91.7,
+  "LRB's 2025 Mach-E GT":  91.7,
+  "LRB's 2026 Mach-E GT":  72.6
+};
 
 const homeRates       = {{ site.data.rates.home_electricity | jsonify }};
 const gasSavingsRates = {{ site.data.rates.gas_savings       | jsonify }};
@@ -2181,7 +2283,368 @@ mkChart('chartHistogram', {
 
   })(sessions); // pass all sessions — vehicle comparison always uses full fleet data
 
-  // ── end new sections ──
+  /* ════════════════════════════════════════
+     SECTION 10 — SESSION DETAIL ANALYTICS
+     Only uses sessions that have SOC data
+  ════════════════════════════════════════ */
+  (function buildSessionDetail(sl) {
+
+    // Helper: parse datetime from stored fields
+    // startDate + startTime → Date object
+    // session date + endTime → Date object
+    function parseStart(s) {
+      if (!s.startDate || !s.startTime) return null;
+      return new Date(s.startDate + 'T' + s.startTime + ':00');
+    }
+    function parseEnd(s) {
+      if (!s.endTime) return null;
+      // End is on session date
+      return new Date(s.date + 'T' + s.endTime + ':00');
+    }
+    function durationHours(s) {
+      const st = parseStart(s), en = parseEnd(s);
+      if (!st || !en) return null;
+      let diff = (en - st) / 3600000;
+      // Handle overnight: if end < start, add 24h
+      if (diff < 0) diff += 24;
+      return diff > 0 ? diff : null;
+    }
+
+    // Sessions with SOC data
+    const socSessions = sl.filter(s => s.socAdded > 0 && s.socStart >= 0 && s.socEnd > 0);
+    // Sessions with timing data
+    const timeSessions = sl.filter(s => parseStart(s) && parseEnd(s));
+
+    // Update subtitle
+    const countEl = document.getElementById('detailSessionCount');
+    if (countEl) {
+      countEl.textContent = `${socSessions.length} sessions with SOC data · ${timeSessions.length} with timing`;
+    }
+
+    // Show/hide UBE reference cards based on vehicles present
+    const vehicles = [...new Set(sl.map(s => s.vehicle))];
+    const hasGT = vehicles.some(v => v.includes('GT'));
+    const hasSR = vehicles.some(v => v.includes('SR') || v.includes('LFP'));
+    const gtCard = document.getElementById('ubeCardGT');
+    const srCard = document.getElementById('ubeCardSR');
+    if (gtCard) gtCard.style.display = hasGT ? '' : 'none';
+    if (srCard) srCard.style.display = hasSR ? '' : 'none';
+
+    if (!socSessions.length && !timeSessions.length) {
+      document.getElementById('detailSection').style.display = 'none';
+      document.getElementById('navSessionDetail').style.display = 'none';
+      return;
+    }
+    document.getElementById('detailSection').style.display = '';
+    document.getElementById('navSessionDetail').style.display = '';
+
+    // ── Histogram helper ──
+    function hist(values, binCount, min, max) {
+      const step = (max - min) / binCount;
+      const bins = Array.from({length: binCount}, (_, i) => ({
+        label: Math.round(min + i * step) + '–' + Math.round(min + (i+1) * step),
+        count: 0
+      }));
+      values.forEach(v => {
+        let idx = Math.floor((v - min) / step);
+        if (idx < 0) idx = 0;
+        if (idx >= binCount) idx = binCount - 1;
+        bins[idx].count++;
+      });
+      return bins;
+    }
+
+    // ── 1. SOC Start histogram ──
+    if (socSessions.length) {
+      const bins = hist(socSessions.map(s => s.socStart), 10, 0, 100);
+      mkChart('chartSocStart', {
+        type: 'bar',
+        data: {
+          labels: bins.map(b => b.label + '%'),
+          datasets: [{ data: bins.map(b => b.count), backgroundColor: C_AMBER, borderRadius: 4 }]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+          plugins: { legend:{display:false}, datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} sessions`}} },
+          scales: {
+            x:{grid:{display:false},ticks:{color:tc(),font:{size:9}}},
+            y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true,
+               title:{display:true,text:'Sessions',color:'#888'}}
+          }
+        }
+      });
+
+      // ── 2. SOC End histogram ──
+      const binsEnd = hist(socSessions.map(s => s.socEnd), 10, 0, 100);
+      mkChart('chartSocEnd', {
+        type: 'bar',
+        data: {
+          labels: binsEnd.map(b => b.label + '%'),
+          datasets: [{ data: binsEnd.map(b => b.count),
+            backgroundColor: ctx => {
+              const label = binsEnd[ctx.dataIndex]?.label || '';
+              const mid = parseInt(label);
+              return mid >= 90 ? C_GREEN : mid >= 70 ? C_BLUE : C_VIOLET;
+            }, borderRadius: 4 }]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+          plugins: { legend:{display:false}, datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} sessions`}} },
+          scales: {
+            x:{grid:{display:false},ticks:{color:tc(),font:{size:9}}},
+            y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true,
+               title:{display:true,text:'Sessions',color:'#888'}}
+          }
+        }
+      });
+
+      // ── 3. SOC Added histogram ──
+      const binsAdded = hist(socSessions.map(s => s.socAdded), 10, 0, 100);
+      mkChart('chartSocAdded', {
+        type: 'bar',
+        data: {
+          labels: binsAdded.map(b => b.label + '%'),
+          datasets: [{ data: binsAdded.map(b => b.count), backgroundColor: C_VIOLET, borderRadius: 4 }]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+          plugins: { legend:{display:false}, datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} sessions`}} },
+          scales: {
+            x:{grid:{display:false},ticks:{color:tc(),font:{size:9}}},
+            y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true,
+               title:{display:true,text:'Sessions',color:'#888'}}
+          }
+        }
+      });
+
+      // ── 7. SOC Start vs kWh Scatter ──
+      const scatterData = socSessions.map(s => ({ x: s.socStart, y: s.kwh, loc: s.bucket }));
+      mkChart('chartSocScatter', {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Sessions',
+            data: scatterData,
+            backgroundColor: scatterData.map(d => (BUCKET_COLORS[d.loc] || '#888') + 'cc'),
+            pointRadius: 5, pointHoverRadius: 7
+          }]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+          plugins: { legend:{display:false}, datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` SOC ${ctx.parsed.x}% → ${ctx.parsed.y.toFixed(1)} kWh`}} },
+          scales: {
+            x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+'%'},
+               title:{display:true,text:'SOC at Plug-in (%)',color:'#888'},min:0,max:100},
+            y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true,
+               title:{display:true,text:'kWh Added',color:'#888'}}
+          }
+        }
+      });
+
+      // ── 8. Avg SOC start/end by location grouped bar ──
+      const locBuckets = [...new Set(socSessions.map(s => s.bucket))];
+      mkChart('chartSocByLoc', {
+        type: 'bar',
+        data: {
+          labels: locBuckets,
+          datasets: [
+            { label: 'Avg Plug-in SOC',
+              data: locBuckets.map(b => {
+                const g = socSessions.filter(s => s.bucket === b);
+                return g.length ? +(g.reduce((a,s)=>a+s.socStart,0)/g.length).toFixed(1) : null;
+              }),
+              backgroundColor: C_AMBER, borderRadius: 4 },
+            { label: 'Avg Unplug SOC',
+              data: locBuckets.map(b => {
+                const g = socSessions.filter(s => s.bucket === b);
+                return g.length ? +(g.reduce((a,s)=>a+s.socEnd,0)/g.length).toFixed(1) : null;
+              }),
+              backgroundColor: C_GREEN, borderRadius: 4 }
+          ]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+          plugins: {
+            legend:{display:true,position:'top',labels:{color:tc(),boxWidth:12,padding:10}},
+            datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)}%`}}
+          },
+          scales: {
+            x:{grid:{display:false},ticks:{color:tc()}},
+            y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+'%'},min:0,max:100,
+               title:{display:true,text:'SOC (%)',color:'#888'}}
+          }
+        }
+      });
+
+      // ── 9. SOC Start over time trend ──
+      const socTimeSorted = [...socSessions].sort((a,b) => a.date.localeCompare(b.date));
+      mkChart('chartSocStartTrend', {
+        type: 'line',
+        data: {
+          labels: socTimeSorted.map(s => s.date),
+          datasets: [{
+            label: 'SOC at Plug-in',
+            data: socTimeSorted.map(s => s.socStart),
+            borderColor: C_AMBER,
+            backgroundColor: 'rgba(243,156,18,0.08)',
+            fill: true, pointRadius: 3, tension: 0.2, borderWidth: 1.5
+          }]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false},datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y}% at plug-in`}}},
+          scales:{
+            x:{grid:{display:false},ticks:{color:tc(),maxTicksLimit:8,maxRotation:45}},
+            y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+'%'},min:0,max:100,
+               title:{display:true,text:'SOC at Plug-in (%)',color:'#888'}}
+          }
+        }
+      });
+
+      // ── Battery health (UBE estimate) ──
+      const ubeSessions = socSessions.filter(s => s.socAdded >= 5); // filter tiny charges — too noisy
+      if (ubeSessions.length) {
+        const vehColors = {'2025 Mach-E GT':C_BLUE,'2026 Mach-E GT':C_BLUE,
+                          "LRB's 2025 Mach-E GT":C_PURPLE,"LRB's 2026 Mach-E GT":C_PURPLE};
+        const ubeByVeh = {};
+        ubeSessions.forEach(s => {
+          if (!ubeByVeh[s.vehicle]) ubeByVeh[s.vehicle] = [];
+          const est = s.kwh / (s.socAdded / 100);
+          if (est > 40 && est < 130) ubeByVeh[s.vehicle].push({ date: s.date, ube: +est.toFixed(1) });
+        });
+        const ubeDatasets = Object.entries(ubeByVeh).map(([v, pts]) => ({
+          label: v,
+          data: pts.map(p => ({ x: p.date, y: p.ube })),
+          borderColor: vehColors[v] || C_VIOLET,
+          backgroundColor: (vehColors[v] || C_VIOLET) + '22',
+          pointRadius: 4, tension: 0.2, borderWidth: 1.5, fill: false
+        }));
+        // Add rated UBE reference lines
+        const allVehs = [...new Set(ubeSessions.map(s => s.vehicle))];
+        const ratedLines = [...new Set(allVehs.map(v => VEHICLE_UBE[v] || 91.7))];
+        ratedLines.forEach(ube => {
+          const label = ube === 91.7 ? 'GT Rated 91.7 kWh' : 'SR Rated 72.6 kWh';
+          const allDates = ubeSessions.map(s => s.date).sort();
+          ubeDatasets.push({
+            label,
+            data: [{ x: allDates[0], y: ube }, { x: allDates[allDates.length-1], y: ube }],
+            borderColor: ube === 91.7 ? C_BLUE : C_PURPLE,
+            borderDash: [8, 4], borderWidth: 2, pointRadius: 0, fill: false
+          });
+        });
+        mkChart('chartBatteryHealth', {
+          type: 'line',
+          data: { datasets: ubeDatasets },
+          options: { responsive:true, maintainAspectRatio:false,
+            plugins:{
+              legend:{display:true,position:'top',labels:{color:tc(),boxWidth:12,padding:10}},
+              datalabels:{display:false},
+              tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} kWh`}}
+            },
+            scales:{
+              x:{type:'category',grid:{color:gc()},ticks:{color:tc(),maxTicksLimit:10,maxRotation:45}},
+              y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' kWh'},
+                 title:{display:true,text:'Estimated UBE (kWh)',color:'#888'},min:40}
+            }
+          }
+        });
+      }
+    }
+
+    // ── 4 & 5. Duration and Rate charts (need timing data) ──
+    if (timeSessions.length) {
+      const durations = timeSessions.map(s => durationHours(s)).filter(Boolean);
+
+      const durBins = hist(durations, 10, 0, Math.min(Math.ceil(Math.max(...durations)), 24));
+      mkChart('chartDuration', {
+        type: 'bar',
+        data: {
+          labels: durBins.map(b => b.label + 'h'),
+          datasets: [{ data: durBins.map(b => b.count), backgroundColor: C_VIOLET, borderRadius: 4 }]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false},datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} sessions`}}},
+          scales:{
+            x:{grid:{display:false},ticks:{color:tc(),font:{size:9}}},
+            y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true,
+               title:{display:true,text:'Sessions',color:'#888'}}
+          }
+        }
+      });
+
+      // Avg charge rate by location (kW = kWh / hours)
+      const rateBuckets = [...new Set(timeSessions.map(s => s.bucket))];
+      const rateByBucket = rateBuckets.map(b => {
+        const g = timeSessions.filter(s => s.bucket === b);
+        const rates = g.map(s => {
+          const h = durationHours(s);
+          return h && h > 0 ? s.kwh / h : null;
+        }).filter(Boolean);
+        return rates.length ? +(rates.reduce((a,v)=>a+v,0)/rates.length).toFixed(1) : 0;
+      });
+      mkChart('chartAvgRate', {
+        type: 'bar',
+        data: {
+          labels: rateBuckets,
+          datasets: [{
+            data: rateByBucket,
+            backgroundColor: rateBuckets.map(b => BUCKET_COLORS[b] || '#888'),
+            borderRadius: 6
+          }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+          plugins:{legend:{display:false},datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x.toFixed(1)} kW avg (incl. idle)`}}},
+          scales:{
+            x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' kW'},beginAtZero:true,
+               title:{display:true,text:'kW (avg, includes idle time)',color:'#888'}},
+            y:{grid:{display:false},ticks:{color:tc()}}
+          }
+        }
+      });
+
+      // ── 6. Plug-in hour polar/bar chart ──
+      const hours = timeSessions.map(s => {
+        const st = parseStart(s);
+        return st ? st.getHours() : null;
+      }).filter(h => h !== null);
+      const hourBins = Array(24).fill(0);
+      hours.forEach(h => hourBins[h]++);
+      const hourLabels = Array.from({length:24}, (_,i) =>
+        i === 0 ? '12am' : i < 12 ? i+'am' : i === 12 ? '12pm' : (i-12)+'pm'
+      );
+      mkChart('chartPluginHour', {
+        type: 'bar',
+        data: {
+          labels: hourLabels,
+          datasets: [{
+            data: hourBins,
+            backgroundColor: hourBins.map((_, i) => {
+              // Color by time of day: night=purple, morning=amber, day=blue, evening=violet
+              if (i >= 22 || i < 6)  return C_PURPLE;
+              if (i >= 6  && i < 10) return C_AMBER;
+              if (i >= 10 && i < 17) return C_BLUE;
+              return C_VIOLET;
+            }),
+            borderRadius: 3
+          }]
+        },
+        options: { responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false},datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} plug-ins at ${hourLabels[ctx.dataIndex]}`}}},
+          scales:{
+            x:{grid:{display:false},ticks:{color:tc(),font:{size:9},maxRotation:45}},
+            y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true,
+               title:{display:true,text:'Sessions',color:'#888'}}
+          }
+        }
+      });
+    }
+
+  })(sl);
+
+  // ── end section 10 ──
 
   buildLocationStats(sl);
 

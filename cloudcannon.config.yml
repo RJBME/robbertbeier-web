@@ -15,49 +15,6 @@ collections_config:
     add_options:
       - name: Add Charging Session
         schema: default
-    _inputs:
-      date:
-        type: date
-        options:
-          time_format: false
-          timezone: America/New_York
-      location:
-        type: select
-        options:
-          values:
-            - Home
-            - Work
-            - "Tesla, Lansing"
-            - "Tesla, Blue Heron Service Plaza, Genoa, OH"
-            - "Tesla, North Canton, OH"
-            - "Tesla, Wyondot Plaza, Genoa, OH"
-            - "Tesla, Battle Creek"
-            - "Tesla, Stevensville, MI"
-            - "Tesla, Des Plains, IL"
-            - "ChargePoint, Muskegon"
-            - "ChargePoint, Clare, MI"
-            - "ChargePoint, BP Gas Station, Grand Rapids, MI"
-            - "ChargePoint, DIA, Detroit"
-            - "Rivian, Clare, MI"
-            - "MGM Grand, Detroit, MI"
-            - "Blink, BJ's Wholesale, Canton"
-            - "Paul & Carol's, Beulah, MI"
-      energy_kwh:
-        type: number
-        comment: "Energy added in kWh"
-      vehicle:
-        type: select
-        options:
-          values:
-            - "2025 Mach-E GT"
-            - "2026 SR LFP AWD"
-            - "LRB's 2025 Mach-E GT"
-            - "LRB's SR LFP AWD"
-      cost:
-        type: number
-        comment: "Total cost in USD"
-      notes:
-        type: textarea
 
 _inputs:
   date:
@@ -94,11 +51,38 @@ _inputs:
     options:
       values:
         - "2025 Mach-E GT"
-        - "2026 SR LFP AWD"
+        - "2026 Mach-E GT"
         - "LRB's 2025 Mach-E GT"
-        - "LRB's SR LFP AWD"
+        - "LRB's 2026 Mach-E GT"
   cost:
     type: number
-    comment: "Total cost in USD"
+    comment: "Total cost in USD. Enter 0 for free sessions (Work, free public). Home cost is calculated automatically."
+  start_date:
+    type: date
+    label: "Charge Start Date"
+    comment: "Date charging began — often the day before for overnight charges"
+    options:
+      time_format: false
+      timezone: America/New_York
+  start_time:
+    type: text
+    label: "Charge Start Time"
+    comment: "Time charging began, 24h format HH:MM (e.g. 22:15)"
+  end_time:
+    type: text
+    label: "Charge End Time"
+    comment: "Time charging ended, 24h format HH:MM (e.g. 06:45)"
+  soc_start:
+    type: number
+    label: "SOC at Plug-in (%)"
+    comment: "Battery % when you plugged in"
+  soc_end:
+    type: number
+    label: "SOC at Unplug (%)"
+    comment: "Battery % when you unplugged"
+  soc_added:
+    type: number
+    label: "SOC Added (%)"
+    comment: "Total % added as reported by FordPass"
   notes:
     type: textarea

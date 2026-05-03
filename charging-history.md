@@ -229,14 +229,20 @@ const brandLocMap = {};
 
 function initFilters() {
   const vehicles = new Set();
+  const allLocs  = new Set();
   document.querySelectorAll('.log-row').forEach(row => {
     const brand = row.getAttribute('data-brand');
     const loc   = row.getAttribute('data-loc');
     const veh   = row.getAttribute('data-veh');
     if (!brandLocMap[brand]) brandLocMap[brand] = new Set();
     brandLocMap[brand].add(loc);
+    allLocs.add(loc);
     vehicles.add(veh);
   });
+  // Populate location with all locations on load
+  const locSel = document.getElementById('locFilter');
+  Array.from(allLocs).sort().forEach(loc => locSel.add(new Option(loc, loc)));
+  // Populate vehicle filter
   const vehSel = document.getElementById('vehFilter');
   Array.from(vehicles).sort().forEach(v => vehSel.add(new Option(v, v)));
   applyFilters();
@@ -247,7 +253,13 @@ function onBrandChange() {
   const locSel = document.getElementById('locFilter');
   locSel.innerHTML = '<option value="">All Locations</option>';
   if (brand && brandLocMap[brand]) {
+    // Brand selected — show only matching locations
     Array.from(brandLocMap[brand]).sort().forEach(loc => locSel.add(new Option(loc, loc)));
+  } else {
+    // No brand — show all locations
+    const allLocs = new Set();
+    document.querySelectorAll('.log-row').forEach(row => allLocs.add(row.getAttribute('data-loc')));
+    Array.from(allLocs).sort().forEach(loc => locSel.add(new Option(loc, loc)));
   }
   applyFilters();
 }
@@ -285,8 +297,13 @@ function applyFilters() {
 
 function resetFilters() {
   document.getElementById('brandFilter').value = '';
-  document.getElementById('locFilter').innerHTML = '<option value="">All Locations</option>';
   document.querySelectorAll('#yearFilter, #vehFilter, #costFilter').forEach(s => s.value = '');
+  // Repopulate location with all locations
+  const locSel = document.getElementById('locFilter');
+  locSel.innerHTML = '<option value="">All Locations</option>';
+  const allLocs = new Set();
+  document.querySelectorAll('.log-row').forEach(row => allLocs.add(row.getAttribute('data-loc')));
+  Array.from(allLocs).sort().forEach(loc => locSel.add(new Option(loc, loc)));
   applyFilters();
 }
 
