@@ -2404,22 +2404,27 @@ mkChart('chartHistogram', {
         </div>` : ''}
 
         ${note?.itinerary && note.itinerary.length ? `
-        <div style="margin-bottom:10px;padding:10px 12px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--dash-border)">
-          <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:8px">Itinerary</div>
-          ${note.itinerary.map((stop, si) => `
-            <div style="display:flex;gap:10px;align-items:flex-start;${si < note.itinerary.length-1 ? 'margin-bottom:6px' : ''}">
-              <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px">
-                <div style="width:8px;height:8px;border-radius:50%;background:var(--link);margin-top:3px"></div>
-                ${si < note.itinerary.length-1 ? '<div style="width:1px;height:100%;min-height:12px;background:var(--dash-border);flex:1"></div>' : ''}
+        <details style="margin-bottom:10px">
+          <summary style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:#888;cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px;user-select:none;padding:4px 0" onclick="this.parentElement.open ? this.querySelector('.itin-arrow').style.transform='rotate(0deg)' : this.querySelector('.itin-arrow').style.transform='rotate(90deg)'">
+            <span class="itin-arrow" style="display:inline-block;transition:transform 0.2s;transform:rotate(0deg);font-style:normal;font-size:0.75rem">▶</span>
+            Itinerary <span style="font-weight:400;opacity:0.6">(${note.itinerary.length} stops)</span>
+          </summary>
+          <div style="margin-top:8px;padding:10px 12px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--dash-border)">
+            ${note.itinerary.map((stop, si) => `
+              <div style="display:flex;gap:10px;align-items:flex-start;${si < note.itinerary.length-1 ? 'margin-bottom:6px' : ''}">
+                <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px">
+                  <div style="width:8px;height:8px;border-radius:50%;background:var(--link);margin-top:3px"></div>
+                  ${si < note.itinerary.length-1 ? '<div style="width:1px;height:100%;min-height:12px;background:var(--dash-border);flex:1"></div>' : ''}
+                </div>
+                <div style="flex:1;padding-bottom:${si < note.itinerary.length-1 ? '4px' : '0'}">
+                  <span style="font-size:0.68rem;color:#aaa;margin-right:6px">${stop.date}</span>
+                  <span style="font-size:0.78rem;font-weight:600;color:var(--text)">${stop.place}</span>
+                  ${stop.note ? `<span style="font-size:0.7rem;color:#888;margin-left:6px">— ${stop.note}</span>` : ''}
+                </div>
               </div>
-              <div style="flex:1;padding-bottom:${si < note.itinerary.length-1 ? '4px' : '0'}">
-                <span style="font-size:0.68rem;color:#aaa;margin-right:6px">${stop.date}</span>
-                <span style="font-size:0.78rem;font-weight:600;color:var(--text)">${stop.place}</span>
-                ${stop.note ? `<span style="font-size:0.7rem;color:#888;margin-left:6px">— ${stop.note}</span>` : ''}
-              </div>
-            </div>
-          `).join('')}
-        </div>` : ''}
+            `).join('')}
+          </div>
+        </details>` : ''}
 
         <!-- Location badges -->
         <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">
