@@ -2784,11 +2784,11 @@ mkChart('chartHistogram', {
       const tripGridEmit    = trip.reduce((a,s) => a + (s.co2GridEmit    || 0), 0);
       const tripGasCould    = trip.reduce((a,s) => a + (s.co2GasCould    || 0), 0);
       const co2BadgeHtml = tripNetAvoided > 0.5 ? `
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          <span class="co2-trip-badge">
-            🌿 <span class="co2-trip-num">${tripNetAvoided.toFixed(1)}</span> kg CO₂ avoided
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.25);border-radius:6px;padding:3px 8px;font-size:0.68rem;color:#2ecc71;font-weight:700">
+            🌿 ${tripNetAvoided.toFixed(1)} kg CO₂ avoided
           </span>
-          <span style="font-size:0.68rem;color:#888">(grid emitted: ${tripGridEmit.toFixed(1)} kg · gas would have been: ${tripGasCould.toFixed(1)} kg)</span>
+          <span style="font-size:0.63rem;color:#aaa">grid: ${tripGridEmit.toFixed(1)} kg · gas equiv: ${tripGasCould.toFixed(1)} kg</span>
         </div>` : '';
 
       const vehBadgeColor = isLRB ? '#f39c12' : '#7b1fa2';
