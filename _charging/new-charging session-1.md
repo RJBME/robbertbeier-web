@@ -11,5 +11,6 @@ end_time: '14:38'
 soc_start: 21
 soc_end: 72
 soc_added: 51
-notes: ''
+miles_added: 120
+notes: $0.34/kWh
 ---
