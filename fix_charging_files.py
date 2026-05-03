@@ -41,14 +41,16 @@ DETAIL_FIELDS = [
     "soc_start",
     "soc_end",
     "soc_added",
+    "miles_added",
 ]
 DETAIL_DEFAULTS = {
-    "start_date": '""',
-    "start_time": '""',
-    "end_time":   '""',
-    "soc_start":  "0",
-    "soc_end":    "0",
-    "soc_added":  "0",
+    "start_date":  '""',
+    "start_time":  '""',
+    "end_time":    '""',
+    "soc_start":   "0",
+    "soc_end":     "0",
+    "soc_added":   "0",
+    "miles_added": "0",
 }
 
 # Vehicle name -> filename slug
@@ -137,7 +139,7 @@ def fix_file(filepath):
     field_order = [
         "date", "location", "vehicle", "energy_kwh", "cost",
         "start_date", "start_time", "end_time",
-        "soc_start", "soc_end", "soc_added",
+        "soc_start", "soc_end", "soc_added", "miles_added",
         "notes",
     ]
     lines = [f"{k}: {data[k]}" for k in field_order if k in data]

@@ -130,24 +130,38 @@ permalink: /charging-analytics/
 
   /* ── Sticky vehicle filter bar ── */
   #vehicleFilterSticky {
-    display: none; /* JS shows this when 2+ vehicles exist */
+    display: none; /* JS shows this when scrolled past inline filter */
     position: fixed;
     top: 0; left: 0; right: 0;
     z-index: 500;
     background: var(--bg);
     border-bottom: 2px solid var(--dash-border);
-    padding: 8px 24px;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
     box-shadow: 0 3px 16px rgba(0,0,0,0.12);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     transform: translateY(-100%);
     transition: transform 0.22s ease;
+    flex-direction: column;
+    gap: 0;
   }
   #vehicleFilterSticky.visible { transform: translateY(0); }
+  #stickyNavRow {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 6px 20px 5px;
+    border-bottom: 1px solid var(--dash-border);
+    background: rgba(0,0,0,0.03);
+  }
+  #stickyNavRow a {
+    font-size: 0.68rem; font-weight: 600; color: var(--link);
+    text-decoration: none; padding: 3px 10px;
+    border-radius: 12px; border: 1px solid transparent;
+    transition: all 0.12s; white-space: nowrap;
+  }
+  #stickyNavRow a:hover { background: var(--link); color: #fff; border-color: var(--link); }
+  #stickyVehicleRow {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 6px 20px 7px;
+  }
   #vehicleFilterSticky .vf-sticky-label {
     font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em;
     color: #888; margin-right: 4px; white-space: nowrap;
@@ -251,13 +265,32 @@ permalink: /charging-analytics/
     <a href="#economics2">Break-Even</a>
     <a href="#roadtrips">Road Trips</a>
     <a href="#sessiondetail" id="navSessionDetail">Detail</a>
+    <a href="#efficiency" id="navEfficiency">Efficiency</a>
     <a href="#vehiclecomp" id="navVehicleComp" style="display:none">Vehicles</a>
     <a href="#map">Map</a>
   </div>
 
-  <!-- Sticky vehicle filter — floats at top when scrolled past inline filter -->
+  <!-- Sticky bar: section nav on top row, vehicle filter on bottom row -->
   <div id="vehicleFilterSticky">
-    <span class="vf-sticky-label">Vehicle</span>
+    <div id="stickyNavRow">
+      <a href="#records">Records</a>
+      <a href="#heatmap">Heatmap</a>
+      <a href="#monthly">Monthly</a>
+      <a href="#sources">Sources</a>
+      <a href="#economics">Economics</a>
+      <a href="#trends">Trends</a>
+      <a href="#sessions">Sessions</a>
+      <a href="#seasonal">Season/Year</a>
+      <a href="#economics2">Break-Even</a>
+      <a href="#roadtrips">Road Trips</a>
+      <a href="#sessiondetail" id="stickyNavDetail">Detail</a>
+      <a href="#efficiency" id="stickyNavEff">Efficiency</a>
+      <a href="#vehiclecomp" id="stickyNavVehicle" style="display:none">Vehicles</a>
+      <a href="#map">Map</a>
+    </div>
+    <div id="stickyVehicleRow">
+      <span class="vf-sticky-label">Vehicle</span>
+    </div>
   </div>
 
   <div id="vehicleFilterBtns" style="display:none"></div>
@@ -753,12 +786,96 @@ permalink: /charging-analytics/
     </div>
   </div>
 
-  <!-- ─── existing hm-tip tooltip ─── -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!--  SECTION 11: REAL-WORLD EFFICIENCY                 -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div id="efficiencySection" style="display:none">
+    <div class="section-header" id="efficiency">
+      <h2>Real-World Efficiency</h2>
+      <span id="effSessionCount">from FordPass miles_added data</span>
+      <a href="#top" class="back-top-pill">↑ top</a>
+    </div>
+
+    <!-- KPI row -->
+    <div class="kpi-strip" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px" id="effKpiStrip">
+      <div class="kpi-card"><span class="kpi-label">Avg mi/kWh</span><span class="kpi-value" id="effAvgMiKwh">—</span></div>
+      <div class="kpi-card"><span class="kpi-label">Avg Wh/mi</span><span class="kpi-value" id="effAvgWhMi">—</span></div>
+      <div class="kpi-card"><span class="kpi-label">Best Session</span><span class="kpi-value" id="effBest">—</span></div>
+      <div class="kpi-card"><span class="kpi-label">Worst Session</span><span class="kpi-value" id="effWorst">—</span></div>
+    </div>
+
+    <!-- Trend + scatter -->
+    <div class="chart-full chart-card" style="margin-bottom:18px">
+      <p class="chart-title">Real Efficiency Over Time — mi/kWh per session</p>
+      <span class="chart-sub">Rolling 5-session average overlaid. Seasonal dips show winter range loss clearly.</span>
+      <div class="chart-wrap" style="height:260px"><canvas id="chartEffTrend"></canvas></div>
+    </div>
+
+    <div class="chart-grid-2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-title">Efficiency Distribution</p>
+        <span class="chart-sub">How often you hit each efficiency band (mi/kWh histogram)</span>
+        <div class="chart-wrap" style="height:230px"><canvas id="chartEffHist"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">Wh/mi Distribution</p>
+        <span class="chart-sub">Energy cost per mile — lower is better</span>
+        <div class="chart-wrap" style="height:230px"><canvas id="chartWhMiHist"></canvas></div>
+      </div>
+    </div>
+
+    <!-- By month + by location -->
+    <div class="chart-grid-2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-title">Avg Real Efficiency by Month</p>
+        <span class="chart-sub">Seasonal pattern — summer vs. winter delta</span>
+        <div class="chart-wrap" style="height:230px"><canvas id="chartEffByMonth"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">Avg Real Efficiency by Location</p>
+        <span class="chart-sub">DC fast charging vs. Level 2 vs. Home</span>
+        <div class="chart-wrap" style="height:230px"><canvas id="chartEffByLoc"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Miles added cumulative + vs assumed -->
+    <div class="chart-grid-2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-title">Cumulative Miles Added via Charging</p>
+        <span class="chart-sub">Running total of FordPass-reported miles added</span>
+        <div class="chart-wrap" style="height:230px"><canvas id="chartCumMiles"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">Real vs. Assumed Efficiency — Session by Session</p>
+        <span class="chart-sub">Real (FordPass) vs. rates.yml assumption — shows where assumption drifts</span>
+        <div class="chart-wrap" style="height:230px"><canvas id="chartEffVsAssumed"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Efficiency vs SOC start scatter -->
+    <div class="chart-grid-2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-title">Efficiency vs. SOC at Plug-in</p>
+        <span class="chart-sub">Does starting charge level affect efficiency?</span>
+        <div class="chart-wrap" style="height:240px"><canvas id="chartEffVsSoc"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">Efficiency vs. kWh Added</p>
+        <span class="chart-sub">Larger charges vs. smaller top-ups — any pattern?</span>
+        <div class="chart-wrap" style="height:240px"><canvas id="chartEffVsKwh"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Gas savings accuracy note -->
+    <div class="chart-card chart-full" style="margin-bottom:18px">
+      <p class="chart-title">Gas Savings: Real vs. Assumed Efficiency</p>
+      <span class="chart-sub">Cumulative savings calculated with real mi/kWh (where available) vs. always using the assumed rate — shows how much the assumption matters</span>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartSavingsRealVsAssumed"></canvas></div>
+      <p style="font-size:0.68rem;color:#888;margin-top:8px">† Sessions without miles_added data use the assumed rate from _data/rates.yml for both lines.</p>
+    </div>
+  <!-- ─── hm-tip tooltip (heatmap hover) ─── -->
   <div id="hm-tip" style="position:fixed;background:rgba(0,0,0,0.82);color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;pointer-events:none;display:none;z-index:9999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);"></div>
 
-  <!-- ═══════════════════════════════════════ -->
-  <!--  CHARGING LOCATIONS MAP                           -->
-  <!-- ═══════════════════════════════════════ -->
   <div class="section-header" id="map">
     <h2>Charging Locations Map</h2>
     <span>energy added at each location — circle size ∝ kWh</span>
@@ -790,7 +907,7 @@ permalink: /charging-analytics/
    RAW DATA FROM JEKYLL LIQUID
    ════════════════════════════════════════════════════════ */
 const sessions = [
-  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }} }{% unless forloop.last %},{% endunless %}
+  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }}, milesAdded: {{ entry.miles_added | default: 0 }} }{% unless forloop.last %},{% endunless %}
   {% endfor %}
 ];
 
@@ -909,7 +1026,16 @@ sessions.forEach(s => {
     const hRate = getStepRate(homeRates, s.date, 'rate', 0.196);
     s.cost      = loc.includes('home') ? s.kwh * hRate : s.rawCost;
     const gs    = getGasSavingsObj(s.date, s.vehicle) || { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
-    s.gasEquiv  = s.kwh * (gs.mi_per_kwh || 3.0) / (gs.mpg || 27) * (gs.gas_price || 3.26);
+
+    // Real efficiency from FordPass miles_added — more accurate than assumed mi/kWh
+    // Falls back to rates.yml assumption if miles_added not recorded
+    s.hasRealEff = s.milesAdded > 0 && s.kwh > 0;
+    s.realMiPerKwh = s.hasRealEff ? s.milesAdded / s.kwh : null;
+    s.realWhPerMi  = s.hasRealEff ? (s.kwh * 1000) / s.milesAdded : null;
+
+    // Use real efficiency for gas savings if available, otherwise fall back to assumed
+    const effMiPerKwh = s.hasRealEff ? s.realMiPerKwh : (gs.mi_per_kwh || 3.0);
+    s.gasEquiv  = s.kwh * effMiPerKwh / (gs.mpg || 27) * (gs.gas_price || 3.26);
     s.saving    = s.gasEquiv - s.cost;
     s.bucket    = getBucket(s.location);
     s.isFree    = s.cost < 0.005;
@@ -917,13 +1043,13 @@ sessions.forEach(s => {
     s.dow       = new Date(s.date + 'T12:00:00').getDay();
   } catch(e) {
     console.error('[EV] Session enrichment failed for', s.date, s.location, e);
-    // Set safe defaults so this session doesn't break the rest
     s.cost     = s.rawCost || 0;
     s.gasEquiv = 0; s.saving = 0;
     s.bucket   = getBucket(s.location || '');
     s.isFree   = s.cost < 0.005;
     s.month    = (s.date || '').substring(0, 7);
     s.dow      = 0;
+    s.hasRealEff = false; s.realMiPerKwh = null; s.realWhPerMi = null;
   }
 });
 
@@ -957,53 +1083,58 @@ function mkChart(id, config) {
    VEHICLE FILTER
    ════════════════════════════════════════════════════════ */
 function buildVehicleFilter() {
-  const el       = document.getElementById('vehicleFilterBtns');
-  const stickyEl = document.getElementById('vehicleFilterSticky');
+  const el        = document.getElementById('vehicleFilterBtns');
+  const stickyBar = document.getElementById('vehicleFilterSticky');
+  const stickyRow = document.getElementById('stickyVehicleRow');
   if (!el) return;
+
+  // Sticky bar always shows (has section nav regardless of vehicle count)
+  if (stickyBar) stickyBar.style.display = 'flex';
+
   if (allVehicles.length < 2) {
     el.style.display = 'none';
-    if (stickyEl) stickyEl.style.display = 'none';
-    return;
-  }
-
-  // Build inline buttons
-  el.style.display = 'flex';
-  el.innerHTML = '';
-  ['all', ...allVehicles].forEach(v => {
-    const btn = document.createElement('button');
-    btn.className = 'vf-btn' + (v === activeVehicle ? ' active' : '');
-    btn.textContent = v === 'all' ? 'All Vehicles' : v;
-    btn.dataset.vehicle = v;
-    btn.onclick = () => setVehicle(v);
-    el.appendChild(btn);
-  });
-
-  // Build sticky bar buttons (same set, different container)
-  if (stickyEl) {
-    stickyEl.style.display = 'flex';
-    // Remove old buttons but keep the label span
-    stickyEl.querySelectorAll('.vf-btn').forEach(b => b.remove());
+    // Hide only the vehicle row, keep nav row
+    if (stickyRow) stickyRow.style.display = 'none';
+  } else {
+    // Build inline vehicle buttons
+    el.style.display = 'flex';
+    el.innerHTML = '';
     ['all', ...allVehicles].forEach(v => {
       const btn = document.createElement('button');
       btn.className = 'vf-btn' + (v === activeVehicle ? ' active' : '');
       btn.textContent = v === 'all' ? 'All Vehicles' : v;
       btn.dataset.vehicle = v;
       btn.onclick = () => setVehicle(v);
-      stickyEl.appendChild(btn);
+      el.appendChild(btn);
     });
+
+    // Build sticky vehicle row buttons
+    if (stickyRow) {
+      stickyRow.style.display = 'flex';
+      stickyRow.querySelectorAll('.vf-btn').forEach(b => b.remove());
+      ['all', ...allVehicles].forEach(v => {
+        const btn = document.createElement('button');
+        btn.className = 'vf-btn' + (v === activeVehicle ? ' active' : '');
+        btn.textContent = v === 'all' ? 'All Vehicles' : v;
+        btn.dataset.vehicle = v;
+        btn.onclick = () => setVehicle(v);
+        stickyRow.appendChild(btn);
+      });
+    }
   }
 
-  // Show sticky bar only when scrolled past the inline filter
-  const observer = new IntersectionObserver(entries => {
-    const sticky = document.getElementById('vehicleFilterSticky');
-    if (!sticky) return;
-    if (entries[0].isIntersecting) {
-      sticky.classList.remove('visible'); // inline visible → hide sticky
-    } else {
-      sticky.classList.add('visible');    // inline scrolled away → show sticky
-    }
-  }, { threshold: 0, rootMargin: '-10px 0px 0px 0px' });
-  observer.observe(el);
+  // Show sticky bar when scrolled past the page header
+  const sentinel = document.getElementById('top');
+  if (sentinel && stickyBar) {
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        stickyBar.classList.remove('visible');
+      } else {
+        stickyBar.classList.add('visible');
+      }
+    }, { threshold: 0, rootMargin: '-60px 0px 0px 0px' });
+    observer.observe(sentinel);
+  }
 }
 
 function setVehicle(v) {
@@ -2723,7 +2854,360 @@ mkChart('chartHistogram', {
 
   })(sl);
 
-  // ── end section 10 ──
+  /* ════════════════════════════════════════
+     SECTION 11 — REAL-WORLD EFFICIENCY
+     Only sessions with milesAdded > 0
+  ════════════════════════════════════════ */
+  (function buildEfficiency(sl) {
+    const effSl = sl.filter(s => s.hasRealEff);
+    const section = document.getElementById('efficiencySection');
+    const navEl   = document.getElementById('navEfficiency');
+    const stickyNavEl = document.getElementById('stickyNavEff');
+
+    if (!effSl.length) {
+      if (section) section.style.display = 'none';
+      if (navEl)   navEl.style.display = 'none';
+      if (stickyNavEl) stickyNavEl.style.display = 'none';
+      return;
+    }
+    if (section) section.style.display = '';
+    if (navEl)   navEl.style.display = '';
+    if (stickyNavEl) stickyNavEl.style.display = '';
+
+    // Count label
+    const countEl = document.getElementById('effSessionCount');
+    if (countEl) countEl.textContent = `${effSl.length} of ${sl.length} sessions have FordPass miles data`;
+
+    // ── KPI values ──
+    const effValues = effSl.map(s => s.realMiPerKwh);
+    const avgMiKwh  = effValues.reduce((a,v) => a+v, 0) / effValues.length;
+    const avgWhMi   = 1000 / avgMiKwh;
+    const bestSess  = effSl.reduce((a,s) => s.realMiPerKwh > a.realMiPerKwh ? s : a, effSl[0]);
+    const worstSess = effSl.reduce((a,s) => s.realMiPerKwh < a.realMiPerKwh ? s : a, effSl[0]);
+
+    const setKpi = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setKpi('effAvgMiKwh', avgMiKwh.toFixed(2) + ' mi/kWh');
+    setKpi('effAvgWhMi',  Math.round(avgWhMi)  + ' Wh/mi');
+    setKpi('effBest',     bestSess.realMiPerKwh.toFixed(2)  + ' mi/kWh');
+    setKpi('effWorst',    worstSess.realMiPerKwh.toFixed(2) + ' mi/kWh');
+
+    // Sort by date for trend charts
+    const sorted = [...effSl].sort((a,b) => a.date.localeCompare(b.date));
+    const dates  = sorted.map(s => s.date);
+    const miKwhArr = sorted.map(s => +s.realMiPerKwh.toFixed(3));
+
+    // Rolling 5-session average
+    const rolling5 = miKwhArr.map((_, i) => {
+      const w = miKwhArr.slice(Math.max(0, i-4), i+1);
+      return +(w.reduce((a,v) => a+v, 0) / w.length).toFixed(3);
+    });
+
+    // ── 1. Efficiency trend + rolling avg ──
+    mkChart('chartEffTrend', {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: 'Session mi/kWh', data: miKwhArr,
+            borderColor: C_BLUE, backgroundColor: 'rgba(2,136,209,0.08)',
+            fill: true, pointRadius: 3, tension: 0.2, borderWidth: 1.5 },
+          { label: '5-session avg', data: rolling5,
+            borderColor: C_AMBER, borderWidth: 2.5, pointRadius: 0,
+            tension: 0.4, borderDash: [5,3] }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins: {
+          legend:{display:true,position:'top',labels:{color:tc(),boxWidth:12,padding:10}},
+          datalabels:{display:false},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} mi/kWh`}}
+        },
+        scales: {
+          x:{grid:{display:false},ticks:{color:tc(),maxTicksLimit:10,maxRotation:45}},
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},
+             title:{display:true,text:'mi/kWh',color:'#888'},beginAtZero:false}
+        }
+      }
+    });
+
+    // ── 2. mi/kWh histogram ──
+    const step = 0.25;
+    const minE = Math.floor(Math.min(...miKwhArr) / step) * step;
+    const maxE = Math.ceil( Math.max(...miKwhArr) / step) * step;
+    const numBins = Math.round((maxE - minE) / step);
+    const effBins = Array.from({length: numBins}, (_, i) => ({
+      label: (minE + i*step).toFixed(2) + '–' + (minE + (i+1)*step).toFixed(2),
+      count: 0
+    }));
+    miKwhArr.forEach(v => {
+      let idx = Math.floor((v - minE) / step);
+      if (idx < 0) idx = 0;
+      if (idx >= numBins) idx = numBins - 1;
+      effBins[idx].count++;
+    });
+    mkChart('chartEffHist', {
+      type: 'bar',
+      data: {
+        labels: effBins.map(b => b.label),
+        datasets: [{ data: effBins.map(b => b.count),
+          backgroundColor: effBins.map(b => {
+            const mid = parseFloat(b.label);
+            return mid >= 3.5 ? C_GREEN : mid >= 2.5 ? C_BLUE : mid >= 1.8 ? C_AMBER : C_RED;
+          }), borderRadius: 4 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false},datalabels:{display:false},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} sessions`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:tc(),font:{size:9},maxRotation:45}},
+          y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true,
+             title:{display:true,text:'Sessions',color:'#888'}}
+        }
+      }
+    });
+
+    // ── 3. Wh/mi histogram ──
+    const whMiArr = sorted.map(s => Math.round(s.realWhPerMi));
+    const wStep = 50;
+    const minW = Math.floor(Math.min(...whMiArr) / wStep) * wStep;
+    const maxW = Math.ceil( Math.max(...whMiArr) / wStep) * wStep;
+    const wBins = Math.round((maxW - minW) / wStep);
+    const whBins = Array.from({length: wBins}, (_, i) => ({
+      label: (minW + i*wStep) + '–' + (minW + (i+1)*wStep),
+      count: 0
+    }));
+    whMiArr.forEach(v => {
+      let idx = Math.floor((v - minW) / wStep);
+      if (idx < 0) idx = 0;
+      if (idx >= wBins) idx = wBins - 1;
+      whBins[idx].count++;
+    });
+    mkChart('chartWhMiHist', {
+      type: 'bar',
+      data: {
+        labels: whBins.map(b => b.label),
+        datasets: [{ data: whBins.map(b => b.count),
+          backgroundColor: whBins.map(b => {
+            const mid = parseInt(b.label);
+            return mid <= 250 ? C_GREEN : mid <= 350 ? C_BLUE : mid <= 450 ? C_AMBER : C_RED;
+          }), borderRadius: 4 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false},datalabels:{display:false},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} sessions`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:tc(),font:{size:9},maxRotation:45}},
+          y:{grid:{color:gc()},ticks:{color:tc()},beginAtZero:true,
+             title:{display:true,text:'Sessions',color:'#888'}}
+        }
+      }
+    });
+
+    // ── 4. Avg efficiency by month ──
+    const effMonths = [...new Set(effSl.map(s => s.month))].sort();
+    mkChart('chartEffByMonth', {
+      type: 'bar',
+      data: {
+        labels: effMonths.map(monthLabel),
+        datasets: [{
+          data: effMonths.map(m => {
+            const g = effSl.filter(s => s.month === m);
+            return g.length ? +(g.reduce((a,s)=>a+s.realMiPerKwh,0)/g.length).toFixed(3) : null;
+          }),
+          backgroundColor: effMonths.map(m => {
+            const mo = parseInt(m.slice(5));
+            return [12,1,2].includes(mo) ? C_BLUE :
+                   [3,4,5].includes(mo)  ? C_GREEN :
+                   [6,7,8].includes(mo)  ? C_AMBER : C_VIOLET;
+          }),
+          borderRadius: 5
+        }]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false},datalabels:{display:false},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y?.toFixed(2)} mi/kWh avg`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:tc()}},
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+             title:{display:true,text:'Avg mi/kWh',color:'#888'}}
+        }
+      }
+    });
+
+    // ── 5. Avg efficiency by location ──
+    const effBuckets = [...new Set(effSl.map(s => s.bucket))];
+    mkChart('chartEffByLoc', {
+      type: 'bar',
+      data: {
+        labels: effBuckets,
+        datasets: [{
+          data: effBuckets.map(b => {
+            const g = effSl.filter(s => s.bucket === b);
+            return g.length ? +(g.reduce((a,s)=>a+s.realMiPerKwh,0)/g.length).toFixed(3) : null;
+          }),
+          backgroundColor: effBuckets.map(b => BUCKET_COLORS[b] || '#888'),
+          borderRadius: 5
+        }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+        plugins:{legend:{display:false},datalabels:{display:false},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x?.toFixed(2)} mi/kWh avg`}}},
+        scales:{
+          x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+             title:{display:true,text:'Avg mi/kWh',color:'#888'}},
+          y:{grid:{display:false},ticks:{color:tc()}}
+        }
+      }
+    });
+
+    // ── 6. Cumulative miles added ──
+    let cumMi = 0;
+    const cumMiData = sorted.map(s => { cumMi += s.milesAdded; return +cumMi.toFixed(1); });
+    mkChart('chartCumMiles', {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [{
+          label: 'Cumulative miles',
+          data: cumMiData,
+          borderColor: C_GREEN,
+          backgroundColor: 'rgba(46,204,113,0.1)',
+          fill: true, pointRadius: 0, tension: 0.1, borderWidth: 2
+        }]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false},datalabels:{display:false},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y.toFixed(0)} mi cumulative`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:tc(),maxTicksLimit:8,maxRotation:45}},
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi'},beginAtZero:true,
+             title:{display:true,text:'Miles',color:'#888'}}
+        }
+      }
+    });
+
+    // ── 7. Real vs assumed efficiency per session ──
+    const assumedArr = sorted.map(s => {
+      const gs = getGasSavingsObj(s.date, s.vehicle);
+      return +(gs.mi_per_kwh || 3.0).toFixed(3);
+    });
+    mkChart('chartEffVsAssumed', {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: 'Real (FordPass)', data: miKwhArr,
+            borderColor: C_BLUE, backgroundColor: 'rgba(2,136,209,0.08)',
+            fill: true, pointRadius: 3, tension: 0.2, borderWidth: 1.5 },
+          { label: 'Assumed (rates.yml)', data: assumedArr,
+            borderColor: C_AMBER, borderWidth: 2, pointRadius: 0,
+            tension: 0, borderDash: [6,3] }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:tc(),boxWidth:12,padding:10}},
+          datalabels:{display:false},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} mi/kWh`}}
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tc(),maxTicksLimit:8,maxRotation:45}},
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+             title:{display:true,text:'mi/kWh',color:'#888'}}
+        }
+      }
+    });
+
+    // ── 8. Efficiency vs SOC at plug-in scatter ──
+    const socEffSl = effSl.filter(s => s.socStart > 0);
+    if (socEffSl.length) {
+      mkChart('chartEffVsSoc', {
+        type: 'scatter',
+        data: { datasets: [{
+          label: 'Sessions',
+          data: socEffSl.map(s => ({ x: s.socStart, y: +s.realMiPerKwh.toFixed(3) })),
+          backgroundColor: socEffSl.map(s => (BUCKET_COLORS[s.bucket] || '#888') + 'cc'),
+          pointRadius: 5, pointHoverRadius: 7
+        }] },
+        options: { responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false},datalabels:{display:false},
+            tooltip:{callbacks:{label:ctx=>` SOC ${ctx.parsed.x}% → ${ctx.parsed.y.toFixed(2)} mi/kWh`}}},
+          scales:{
+            x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+'%'},min:0,max:100,
+               title:{display:true,text:'SOC at Plug-in (%)',color:'#888'}},
+            y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+               title:{display:true,text:'Real mi/kWh',color:'#888'}}
+          }
+        }
+      });
+    }
+
+    // ── 9. Efficiency vs kWh added scatter ──
+    mkChart('chartEffVsKwh', {
+      type: 'scatter',
+      data: { datasets: [{
+        label: 'Sessions',
+        data: sorted.map(s => ({ x: s.kwh, y: +s.realMiPerKwh.toFixed(3) })),
+        backgroundColor: sorted.map(s => (BUCKET_COLORS[s.bucket] || '#888') + 'cc'),
+        pointRadius: 5, pointHoverRadius: 7
+      }] },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false},datalabels:{display:false},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x.toFixed(1)} kWh → ${ctx.parsed.y.toFixed(2)} mi/kWh`}}},
+        scales:{
+          x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' kWh'},beginAtZero:true,
+             title:{display:true,text:'kWh Added',color:'#888'}},
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' mi/kWh'},beginAtZero:false,
+             title:{display:true,text:'Real mi/kWh',color:'#888'}}
+        }
+      }
+    });
+
+    // ── 10. Gas savings: real vs assumed cumulative ──
+    let cumReal = 0, cumAssumed = 0;
+    const cumRealArr     = [];
+    const cumAssumedArr  = [];
+    sorted.forEach(s => {
+      const gs = getGasSavingsObj(s.date, s.vehicle);
+      const realEff     = s.hasRealEff ? s.realMiPerKwh : (gs.mi_per_kwh || 3.0);
+      const assumedEff  = gs.mi_per_kwh || 3.0;
+      const gasPrice    = gs.gas_price || 3.26;
+      const mpg         = gs.mpg || 27;
+      cumReal    += (s.kwh * realEff    / mpg * gasPrice) - s.cost;
+      cumAssumed += (s.kwh * assumedEff / mpg * gasPrice) - s.cost;
+      cumRealArr.push(+cumReal.toFixed(2));
+      cumAssumedArr.push(+cumAssumed.toFixed(2));
+    });
+    mkChart('chartSavingsRealVsAssumed', {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: 'Real efficiency', data: cumRealArr,
+            borderColor: C_GREEN, backgroundColor: 'rgba(46,204,113,0.1)',
+            fill: true, pointRadius: 0, tension: 0.2, borderWidth: 2.5 },
+          { label: 'Assumed rate', data: cumAssumedArr,
+            borderColor: C_AMBER, borderWidth: 2, pointRadius: 0,
+            tension: 0.2, borderDash: [6,3] }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:tc(),boxWidth:12,padding:10}},
+          datalabels:{display:false},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtUSD(ctx.parsed.y)} saved`}}
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tc(),maxTicksLimit:8,maxRotation:45}},
+          y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>'$'+v.toFixed(0)},
+             title:{display:true,text:'Cumulative Savings ($)',color:'#888'}}
+        }
+      }
+    });
+
+  })(sl);
+
+  // ── end section 11 ──
 
   buildLocationStats(sl);
 

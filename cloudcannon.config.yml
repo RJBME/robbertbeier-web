@@ -35,17 +35,17 @@ _inputs:
         - "Tesla, Battle Creek"
         - "Tesla, Stevensville, MI"
         - "Tesla, Des Plains, IL"
+        - "Tesla, The Arboretum, South Barrington, IL"
+        - "Tesla, South Livingston, Madison, WI"
         - "ChargePoint, Muskegon"
         - "ChargePoint, Clare, MI"
         - "ChargePoint, BP Gas Station, Grand Rapids, MI"
         - "ChargePoint, DIA, Detroit"
+        - "ChargePoint, UW Lot 46, Madison, WI"
         - "Rivian, Clare, MI"
         - "MGM Grand, Detroit, MI"
         - "Blink, BJ's Wholesale, Canton"
         - "Paul & Carol's, Beulah, MI"
-        - "Tesla, The Arboretum, South Barrington, IL"
-        - "Tesla, South Livingston, Madison, WI"
-        - "ChargePoint, UW Lot 46, Madison, WI"
   energy_kwh:
     type: number
     comment: "Energy added in kWh"
@@ -87,5 +87,9 @@ _inputs:
     type: number
     label: "SOC Added (%)"
     comment: "Total % added as reported by FordPass"
+  miles_added:
+    type: number
+    label: "Miles Added"
+    comment: "Miles added this session as reported by FordPass"
   notes:
     type: textarea
