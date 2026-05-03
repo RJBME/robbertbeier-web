@@ -795,13 +795,26 @@ function getStepRate(arr, date, field, fallback) {
   for (const r of arr) { if (r.date <= date) val = r[field]; }
   return (val !== undefined && val !== null) ? val : fallback;
 }
-function getGasSavingsObj(date) {
+// Per-vehicle MPG override for gas savings comparison.
+// Keys must exactly match vehicle field values in session files.
+// If a vehicle isn't listed here, the mpg from rates.yml is used.
+const VEHICLE_MPG = {
+  '2025 Mach-E GT':        27,
+  '2026 Mach-E SR':        27,
+  "LRB's 2025 Mach-E GT":  23,
+  "LRB's 2026 Mach-E SR":  23,
+};
+
+function getGasSavingsObj(date, vehicle) {
   if (!Array.isArray(gasSavingsRates) || !gasSavingsRates.length) {
     return { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
   }
-  let obj = gasSavingsRates[0];
-  // Walk the full array — do NOT break early
-  for (const r of gasSavingsRates) { if (r.date <= date) obj = r; }
+  let obj = { ...gasSavingsRates[0] };
+  for (const r of gasSavingsRates) { if (r.date <= date) obj = { ...r }; }
+  // Override mpg with per-vehicle value if defined
+  if (vehicle && VEHICLE_MPG[vehicle] !== undefined) {
+    obj = { ...obj, mpg: VEHICLE_MPG[vehicle] };
+  }
   return obj;
 }
 function getBucket(loc) {
@@ -865,7 +878,7 @@ sessions.forEach(s => {
     const loc   = s.location.toLowerCase();
     const hRate = getStepRate(homeRates, s.date, 'rate', 0.196);
     s.cost      = loc.includes('home') ? s.kwh * hRate : s.rawCost;
-    const gs    = getGasSavingsObj(s.date) || { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
+    const gs    = getGasSavingsObj(s.date, s.vehicle) || { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
     s.gasEquiv  = s.kwh * (gs.mi_per_kwh || 3.0) / (gs.mpg || 27) * (gs.gas_price || 3.26);
     s.saving    = s.gasEquiv - s.cost;
     s.bucket    = getBucket(s.location);
@@ -1109,9 +1122,9 @@ mkChart('chartMonthlyCostVsGas', {
             const m = allMonths[items[0].dataIndex];
             const saved = monthly[m].saving;
             const monthSess = sl.filter(s => s.month === m);
-            const gs = monthSess.length ? getGasSavingsObj(monthSess[monthSess.length - 1].date) : null;
+            const gs = monthSess.length ? getGasSavingsObj(monthSess[monthSess.length - 1].date, monthSess[monthSess.length - 1].vehicle) : null;
             const lines = [`Saved vs. gas: ${fmtUSD(saved)}`];
-            if (gs) lines.push(`Fuel rate used: $${gs.gas_price.toFixed(2)}/gal · ${gs.mpg} mpg · ${gs.mi_per_kwh} mi/kWh`);
+            if (gs) lines.push(`Fuel rate: $${gs.gas_price.toFixed(2)}/gal · ${gs.mpg} mpg (last session) · ${gs.mi_per_kwh} mi/kWh`);
             return lines;
           }
         }
@@ -1876,7 +1889,7 @@ mkChart('chartHistogram', {
   const cpmData = allMonths.map(m => {
     const monthSessions = sl.filter(s => s.month === m);
     if (!monthSessions.length) return 0;
-    const gs       = getGasSavingsObj(monthSessions[monthSessions.length-1].date);
+    const gs       = getGasSavingsObj(monthSessions[monthSessions.length-1].date, monthSessions[monthSessions.length-1].vehicle);
     const kwhTotal = monthly[m].kwh;
     const milesEst = kwhTotal * (gs.mi_per_kwh || 3.0);
     return milesEst > 0 ? +(monthly[m].cost / milesEst * 100).toFixed(2) : 0; // ¢/mile
@@ -2119,7 +2132,7 @@ mkChart('chartHistogram', {
       const kwh     = vs.reduce((a,s) => a + s.kwh, 0);
       const cost    = vs.reduce((a,s) => a + s.cost, 0);
       const saving  = vs.reduce((a,s) => a + s.saving, 0);
-      const gs      = vs.length ? getGasSavingsObj(vs[vs.length-1].date) : { mi_per_kwh: 3.0 };
+      const gs      = vs.length ? getGasSavingsObj(vs[vs.length-1].date, v) : { mi_per_kwh: 3.0 };
       const milesEst = kwh * (gs.mi_per_kwh || 3.0);
       vehStats[v] = { kwh, cost, saving, sessions: vs.length, milesEst,
         avgKwh: vs.length ? kwh / vs.length : 0,
@@ -2257,7 +2270,7 @@ mkChart('chartHistogram', {
           const data = allMonths.map(m => {
             const ms  = sl.filter(s => s.vehicle === v && s.month === m);
             if (!ms.length) return null;
-            const gs  = getGasSavingsObj(ms[ms.length-1].date);
+            const gs  = getGasSavingsObj(ms[ms.length-1].date, v);
             const kwh = ms.reduce((a,s) => a+s.kwh, 0);
             const mi  = kwh * (gs.mi_per_kwh || 3.0);
             return mi > 0 ? +(kwh / mi * 100).toFixed(2) : null; // kWh/100mi

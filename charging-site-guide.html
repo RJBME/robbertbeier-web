@@ -723,13 +723,13 @@
       <div class="slide-section-label">Gas Savings Calculation</div>
       <h2 class="slide-heading">Managing <span>gas savings</span> periods</h2>
 
-      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Gas savings use period-based rates from <span class="mono">_data/rates.yml</span> — each session is calculated with the rates that were current when it happened. Edit only that one file.</p>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Gas savings use period-based rates from <span class="mono">_data/rates.yml</span> — each session is calculated with the rates that were current when it happened. The <strong style="color:var(--text);">mpg field is your baseline</strong> (27 mpg). LRB's sessions automatically use 23 mpg via a per-vehicle override in the code — you don't need a separate rates.yml entry for this.</p>
 
       <div class="code-label">_data/rates.yml — the gas_savings section</div>
       <div class="code-block">
 <span class="key">gas_savings</span>:
   - <span class="key">date</span>: <span class="val">"2025-08-22"</span>
-    <span class="key">mpg</span>: <span class="val">27</span>
+    <span class="key">mpg</span>: <span class="val">27</span>     <span class="comment">← your baseline; LRB's sessions override to 23 in code</span>
     <span class="key">gas_price</span>: <span class="val">3.26</span>
     <span class="key">mi_per_kwh</span>: <span class="val">3.0</span>
   - <span class="key">date</span>: <span class="val">"2025-09-01"</span>    <span class="comment">← winter: lower efficiency</span>
@@ -740,8 +740,6 @@
     <span class="key">mpg</span>: <span class="val">27</span>
     <span class="key">gas_price</span>: <span class="val">4.24</span>
     <span class="key">mi_per_kwh</span>: <span class="val">3.0</span>
-<span class="val">"</span> <span class="pipe">| strip | split:</span> <span class="val">"</span>
-<span class="val">"</span> <span class="key">%}</span>
       </div>
 
       <div class="two-col" style="margin-top:14px;">
@@ -754,7 +752,7 @@
             </div>
             <div class="step">
               <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">→</div>
-              <div class="step-content"><h4>mpg</h4><p>MPG of the gas car you're comparing against. 27 = your previous car. 23 = US average sedan.</p></div>
+              <div class="step-content"><h4>mpg</h4><p>Your baseline MPG (27 = your previous car). LRB's sessions always use 23 mpg regardless — this is a per-vehicle override in <span class="mono">charging-dashboard.md</span> and <span class="mono">charging-analytics.md</span>. Don't change this field to 23.</p></div>
             </div>
             <div class="step">
               <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">→</div>
@@ -762,22 +760,42 @@
             </div>
             <div class="step">
               <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">→</div>
-              <div class="step-content"><h4>mi_per_kwh</h4><p>Mach-E GT real-world efficiency. ~3.0 summer, ~2.5 winter. Check FordPass for your rolling average.</p></div>
+              <div class="step-content"><h4>mi_per_kwh</h4><p>Real-world EV efficiency. ~3.0 summer, ~2.5 winter. Check FordPass for your rolling average. Applied to both vehicles.</p></div>
             </div>
           </div>
         </div>
         <div>
-          <div class="info-box tip">
+          <div class="info-box warn">
+            <strong>Per-vehicle MPG overrides (hardcoded)</strong><br>
+            These are set in the JS/Liquid code — do NOT try to manage them via rates.yml:<br><br>
+            <table style="font-size:0.75rem;width:100%;border-collapse:collapse">
+              <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">2025 Mach-E GT</td><td style="font-weight:700">27 mpg</td></tr>
+              <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">2026 Mach-E SR</td><td style="font-weight:700">27 mpg</td></tr>
+              <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">LRB's 2025 Mach-E GT</td><td style="font-weight:700">23 mpg</td></tr>
+              <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">LRB's 2026 Mach-E SR</td><td style="font-weight:700">23 mpg</td></tr>
+            </table>
+          </div>
+          <div class="info-box tip" style="margin-top:10px;">
             <strong>When to add a new period:</strong><br>
             • Gas price shifts more than ~$0.25/gal<br>
             • Seasonal efficiency change (Nov → Mar)<br>
-            • You want to update comparison MPG
+            • You want to update your baseline MPG
           </div>
           <div class="info-box green" style="margin-top:10px;">
             <strong>✓ The "see assumptions" link</strong><br>
-            On the live charging page, click "see assumptions ↕" under the green Gas Savings number to expand a table showing all periods from <span class="mono">_data/rates.yml</span>.
+            On the live charging page, click "see assumptions ↕" to expand a table showing all periods, the per-vehicle MPG overrides, and the usable battery capacity for each car.
           </div>
         </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <p style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;"><strong style="color:var(--text);">Usable Battery Capacity — also hardcoded per vehicle</strong></p>
+        <div class="three-col" style="gap:8px;">
+          <div class="stat-card"><div class="label">2025 Mach-E GT</div><div class="value" style="font-size:1rem;">91.7 kWh</div><div class="sub">NCM Extended Range</div></div>
+          <div class="stat-card"><div class="label">2026 Mach-E SR</div><div class="value" style="font-size:1rem;">72.6 kWh</div><div class="sub">LFP Standard Range</div></div>
+          <div class="stat-card"><div class="label">LRB's 2025 / 2026</div><div class="value" style="font-size:1rem;">91.7 / 72.6</div><div class="sub">GT=91.7 · SR=72.6</div></div>
+        </div>
+        <p style="font-size:0.7rem;color:var(--muted);margin-top:8px;">These values live in <span class="mono">VEHICLE_UBE</span> in <span class="mono">charging-analytics.md</span>. Used to estimate battery degradation over time in the Session Detail section.</p>
       </div>
     </div>
     <div class="slide-footer">
@@ -848,7 +866,7 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════
-       SLIDE 10 — FILE CLEANUP (Python Script)
+       SLIDE 8 — FILE CLEANUP (Python Script)
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
     <div class="slide-accent" style="background: linear-gradient(90deg, #CC0000, #FF7A14);"></div>
@@ -907,13 +925,13 @@ python3 fix_charging_files.py --rename
       </div>
     </div>
     <div class="slide-footer">
-      <span class="slide-footer-label">slide 10</span>
+      <span class="slide-footer-label">slide 08</span>
       <div class="slide-dot-nav" id="dots"></div>
     </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════════
-       SLIDE 11 — GIT WORKFLOW
+       SLIDE 9 — GIT WORKFLOW
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
     <div class="slide-accent" style="background: linear-gradient(90deg, #ffa500, #2ecc71);"></div>
@@ -971,13 +989,13 @@ git push
       </div>
     </div>
     <div class="slide-footer">
-      <span class="slide-footer-label">slide 11</span>
+      <span class="slide-footer-label">slide 09</span>
       <div class="slide-dot-nav" id="dots"></div>
     </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════════
-       SLIDE 12 — CLOUDCANNON CONFIG FILES
+       SLIDE 10 — CLOUDCANNON CONFIG FILES
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
     <div class="slide-accent" style="background: linear-gradient(90deg, #5D3FD3, #CC0000);"></div>
@@ -1036,13 +1054,13 @@ git push
       </div>
     </div>
     <div class="slide-footer">
-      <span class="slide-footer-label">slide 12</span>
+      <span class="slide-footer-label">slide 10</span>
       <div class="slide-dot-nav" id="dots"></div>
     </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════════
-       SLIDE 13 — QUICK REFERENCE CHEATSHEET
+       SLIDE 11 — QUICK REFERENCE CHEATSHEET
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
     <div class="slide-accent" style="background: linear-gradient(90deg, #2ecc71, #5D3FD3, #CC0000);"></div>
@@ -1058,8 +1076,7 @@ git push
             <div class="check-item"><span class="check-icon">🔌</span><span><strong>Update electricity rate:</strong> Add new entry to <span class="mono">_data/rates.yml</span> → <span class="mono">home_electricity:</span> section, commit</span></div>
             <div class="check-item"><span class="check-icon">⛽</span><span><strong>Update gas period:</strong> Add new entry to <span class="mono">_data/rates.yml</span> → <span class="mono">gas_savings:</span> section, commit</span></div>
             <div class="check-item"><span class="check-icon">🚗</span><span><strong>Update odometer:</strong> Change miles + date in odometer_entries in charging-dashboard.md</span></div>
-            <div class="check-item"><span class="check-icon">🔌</span><span><strong>Add vehicle:</strong> Add to <span class="mono">cloudcannon.config.yml</span> vehicle values + odometer table in <span class="mono">charging-dashboard.md</span> + schema default if needed (see slide 08)</span></div>
-            <div class="check-item"><span class="check-icon">📍</span><span><strong>Add location:</strong> Add to <span class="mono">cloudcannon.config.yml</span> location values + <span class="mono">.cloudcannon/schemas/charging.md</span> + add entry with lat/lng to <span class="mono">_data/locations.yml</span></span></div>
+            <div class="check-item"><span class="check-icon">📍</span><span><strong>Add location:</strong> Edit <span class="mono">.cloudcannon/schemas/charging.md</span> values list, commit</span></div>
             <div class="check-item"><span class="check-icon">🧹</span><span><strong>Cleanup files:</strong> <span class="mono">python3 fix_charging_files.py</span> then commit</span></div>
           </div>
         </div>
@@ -1068,24 +1085,23 @@ git push
           <div class="checklist">
             <div class="check-item"><span class="check-icon">📁</span><span><span class="mono">_charging/*.md</span> — one file per charging session</span></div>
             <div class="check-item"><span class="check-icon">📊</span><span><span class="mono">_data/rates.yml</span> — ALL electricity rates &amp; gas savings assumptions</span></div>
-            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-analytics.md</span> — /charging-analytics/ EV Analytics page (17 charts, map, vehicle filter)</span></div>
-            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-dashboard.md</span> — main /charging/ page (odometer config here)</span></div>
-            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-history.md</span> — /charging-history/ full filterable session table</span></div>
-            <div class="check-item"><span class="check-icon">⚙️</span><span><span class="mono">cloudcannon.config.yml</span> — CloudCannon UI settings (vehicle + location dropdowns)</span></div>
-            <div class="check-item"><span class="check-icon">🗂</span><span><span class="mono">.cloudcannon/schemas/charging.md</span> — new session template (location list + default vehicle)</span></div>
-            <div class="check-item"><span class="check-icon">📍</span><span><span class="mono">_data/locations.yml</span> — lat/lng coordinates for the analytics map (one entry per location)</span></div>
+            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-dashboard.md</span> — main /charging/ page (odometer config only)</span></div>
+            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-history.md</span> — /charging-history/ full table page</span></div>
+            <div class="check-item"><span class="check-icon">⚙️</span><span><span class="mono">cloudcannon.config.yml</span> — CloudCannon UI settings</span></div>
+            <div class="check-item"><span class="check-icon">🗂</span><span><span class="mono">.cloudcannon/schemas/charging.md</span> — new session template</span></div>
             <div class="check-item"><span class="check-icon">⚙️</span><span><span class="mono">_config.yml</span> — Jekyll site settings only</span></div>
+            <div class="check-item"><span class="check-icon">🐍</span><span><span class="mono">fix_charging_files.py</span> — cleanup/rename script</span></div>
           </div>
 
-          <div class="info-box tip" style="margin-top:14px;">
-            <strong>💡 Sticky navigation &amp; mobile</strong><br>
-            On desktop and iPad (≥768 px) the nav stays fixed at the top while scrolling. On iPhone it collapses to a hamburger (≡) that slides in from the right. iPad always shows the desktop nav.
+          <div class="info-box green" style="margin-top:14px;">
+            <strong>✓ Node.js update reminder</strong><br>
+            Before June 2026 — update GitHub Actions workflow to use <span class="mono">actions/checkout@v4.2.2</span> and <span class="mono">actions/upload-artifact@v4.6.0</span> to avoid build warnings.
           </div>
         </div>
       </div>
     </div>
     <div class="slide-footer">
-      <span class="slide-footer-label">slide 13</span>
+      <span class="slide-footer-label">slide 11</span>
       <div class="slide-dot-nav" id="dots"></div>
     </div>
   </div>
