@@ -18,9 +18,9 @@ The --rename option:
 
 VEHICLE SLUG MAP (edit if you add new vehicles):
   "2025 Mach-E GT"        -> rjb-gt
-  "2026 Mach-E GT"        -> rjb-gt
+  "2026 Mach-E SR"        -> rjb-gt
   "LRB's 2025 Mach-E GT"  -> lrb-gt
-  "LRB's 2026 Mach-E GT"  -> lrb-gt
+  "LRB's 2026 Mach-E SR"  -> lrb-gt
 """
 
 import os
@@ -54,9 +54,9 @@ DETAIL_DEFAULTS = {
 # Vehicle name -> filename slug
 VEHICLE_SLUGS = {
     "2025 Mach-E GT":        "rjb-gt",
-    "2026 Mach-E GT":        "rjb-gt",
+    "2026 Mach-E SR":        "rjb-sr",
     "LRB's 2025 Mach-E GT":  "lrb-gt",
-    "LRB's 2026 Mach-E GT":  "lrb-gt",
+    "LRB's 2026 Mach-E SR":  "lrb-sr",
 }
 
 def vehicle_slug(name):

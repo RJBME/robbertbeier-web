@@ -769,9 +769,9 @@ const sessions = [
 // SR LFP (2026): 72.6 kWh usable
 const VEHICLE_UBE = {
   '2025 Mach-E GT':        91.7,
-  '2026 Mach-E GT':        91.7,
+  '2026 Mach-E SR':        72.6,
   "LRB's 2025 Mach-E GT":  91.7,
-  "LRB's 2026 Mach-E GT":  72.6
+  "LRB's 2026 Mach-E SR":  72.6
 };
 
 const homeRates       = {{ site.data.rates.home_electricity | jsonify }};
@@ -2504,8 +2504,8 @@ mkChart('chartHistogram', {
       // ── Battery health (UBE estimate) ──
       const ubeSessions = socSessions.filter(s => s.socAdded >= 5); // filter tiny charges — too noisy
       if (ubeSessions.length) {
-        const vehColors = {'2025 Mach-E GT':C_BLUE,'2026 Mach-E GT':C_BLUE,
-                          "LRB's 2025 Mach-E GT":C_PURPLE,"LRB's 2026 Mach-E GT":C_PURPLE};
+        const vehColors = {'2025 Mach-E GT':C_BLUE,'2026 Mach-E SR':C_BLUE,
+                          "LRB's 2025 Mach-E GT":C_PURPLE,"LRB's 2026 Mach-E SR":C_PURPLE};
         const ubeByVeh = {};
         ubeSessions.forEach(s => {
           if (!ubeByVeh[s.vehicle]) ubeByVeh[s.vehicle] = [];

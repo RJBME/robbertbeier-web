@@ -51,9 +51,9 @@ _inputs:
     options:
       values:
         - "2025 Mach-E GT"
-        - "2026 Mach-E GT"
+        - "2026 Mach-E SR"
         - "LRB's 2025 Mach-E GT"
-        - "LRB's 2026 Mach-E GT"
+        - "LRB's 2026 Mach-E SR"
   cost:
     type: number
     comment: "Total cost in USD. Enter 0 for free sessions (Work, free public). Home cost is calculated automatically."
