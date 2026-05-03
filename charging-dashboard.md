@@ -100,6 +100,14 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
 {% assign blink_kwh   = 0.0 %}
 {% assign rivian_kwh  = 0.0 %}
 {% assign other_kwh   = 0.0 %}
+{% assign veh_cost_0  = 0.0 %}
+{% assign veh_kwh_0   = 0.0 %}
+{% assign veh_cost_1  = 0.0 %}
+{% assign veh_kwh_1   = 0.0 %}
+{% assign veh_cost_2  = 0.0 %}
+{% assign veh_kwh_2   = 0.0 %}
+{% assign veh_cost_3  = 0.0 %}
+{% assign veh_kwh_3   = 0.0 %}
 
 {% for entry in site.charging %}
   {% assign k          = entry.energy_kwh | times: 1.0 %}
@@ -163,11 +171,13 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
   {% assign gas_savings    = gas_savings | plus: session_saving %}
 
   {% comment %} ── Per-vehicle cost/kWh accumulation ── {% endcomment %}
+  {% assign veh_clean = veh | strip | downcase %}
   {% for odo in odometer_entries %}
     {% assign op          = odo | strip | split: " | " %}
     {% assign odo_vehicle = op[0] | strip %}
     {% assign odo_date    = op[2] | strip %}
-    {% if veh == odo_vehicle and entry_date <= odo_date %}
+    {% assign odo_vehicle_clean = odo_vehicle | strip | downcase %}
+    {% if veh_clean == odo_vehicle_clean and entry_date <= odo_date %}
       {% assign odo_idx = forloop.index0 %}
       {% case odo_idx %}
         {% when 0 %}
@@ -189,15 +199,6 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
 {% endfor %}
 
 {% assign gas_savings = gas_savings | round: 0 %}
-
-{% unless veh_cost_0 %}{% assign veh_cost_0 = 0.0 %}{% endunless %}
-{% unless veh_kwh_0  %}{% assign veh_kwh_0  = 0.0 %}{% endunless %}
-{% unless veh_cost_1 %}{% assign veh_cost_1 = 0.0 %}{% endunless %}
-{% unless veh_kwh_1  %}{% assign veh_kwh_1  = 0.0 %}{% endunless %}
-{% unless veh_cost_2 %}{% assign veh_cost_2 = 0.0 %}{% endunless %}
-{% unless veh_kwh_2  %}{% assign veh_kwh_2  = 0.0 %}{% endunless %}
-{% unless veh_cost_3 %}{% assign veh_cost_3 = 0.0 %}{% endunless %}
-{% unless veh_kwh_3  %}{% assign veh_kwh_3  = 0.0 %}{% endunless %}
 
 <div class="dash-container">
 
