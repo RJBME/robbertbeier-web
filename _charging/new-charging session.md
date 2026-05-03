@@ -1,0 +1,16 @@
+---
+_schema: default
+date: 2026-03-29T00:00:00-04:00
+location: Tesla, Menomonie, WI
+vehicle: LRB's 2025 Mach-E GT
+energy_kwh: 24.297
+cost: 8.74
+start_date: 2026-03-29T00:00:00-04:00
+start_time: '18:16'
+end_time: '18:28'
+soc_start: 31
+soc_end: 57
+soc_added: 26
+miles_added: 62
+notes: $0.36/kWh
+---
