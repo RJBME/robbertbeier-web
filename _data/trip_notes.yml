@@ -1,0 +1,187 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  _data/trip_notes.yml  —  Road Trip Annotations
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#  The analytics page auto-detects road trips from your charging session data.
+#  Use this file to add destination info, itinerary, and notes to each trip.
+#
+#  HOW TO FIND A TRIP'S KEY:
+#    Each trip is keyed by the date of its FIRST charging session (YYYY-MM-DD).
+#    Look at the Road Trips section — the date range on each card starts with
+#    the key date. If two trips start on the same date, append -2, -3, etc.
+#
+#  FIELDS:
+#    key            REQUIRED. First session date: "YYYY-MM-DD"
+#    destination    Short headline name for the trip.
+#    arrive         Date you arrived at the final destination (YYYY-MM-DD).
+#    depart         Date you departed the final destination (YYYY-MM-DD).
+#    dest_lat       Decimal latitude of actual final destination.
+#    dest_lng       Decimal longitude of actual final destination.
+#    description    One-sentence summary shown on the card.
+#    notes          Free-form notes (passengers, weather, etc.)
+#    blog_tag       Future use — tag slug for blog posts about this trip.
+#                   e.g. "chicago-2026" will eventually link to /blog/tag/chicago-2026/
+#    itinerary      Optional chronological list of stops.
+#                   Each entry: date (YYYY-MM-DD), place, note.
+#
+#  HOW TO GET COORDINATES:
+#    Right-click any location in Google Maps -> "What's here?" -> copy lat/lng.
+#
+#  ADD A NEW ENTRY: Copy the TEMPLATE block at the bottom, fill in, commit.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+- key: "2025-09-26"
+  destination: "Visiting Paul & Carol"
+  arrive: ""
+  depart: ""
+  dest_lat: 43.3614
+  dest_lng: -86.1553
+  description: "Trip north to stay with friends."
+  notes: ""
+  blog_tag: ""
+  itinerary:
+    - date: "2025-09-26"
+      place: "ChargePoint, Clare MI"
+      note: "Northbound stop"
+    - date: "2025-09-26"
+      place: "Paul & Carol's, Beulah MI"
+      note: "Destination area charge"
+    - date: "2025-09-28"
+      place: "Rivian, Clare MI"
+      note: "Southbound stop"
+
+- key: "2025-10-29"
+  destination: "Work Trip""
+  arrive: ""
+  depart: ""
+  dest_lat: 40.9028
+  dest_lng: -81.4448
+  description: "Three Tesla Supercharger stops along the Ohio Turnpike."
+  notes: "First Ohio road trip in the GT."
+  blog_tag: ""
+  itinerary:
+    - date: "2025-10-29"
+      place: "Tesla, Wyondot Plaza, Genoa OH"
+      note: ""
+    - date: "2025-10-29"
+      place: "Tesla, North Canton OH"
+      note: ""
+    - date: "2025-10-29"
+      place: "Tesla, Blue Heron Service Plaza, Genoa OH"
+      note: "Return stop"
+
+- key: "2025-11-15"
+  destination: "Battle Creek, MI"
+  arrive: ""
+  depart: ""
+  dest_lat:
+  dest_lng:
+  description: "Single Tesla Supercharger stop in Battle Creek."
+  notes: ""
+  blog_tag: ""
+  itinerary: []
+
+- key: "2025-12-12"
+  destination: ""
+  arrive: ""
+  depart: ""
+  dest_lat:
+  dest_lng:
+  description: "ChargePoint Muskegon + Tesla Lansing stops."
+  notes: ""
+  blog_tag: ""
+  itinerary: []
+
+- key: "2026-02-21"
+  destination: "West Michigan Fencing Classic, Grand Rapids MI"
+  arrive: "2026-02-21"
+  depart: "2026-02-21"
+  dest_lat: 43.027897
+  dest_lng: -85.628486
+  description: "Fencing competition at WMFA. ChargePoint Grand Rapids + Tesla Lansing on the return."
+  notes: "Day trip."
+  blog_tag: ""
+  itinerary:
+    - date: "2026-02-21"
+      place: "WMFA — West Michigan Fencing Academy"
+      note: "Competition"
+    - date: "2026-02-21"
+      place: "ChargePoint, BP Gas Station, Grand Rapids MI"
+      note: "Return charge 1"
+    - date: "2026-02-21"
+      place: "Tesla, Lansing"
+      note: "Return charge 2"
+
+- key: "2026-03-28"
+  destination: "Mall of America, Bloomington MN"
+  arrive: "2026-03-29"
+  depart: "2026-03-31"
+  dest_lat: 44.8554
+  dest_lng: -93.2422
+  description: "Mall of America weekend — Madison WI overnight stop outbound, Madison + Chicago return."
+  notes: "Hampton Inn Madison (Mar 28-29). Hilton Garden Inn Bloomington (Mar 29-31). Hilton Magnificent Mile Chicago (Mar 31-Apr 3) on return."
+  blog_tag: "moa-2026"
+  itinerary:
+    - date: "2026-03-28"
+      place: "Tesla, Stevensville MI"
+      note: "Outbound charge"
+    - date: "2026-03-28"
+      place: "Hampton Inn & Suites Madison / Downtown"
+      note: "Overnight stop — Madison WI"
+    - date: "2026-03-29"
+      place: "ChargePoint, UW Lot 46, Madison WI"
+      note: "Morning charge before heading north"
+    - date: "2026-03-29"
+      place: "Mall of America, Bloomington MN"
+      note: "Arrived Saturday — Hilton Garden Inn (2 nights)"
+    - date: "2026-03-31"
+      place: "Tesla, South Livingston, Madison WI"
+      note: "Southbound return charge"
+    - date: "2026-03-31"
+      place: "Hilton Chicago / Magnificent Mile Suites"
+      note: "Chicago stop — Apr 3 departure"
+
+- key: "2026-04-11"
+  destination: "Chicago Fencing — Palatine/Arlington Heights IL"
+  arrive: "2026-04-11"
+  depart: "2026-04-12"
+  dest_lat: 42.1103
+  dest_lng: -87.9870
+  description: "Fencing Masterclass — Palatine Saturday night, Chicago Fencing Center Sunday before returning home."
+  notes: ""
+  blog_tag: "chicago-fencing-2026"
+  itinerary:
+    - date: "2026-04-11"
+      place: "Tesla, Lansing"
+      note: "Outbound charge"
+    - date: "2026-04-11"
+      place: "Tesla, Stevensville MI"
+      note: "Outbound charge"
+    - date: "2026-04-11"
+      place: "Spark Hotel, Palatine / Arlington Heights IL"
+      note: "Saturday overnight"
+    - date: "2026-04-12"
+      place: "Tesla, Des Plaines IL"
+      note: "Arrival area charge"
+    - date: "2026-04-12"
+      place: "Chicago Fencing Center"
+      note: "Sunday competition before returning home"
+    - date: "2026-04-12"
+      place: "Tesla, Battle Creek"
+      note: "Return charge"
+
+# ── TEMPLATE — copy this block for new trips ──────────────────────────────
+# - key: "YYYY-MM-DD"
+#   destination: ""
+#   arrive: ""
+#   depart: ""
+#   dest_lat:
+#   dest_lng:
+#   description: ""
+#   notes: ""
+#   blog_tag: ""
+#   itinerary:
+#     - date: "YYYY-MM-DD"
+#       place: ""
+#       note: ""

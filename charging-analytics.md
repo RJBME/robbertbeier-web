@@ -182,14 +182,6 @@ permalink: /charging-analytics/
     align-self: center;
   }
   .back-top-pill:hover { color: var(--link); border-color: var(--link); }
-  .open-tab-btn {
-    font-size: 0.65rem; font-weight: 600; color: #888;
-    text-decoration: none; padding: 3px 9px;
-    border: 1px solid var(--dash-border); border-radius: 20px;
-    transition: all 0.15s; white-space: nowrap; cursor: pointer;
-    background: transparent; align-self: center;
-  }
-  .open-tab-btn:hover { border-color: var(--link); color: var(--link); }
 
   /* ── Responsive ── */
   @media (max-width: 767px) {
@@ -940,7 +932,8 @@ const VEHICLE_UBE = {
 
 const homeRates       = {{ site.data.rates.home_electricity | jsonify }};
 const gasSavingsRates = {{ site.data.rates.gas_savings       | jsonify }};
-const locationData    = {{ site.data.locations | jsonify }} || [];
+const locationData    = {{ site.data.locations  | jsonify }} || [];
+const tripNotes       = {{ site.data.trip_notes | jsonify }} || [];
 
 /* ── Location table state — declared here so nothing runs before these exist ── */
 let _locSortCol = 'name', _locSortDir = 'asc', _locView = 'location', _locSl = [];
@@ -1045,9 +1038,10 @@ sessions.forEach(s => {
     const gs    = getGasSavingsObj(s.date, s.vehicle) || { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
 
     // Real efficiency from FordPass miles_added — more accurate than assumed mi/kWh
-    // Falls back to rates.yml assumption if miles_added not recorded
-    s.hasRealEff = s.milesAdded > 0 && s.kwh > 0;
-    s.realMiPerKwh = s.hasRealEff ? s.milesAdded / s.kwh : null;
+    // Filter out physical impossibilities: <1.0 or >5.0 mi/kWh are outliers
+    const rawMiPerKwh = s.milesAdded > 0 && s.kwh > 0 ? s.milesAdded / s.kwh : null;
+    s.hasRealEff   = rawMiPerKwh !== null && rawMiPerKwh >= 1.0 && rawMiPerKwh <= 5.0;
+    s.realMiPerKwh = s.hasRealEff ? rawMiPerKwh : null;
     s.realWhPerMi  = s.hasRealEff ? (s.kwh * 1000) / s.milesAdded : null;
 
     // Use real efficiency for gas savings if available, otherwise fall back to assumed
@@ -2204,9 +2198,9 @@ mkChart('chartHistogram', {
     const container = document.getElementById('roadTripContainer');
     if (!container) return;
 
-    // ── Haversine distance in miles between two lat/lng points ──
+    // ── Haversine distance in miles ──
     function haversineMiles(lat1, lng1, lat2, lng2) {
-      const R  = 3958.8; // Earth radius in miles
+      const R  = 3958.8;
       const dL = (lat2 - lat1) * Math.PI / 180;
       const dG = (lng2 - lng1) * Math.PI / 180;
       const a  = Math.sin(dL/2)**2
@@ -2216,26 +2210,98 @@ mkChart('chartHistogram', {
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // Home coordinates from _data/locations.yml (first Home entry)
     const homeLoc = (locationData || []).find(l => l.location === 'Home');
     const homeLat = homeLoc?.lat || 42.3714;
     const homeLng = homeLoc?.lng || -83.4702;
-    const TRIP_RADIUS_MI = 50; // sessions closer than this aren't "road trips"
-    const TRIP_WINDOW_DAYS = 5; // sessions within this many days cluster into one trip
+    const TRIP_RADIUS_MI  = 50;
+    const TRIP_WINDOW_DAYS = 5;
+    const DCFC_KW_THRESHOLD = 25; // avg kW threshold to classify as DCFC en-route
+    const DCFC_NETWORKS = ['Tesla SC', 'ChargePoint', 'Rivian', 'Blink'];
+    const GAS_STOP_MIN  = 6; // minutes per gas fill-up (midpoint 5–7 min)
 
-    // Build a fast distance lookup: location name → miles from home
+    // Per-vehicle gas car comparison specs
+    // key: substring to match vehicle name — LRB = Explorer, else = Escape
+    const GAS_SPECS = {
+      lrb: { name: '2023 Explorer AWD', mpg: 23, tank: 17.9 },
+      rjb: { name: '2023 Escape AWD',   mpg: 27, tank: 15.7 }
+    };
+    function gasSpecForVehicle(vehicleName) {
+      return (vehicleName || '').includes('LRB') ? GAS_SPECS.lrb : GAS_SPECS.rjb;
+    }
+
+    // Distance lookup cache: location name → miles from home
     const distCache = {};
     function distFromHome(locationName) {
       if (distCache[locationName] !== undefined) return distCache[locationName];
       const entry = (locationData || []).find(l => l.location === locationName);
-      if (!entry || !entry.lat || !entry.lng) {
-        // Unknown coords — include by default (don't accidentally hide real trips)
-        return distCache[locationName] = 999;
-      }
+      if (!entry || !entry.lat || !entry.lng) return distCache[locationName] = 999;
       return distCache[locationName] = haversineMiles(homeLat, homeLng, entry.lat, entry.lng);
     }
 
-    // Public sessions = not Home and not Work, AND >50 miles from home
+    // Location coords lookup
+    function locCoords(locationName) {
+      const entry = (locationData || []).find(l => l.location === locationName);
+      return (entry && entry.lat && entry.lng) ? { lat: entry.lat, lng: entry.lng } : null;
+    }
+
+    // Trip annotation lookup from _data/trip_notes.yml
+    function tripNote(firstDate) {
+      return (tripNotes || []).find(n => n.key === firstDate) || null;
+    }
+
+    // Determine if a session is likely DCFC en-route (not destination/overnight)
+    function isDCFC(s) {
+      const isDCFCNetwork = DCFC_NETWORKS.some(n =>
+        (s.bucket || '').toLowerCase().includes(n.toLowerCase()) ||
+        s.bucket === 'Tesla SC'
+      );
+      // If we have timing data, use avg kW
+      if (s.startTime && s.endTime && s.startDate) {
+        const st = new Date(s.startDate + 'T' + s.startTime + ':00');
+        const en = new Date(s.date      + 'T' + s.endTime   + ':00');
+        let hrs  = (en - st) / 3600000;
+        if (hrs < 0) hrs += 24; // overnight wrap
+        if (hrs > 0 && hrs < 24) {
+          const avgKw = s.kwh / hrs;
+          return avgKw >= DCFC_KW_THRESHOLD;
+        }
+      }
+      // Fallback: DCFC network + substantial charge = likely en-route
+      return isDCFCNetwork && s.kwh >= 20;
+    }
+
+    // Charge duration in minutes for a DCFC session
+    function chargeMinutes(s) {
+      if (s.startTime && s.endTime && s.startDate) {
+        const st = new Date(s.startDate + 'T' + s.startTime + ':00');
+        const en = new Date(s.date      + 'T' + s.endTime   + ':00');
+        let hrs = (en - st) / 3600000;
+        if (hrs < 0) hrs += 24;
+        if (hrs > 0 && hrs < 24) return Math.round(hrs * 60);
+      }
+      // Estimate from kWh if no timing: assume 150 kW average for Tesla SC
+      if (s.bucket === 'Tesla SC') return Math.round(s.kwh / 150 * 60);
+      return null; // unknown
+    }
+
+    // Estimate trip distance from sequential stop coordinates
+    // If trip note has dest_lat/dest_lng, insert destination after last charger
+    function estimateTripMiles(locs, note) {
+      const points = [{ lat: homeLat, lng: homeLng }];
+      locs.forEach(l => { const c = locCoords(l); if (c) points.push(c); });
+      // Insert actual destination if provided
+      if (note && note.dest_lat && note.dest_lng) {
+        points.push({ lat: parseFloat(note.dest_lat), lng: parseFloat(note.dest_lng) });
+      }
+      points.push({ lat: homeLat, lng: homeLng });
+      let total = 0;
+      for (let i = 1; i < points.length; i++) {
+        total += haversineMiles(points[i-1].lat, points[i-1].lng, points[i].lat, points[i].lng);
+      }
+      return Math.round(total);
+    }
+
+    // Filter sessions: public, >50mi from home
     const pubSessions = sl
       .filter(s => s.bucket !== 'Home' && s.bucket !== 'Work')
       .filter(s => distFromHome(s.location) >= TRIP_RADIUS_MI)
@@ -2246,75 +2312,159 @@ mkChart('chartHistogram', {
       return;
     }
 
-    // Group sessions within TRIP_WINDOW_DAYS of each other into one trip
+    // Cluster into trips
     const trips = [];
-    let currentTrip = [pubSessions[0]];
+    let cur = [pubSessions[0]];
     for (let i = 1; i < pubSessions.length; i++) {
-      const prev    = new Date(pubSessions[i-1].date + 'T12:00:00');
-      const curr    = new Date(pubSessions[i].date   + 'T12:00:00');
-      const diffDays = (curr - prev) / 86400000;
-      if (diffDays <= TRIP_WINDOW_DAYS) {
-        currentTrip.push(pubSessions[i]);
-      } else {
-        trips.push(currentTrip);
-        currentTrip = [pubSessions[i]];
-      }
+      const diffDays = (new Date(pubSessions[i].date + 'T12:00:00') - new Date(pubSessions[i-1].date + 'T12:00:00')) / 86400000;
+      if (diffDays <= TRIP_WINDOW_DAYS) { cur.push(pubSessions[i]); }
+      else { trips.push(cur); cur = [pubSessions[i]]; }
     }
-    trips.push(currentTrip);
+    trips.push(cur);
 
-    // Build trip cards HTML — most recent first
+    // Build cards — most recent first
     const tripHTML = trips.slice().reverse().map((trip, ti, arr) => {
-      const tripNum   = arr.length - ti; // descending number so Trip 9 stays Trip 9
-      const kwh       = trip.reduce((a,s) => a + s.kwh, 0);
-      const cost      = trip.reduce((a,s) => a + s.cost, 0);
-      const saving    = trip.reduce((a,s) => a + s.saving, 0);
-      const locs      = [...new Set(trip.map(s => s.location))];
-      const dateRange = trip.length === 1
-        ? trip[0].date
-        : trip[0].date + ' – ' + trip[trip.length-1].date;
-      const isFree    = cost < 0.01;
-      const savingColor = saving < 0 ? '#e74c3c' : '#2ecc71'; // red if electricity cost more than gas
+      const tripNum    = arr.length - ti;
+      const firstDate  = trip[0].date;
+      const kwh        = trip.reduce((a,s) => a + s.kwh, 0);
+      const cost       = trip.reduce((a,s) => a + s.cost, 0);
+      const saving     = trip.reduce((a,s) => a + s.saving, 0);
+      const locs       = [...new Set(trip.map(s => s.location))];
+      const dateRange  = trip.length === 1 ? firstDate : firstDate + ' – ' + trip[trip.length-1].date;
+      const isFree     = cost < 0.01;
+      const savingColor = saving < 0 ? C_RED : C_GREEN;
 
-      // Furthest stop distance for a fun stat
-      const maxDist = Math.round(Math.max(...locs.map(l => distFromHome(l))));
-      const distLabel = maxDist < 999 ? maxDist + ' mi from home' : '';
+      // Trip annotation
+      const note = tripNote(firstDate);
 
-      return `<div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:12px;padding:16px 20px;margin-bottom:12px;transition:box-shadow 0.2s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow=''">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
-          <div style="flex:1;min-width:200px">
-            <div style="font-weight:700;font-size:0.92rem;display:flex;align-items:center;gap:8px">
-              🚗 Trip ${tripNum}
-              <span style="color:#888;font-weight:400;font-size:0.78rem">${dateRange}</span>
-              ${distLabel ? `<span style="font-size:0.68rem;background:var(--dash-border);padding:2px 8px;border-radius:10px;color:#888">${distLabel}</span>` : ''}
+      // Distance stats
+      const maxDist    = Math.round(Math.max(...locs.map(l => distFromHome(l))));
+      const distLabel  = maxDist < 999 ? maxDist + ' mi from home' : '';
+      const estMiles   = estimateTripMiles(locs, note);
+
+      // Vehicle attribution (most common vehicle in trip)
+      const vehCounts = {};
+      trip.forEach(s => { vehCounts[s.vehicle] = (vehCounts[s.vehicle] || 0) + 1; });
+      const tripVehicle = Object.entries(vehCounts).sort((a,b) => b[1]-a[1])[0][0];
+      const spec = gasSpecForVehicle(tripVehicle);
+      const isLRB = (tripVehicle || '').includes('LRB');
+
+      // DCFC sessions only — for charge time
+      const dcfcSessions  = trip.filter(s => isDCFC(s));
+      const dcfcMins      = dcfcSessions.map(s => chargeMinutes(s)).filter(m => m !== null);
+      const totalChargeMins = dcfcMins.reduce((a,v) => a+v, 0);
+      const hasChargeTimes  = dcfcMins.length > 0;
+      const hasUnknownTimes = dcfcSessions.length > dcfcMins.length;
+
+      // Gas comparison
+      const tankRange   = spec.mpg * spec.tank; // miles per tank
+      const gasStops    = Math.max(0, Math.ceil(estMiles / tankRange) - 1);
+      const gasMins     = gasStops * GAS_STOP_MIN;
+      const timeDiff    = hasChargeTimes ? totalChargeMins - gasMins : null;
+      const timeDiffStr = timeDiff === null ? '—'
+        : timeDiff > 0
+          ? `+${timeDiff} min vs gas`
+          : timeDiff === 0
+            ? 'Same as gas'
+            : `${Math.abs(timeDiff)} min faster than gas`;
+      const timeDiffColor = timeDiff === null ? '#888'
+        : timeDiff > 0 ? C_AMBER
+        : C_GREEN;
+
+      // Format charge time
+      const chargeTimeStr = !hasChargeTimes
+        ? (dcfcSessions.length ? '⚠ add timing data' : '—')
+        : (totalChargeMins >= 60
+            ? `${Math.floor(totalChargeMins/60)}h ${totalChargeMins%60}m`
+            : `${totalChargeMins} min`)
+          + (hasUnknownTimes ? '*' : '');
+
+      const vehBadgeColor = isLRB ? '#f39c12' : '#7b1fa2';
+
+      return `<div style="background:var(--dash-card);border:1px solid var(--dash-border);border-left:4px solid ${vehBadgeColor};border-radius:12px;padding:16px 20px;margin-bottom:14px;transition:box-shadow 0.2s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow=''">
+
+        <!-- Header row -->
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <span style="font-weight:800;font-size:0.95rem">🚗 Trip ${tripNum}</span>
+          <span style="color:#888;font-size:0.78rem">${dateRange}</span>
+          ${distLabel ? `<span style="font-size:0.68rem;background:var(--dash-border);padding:2px 8px;border-radius:10px;color:#888">${distLabel}</span>` : ''}
+          <span style="font-size:0.68rem;padding:2px 8px;border-radius:10px;background:${vehBadgeColor}22;color:${vehBadgeColor};font-weight:600">${tripVehicle}</span>
+          ${note?.destination ? `<span style="font-size:0.82rem;font-weight:700;color:var(--text)">📍 ${note.destination}</span>` : `<span style="font-size:0.7rem;color:#bbb;font-style:italic">add destination in _data/trip_notes.yml</span>`}
+        </div>
+
+        ${note?.description ? `<p style="font-size:0.78rem;color:#888;margin:0 0 6px">${note.description}</p>` : ''}
+        ${note?.notes ? `<p style="font-size:0.75rem;color:#aaa;margin:0 0 8px;font-style:italic">${note.notes}</p>` : ''}
+
+        ${note?.arrive || note?.depart ? `
+        <div style="font-size:0.72rem;color:#888;margin-bottom:8px">
+          ${note.arrive ? `<span>✈️ Arrived: <strong style="color:var(--text)">${note.arrive}</strong></span>` : ''}
+          ${note.arrive && note.depart ? ' &nbsp;·&nbsp; ' : ''}
+          ${note.depart ? `<span>🏠 Departed: <strong style="color:var(--text)">${note.depart}</strong></span>` : ''}
+        </div>` : ''}
+
+        ${note?.itinerary && note.itinerary.length ? `
+        <div style="margin-bottom:10px;padding:10px 12px;background:rgba(0,0,0,0.03);border-radius:8px;border-left:3px solid var(--dash-border)">
+          <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:8px">Itinerary</div>
+          ${note.itinerary.map((stop, si) => `
+            <div style="display:flex;gap:10px;align-items:flex-start;${si < note.itinerary.length-1 ? 'margin-bottom:6px' : ''}">
+              <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px">
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--link);margin-top:3px"></div>
+                ${si < note.itinerary.length-1 ? '<div style="width:1px;height:100%;min-height:12px;background:var(--dash-border);flex:1"></div>' : ''}
+              </div>
+              <div style="flex:1;padding-bottom:${si < note.itinerary.length-1 ? '4px' : '0'}">
+                <span style="font-size:0.68rem;color:#aaa;margin-right:6px">${stop.date}</span>
+                <span style="font-size:0.78rem;font-weight:600;color:var(--text)">${stop.place}</span>
+                ${stop.note ? `<span style="font-size:0.7rem;color:#888;margin-left:6px">— ${stop.note}</span>` : ''}
+              </div>
             </div>
-            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">
-              ${locs.map(l => `<span class="badge ${badgeClass(getBucket(l))}">${l}</span>`).join('')}
-            </div>
+          `).join('')}
+        </div>` : ''}
+
+        <!-- Location badges -->
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">
+          ${locs.map(l => `<span class="badge ${badgeClass(getBucket(l))}">${l}</span>`).join('')}
+        </div>
+
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;padding-top:10px;border-top:1px solid var(--dash-border)">
+          <div style="text-align:center">
+            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Charged</div>
+            <div style="font-weight:800;font-size:1rem">${kwh.toFixed(1)} kWh</div>
           </div>
-          <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
-            <div style="text-align:center">
-              <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Charged</div>
-              <div style="font-weight:800;font-size:1.05rem">${kwh.toFixed(1)} kWh</div>
-            </div>
-            <div style="text-align:center">
-              <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Cost</div>
-              <div style="font-weight:800;font-size:1.05rem">${isFree ? '<span style="color:#2ecc71">Free</span>' : fmtUSD(cost)}</div>
-            </div>
-            <div style="text-align:center">
-              <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Saved vs Gas</div>
-              <div style="font-weight:800;font-size:1.05rem;color:${savingColor}">${fmtUSD(saving)}</div>
-            </div>
-            <div style="text-align:center">
-              <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Stops</div>
-              <div style="font-weight:800;font-size:1.05rem">${trip.length}</div>
-            </div>
+          <div style="text-align:center">
+            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Cost</div>
+            <div style="font-weight:800;font-size:1rem">${isFree ? '<span style="color:'+C_GREEN+'">Free</span>' : fmtUSD(cost)}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Saved vs Gas</div>
+            <div style="font-weight:800;font-size:1rem;color:${savingColor}">${fmtUSD(saving)}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">DCFC Time</div>
+            <div style="font-weight:800;font-size:1rem">${chargeTimeStr}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Est. Miles</div>
+            <div style="font-weight:800;font-size:1rem">${estMiles > 0 ? '~'+estMiles : '—'}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Gas Stops (${spec.mpg}mpg)</div>
+            <div style="font-weight:800;font-size:1rem">${gasStops} × ${GAS_STOP_MIN}min = ${gasMins}min</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Time vs Gas</div>
+            <div style="font-weight:700;font-size:0.9rem;color:${timeDiffColor}">${timeDiffStr}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Stops</div>
+            <div style="font-weight:800;font-size:1rem">${trip.length}</div>
           </div>
         </div>
+        ${hasUnknownTimes ? '<p style="font-size:0.65rem;color:#888;margin:8px 0 0">* Some DCFC sessions missing start/end time — add to session in CloudCannon for accurate charge time.</p>' : ''}
       </div>`;
     }).join('');
 
-    container.innerHTML = tripHTML ||
-      '<p style="color:#888;font-size:0.85rem">No qualifying road trips found.</p>';
+    container.innerHTML = tripHTML || '<p style="color:#888;font-size:0.85rem">No qualifying road trips found.</p>';
   })(sl);
 
   /* ════════════════════════════════════════
@@ -3236,46 +3386,10 @@ let _leafletMap = null;
 let _lastSl     = sessions;
 
 buildVehicleFilter();
-injectTabButtons();
 rebuild(sessions);
 
 // Use window.onload so all external scripts (Leaflet) are guaranteed loaded
 // and the DOM is fully painted with real dimensions before we call L.map()
-// ── Inject "↗ tab" buttons into every section header ──
-// Clicking opens that section in a new tab with the current vehicle filter preserved
-function injectTabButtons() {
-  document.querySelectorAll('.section-header[id]').forEach(hdr => {
-    const sectionId = hdr.id;
-    const btn = document.createElement('a');
-    btn.className = 'open-tab-btn';
-    btn.textContent = '↗ tab';
-    btn.title = 'Open this section in a new tab';
-    btn.target = '_blank';
-    btn.rel = 'noopener';
-    // Build URL: current page + #sectionId + vehicle param if filtered
-    btn.href = '#'; // set dynamically on click so vehicle filter is current
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      const v = activeVehicle !== 'all' ? '?vehicle=' + encodeURIComponent(activeVehicle) : '';
-      window.open(window.location.pathname + v + '#' + sectionId, '_blank');
-    });
-    // Insert before the ↑ top pill if present, otherwise append
-    const topPill = hdr.querySelector('.back-top-pill');
-    if (topPill) {
-      hdr.insertBefore(btn, topPill);
-    } else {
-      hdr.appendChild(btn);
-    }
-  });
-
-  // On page load, if ?vehicle= param is in URL, apply that filter
-  const urlParams = new URLSearchParams(window.location.search);
-  const vParam = urlParams.get('vehicle');
-  if (vParam && allVehicles.includes(vParam)) {
-    setVehicle(vParam);
-  }
-}
-
 window.addEventListener('load', function() {
   // Initialise Leaflet map after DOM is fully painted
   var geoLocs  = Array.isArray(locationData) ? locationData.filter(function(l){ return l.lat && l.lng; }) : [];
