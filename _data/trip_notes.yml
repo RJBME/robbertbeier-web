@@ -52,7 +52,7 @@
       note: "Southbound stop"
 
 - key: "2025-10-29"
-  destination: "Work Trip""
+  destination: "Work Trip"
   arrive: ""
   depart: ""
   dest_lat: 40.9028
@@ -75,23 +75,29 @@
   destination: "Battle Creek, MI"
   arrive: ""
   depart: ""
-  dest_lat:
-  dest_lng:
+  dest_lat: 0
+  dest_lng: 0
   description: "Single Tesla Supercharger stop in Battle Creek."
   notes: ""
   blog_tag: ""
-  itinerary: []
+  itinerary:
+    - date: ""
+      place: ""
+      note: ""
 
 - key: "2025-12-12"
   destination: ""
   arrive: ""
   depart: ""
-  dest_lat:
-  dest_lng:
+  dest_lat: 0
+  dest_lng: 0
   description: "ChargePoint Muskegon + Tesla Lansing stops."
   notes: ""
   blog_tag: ""
-  itinerary: []
+  itinerary:
+    - date: ""
+      place: ""
+      note: ""
 
 - key: "2026-02-21"
   destination: "West Michigan Fencing Classic, Grand Rapids MI"

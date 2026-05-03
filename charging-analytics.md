@@ -2290,7 +2290,8 @@ mkChart('chartHistogram', {
       const points = [{ lat: homeLat, lng: homeLng }];
       locs.forEach(l => { const c = locCoords(l); if (c) points.push(c); });
       // Insert actual destination if provided
-      if (note && note.dest_lat && note.dest_lng) {
+      if (note && note.dest_lat && note.dest_lng &&
+          parseFloat(note.dest_lat) !== 0 && parseFloat(note.dest_lng) !== 0) {
         points.push({ lat: parseFloat(note.dest_lat), lng: parseFloat(note.dest_lng) });
       }
       points.push({ lat: homeLat, lng: homeLng });
