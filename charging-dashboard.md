@@ -41,7 +41,7 @@ permalink: /charging/
 =============================================================
 {% endcomment %}
 {% assign odometer_entries = "
-RLB's 2025 Mach-E GT | 11195 | 2026-05-02 | 2025-08-22 |
+2025 Mach-E GT | 11195 | 2026-05-02 | 2025-08-22 |
 LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
 " | strip | split: "
 " %}
