@@ -214,7 +214,8 @@ permalink: /charging-history/
         data-kwh="{{ log.energy_kwh }}"
         data-cost="{{ cost_data }}"
         data-miles="{{ log.miles_added }}"
-        data-type="{% if cost_data > 0 %}paid{% else %}free{% endif %}">
+        data-type="{% if cost_data > 0 %}paid{% else %}free{% endif %}"
+        data-sort="{{ log.date | date: '%Y-%m-%d' }}T{{ log.start_time | default: '99:99' }}">
         <td>{{ log.date | date: "%Y-%m-%d" }}</td>
         <td>
           {% assign l = log.location | downcase %}
@@ -244,6 +245,18 @@ permalink: /charging-history/
 const brandLocMap = {};
 
 function initFilters() {
+  // Sort rows by date+start_time descending (newest first).
+  // Sessions without start_time get '99:99' so they sort last within their day.
+  const tbody = document.querySelector('#history-table tbody');
+  if (tbody) {
+    const rows = Array.from(tbody.querySelectorAll('tr.log-row'));
+    rows.sort((a, b) => {
+      const sa = a.getAttribute('data-sort') || '';
+      const sb = b.getAttribute('data-sort') || '';
+      return sb.localeCompare(sa); // descending
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
   const vehicles = new Set();
   const allLocs  = new Set();
   document.querySelectorAll('.log-row').forEach(row => {
