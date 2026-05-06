@@ -1,0 +1,16 @@
+---
+_schema: default
+date: 2026-03-31T00:00:00-04:00
+location: Tesla, Tomah, WI
+vehicle: 2025 Mach-E GT
+energy_kwh: 49.8881
+cost: 17.95
+start_date: 2026-03-31T00:00:00-04:00
+start_time: '14:03'
+end_time: '14:40'
+soc_start: 18
+soc_end: 73
+soc_added: 55
+miles_added: 128
+notes: ''
+---
