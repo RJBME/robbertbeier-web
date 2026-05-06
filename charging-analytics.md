@@ -48,12 +48,18 @@ permalink: /charging-analytics/
     grid-template-columns: repeat(4, 1fr);
     gap: 12px; margin-bottom: 28px;
   }
-  @media (max-width: 767px) { .kpi-strip { grid-template-columns: repeat(4, 1fr); } }
   @media (max-width: 520px)  { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
   .kpi-card {
     background: var(--dash-card); border: 1px solid var(--dash-border);
+    border-top: 3px solid var(--link);
     border-radius: 12px; padding: 18px 16px; text-align: center;
     display: flex; flex-direction: column; justify-content: center; gap: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
+  }
+  .kpi-card:hover {
+    box-shadow: 0 6px 20px rgba(93,63,211,0.14);
+    transform: translateY(-2px);
   }
   .kpi-label {
     font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em;
@@ -162,6 +168,7 @@ permalink: /charging-analytics/
     transition: all 0.12s; white-space: nowrap;
   }
   #stickyNavRow a:hover { background: var(--link); color: #fff; border-color: var(--link); }
+  #stickyNavRow a.nav-active { border-color: var(--link); color: var(--link); background: rgba(93,63,211,0.08); }
   #stickyVehicleRow {
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
     padding: 6px 20px 7px;
@@ -192,6 +199,19 @@ permalink: /charging-analytics/
     .chart-grid-2, .chart-grid-3 { grid-template-columns: 1fr; }
     .section-nav a { padding: 5px 10px; font-size: 0.72rem; }
     .chart-card { padding: 12px 14px; }
+    /* Fix: was repeat(4,1fr) — same as desktop, a no-op. Collapse to 2 cols on tablet/large-phone */
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    /* Allow title + subtitle + back-to-top pill to wrap on narrow screens */
+    .section-header { flex-wrap: wrap; }
+    /* CO2 hero: reduce side padding so content isn't cramped */
+    .co2-hero { padding: 20px 16px 18px; }
+    /* Slightly smaller page title */
+    .analytics-header h1 { font-size: 1.4rem; }
+  }
+  @media (max-width: 480px) {
+    /* KPI values + cards: reduce size to fit comfortably in 2-col layout */
+    .kpi-value { font-size: 1.2rem; }
+    .kpi-card  { padding: 12px 10px; }
   }
 
   /* ── Personal records ── */
@@ -204,18 +224,27 @@ permalink: /charging-analytics/
   @media (max-width: 420px) { .records-grid { grid-template-columns: 1fr; } }
   .record-card {
     background: var(--dash-card); border: 1px solid var(--dash-border);
-    border-radius: 12px; padding: 18px 16px;
+    border-left: 4px solid var(--link);
+    border-radius: 12px; padding: 16px 18px;
     display: flex; flex-direction: row; align-items: flex-start;
-    gap: 14px; transition: box-shadow 0.2s, border-color 0.2s;
+    gap: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
   }
-  .record-card:hover { border-color: var(--link); box-shadow: 0 4px 16px rgba(93,63,211,0.12); }
+  .record-card:hover {
+    border-left-color: var(--link);
+    box-shadow: 0 6px 22px rgba(93,63,211,0.16);
+    transform: translateY(-2px);
+  }
   .record-icon  {
-    font-size: 1.4rem; line-height: 1; flex-shrink: 0;
-    width: 2rem; text-align: center; padding-top: 2px;
+    font-size: 1.3rem; line-height: 1; flex-shrink: 0;
+    width: 2.4rem; height: 2.4rem;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(93,63,211,0.08); border-radius: 10px;
   }
   .record-body  { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .record-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: #888; }
-  .record-value { font-size: 1.5rem; font-weight: 900; color: var(--link); line-height: 1.1; }
+  .record-value { font-size: 1.55rem; font-weight: 900; color: var(--link); line-height: 1.1; }
   .record-sub   { font-size: 0.75rem; color: #888; }
 
   /* ── Location stats table ── */
@@ -299,13 +328,16 @@ permalink: /charging-analytics/
   /* ── Charging locations map ── */
   .ev-map-icon { background: transparent !important; border: none !important; overflow: visible !important; }
   .ev-pulse { position: relative; overflow: visible; }
-  .ev-dot { position: absolute; inset: 0; border-radius: 50%; opacity: 0.35; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
-  .ev-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid; opacity: 0.55; animation: ev-pulse 2.2s ease-out infinite; }
+  .ev-dot { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; border-radius: 50%; opacity: 0.35; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+  .ev-ring { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; border-radius: 50%; border: 2px solid; opacity: 0; animation: ev-pulse 2.2s ease-out 3; }
   .ev-pin { position: absolute; bottom: 50%; left: 50%; transform: translateX(-50%); filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); pointer-events: none; }
   @keyframes ev-pulse { 0% { transform: scale(1); opacity: 0.75; } 100% { transform: scale(2.8); opacity: 0; } }
   #chargingMap { border-radius: 10px; }
   #chargingMap .leaflet-popup-content-wrapper { background: var(--dash-card,#fff); color: var(--text,#333); border: 1px solid var(--dash-border,#ddd); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
   #chargingMap .leaflet-popup-tip { background: var(--dash-card,#fff); }
+
+  /* Tighten gap between site nav and charging sub-nav */
+  nav { margin-bottom: 0.75rem !important; }
 </style>
 
 <div class="analytics-container" id="top">
@@ -315,27 +347,18 @@ permalink: /charging-analytics/
     <a href="/charging/"         style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">⚡ Dashboard</a>
     <a href="/charging-history/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📋 History</a>
     <a href="/charging-analytics/" style="font-size:0.78rem;font-weight:700;color:#fff;text-decoration:none;padding:5px 14px;border:1px solid var(--link);border-radius:20px;background:var(--link)">📊 Analytics</a>
-    <button id="themeToggleLocal" onclick="toggleThemeLocal()" style="margin-left:auto;font-size:0.78rem;font-weight:600;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);color:var(--text);cursor:pointer;transition:all 0.15s">🌙 Dark</button>
   </div>
   <script>
+    /* Early theme init — prevents flash of wrong theme before layout JS runs */
     (function(){
       var stored = localStorage.getItem('theme');
-      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      var dark = stored ? stored === 'dark' : prefersDark;
+      var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
       document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-      function updateBtn(){
-        var btn = document.getElementById('themeToggleLocal');
-        if(btn){ var d = document.documentElement.getAttribute('data-theme')==='dark'; btn.textContent = d ? '☀️ Light' : '🌙 Dark'; }
-      }
-      window.toggleThemeLocal = function(){
-        var d = document.documentElement.getAttribute('data-theme')==='dark';
-        var next = d ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateBtn();
-        window.dispatchEvent(new Event('themeChanged'));
-      };
-      document.addEventListener('DOMContentLoaded', updateBtn);
+      /* Battery emoji favicon for charging pages */
+      var lnk = document.querySelector("link[rel~='icon']") || document.createElement('link');
+      lnk.rel = 'icon';
+      lnk.href = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔋</text></svg>";
+      if (!lnk.parentNode) document.head.appendChild(lnk);
     })();
   </script>
 
@@ -1022,6 +1045,8 @@ permalink: /charging-analytics/
       <div class="chart-wrap" style="height:240px"><canvas id="chartSavingsRealVsAssumed"></canvas></div>
       <p style="font-size:0.68rem;color:#888;margin-top:8px">† Sessions without miles_added data use the assumed rate from _data/rates.yml for both lines.</p>
     </div>
+  </div><!-- /#efficiencySection -->
+
   <!-- ─── hm-tip tooltip (heatmap hover) ─── -->
   <div id="hm-tip" style="position:fixed;background:rgba(0,0,0,0.82);color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;pointer-events:none;display:none;z-index:9999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);"></div>
 
@@ -1077,6 +1102,7 @@ const tripNotes       = {{ site.data.trip_notes | jsonify }} || [];
 
 /* ── Location table state — declared here so nothing runs before these exist ── */
 let _locSortCol = 'name', _locSortDir = 'asc', _locView = 'location', _locSl = [];
+let _locHdrsWired = false; // guard: only wire sort-header onclick once
 
 /* ════════════════════════════════════════════════════════
    UTILITIES
@@ -1239,9 +1265,9 @@ sessions.forEach(s => {
     const gs    = getGasSavingsObj(s.date, s.vehicle) || { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
 
     // Real efficiency from FordPass miles_added — more accurate than assumed mi/kWh
-    // Filter out physical impossibilities: <1.0 or >5.0 mi/kWh are outliers
+    // Filter outliers: <1.5 mi/kWh (>667 Wh/mi) or >4.75 mi/kWh (<211 Wh/mi) are physically implausible
     const rawMiPerKwh = s.milesAdded > 0 && s.kwh > 0 ? s.milesAdded / s.kwh : null;
-    s.hasRealEff   = rawMiPerKwh !== null && rawMiPerKwh >= 1.0 && rawMiPerKwh <= 5.0;
+    s.hasRealEff   = rawMiPerKwh !== null && rawMiPerKwh >= 1.5 && rawMiPerKwh <= 4.75;
     s.realMiPerKwh = s.hasRealEff ? rawMiPerKwh : null;
     s.realWhPerMi  = s.hasRealEff ? (s.kwh * 1000) / s.milesAdded : null;
 
@@ -1254,14 +1280,14 @@ sessions.forEach(s => {
     s.month     = s.date.substring(0, 7);
     s.dow       = new Date(s.date + 'T12:00:00').getDay();
 
-    // CO2 calculations
+    // CO2 calculations — reuse effMiPerKwh already computed above; cache egridFactor
     const mpg        = getBaselineMpg(s.vehicle);
-    const effMiKwh   = s.hasRealEff ? s.realMiPerKwh : (getGasSavingsObj(s.date, s.vehicle).mi_per_kwh || 3.0);
-    const estMiles   = s.kwh * effMiKwh;
+    const estMiles   = s.kwh * effMiPerKwh;
+    const egridFactor = getEgridFactor(s.location);
     s.co2GasCould    = (estMiles / mpg) * CO2_GAS_KG_PER_GAL;   // kg CO2 if driven on gas
-    s.co2GridEmit    = s.kwh * getEgridFactor(s.location);        // kg CO2 from grid
+    s.co2GridEmit    = s.kwh * egridFactor;                        // kg CO2 from grid
     s.co2NetAvoided  = s.co2GasCould - s.co2GridEmit;             // net kg CO2 avoided
-    s.egridFactor    = getEgridFactor(s.location);                 // store for display
+    s.egridFactor    = egridFactor;                                 // store for display
   } catch(e) {
     console.error('[EV] Session enrichment failed for', s.date, s.location, e);
     s.cost     = s.rawCost || 0;
@@ -1278,21 +1304,28 @@ sessions.forEach(s => {
    CHART FACTORY + ANIMATION HELPERS
    ════════════════════════════════════════════════════════ */
 Chart.register(ChartDataLabels);
+Chart.defaults.animation = false; // disable all chart animations — prevents CPU spike on rebuild
 
-/* Cubic ease-out count-up animation */
+/* Cubic ease-out count-up animation — RAF ID tracked per element so rapid
+   vehicle-filter clicks cancel in-flight animations instead of stacking */
+const _cuRAF = new Map();
 function countUp(el, target, fmt, dur) {
+  if (_cuRAF.has(el)) { cancelAnimationFrame(_cuRAF.get(el)); _cuRAF.delete(el); }
   dur = dur || 900;
   const t0 = performance.now();
   (function tick(now) {
     const p = Math.min((now - t0) / dur, 1);
     el.textContent = fmt((1 - Math.pow(1 - p, 3)) * target);
-    if (p < 1) requestAnimationFrame(tick);
+    if (p < 1) { _cuRAF.set(el, requestAnimationFrame(tick)); }
+    else        { _cuRAF.delete(el); }
   })(t0);
 }
 
 const allVehicles = [...new Set(sessions.map(s => s.vehicle))].sort();
 let activeVehicle = 'all';
 let allCharts = [];
+let _hmRender = null;        // current heatmap render fn — updated on each rebuild
+let _heatmapWired = false;  // event listeners on heatmapContainer wired only once
 
 function mkChart(id, config) {
   const c = new Chart(document.getElementById(id), config);
@@ -1344,8 +1377,7 @@ function buildVehicleFilter() {
     }
   }
 
-  // Show sticky bar after scrolling 120px — scroll event is more reliable
-  // than IntersectionObserver for this use case across browsers
+  // Show sticky bar after scrolling 120px
   if (stickyBar) {
     window.addEventListener('scroll', () => {
       if (window.scrollY > 120) {
@@ -1354,6 +1386,37 @@ function buildVehicleFilter() {
         stickyBar.classList.remove('visible');
       }
     }, { passive: true });
+  }
+
+  // Active section highlight in sticky nav via IntersectionObserver
+  const navLinks = document.querySelectorAll('#stickyNavRow a[href^="#"]');
+  const sectionEls = Array.from(navLinks)
+    .map(a => document.getElementById(a.getAttribute('href').slice(1)))
+    .filter(Boolean);
+
+  if (sectionEls.length && 'IntersectionObserver' in window) {
+    let activeId = null;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          const vh = window.innerHeight;
+          // Read all rects in a single pass — avoids repeated forced layout
+          const rects = sectionEls.map(el => ({ el, rect: el.getBoundingClientRect() }));
+          const visible = rects.filter(({ rect }) => rect.top < vh * 0.55 && rect.bottom > 0);
+          if (visible.length) {
+            visible.sort((a, b) => Math.abs(a.rect.top) - Math.abs(b.rect.top));
+            activeId = visible[0].el.id;
+          } else {
+            activeId = id;
+          }
+          navLinks.forEach(a => {
+            a.classList.toggle('nav-active', a.getAttribute('href') === '#' + activeId);
+          });
+        }
+      });
+    }, { rootMargin: '-10% 0px -50% 0px', threshold: 0 });
+    sectionEls.forEach(el => obs.observe(el));
   }
 }
 
@@ -2722,6 +2785,11 @@ mkChart('chartHistogram', {
     trips.push(cur);
 
     // Build cards — most recent first
+    function fmtMins(m) {
+      if (m < 60) return `${m} min`;
+      const h = Math.floor(m / 60), rem = m % 60;
+      return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+    }
     const tripHTML = trips.slice().reverse().map((trip, ti, arr) => {
       const tripNum    = arr.length - ti;
       const firstDate  = trip[0].date;
@@ -2762,10 +2830,10 @@ mkChart('chartHistogram', {
       const timeDiff    = hasChargeTimes ? totalChargeMins - gasMins : null;
       const timeDiffStr = timeDiff === null ? '—'
         : timeDiff > 0
-          ? `+${timeDiff} min vs gas`
+          ? `+${fmtMins(timeDiff)} vs gas`
           : timeDiff === 0
             ? 'Same as gas'
-            : `${Math.abs(timeDiff)} min faster than gas`;
+            : `${fmtMins(Math.abs(timeDiff))} faster than gas`;
       const timeDiffColor = timeDiff === null ? '#888'
         : timeDiff > 0 ? C_AMBER
         : C_GREEN;
@@ -3298,49 +3366,105 @@ mkChart('chartHistogram', {
       });
 
       // ── Battery health (UBE estimate) ──
-      const ubeSessions = socSessions.filter(s => s.socAdded >= 5); // filter tiny charges — too noisy
+      // Require ≥15% SOC added — tiny charges (e.g. 5% SOC + 6 kWh) produce wildly inflated estimates
+      const ubeSessions = socSessions.filter(s => s.socAdded >= 15);
       if (ubeSessions.length) {
-        const vehColors = {'2025 Mach-E GT':C_BLUE,'2026 Mach-E SR':C_BLUE,
-                          "LRB's 2025 Mach-E GT":C_PURPLE,"LRB's 2026 Mach-E SR":C_PURPLE};
+        const vehColors = {
+          '2025 Mach-E GT':       C_BLUE,
+          '2026 Mach-E SR':       C_GREEN,
+          "LRB's 2025 Mach-E GT": C_PURPLE,
+          "LRB's 2026 Mach-E SR": C_AMBER
+        };
+
+        // Build per-vehicle arrays of valid UBE estimates, sorted by date
         const ubeByVeh = {};
         ubeSessions.forEach(s => {
-          if (!ubeByVeh[s.vehicle]) ubeByVeh[s.vehicle] = [];
           const est = s.kwh / (s.socAdded / 100);
-          if (est > 40 && est < 130) ubeByVeh[s.vehicle].push({ date: s.date, ube: +est.toFixed(1) });
+          // Clamp to physically plausible range: GT ≤~115, SR ≤~95; both ≥ 60
+          if (est < 60 || est > 115) return;
+          if (!ubeByVeh[s.vehicle]) ubeByVeh[s.vehicle] = [];
+          ubeByVeh[s.vehicle].push({ date: s.date, ube: +est.toFixed(1) });
         });
-        const ubeDatasets = Object.entries(ubeByVeh).map(([v, pts]) => ({
-          label: v,
-          data: pts.map(p => ({ x: p.date, y: p.ube })),
-          borderColor: vehColors[v] || C_VIOLET,
-          backgroundColor: (vehColors[v] || C_VIOLET) + '22',
-          pointRadius: 4, tension: 0.2, borderWidth: 1.5, fill: false
-        }));
-        // Add rated UBE reference lines
-        const allVehs = [...new Set(ubeSessions.map(s => s.vehicle))];
-        const ratedLines = [...new Set(allVehs.map(v => VEHICLE_UBE[v] || 91.7))];
-        ratedLines.forEach(ube => {
-          const label = ube === 91.7 ? 'GT Rated 91.7 kWh' : 'SR Rated 72.6 kWh';
-          const allDates = ubeSessions.map(s => s.date).sort();
+        Object.values(ubeByVeh).forEach(pts => pts.sort((a,b) => a.date.localeCompare(b.date)));
+
+        // Shared sorted x-axis — all unique dates across all vehicles
+        const allDates = [...new Set(ubeSessions.map(s => s.date))].sort();
+
+        const ubeDatasets = [];
+        Object.entries(ubeByVeh).forEach(([v, pts]) => {
+          if (!pts.length) return;
+          const color = vehColors[v] || C_VIOLET;
+
+          // Map each date to its UBE value (null if no data for that date)
+          const ptMap = Object.fromEntries(pts.map(p => [p.date, p.ube]));
+          const aligned = allDates.map(d => ptMap[d] ?? null);
+
+          // Rolling 5-session trend (computed on non-null points only, mapped back)
+          const nonNull = pts; // already sorted
+          const rollingMap = {};
+          nonNull.forEach((p, i) => {
+            const window = nonNull.slice(Math.max(0, i-4), i+1).map(q => q.ube);
+            rollingMap[p.date] = +(window.reduce((a,v)=>a+v,0)/window.length).toFixed(2);
+          });
+          const rollingAligned = allDates.map(d => rollingMap[d] ?? null);
+
+          // Raw session dots — small & semi-transparent
           ubeDatasets.push({
-            label,
-            data: [{ x: allDates[0], y: ube }, { x: allDates[allDates.length-1], y: ube }],
-            borderColor: ube === 91.7 ? C_BLUE : C_PURPLE,
-            borderDash: [8, 4], borderWidth: 2, pointRadius: 0, fill: false
+            label: v,
+            data: aligned,
+            borderColor: color + '55',
+            backgroundColor: color + '22',
+            pointRadius: 3, pointHoverRadius: 6,
+            tension: 0, borderWidth: 1, fill: false, spanGaps: false
+          });
+          // Bold rolling trend line
+          ubeDatasets.push({
+            label: v + ' (5-sess avg)',
+            data: rollingAligned,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            pointRadius: 0, tension: 0.35, borderWidth: 2.5,
+            fill: false, spanGaps: true
           });
         });
+
+        // Rated UBE reference lines — neutral grey dashes, one per unique UBE value
+        const allVehs = [...new Set(ubeSessions.map(s => s.vehicle))];
+        const ratedLines = [...new Map(allVehs.map(v => [VEHICLE_UBE[v] || 91.7, v])).entries()];
+        ratedLines.forEach(([ube, v]) => {
+          const label = ube === 91.7 ? 'GT Rated 91.7 kWh' : 'SR Rated 72.6 kWh';
+          ubeDatasets.push({
+            label,
+            data: allDates.map(() => ube),
+            borderColor: '#aaa',
+            borderDash: [8, 4], borderWidth: 1.5, pointRadius: 0, fill: false
+          });
+        });
+
         mkChart('chartBatteryHealth', {
           type: 'line',
-          data: { datasets: ubeDatasets },
+          data: { labels: allDates, datasets: ubeDatasets },
           options: { responsive:true, maintainAspectRatio:false,
             plugins:{
-              legend:{display:true,position:'top',labels:{color:tc(),boxWidth:12,padding:10}},
+              legend:{
+                display:true, position:'top',
+                labels:{ color:tc(), boxWidth:12, padding:10,
+                  // Hide the raw-dot series from the legend (keep trend + rated lines)
+                  filter: item => item.text.includes('avg') || item.text.includes('Rated')
+                }
+              },
               datalabels:{display:false},
-              tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} kWh`}}
+              tooltip:{callbacks:{
+                label: ctx => ctx.parsed.y !== null
+                  ? ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} kWh`
+                  : null
+              }}
             },
             scales:{
-              x:{type:'category',grid:{color:gc()},ticks:{color:tc(),maxTicksLimit:10,maxRotation:45}},
+              x:{grid:{color:gc()},ticks:{color:tc(),maxTicksLimit:10,maxRotation:45}},
               y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' kWh'},
-                 title:{display:true,text:'Estimated UBE (kWh)',color:'#888'},min:40}
+                 title:{display:true,text:'Estimated UBE (kWh)',color:'#888'},
+                 min:60, suggestedMax:115}
             }
           }
         });
@@ -3851,17 +3975,19 @@ function buildMap(sl) {
     stats[s.location].sessions += 1;
   });
 
-  const geoLocs = (locationData || []).filter(l => l.lat && l.lng);
+  // Only show locations that have sessions in the current (possibly vehicle-filtered) set
+  const geoLocs = (locationData || []).filter(l => l.lat && l.lng && stats[l.location]);
   if (!geoLocs.length) return;
 
   // Clear old markers
   _leafletMap.eachLayer(l => { if (!(l instanceof L.TileLayer)) _leafletMap.removeLayer(l); });
 
-  const maxKwh = Math.max(...geoLocs.map(l => (stats[l.location] || {}).kwh || 0), 1);
+  // maxKwh from the filtered set so pin sizes scale relative to the active vehicle
+  const maxKwh = Math.max(...geoLocs.map(l => stats[l.location].kwh), 1);
   const bounds = [];
 
   geoLocs.forEach(loc => {
-    const st    = stats[loc.location] || { kwh: 0, sessions: 0, bucket: getBucket(loc.location) };
+    const st    = stats[loc.location];
     const color = BUCKET_COLORS[st.bucket] || '#888';
     const sz    = Math.round(24 + (st.kwh / maxKwh) * 40);
     const avg   = st.sessions ? (st.kwh / st.sessions).toFixed(1) : '0';
@@ -3901,19 +4027,23 @@ function setLocView(v) {
 
 function buildLocationStats(sl) {
   _locSl = sl;
-  // wire sort headers once
-  document.querySelectorAll('.loc-sort-hdr').forEach(th => {
-    th.onclick = () => {
-      const col = th.dataset.col;
-      if (_locSortCol === col) {
-        _locSortDir = _locSortDir === 'asc' ? 'desc' : 'asc';
-      } else {
-        _locSortCol = col;
-        _locSortDir = col === 'name' ? 'asc' : 'desc';
-      }
-      renderLocationStats();
-    };
-  });
+  // Wire sort headers once — onclick is a property assignment so no accumulation,
+  // but querying and reassigning on every rebuild() is wasteful.
+  if (!_locHdrsWired) {
+    _locHdrsWired = true;
+    document.querySelectorAll('.loc-sort-hdr').forEach(th => {
+      th.onclick = () => {
+        const col = th.dataset.col;
+        if (_locSortCol === col) {
+          _locSortDir = _locSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          _locSortCol = col;
+          _locSortDir = col === 'name' ? 'asc' : 'desc';
+        }
+        renderLocationStats();
+      };
+    });
+  }
   renderLocationStats();
 }
 
@@ -3921,7 +4051,6 @@ function renderLocationStats() {
   const tbody = document.getElementById('locationStatsBody');
   if (!tbody) { console.warn('[LocStats] tbody not found'); return; }
   if (!_locSl.length) { console.warn('[LocStats] _locSl is empty'); return; }
-  console.log('[LocStats] rendering', _locSl.length, 'sessions, view:', _locView);
 
   // Aggregate
   const agg = {};
@@ -4105,7 +4234,7 @@ function buildHeatmap(sl) {
   // Map bucket → label for legend
   var BUCKET_LABELS = {
     'Work': 'Work', 'Home': 'Home', 'Tesla SC': 'Tesla SC',
-    'ChargePoint': 'ChargePoint', 'Blink': 'Blink', 'Rivian': 'Rivian', 'Other': 'Public'
+    'ChargePoint': 'ChargePoint', 'Blink': 'Blink', 'Rivian': 'Rivian', 'Other': 'Public/Other'
   };
 
   // Are we in single-vehicle mode?
@@ -4213,8 +4342,8 @@ function buildHeatmap(sl) {
             + 'margin-left:' + DOW_LEFT + 'px;flex-wrap:wrap;">';
 
     if (singleVehicle) {
-      // Show one swatch per bucket that actually appears in the data, using its mid-tone color
-      var bucketsInData = [...new Set(sl.map(s => s.bucket))].sort();
+      // Show one swatch per bucket that is the DOMINANT bucket on at least one day
+      var bucketsInData = [...new Set(Object.keys(dayBucketMap).map(dominantBucket).filter(Boolean))].sort();
       leg += '<span style="font-size:10px;color:#888;margin-right:4px;">Location:</span>';
       bucketsInData.forEach(function(b) {
         var pal = isDark() ? BUCKET_PALS.dark[b] : BUCKET_PALS.light[b];
@@ -4245,33 +4374,40 @@ function buildHeatmap(sl) {
     el.innerHTML = mHtml + gHtml + leg;
   }
 
+  // Store current render fn so the single themeChanged listener always uses fresh data
+  _hmRender = render;
   render();
-  window.addEventListener('themeChanged', render);
 
-  /* Tooltip */
-  var hmTip = document.getElementById('hm-tip');
-  el.addEventListener('mouseover', function(e) {
-    var t = e.target.dataset.tip;
-    if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
-  });
-  el.addEventListener('mousemove', function(e) {
-    hmTip.style.left = (e.clientX + 14) + 'px';
-    hmTip.style.top  = (e.clientY - 34) + 'px';
-  });
-  el.addEventListener('mouseout', function(e) {
-    if (e.target.dataset.tip) hmTip.style.display = 'none';
-  });
-  el.addEventListener('touchstart', function(e) {
-    var t = e.target.dataset.tip;
-    if (t) {
-      var touch = e.touches[0];
-      hmTip.textContent = t;
-      hmTip.style.left = (touch.clientX + 14) + 'px';
-      hmTip.style.top  = (touch.clientY - 44) + 'px';
-      hmTip.style.display = 'block';
-    }
-  }, {passive: true});
-  el.addEventListener('touchend', function() { hmTip.style.display = 'none'; }, {passive: true});
+  // Wire events exactly once — guards against listener accumulation on each rebuild()
+  if (!_heatmapWired) {
+    _heatmapWired = true;
+    window.addEventListener('themeChanged', function() { if (_hmRender) _hmRender(); });
+
+    /* Tooltip — delegated on the container, wired once */
+    var hmTip = document.getElementById('hm-tip');
+    el.addEventListener('mouseover', function(e) {
+      var t = e.target.dataset.tip;
+      if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
+    });
+    el.addEventListener('mousemove', function(e) {
+      hmTip.style.left = (e.clientX + 14) + 'px';
+      hmTip.style.top  = (e.clientY - 34) + 'px';
+    });
+    el.addEventListener('mouseout', function(e) {
+      if (e.target.dataset.tip) hmTip.style.display = 'none';
+    });
+    el.addEventListener('touchstart', function(e) {
+      var t = e.target.dataset.tip;
+      if (t) {
+        var touch = e.touches[0];
+        hmTip.textContent = t;
+        hmTip.style.left = (touch.clientX + 14) + 'px';
+        hmTip.style.top  = (touch.clientY - 44) + 'px';
+        hmTip.style.display = 'block';
+      }
+    }, {passive: true});
+    el.addEventListener('touchend', function() { hmTip.style.display = 'none'; }, {passive: true});
+  }
 }
 
 /* ════════════════════════════════════════════════════════

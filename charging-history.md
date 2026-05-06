@@ -32,7 +32,7 @@ permalink: /charging-history/
   }
   .filter-group { display: flex; flex-direction: column; gap: 5px; }
   .filter-group label { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; color: #888; }
-  select { padding: 8px; border-radius: 6px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
+  select { padding: 8px; border-radius: 6px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; width: 100%; box-sizing: border-box; }
   .btn-reset { padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; align-self: flex-end; }
 
   .badge { padding: 3px 8px; border-radius: 20px; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; display: inline-block; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
@@ -65,18 +65,16 @@ permalink: /charging-history/
     display: none;
     position: absolute;
     bottom: 130%;
-    left: 50%;
-    transform: translateX(-50%);
+    right: 0;
     background: #2c3e50;
     color: white;
     padding: 6px 10px;
     border-radius: 6px;
     font-size: 0.78rem;
     line-height: 1.4;
-    white-space: nowrap;
-    max-width: 320px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    width: max-content;
+    max-width: min(280px, 80vw);
     z-index: 100;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
@@ -84,15 +82,26 @@ permalink: /charging-history/
     content: '';
     position: absolute;
     top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
+    right: 10px;
     border: 5px solid transparent;
     border-top-color: #2c3e50;
   }
-  .note-icon:hover .note-tooltip { display: block; }
+  .note-icon:hover .note-tooltip,
+  .note-icon.tip-open .note-tooltip { display: block; }
+  @media (max-width: 520px) {
+    .summary-bar { padding: 12px 14px; gap: 12px; }
+    .summary-value { font-size: 1rem; }
+    .filter-bar { padding: 12px 14px; }
+  }
 </style>
 
 <div class="history-container">
+<script>(function(){
+  var lnk = document.querySelector("link[rel~='icon']") || document.createElement('link');
+  lnk.rel = 'icon';
+  lnk.href = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔋</text></svg>";
+  if (!lnk.parentNode) document.head.appendChild(lnk);
+})();</script>
 
   <!-- Cross-page charging nav -->
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);align-items:center;">
@@ -135,8 +144,6 @@ permalink: /charging-history/
         <label>Year</label>
         <select id="yearFilter" onchange="applyFilters()">
           <option value="">All Years</option>
-          <option value="2025">2025</option>
-          <option value="2026">2026</option>
         </select>
       </div>
       <div class="filter-group">
@@ -210,7 +217,7 @@ permalink: /charging-history/
         data-year="{{ log.date | date: '%Y' }}"
         data-loc="{{ log.location }}"
         data-brand="{{ brand }}"
-        data-veh="{{ log.vehicle }}"
+        data-veh="{{ log.vehicle | default: '2025 Mach-E GT' }}"
         data-kwh="{{ log.energy_kwh }}"
         data-cost="{{ cost_data }}"
         data-miles="{{ log.miles_added }}"
@@ -271,6 +278,12 @@ function initFilters() {
   // Populate location with all locations on load
   const locSel = document.getElementById('locFilter');
   Array.from(allLocs).sort().forEach(loc => locSel.add(new Option(loc, loc)));
+  // Populate year filter dynamically from actual data
+  const yearSel = document.getElementById('yearFilter');
+  const years = new Set();
+  document.querySelectorAll('.log-row').forEach(row => years.add(row.getAttribute('data-year')));
+  Array.from(years).sort().forEach(y => yearSel.add(new Option(y, y)));
+
   // Populate vehicle filter
   const vehSel = document.getElementById('vehFilter');
   Array.from(vehicles).sort().forEach(v => vehSel.add(new Option(v, v)));
@@ -336,5 +349,17 @@ function resetFilters() {
   applyFilters();
 }
 
-window.onload = initFilters;
+window.addEventListener('load', initFilters);
+
+// Touch support for note tooltips: tap to toggle, tap elsewhere to close
+document.addEventListener('click', function(e) {
+  const icon = e.target.closest('.note-icon');
+  document.querySelectorAll('.note-icon.tip-open').forEach(function(el) {
+    if (el !== icon) el.classList.remove('tip-open');
+  });
+  if (icon) {
+    e.preventDefault();
+    icon.classList.toggle('tip-open');
+  }
+});
 </script>

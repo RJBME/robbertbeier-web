@@ -87,6 +87,37 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
   .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; color: var(--text) !important; }
   .charging-table th { background: var(--table-head); padding: 12px; text-align: left; border-bottom: 2px solid var(--dash-border); }
   .charging-table td { padding: 12px; border-bottom: 1px solid var(--dash-border); }
+  .charging-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* ── Mobile layout ── */
+  @media (max-width: 600px) {
+    /* Status bar: 2×2 grid instead of 4 cramped columns */
+    .status-bar {
+      flex-wrap: wrap;
+      padding: 14px 12px;
+      gap: 0;
+    }
+    .status-item {
+      flex: 1 1 50%;
+      border-right: none;
+      border-bottom: 1px solid var(--dash-border);
+      padding: 10px 6px;
+    }
+    .status-item:nth-child(odd)  { border-right: 1px solid var(--dash-border); }
+    .status-item:nth-child(3),
+    .status-item:nth-child(4)    { border-bottom: none; }
+    .status-value { font-size: 1.25rem; }
+
+    /* Charts: stack vertically */
+    .media-grid { grid-template-columns: 1fr; gap: 14px; }
+
+    /* CPM cards: tighter padding, stats wrap to 2-per-row */
+    .cpm-row { padding: 12px 14px; gap: 12px; }
+    .cpm-stat { flex: 1 1 80px; }
+
+    /* Assumptions panel: scrollable tables */
+    .assumptions-panel { padding: 10px 12px; }
+  }
 </style>
 
 {% comment %} ── Initialize all accumulators ── {% endcomment %}
@@ -201,6 +232,12 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
 {% assign gas_savings = gas_savings | round: 0 %}
 
 <div class="dash-container">
+<script>(function(){
+  var lnk = document.querySelector("link[rel~='icon']") || document.createElement('link');
+  lnk.rel = 'icon';
+  lnk.href = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔋</text></svg>";
+  if (!lnk.parentNode) document.head.appendChild(lnk);
+})();</script>
 
   <!-- Cross-page charging nav -->
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);">
@@ -240,6 +277,7 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
   <div id="gas-assumptions" class="assumptions-panel">
     <strong>Gas Savings Assumptions by Period</strong>
     <p style="font-size:0.78rem;color:#888;margin:4px 0 8px">The <em>mpg</em> column is the baseline for your car (27 mpg). LRB's sessions automatically use <strong>23 mpg</strong> regardless of this table — that override is hardcoded per-vehicle in the analytics and dashboard code.</p>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
     <table>
       <tr><th>From date</th><th>Baseline MPG</th><th>Gas $/gal</th><th>mi/kWh</th></tr>
       {% for period in site.data.rates.gas_savings %}
@@ -251,8 +289,10 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
         </tr>
       {% endfor %}
     </table>
+    </div>
     <br>
     <strong>Home Electricity Rates by Period</strong>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
     <table>
       <tr><th>From date</th><th>Rate ($/kWh)</th></tr>
       {% for period in site.data.rates.home_electricity %}
@@ -262,8 +302,10 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
         </tr>
       {% endfor %}
     </table>
+    </div>
     <br>
     <strong>Per-Vehicle Battery Capacity (Usable kWh)</strong>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
     <table>
       <tr><th>Vehicle</th><th>Usable kWh</th><th>Chemistry</th></tr>
       <tr><td>2025 Mach-E GT</td><td>91.7 kWh</td><td>NCM Extended Range</td></tr>
@@ -271,6 +313,7 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
       <tr><td>LRB's 2025 Mach-E GT</td><td>91.7 kWh</td><td>NCM Extended Range</td></tr>
       <tr><td>LRB's 2026 Mach-E SR</td><td>72.6 kWh</td><td>LFP Standard Range</td></tr>
     </table>
+    </div>
   </div>
 
   {% comment %} ── Cost per mile / efficiency cards ── {% endcomment %}
@@ -382,10 +425,11 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
       <h3 style="margin: 0; font-size: 1.1rem;">Recent Sessions</h3>
       <a href="/charging-history/" style="color: #3498db; font-weight: bold; text-decoration: none; font-size: 0.8rem;">View All →</a>
     </div>
+    <div class="charging-table-wrap">
     <table class="charging-table">
       <thead><tr><th>Date</th><th>Location</th><th>Energy</th><th>Cost</th></tr></thead>
       <tbody>
-        {% assign sorted = site.charging | reverse %}
+        {% assign sorted = site.charging | sort: 'date' | reverse %}
         {% for log in sorted limit: 8 %}
           {% assign log_date = log.date | date: "%Y-%m-%d" %}
           {% assign log_loc  = log.location | downcase %}
@@ -424,6 +468,7 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 
@@ -431,6 +476,7 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script>
   Chart.register(ChartDataLabels);
+  Chart.defaults.animation = false;
   const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
   const getThemeColor = () => isDark() ? '#eee' : '#333';
 
@@ -471,7 +517,7 @@ LRB's 2025 Mach-E GT | 11352 | 2026-05-02 | 2026-05-02 |
     { label: 'Blink',  val: {{ blink_kwh }},  color: '#65A844' },
     { label: 'Rivian', val: {{ rivian_kwh }}, color: '#ffa500' },
     { label: 'Other',  val: {{ other_kwh }},  color: '#616161' }
-  ].sort((a, b) => b.val - a.val);
+  ].filter(d => d.val > 0).sort((a, b) => b.val - a.val);
 
   const barChart = new Chart(document.getElementById('locationBarChart'), {
     type: 'bar',
