@@ -162,7 +162,8 @@ permalink: /charging-analytics/
     display: flex; flex-wrap: wrap; gap: 6px;
     padding: 6px 20px 5px;
     border-bottom: 1px solid var(--dash-border);
-    background: rgba(0,0,0,0.03);
+    /* constrain to same width as page body so rows align with site nav content */
+    max-width: 1060px; margin: 0 auto; box-sizing: border-box; width: 100%;
   }
   #stickyNavRow a {
     font-size: 0.68rem; font-weight: 600; color: var(--link);
@@ -175,6 +176,7 @@ permalink: /charging-analytics/
   #stickyVehicleRow {
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
     padding: 6px 20px 7px;
+    max-width: 1060px; margin: 0 auto; box-sizing: border-box; width: 100%;
   }
   #vehicleFilterSticky .vf-sticky-label {
     font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em;
@@ -4128,7 +4130,7 @@ function initStickyBar() {
   function _updateTop() {
     const nav    = document.querySelector('body > nav');
     const bottom = nav ? nav.getBoundingClientRect().bottom : 0;
-    const top    = bottom > 0 ? Math.ceil(bottom) : 62;
+    const top    = bottom > 0 ? Math.round(bottom) - 1 : 62;
     document.documentElement.style.setProperty('--sticky-bar-top', top + 'px');
     // Keep scroll-padding-top in sync so hash jumps always clear both sticky bars
     const barH = stickyBar.classList.contains('visible') ? stickyBar.offsetHeight : 0;
