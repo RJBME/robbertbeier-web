@@ -338,12 +338,49 @@ permalink: /charging-analytics/
 
   /* Tighten gap between site nav and charging sub-nav */
   nav { margin-bottom: 0.75rem !important; }
+
+  /* ── Print / PDF Report ── */
+  #printFab   { display: flex; }
+  #printPanel { display: none; flex-direction: column; }
+  #printPanel.open { display: flex; }
+
+  @media print {
+    @page { size: 11in 8.5in landscape; margin: 0.4in 0.45in; }
+
+    /* Hide all UI chrome */
+    nav, #chargingPageNav, #vehicleFilterSticky, #vehicleFilterBtns,
+    .section-nav, .back-top-pill, .back-link,
+    #printFab, #printPanel, #hm-tip, #locViewBtns, .loc-view-btn,
+    .analytics-header > p { display: none !important; }
+
+    /* Reset layout for full-width print */
+    body  { padding: 0 !important; max-width: none !important; background: #fff !important; overflow: visible !important; }
+    html  { overflow: visible !important; }
+    nav   { margin-bottom: 0 !important; }
+    .analytics-container { max-width: none !important; width: 100% !important; margin: 0 !important; }
+
+    /* Charts: fixed height keeps them on-page in landscape */
+    .chart-wrap { height: 200px !important; }
+    canvas { max-width: 100% !important; }
+
+    /* Print-friendly cards */
+    .chart-card, .record-card, .kpi-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+    .chart-card { break-inside: avoid; page-break-inside: avoid; }
+
+    /* Page breaks: each section starts on a new page */
+    .section-header { break-before: page; page-break-before: always; break-inside: avoid; page-break-inside: avoid; }
+    /* First visible section — no leading blank page */
+    .section-header.print-first-sec { break-before: avoid !important; page-break-before: avoid !important; }
+
+    /* Preserve colours in PDF */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  }
 </style>
 
 <div class="analytics-container" id="top">
 
   <!-- Cross-page charging nav -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);align-items:center;">
+  <div id="chargingPageNav" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);align-items:center;">
     <a href="/charging/"         style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">⚡ Dashboard</a>
     <a href="/charging-history/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📋 History</a>
     <a href="/charging-analytics/" style="font-size:0.78rem;font-weight:700;color:#fff;text-decoration:none;padding:5px 14px;border:1px solid var(--link);border-radius:20px;background:var(--link)">📊 Analytics</a>
@@ -1068,6 +1105,28 @@ permalink: /charging-analytics/
 
 </div><!-- .analytics-container -->
 
+<!-- ─── Print Report FAB + Panel ─── -->
+<button id="printFab" title="Generate PDF Report"
+  style="position:fixed;bottom:28px;right:28px;z-index:600;width:52px;height:52px;border-radius:50%;background:var(--link);color:#fff;border:none;font-size:1.35rem;cursor:pointer;box-shadow:0 4px 18px rgba(93,63,211,0.42);transition:transform 0.15s,box-shadow 0.15s;align-items:center;justify-content:center"
+  onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 6px 26px rgba(93,63,211,0.58)'"
+  onmouseout="this.style.transform='';this.style.boxShadow='0 4px 18px rgba(93,63,211,0.42)'">📄</button>
+
+<div id="printPanel" style="position:fixed;bottom:92px;right:28px;z-index:601;width:290px;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:16px;box-shadow:0 8px 36px rgba(0,0,0,0.18);overflow:hidden">
+  <div style="padding:13px 16px;border-bottom:1px solid var(--dash-border);display:flex;align-items:center;justify-content:space-between">
+    <span style="font-weight:800;font-size:0.88rem">📄 Print Report</span>
+    <button id="printClose" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#888;padding:2px 6px;border-radius:6px;line-height:1" onmouseover="this.style.background='var(--dash-border)'" onmouseout="this.style.background=''">✕</button>
+  </div>
+  <div style="padding:8px 10px;border-bottom:1px solid var(--dash-border);display:flex;gap:8px">
+    <button id="printSelectAll"  style="flex:1;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:8px;padding:5px;font-size:0.72rem;font-weight:700;cursor:pointer;color:var(--link);font-family:inherit" onmouseover="this.style.borderColor='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)'">All</button>
+    <button id="printSelectNone" style="flex:1;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:8px;padding:5px;font-size:0.72rem;font-weight:700;cursor:pointer;color:#888;font-family:inherit">None</button>
+  </div>
+  <div id="printSectionList" style="padding:6px 8px;max-height:340px;overflow-y:auto"></div>
+  <div style="padding:10px 12px;border-top:1px solid var(--dash-border)">
+    <button id="doPrint" style="width:100%;background:var(--link);color:#fff;border:none;border-radius:10px;padding:10px;font-size:0.86rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🖨️ Print / Save as PDF</button>
+    <p style="font-size:0.64rem;color:#888;margin:7px 0 0;text-align:center;line-height:1.45">Print dialog → <strong>Save as PDF</strong> · set <strong>Landscape</strong></p>
+  </div>
+</div>
+
 <!-- ─────────────────────────────────────────────────── -->
 <!--  SCRIPTS                                           -->
 <!-- ─────────────────────────────────────────────────── -->
@@ -1377,10 +1436,17 @@ function buildVehicleFilter() {
     }
   }
 
-  // Show sticky bar after scrolling 120px
+  // Position the sticky bar below the global site nav so they don't overlap.
+  // The site nav is position:sticky;top:0 — measure its height once and offset.
   if (stickyBar) {
+    const globalNav = document.querySelector('body > nav, nav.site-nav, header nav, nav') ;
+    const navH = globalNav ? globalNav.offsetHeight : 0;
+    if (navH > 0) stickyBar.style.top = navH + 'px';
+
+    // Show sticky bar after scrolling past the nav + a little buffer
+    const showAt = Math.max(navH + 60, 120);
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 120) {
+      if (window.scrollY > showAt) {
         stickyBar.classList.add('visible');
       } else {
         stickyBar.classList.remove('visible');
@@ -1428,7 +1494,22 @@ function setVehicle(v) {
     b.classList.toggle('active', b.textContent === label);
   });
   _lastSl = v === 'all' ? sessions : sessions.filter(s => s.vehicle === v);
+
+  // Preserve scroll position across rebuild — #efficiencySection, #detailSection,
+  // and #vehicleCompSection toggle display when switching vehicles, shifting the map
+  // section up/down and causing a visible scroll jump to the wrong section.
+  // Anchor to the map container (always in DOM) and compensate for any layout delta.
+  const _anchor = document.getElementById('chargingMap');
+  const _preY   = _anchor ? _anchor.getBoundingClientRect().top + window.scrollY : 0;
+  const _savedY = window.scrollY;
+
   rebuild(_lastSl);
+
+  if (_anchor) {
+    const _postY = _anchor.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo(0, _savedY + (_postY - _preY));
+  }
+
   if (_leafletMap) buildMap(_lastSl);
 }
 
@@ -3931,6 +4012,7 @@ let _lastSl     = sessions;
 
 buildVehicleFilter();
 rebuild(sessions);
+initPrint();
 
 // Use window.onload so all external scripts (Leaflet) are guaranteed loaded
 // and the DOM is fully painted with real dimensions before we call L.map()
@@ -4444,4 +4526,122 @@ window.addEventListener('themeChanged', () => {
     chart.update('none');
   });
 });
+
+/* ════════════════════════════════════════════════════════
+   PRINT / PDF REPORT
+   ════════════════════════════════════════════════════════ */
+const PRINT_SECTIONS = [
+  { id: 'kpi',          label: 'KPI Summary',            icon: '📊' },
+  { id: 'records',      label: 'Personal Records',       icon: '🏆' },
+  { id: 'heatmap',      label: 'Year at a Glance',       icon: '📅' },
+  { id: 'monthly',      label: 'Monthly Breakdown',      icon: '📊' },
+  { id: 'sources',      label: 'Charging Sources',       icon: '📍' },
+  { id: 'economics',    label: 'Economics',              icon: '💰' },
+  { id: 'trends',       label: 'Trends',                 icon: '📈' },
+  { id: 'sessions',     label: 'Session Deep Dive',      icon: '🔍' },
+  { id: 'seasonal',     label: 'Season Over Season',     icon: '❄️' },
+  { id: 'economics2',   label: 'Economics Deep Dive',    icon: '💎' },
+  { id: 'co2',          label: 'CO₂ Avoidance',          icon: '🌿' },
+  { id: 'roadtrips',    label: 'Road Trips',             icon: '🚗' },
+  { id: 'vehiclecomp',  label: 'Vehicle Comparison',     icon: '🔄' },
+  { id: 'sessiondetail',label: 'Session Detail',         icon: '🔬' },
+  { id: 'efficiency',   label: 'Real-World Efficiency',  icon: '⚡' },
+  { id: 'map',          label: 'Locations Map',          icon: '🗺️' },
+];
+
+// Wrapped section id → DOM element id (these are already container divs)
+const _WRAPPED_IDS = {
+  vehiclecomp:   'vehicleCompSection',
+  sessiondetail: 'detailSection',
+  efficiency:    'efficiencySection',
+};
+
+// Tag every direct child of .analytics-container with its section id once at init
+function tagPrintSections() {
+  const container = document.querySelector('.analytics-container');
+  if (!container) return;
+  const WRAPPED = { vehicleCompSection:'vehiclecomp', detailSection:'sessiondetail', efficiencySection:'efficiency' };
+  let cur = null;
+  Array.from(container.children).forEach(el => {
+    // Wrapped container divs: assign their own section id
+    if (el.id && WRAPPED[el.id]) { cur = WRAPPED[el.id]; el.dataset.printSec = cur; return; }
+    // Section-header marks start of a new section
+    if (el.classList.contains('section-header') && el.id) cur = el.id;
+    // KPI strip sits before the first section-header
+    if (!cur && el.classList.contains('kpi-strip')) { el.dataset.printSec = 'kpi'; return; }
+    if (cur) el.dataset.printSec = cur;
+  });
+}
+
+// Populate the section checklist — called each time the panel opens
+function buildPrintPanel() {
+  const list = document.getElementById('printSectionList');
+  if (!list) return;
+  list.innerHTML = PRINT_SECTIONS.map(s => {
+    // Conditional sections: skip if currently hidden (no data for active vehicle)
+    if (_WRAPPED_IDS[s.id]) {
+      const el = document.getElementById(_WRAPPED_IDS[s.id]);
+      if (!el || el.style.display === 'none') return '';
+    }
+    if (s.id === 'kpi' && !document.querySelector('[data-print-sec="kpi"]')) return '';
+    return `<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer" onmouseover="this.style.background='var(--dash-border)'" onmouseout="this.style.background=''">
+      <input type="checkbox" class="print-cb" value="${s.id}" checked style="width:15px;height:15px;accent-color:var(--link);flex-shrink:0;cursor:pointer">
+      <span style="width:1.3em;text-align:center">${s.icon}</span>
+      <span style="font-weight:600;color:var(--text);font-size:0.85rem">${s.label}</span>
+    </label>`;
+  }).join('');
+}
+
+const _printOrig = new Map();
+
+function applyPrintState() {
+  const selected = new Set(
+    Array.from(document.querySelectorAll('.print-cb:checked')).map(cb => cb.value)
+  );
+  _printOrig.clear();
+
+  // Hide all section elements not in the selected set
+  document.querySelectorAll('[data-print-sec]').forEach(el => {
+    if (!selected.has(el.dataset.printSec)) {
+      _printOrig.set(el, el.style.display);
+      el.style.display = 'none';
+    }
+  });
+
+  // Mark the first visible section-header so print CSS suppresses its page-break
+  document.querySelectorAll('.print-first-sec').forEach(el => el.classList.remove('print-first-sec'));
+  let firstFound = false;
+  document.querySelectorAll('.section-header').forEach(hdr => {
+    if (firstFound) return;
+    const sec = hdr.closest('[data-print-sec]')?.dataset.printSec;
+    if (sec && selected.has(sec)) { hdr.classList.add('print-first-sec'); firstFound = true; }
+  });
+}
+
+function clearPrintState() {
+  _printOrig.forEach((val, el) => {
+    el.style.removeProperty('display');
+    if (val) el.style.display = val;
+  });
+  _printOrig.clear();
+  document.querySelectorAll('.print-first-sec').forEach(el => el.classList.remove('print-first-sec'));
+}
+
+function initPrint() {
+  tagPrintSections();
+  const fab   = document.getElementById('printFab');
+  const panel = document.getElementById('printPanel');
+  if (!fab || !panel) return;
+
+  fab.onclick   = () => { buildPrintPanel(); panel.classList.toggle('open'); };
+  document.getElementById('printClose').onclick     = () => panel.classList.remove('open');
+  document.getElementById('printSelectAll').onclick  = () => document.querySelectorAll('.print-cb').forEach(cb => cb.checked = true);
+  document.getElementById('printSelectNone').onclick = () => document.querySelectorAll('.print-cb').forEach(cb => cb.checked = false);
+  document.getElementById('doPrint').onclick = () => {
+    panel.classList.remove('open');
+    // Brief delay so panel closes before browser opens the print dialog
+    setTimeout(() => { applyPrintState(); window.print(); }, 80);
+  };
+  window.addEventListener('afterprint', clearPrintState);
+}
 </script>
