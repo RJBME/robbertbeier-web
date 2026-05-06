@@ -7,8 +7,9 @@ permalink: /charging-analytics/
 
 <style>
   /* ── Page-level overrides ── */
-  body { max-width: 1100px !important; overflow-x: hidden; }
-  html { overflow-x: hidden; }
+  body { max-width: 1100px !important; overflow-x: clip; }
+  /* NOTE: do NOT set overflow on <html> — it breaks position:sticky on the site nav.
+     overflow-x:clip on body clips horizontal bleed without creating a scroll container. */
   /* offset hash-jump targets so they clear both sticky bars */
   :root { scroll-padding-top: var(--scroll-pad, 70px); }
 
@@ -427,6 +428,10 @@ permalink: /charging-analytics/
   <!-- Sticky bar: section nav on top row, vehicle filter on bottom row -->
   <div id="vehicleFilterSticky">
     <div id="stickyNavRow">
+      <!-- Cross-page shortcuts (compact, separated from section nav) -->
+      <a href="/charging/" style="opacity:0.55;font-size:0.62rem;padding:2px 7px">⚡ Dash</a>
+      <a href="/charging-history/" style="opacity:0.55;font-size:0.62rem;padding:2px 7px">📋 History</a>
+      <span style="color:var(--dash-border);margin:0 4px;align-self:center">│</span>
       <a href="#records">Records</a>
       <a href="#heatmap">Heatmap</a>
       <a href="#monthly">Monthly</a>
@@ -4116,19 +4121,29 @@ function initStickyBar() {
   const inlineFilter = document.getElementById('vehicleFilterBtns');
   if (!stickyBar) return;
 
-  // ── Measure site nav height → set CSS custom property ──
+  // ── Measure site nav position → set CSS custom property ──
+  // Use getBoundingClientRect().bottom: gives the EXACT viewport Y of the nav's
+  // bottom edge regardless of whether the nav is sticky or not. This eliminates
+  // the 'gap' caused by margin offsets when measuring .height alone.
   function _updateTop() {
-    const nav = document.querySelector('body > nav');
-    const h   = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
-    const top = h > 0 ? h : 62;
+    const nav    = document.querySelector('body > nav');
+    const bottom = nav ? nav.getBoundingClientRect().bottom : 0;
+    const top    = bottom > 0 ? Math.ceil(bottom) : 62;
     document.documentElement.style.setProperty('--sticky-bar-top', top + 'px');
-    // Keep scroll-padding-top in sync so hash jumps always clear both bars
-    const barH = stickyBar.classList.contains('visible') ? (stickyBar.offsetHeight + 4) : 0;
-    document.documentElement.style.setProperty('--scroll-pad', (top + barH + 4) + 'px');
+    // Keep scroll-padding-top in sync so hash jumps always clear both sticky bars
+    const barH = stickyBar.classList.contains('visible') ? stickyBar.offsetHeight : 0;
+    document.documentElement.style.setProperty('--scroll-pad', (top + barH + 6) + 'px');
   }
   _updateTop();
   window.addEventListener('load',   _updateTop, { once: true });
   window.addEventListener('resize', _updateTop, { passive: true });
+  // Re-measure on scroll too: if the nav is not sticky (e.g. page not yet scrolled to
+  // its threshold) the nav bottom changes with scroll. rAF-throttled to stay smooth.
+  var _utRaf = null;
+  window.addEventListener('scroll', function() {
+    if (_utRaf) return;
+    _utRaf = requestAnimationFrame(function() { _utRaf = null; _updateTop(); });
+  }, { passive: true });
 
   // ── Show/hide: only after inline filter has scrolled off the top ──
   // Using IntersectionObserver is far more reliable than a hardcoded scrollY
