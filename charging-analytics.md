@@ -4040,8 +4040,22 @@ function buildHeatmap(sl) {
   if (!el || !sl.length) return;
 
   var CELL = 16, GAP = 4, W = CELL + GAP;
+
+  // Build dayMap (total kWh) and dayBucketMap (kWh per bucket per day)
   var dayMap = {};
-  sl.forEach(function(s){ dayMap[s.date] = (dayMap[s.date] || 0) + s.kwh; });
+  var dayBucketMap = {}; // { 'YYYY-MM-DD': { Work:0, Home:0, 'Tesla SC':0, ... } }
+  sl.forEach(function(s) {
+    dayMap[s.date] = (dayMap[s.date] || 0) + s.kwh;
+    if (!dayBucketMap[s.date]) dayBucketMap[s.date] = {};
+    dayBucketMap[s.date][s.bucket] = (dayBucketMap[s.date][s.bucket] || 0) + s.kwh;
+  });
+
+  // Determine dominant bucket for a day (most kWh)
+  function dominantBucket(ds) {
+    var bm = dayBucketMap[ds];
+    if (!bm) return null;
+    return Object.keys(bm).reduce(function(a, b) { return bm[a] >= bm[b] ? a : b; });
+  }
 
   // Find max kWh in a day for dynamic scaling
   var maxDay = Math.max.apply(null, Object.values(dayMap).concat([1]));
@@ -4059,14 +4073,53 @@ function buildHeatmap(sl) {
     weeks.push(wk);
   }
 
-  // 5-stop palettes with strong contrast between levels
+  // Generic purple palette (all-vehicles mode)
   var PALS = {
     light: ['#e8e8e8', '#d4baf5', '#a67ce0', '#7b1fa2', '#3d0066'],
     dark:  ['#2a2a2a', '#3b2060', '#6a2fa0', '#9c27b0', '#e040fb']
   };
 
-  function cellCol(kwh) {
-    var p = isDark() ? PALS.dark : PALS.light;
+  // Per-bucket palettes for single-vehicle mode
+  // Each has 5 stops: [empty, faint, light, mid, strong]
+  var BUCKET_PALS = {
+    light: {
+      'Work':       ['#e8e8e8', '#bbdefb', '#64b5f6', '#0288d1', '#01579b'],
+      'Home':       ['#e8e8e8', '#d4baf5', '#a67ce0', '#7b1fa2', '#3d0066'],
+      'Tesla SC':   ['#e8e8e8', '#ffcdd2', '#ef9a9a', '#e53935', '#7f0000'],
+      'ChargePoint':['#e8e8e8', '#ffe0b2', '#ffb74d', '#FF7A14', '#bf360c'],
+      'Blink':      ['#e8e8e8', '#c8e6c9', '#81c784', '#43a047', '#1b5e20'],
+      'Rivian':     ['#e8e8e8', '#fff9c4', '#fff176', '#fdd835', '#f57f17'],
+      'Other':      ['#e8e8e8', '#e0e0e0', '#bdbdbd', '#757575', '#424242'],
+    },
+    dark: {
+      'Work':       ['#2a2a2a', '#0d2744', '#1565c0', '#1e88e5', '#64b5f6'],
+      'Home':       ['#2a2a2a', '#3b2060', '#6a2fa0', '#9c27b0', '#e040fb'],
+      'Tesla SC':   ['#2a2a2a', '#4a1010', '#c62828', '#ef5350', '#ff8a80'],
+      'ChargePoint':['#2a2a2a', '#3a1a00', '#bf360c', '#f4511e', '#ff8a65'],
+      'Blink':      ['#2a2a2a', '#0a2a0a', '#2e7d32', '#43a047', '#81c784'],
+      'Rivian':     ['#2a2a2a', '#332600', '#f57f17', '#fdd835', '#fff176'],
+      'Other':      ['#2a2a2a', '#333333', '#555555', '#888888', '#bdbdbd'],
+    }
+  };
+
+  // Map bucket → label for legend
+  var BUCKET_LABELS = {
+    'Work': 'Work', 'Home': 'Home', 'Tesla SC': 'Tesla SC',
+    'ChargePoint': 'ChargePoint', 'Blink': 'Blink', 'Rivian': 'Rivian', 'Other': 'Public'
+  };
+
+  // Are we in single-vehicle mode?
+  var singleVehicle = activeVehicle && activeVehicle !== 'all';
+
+  function getPalette(bucket) {
+    var theme = isDark() ? 'dark' : 'light';
+    if (!singleVehicle) return PALS[theme];
+    var b = bucket || 'Home';
+    return (BUCKET_PALS[theme][b] || BUCKET_PALS[theme]['Home']);
+  }
+
+  function cellCol(kwh, bucket) {
+    var p = getPalette(bucket);
     if (!kwh || kwh === 0) return p[0];
     var ratio = kwh / maxDay;
     if (ratio < 0.20) return p[1];
@@ -4087,8 +4140,9 @@ function buildHeatmap(sl) {
 
   function render() {
     var p = isDark() ? PALS.dark : PALS.light;
+    singleVehicle = activeVehicle && activeVehicle !== 'all';
 
-    /* Month labels — positioned to align with first week of that month */
+    /* Month labels */
     var mHtml = '<div style="display:flex;margin-left:' + DOW_LEFT + 'px;margin-bottom:4px;">';
     var lastM = -1;
     weeks.forEach(function(wk) {
@@ -4121,13 +4175,28 @@ function buildHeatmap(sl) {
       gHtml += '<div style="display:flex;flex-direction:column;gap:' + GAP + 'px;'
              + 'margin-right:' + GAP + 'px;flex-shrink:0;">';
       wk.forEach(function(day) {
-        var ds     = localDate(day);
-        var kwh    = dayMap[ds] || 0;
-        var future = day > today;
-        var tip    = kwh > 0
-          ? ds + ': ' + kwh.toFixed(1) + ' kWh'
-          : ds;
-        var bg = future ? 'transparent' : cellCol(kwh);
+        var ds      = localDate(day);
+        var kwh     = dayMap[ds] || 0;
+        var bucket  = dominantBucket(ds);
+        var future  = day > today;
+
+        // Build tooltip: show kWh and, in single-vehicle mode, dominant location type
+        var tipParts = [];
+        if (kwh > 0) {
+          tipParts.push(ds + ': ' + kwh.toFixed(1) + ' kWh');
+          if (singleVehicle && bucket) tipParts.push(BUCKET_LABELS[bucket] || bucket);
+          // If multiple buckets on same day, note it
+          var bm = dayBucketMap[ds];
+          if (bm && Object.keys(bm).length > 1) {
+            var parts = Object.keys(bm).map(function(b) { return (BUCKET_LABELS[b]||b) + ' ' + bm[b].toFixed(1) + ' kWh'; });
+            tipParts.push('(' + parts.join(' + ') + ')');
+          }
+        } else {
+          tipParts.push(ds);
+        }
+        var tip = tipParts.join(' · ');
+
+        var bg = future ? 'transparent' : cellCol(kwh, bucket);
         var border = (!future && kwh === 0)
           ? 'border:1px solid ' + (isDark() ? '#3a3a3a' : '#ddd') + ';'
           : '';
@@ -4139,20 +4208,38 @@ function buildHeatmap(sl) {
     });
     gHtml += '</div>';
 
-    /* Legend — shows actual thresholds */
-    var thresh = [0, Math.round(maxDay*0.20), Math.round(maxDay*0.45), Math.round(maxDay*0.75), Math.round(maxDay)];
+    /* Legend */
     var leg = '<div style="display:flex;align-items:center;gap:6px;margin-top:12px;'
             + 'margin-left:' + DOW_LEFT + 'px;flex-wrap:wrap;">';
-    leg += '<span style="font-size:10px;color:#888;margin-right:2px;">Less</span>';
-    p.forEach(function(c, i) {
-      leg += '<div title="' + (i===0 ? 'No charge' : '≥'+thresh[i]+' kWh') + '" style="'
-           + 'width:' + CELL + 'px;height:' + CELL + 'px;background:' + c + ';'
-           + 'border-radius:3px;flex-shrink:0;box-sizing:border-box;'
-           + (i===0 ? 'border:1px solid '+(isDark()?'#3a3a3a':'#ddd')+';' : '')
-           + '"></div>';
-    });
-    leg += '<span style="font-size:10px;color:#888;margin-left:2px;">More</span>';
-    leg += '<span style="font-size:10px;color:#aaa;margin-left:16px;">Hover cell for kWh</span>';
+
+    if (singleVehicle) {
+      // Show one swatch per bucket that actually appears in the data, using its mid-tone color
+      var bucketsInData = [...new Set(sl.map(s => s.bucket))].sort();
+      leg += '<span style="font-size:10px;color:#888;margin-right:4px;">Location:</span>';
+      bucketsInData.forEach(function(b) {
+        var pal = isDark() ? BUCKET_PALS.dark[b] : BUCKET_PALS.light[b];
+        if (!pal) return;
+        leg += '<div style="display:flex;align-items:center;gap:3px;margin-right:6px;">'
+             + '<div style="width:' + CELL + 'px;height:' + CELL + 'px;background:' + pal[3] + ';'
+             + 'border-radius:3px;flex-shrink:0;"></div>'
+             + '<span style="font-size:10px;color:' + (isDark() ? '#aaa' : '#666') + '">' + (BUCKET_LABELS[b]||b) + '</span>'
+             + '</div>';
+      });
+      leg += '<span style="font-size:10px;color:#aaa;margin-left:8px;">color = dominant location · intensity = kWh</span>';
+    } else {
+      // Generic intensity legend
+      var thresh = [0, Math.round(maxDay*0.20), Math.round(maxDay*0.45), Math.round(maxDay*0.75), Math.round(maxDay)];
+      leg += '<span style="font-size:10px;color:#888;margin-right:2px;">Less</span>';
+      p.forEach(function(c, i) {
+        leg += '<div title="' + (i===0 ? 'No charge' : '≥'+thresh[i]+' kWh') + '" style="'
+             + 'width:' + CELL + 'px;height:' + CELL + 'px;background:' + c + ';'
+             + 'border-radius:3px;flex-shrink:0;box-sizing:border-box;'
+             + (i===0 ? 'border:1px solid '+(isDark()?'#3a3a3a':'#ddd')+';' : '')
+             + '"></div>';
+      });
+      leg += '<span style="font-size:10px;color:#888;margin-left:2px;">More</span>';
+      leg += '<span style="font-size:10px;color:#aaa;margin-left:16px;">Hover cell for kWh</span>';
+    }
     leg += '</div>';
 
     el.innerHTML = mHtml + gHtml + leg;
