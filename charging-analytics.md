@@ -336,8 +336,10 @@ permalink: /charging-analytics/
   #chargingMap .leaflet-popup-content-wrapper { background: var(--dash-card,#fff); color: var(--text,#333); border: 1px solid var(--dash-border,#ddd); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
   #chargingMap .leaflet-popup-tip { background: var(--dash-card,#fff); }
 
-  /* Tighten gap between site nav and charging sub-nav */
-  nav { margin-bottom: 0.75rem !important; }
+  /* Tighten gap between site nav and charging sub-nav.
+     Also raise its z-index above the analytics sticky bar (z-index:500)
+     so it always renders on top even if positioning math fails. */
+  nav { margin-bottom: 0.75rem !important; z-index: 600 !important; }
 
   /* ── Print / PDF Report ── */
   #printFab   { display: flex; }
@@ -1437,20 +1439,24 @@ function buildVehicleFilter() {
   }
 
   // Position the sticky bar below the global site nav so they don't overlap.
-  // The site nav is position:sticky;top:0 — measure its height once and offset.
+  // Measurement runs in rAF (after first paint) and again on load (after fonts/images
+  // settle), so offsetHeight is reliable regardless of script execution timing.
   if (stickyBar) {
-    const globalNav = document.querySelector('body > nav, nav.site-nav, header nav, nav') ;
-    const navH = globalNav ? globalNav.offsetHeight : 0;
-    if (navH > 0) stickyBar.style.top = navH + 'px';
+    function _positionStickyBar() {
+      // Find the tallest <nav> that is NOT inside our own sticky bar.
+      let maxH = 0;
+      document.querySelectorAll('nav').forEach(function(n) {
+        if (!n.closest('#vehicleFilterSticky') && n.offsetHeight > maxH) maxH = n.offsetHeight;
+      });
+      if (maxH > 0) stickyBar.style.top = maxH + 'px';
+    }
+    requestAnimationFrame(_positionStickyBar);          // after first paint
+    window.addEventListener('load',   _positionStickyBar); // after all resources
+    window.addEventListener('resize', _positionStickyBar, { passive: true });
 
-    // Show sticky bar after scrolling past the nav + a little buffer
-    const showAt = Math.max(navH + 60, 120);
-    window.addEventListener('scroll', () => {
-      if (window.scrollY > showAt) {
-        stickyBar.classList.add('visible');
-      } else {
-        stickyBar.classList.remove('visible');
-      }
+    const showAt = 120;
+    window.addEventListener('scroll', function() {
+      stickyBar.classList.toggle('visible', window.scrollY > showAt);
     }, { passive: true });
   }
 
@@ -1495,19 +1501,36 @@ function setVehicle(v) {
   });
   _lastSl = v === 'all' ? sessions : sessions.filter(s => s.vehicle === v);
 
-  // Preserve scroll position across rebuild — #efficiencySection, #detailSection,
-  // and #vehicleCompSection toggle display when switching vehicles, shifting the map
-  // section up/down and causing a visible scroll jump to the wrong section.
-  // Anchor to the map container (always in DOM) and compensate for any layout delta.
-  const _anchor = document.getElementById('chargingMap');
-  const _preY   = _anchor ? _anchor.getBoundingClientRect().top + window.scrollY : 0;
+  // Preserve scroll position across rebuild.
+  // Toggling section visibility (efficiencySection, detailSection, vehicleCompSection)
+  // shifts all content below those sections. Anchoring to a fixed element (like the map)
+  // overcorrects when the user is near the TOP of the page — the map is far below
+  // the viewport and its delta gets applied even though nothing shifted in view.
+  //
+  // Instead: find the topmost section-header or kpi-strip that's currently AT or
+  // BELOW the viewport top. Record its distance from the viewport top. After rebuild,
+  // scroll by the delta so that element stays exactly where it was.
+  // If everything is above the fold (user at very top), there's no visible shift,
+  // so delta will be 0 and no scroll correction fires.
   const _savedY = window.scrollY;
+  let _anchorEl = null, _anchorTopBefore = 0;
+  const _candidates = document.querySelectorAll(
+    '.analytics-container .kpi-strip, .analytics-container .section-header'
+  );
+  for (const el of _candidates) {
+    const r = el.getBoundingClientRect();
+    if (r.bottom > 0) { // first element at or overlapping the viewport top
+      _anchorEl = el;
+      _anchorTopBefore = r.top;
+      break;
+    }
+  }
 
   rebuild(_lastSl);
 
-  if (_anchor) {
-    const _postY = _anchor.getBoundingClientRect().top + window.scrollY;
-    window.scrollTo(0, _savedY + (_postY - _preY));
+  if (_anchorEl) {
+    const delta = _anchorEl.getBoundingClientRect().top - _anchorTopBefore;
+    if (delta !== 0) window.scrollTo(0, _savedY + delta);
   }
 
   if (_leafletMap) buildMap(_lastSl);
