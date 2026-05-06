@@ -140,21 +140,21 @@ permalink: /charging-analytics/
 
   /* ── Sticky vehicle filter bar ── */
   #vehicleFilterSticky {
-    display: none; /* JS shows this when scrolled past page header */
+    display: none;          /* only shown via .visible class after scrolling */
     position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 500;
+    top: var(--sticky-bar-top, -200px); /* JS sets this after measuring site nav */
+    left: 0; right: 0;
+    z-index: 490;           /* intentionally BELOW site nav (z-index:500) */
     background: var(--bg);
     border-bottom: 2px solid var(--dash-border);
     box-shadow: 0 3px 16px rgba(0,0,0,0.12);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    transform: translateY(-110%);
-    transition: transform 0.22s ease;
     flex-direction: column;
     gap: 0;
   }
-  #vehicleFilterSticky.visible { transform: translateY(0); }
+  /* Show via display only — no transform trick (breaks when height is 0 on init) */
+  #vehicleFilterSticky.visible { display: flex; }
   #stickyNavRow {
     display: flex; flex-wrap: wrap; gap: 6px;
     padding: 6px 20px 5px;
@@ -336,10 +336,8 @@ permalink: /charging-analytics/
   #chargingMap .leaflet-popup-content-wrapper { background: var(--dash-card,#fff); color: var(--text,#333); border: 1px solid var(--dash-border,#ddd); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
   #chargingMap .leaflet-popup-tip { background: var(--dash-card,#fff); }
 
-  /* Tighten gap between site nav and charging sub-nav.
-     Also raise its z-index above the analytics sticky bar (z-index:500)
-     so it always renders on top even if positioning math fails. */
-  nav { margin-bottom: 0.75rem !important; z-index: 600 !important; }
+  /* Tighten gap between site nav and charging sub-nav */
+  nav { margin-bottom: 0.75rem !important; }
 
   /* ── Print / PDF Report ── */
   #printFab   { display: flex; }
@@ -824,7 +822,35 @@ permalink: /charging-analytics/
       <strong>1,397 lbs/MWh</strong>, nearly 44% dirtier than home (RFCM, 971 lbs/MWh).
       Comparison vehicle: <span id="co2BaselineNote">RJB → 2023 Escape (24.8 MPG actual) · LRB → 2016 Explorer (23.0 MPG)</span>.
     </div>
-  </div>
+
+    <!-- Solar scenario footnote -->
+    <div id="co2SolarBox" style="margin-top:14px;background:rgba(2,136,209,0.07);border:1px solid rgba(2,136,209,0.25);border-radius:10px;padding:14px 16px">
+      <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:#0288d1;font-weight:700;margin-bottom:10px">☀️ Solar What-If Scenarios — Home Charging</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+        <div style="background:rgba(2,136,209,0.06);border:1px solid rgba(2,136,209,0.18);border-radius:8px;padding:10px 12px">
+          <div style="font-size:0.58rem;text-transform:uppercase;color:#888;margin-bottom:3px">Current (grid-tied)</div>
+          <div style="font-size:1.2rem;font-weight:900;color:#2ecc71" id="co2SolarBase">—</div>
+          <div style="font-size:0.65rem;color:#888;margin-top:2px">kg net CO₂ avoided</div>
+        </div>
+        <div style="background:rgba(2,136,209,0.06);border:1px solid rgba(2,136,209,0.18);border-radius:8px;padding:10px 12px">
+          <div style="font-size:0.58rem;text-transform:uppercase;color:#888;margin-bottom:3px">50% home solar</div>
+          <div style="font-size:1.2rem;font-weight:900;color:#0288d1" id="co2Solar50">—</div>
+          <div style="font-size:0.65rem;color:#888;margin-top:2px">kg avoided · <span id="co2Solar50delta" style="color:#0288d1">—</span> more</div>
+        </div>
+        <div style="background:rgba(2,136,209,0.06);border:1px solid rgba(2,136,209,0.18);border-radius:8px;padding:10px 12px">
+          <div style="font-size:0.58rem;text-transform:uppercase;color:#888;margin-bottom:3px">100% home solar</div>
+          <div style="font-size:1.2rem;font-weight:900;color:#0288d1" id="co2Solar100">—</div>
+          <div style="font-size:0.65rem;color:#888;margin-top:2px">kg avoided · <span id="co2Solar100delta" style="color:#0288d1">—</span> more</div>
+        </div>
+        <div style="background:rgba(2,136,209,0.06);border:1px solid rgba(2,136,209,0.18);border-radius:8px;padding:10px 12px">
+          <div style="font-size:0.58rem;text-transform:uppercase;color:#888;margin-bottom:3px">100% solar, all sites</div>
+          <div style="font-size:1.2rem;font-weight:900;color:#7b1fa2" id="co2SolarAll">—</div>
+          <div style="font-size:0.65rem;color:#888;margin-top:2px">kg avoided · <span id="co2SolarAlldelta" style="color:#7b1fa2">—</span> more</div>
+        </div>
+      </div>
+      <p id="co2SolarNote" style="font-size:0.63rem;color:#888;margin:10px 0 0;line-height:1.55"></p>
+    </div>
+  </div><!-- /.co2-hero -->
 
   <!-- Monthly CO2 chart + grid factor breakdown -->
   <div class="co2-chart-row">
@@ -1403,8 +1429,9 @@ function buildVehicleFilter() {
   const stickyRow = document.getElementById('stickyVehicleRow');
   if (!el) return;
 
-  // Sticky bar always shows (has section nav regardless of vehicle count)
-  if (stickyBar) stickyBar.style.display = 'flex';
+  // Sticky bar starts hidden. Only show it when the user has scrolled past the header.
+  // Do NOT call stickyBar.style.display = 'flex' unconditionally here — that was the
+  // root cause of the bar appearing at the top of the page on load.
 
   if (allVehicles.length < 2) {
     el.style.display = 'none';
@@ -1438,23 +1465,24 @@ function buildVehicleFilter() {
     }
   }
 
-  // Position the sticky bar below the global site nav so they don't overlap.
-  // Measurement runs in rAF (after first paint) and again on load (after fonts/images
-  // settle), so offsetHeight is reliable regardless of script execution timing.
+  // Position the sticky bar directly below the site nav.
+  // Use a CSS custom property so there's no flash: the bar starts at top:-200px
+  // (off-screen) until JS measures the real nav height.
   if (stickyBar) {
     function _positionStickyBar() {
-      // Find the tallest <nav> that is NOT inside our own sticky bar.
       let maxH = 0;
       document.querySelectorAll('nav').forEach(function(n) {
         if (!n.closest('#vehicleFilterSticky') && n.offsetHeight > maxH) maxH = n.offsetHeight;
       });
-      if (maxH > 0) stickyBar.style.top = maxH + 'px';
+      // Default to 50px if nav not yet measured (avoids top:0 flash)
+      const h = maxH > 0 ? maxH : 50;
+      document.documentElement.style.setProperty('--sticky-bar-top', h + 'px');
     }
-    requestAnimationFrame(_positionStickyBar);          // after first paint
-    window.addEventListener('load',   _positionStickyBar); // after all resources
+    requestAnimationFrame(_positionStickyBar);
+    window.addEventListener('load',   _positionStickyBar);
     window.addEventListener('resize', _positionStickyBar, { passive: true });
 
-    const showAt = 120;
+    const showAt = 140;
     window.addEventListener('scroll', function() {
       stickyBar.classList.toggle('visible', window.scrollY > showAt);
     }, { passive: true });
@@ -2603,7 +2631,64 @@ mkChart('chartHistogram', {
     setStatEl('co2GasWould', totalGasCould.toFixed(0) + ' kg');
     setStatEl('co2Pct',      pct.toFixed(0) + '%');
 
-    // Baseline note
+    // ── Solar what-if scenarios ──
+    // Solar lifecycle emissions: ~20–40 g CO₂/kWh (IPCC median 41 g/kWh for rooftop PV)
+    // Battery storage adds ~5–10 g/kWh; combined solar+battery ≈ 50 g CO₂/kWh lifecycle.
+    // Home grid (RFCM): 970.6 lbs/MWh = 440.2 g CO₂/kWh
+    // Solar+battery: 50 g CO₂/kWh (lifecycle median, NREL/IPCC)
+    const SOLAR_BATT_G_PER_KWH = 50;  // g CO₂/kWh — solar PV + home battery system lifecycle
+    const SOLAR_BATT_KG        = SOLAR_BATT_G_PER_KWH / 1000;
+
+    // Identify home sessions and their grid emissions
+    const homeSessions    = sl.filter(s => s.bucket === 'Home');
+    const homeKwh         = homeSessions.reduce((a, s) => a + s.kwh, 0);
+    const homeGridEmit    = homeSessions.reduce((a, s) => a + (s.co2GridEmit || 0), 0);
+    // Grid CO₂ for non-home sessions stays unchanged in all scenarios
+    const nonHomeGridEmit = totalGridEmit - homeGridEmit;
+
+    // Replace home grid emissions with solar+battery lifecycle emissions
+    function solarNetAvoided(homeSolarFrac, allSolarFrac) {
+      // homeSolarFrac: fraction of home kWh covered by solar+battery (0–1)
+      // allSolarFrac: fraction of ALL kWh covered by solar (for the all-sites scenario)
+      const homeEmit    = homeKwh * (homeSolarFrac * SOLAR_BATT_KG + (1 - homeSolarFrac) * EGRID_FACTORS.RFCM);
+      const otherEmit   = allSolarFrac > 0
+        ? (totalGridEmit - homeGridEmit) * (1 - allSolarFrac) + (totalGridEmit - homeGridEmit) * allSolarFrac * (SOLAR_BATT_KG / EGRID_DEFAULT)
+        : nonHomeGridEmit;
+      return totalGasCould - homeEmit - otherEmit;
+    }
+
+    // Scenario values
+    const base       = totalNetAvoided;                    // current grid
+    const solar50    = solarNetAvoided(0.50, 0);           // 50% home solar
+    const solar100   = solarNetAvoided(1.00, 0);           // 100% home solar
+    // All-sites solar: replace ALL grid CO₂ with solar+battery lifecycle
+    const solarAllVal = totalGasCould - (sl.reduce((a, s) => a + s.kwh, 0) * SOLAR_BATT_KG);
+
+    const fmtKg = v => v >= 1000 ? (v/1000).toFixed(2) + ' t' : Math.round(v) + ' kg';
+    const fmtDelta = (v, base) => {
+      const d = v - base;
+      return (d >= 0 ? '+' : '') + fmtKg(d);
+    };
+
+    setStatEl('co2SolarBase',      fmtKg(base));
+    setStatEl('co2Solar50',        fmtKg(solar50));
+    setStatEl('co2Solar100',       fmtKg(solar100));
+    setStatEl('co2SolarAll',       fmtKg(solarAllVal));
+    setStatEl('co2Solar50delta',   fmtDelta(solar50,    base));
+    setStatEl('co2Solar100delta',  fmtDelta(solar100,   base));
+    setStatEl('co2SolarAlldelta',  fmtDelta(solarAllVal, base));
+
+    const noteEl = document.getElementById('co2SolarNote');
+    if (noteEl) {
+      const homeKwhPct = totalGridEmit > 0 ? (homeGridEmit / totalGridEmit * 100).toFixed(0) : 0;
+      noteEl.innerHTML =
+        `<strong>Home charging</strong> accounts for ${fmtKg(homeGridEmit)} of ${fmtKg(totalGridEmit)} total grid CO₂ (${homeKwhPct}%). ` +
+        `Solar+battery lifecycle factor used: <strong>${SOLAR_BATT_G_PER_KWH} g CO₂/kWh</strong> ` +
+        `(vs. Michigan grid ${(EGRID_FACTORS.RFCM * 1000).toFixed(0)} g/kWh — ` +
+        `${Math.round((1 - SOLAR_BATT_KG / EGRID_FACTORS.RFCM) * 100)}% cleaner). ` +
+        `"All sites" scenario assumes solar/storage at every charging location — theoretical best-case. ` +
+        `Source: IPCC AR6 WG3 §6.4, NREL lifecycle LCA 2022.`;
+    }
     const isLRB   = activeVehicle && activeVehicle.includes('LRB');
     const isMixed = !activeVehicle || activeVehicle === 'all';
     const baseNote = document.getElementById('co2BaselineNote');
