@@ -9,6 +9,8 @@ permalink: /charging-analytics/
   /* ── Page-level overrides ── */
   body { max-width: 1100px !important; overflow-x: hidden; }
   html { overflow-x: hidden; }
+  /* offset hash-jump targets so they clear both sticky bars */
+  :root { scroll-padding-top: var(--scroll-pad, 70px); }
 
   .analytics-container {
     font-family: -apple-system, sans-serif;
@@ -873,6 +875,7 @@ permalink: /charging-analytics/
     <div class="chart-card">
       <p class="chart-title">CO₂ by Charging Location — grid intensity matters</p>
       <div class="chart-wrap" style="height:240px"><canvas id="chartCo2ByLocation"></canvas></div>
+      <div id="co2LocLegend" style="font-size:0.62rem;color:#888;margin-top:6px;display:none"></div>
     </div>
   </div>
 
@@ -1465,28 +1468,7 @@ function buildVehicleFilter() {
     }
   }
 
-  // Position the sticky bar directly below the site nav.
-  // Use a CSS custom property so there's no flash: the bar starts at top:-200px
-  // (off-screen) until JS measures the real nav height.
-  if (stickyBar) {
-    function _positionStickyBar() {
-      let maxH = 0;
-      document.querySelectorAll('nav').forEach(function(n) {
-        if (!n.closest('#vehicleFilterSticky') && n.offsetHeight > maxH) maxH = n.offsetHeight;
-      });
-      // Default to 50px if nav not yet measured (avoids top:0 flash)
-      const h = maxH > 0 ? maxH : 50;
-      document.documentElement.style.setProperty('--sticky-bar-top', h + 'px');
-    }
-    requestAnimationFrame(_positionStickyBar);
-    window.addEventListener('load',   _positionStickyBar);
-    window.addEventListener('resize', _positionStickyBar, { passive: true });
-
-    const showAt = 140;
-    window.addEventListener('scroll', function() {
-      stickyBar.classList.toggle('visible', window.scrollY > showAt);
-    }, { passive: true });
-  }
+  // Sticky bar positioning and show/hide are handled by initStickyBar() (called once at init).
 
   // Active section highlight in sticky nav via IntersectionObserver
   const navLinks = document.querySelectorAll('#stickyNavRow a[href^="#"]');
@@ -2805,10 +2787,13 @@ mkChart('chartHistogram', {
         locCo2[s.location].kwh  += s.kwh;
       });
       const locSorted = Object.entries(locCo2).sort((a,b) => b[1].net - a[1].net).slice(0, 10);
+      const minFactor = Math.min(...locSorted.map(([,v]) => v.factor));
       const maxFactor = Math.max(...locSorted.map(([,v]) => v.factor));
+      const factorRange = maxFactor - minFactor || 1;
+      // Green (clean grid) → Amber (dirtier grid): avoids the muddy brown mid-range
       const locColors = locSorted.map(([,v]) => {
-        const t = v.factor / maxFactor;
-        return `rgba(${Math.round(46 + 185*t)},${Math.round(204 - 128*t)},${Math.round(113 - 53*t)},0.78)`;
+        const t = (v.factor - minFactor) / factorRange;
+        return `rgba(${Math.round(46 + 199*t)},${Math.round(204 - 46*t)},${Math.round(113 - 102*t)},0.80)`;
       });
       mkChart('chartCo2ByLocation', {
         type: 'bar',
@@ -2838,6 +2823,17 @@ mkChart('chartHistogram', {
           }
         }
       });
+      // Tiny legend below the chart
+      const legendEl = document.getElementById('co2LocLegend');
+      if (legendEl && factorRange > 0.01) {
+        legendEl.style.display = '';
+        legendEl.innerHTML =
+          '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(46,204,113,0.85);margin-right:4px;vertical-align:middle"></span>Cleaner grid' +
+          '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(245,158,11,0.85);margin:0 4px 0 14px;vertical-align:middle"></span>Dirtier grid' +
+          ' &nbsp;·&nbsp; colour = relative grid CO₂ intensity';
+      } else if (legendEl) {
+        legendEl.style.display = 'none';
+      }
     }
   })(sl);
 
@@ -4113,6 +4109,53 @@ mkChart('chartHistogram', {
 } // ── end rebuild ──
 
 /* ════════════════════════════════════════════════════════
+   STICKY BAR — one-time setup (called after first rebuild)
+   ════════════════════════════════════════════════════════ */
+function initStickyBar() {
+  const stickyBar    = document.getElementById('vehicleFilterSticky');
+  const inlineFilter = document.getElementById('vehicleFilterBtns');
+  if (!stickyBar) return;
+
+  // ── Measure site nav height → set CSS custom property ──
+  function _updateTop() {
+    const nav = document.querySelector('body > nav');
+    const h   = nav ? Math.round(nav.getBoundingClientRect().height) : 0;
+    const top = h > 0 ? h : 62;
+    document.documentElement.style.setProperty('--sticky-bar-top', top + 'px');
+    // Keep scroll-padding-top in sync so hash jumps always clear both bars
+    const barH = stickyBar.classList.contains('visible') ? (stickyBar.offsetHeight + 4) : 0;
+    document.documentElement.style.setProperty('--scroll-pad', (top + barH + 4) + 'px');
+  }
+  _updateTop();
+  window.addEventListener('load',   _updateTop, { once: true });
+  window.addEventListener('resize', _updateTop, { passive: true });
+
+  // ── Show/hide: only after inline filter has scrolled off the top ──
+  // Using IntersectionObserver is far more reliable than a hardcoded scrollY
+  // threshold (the old 140px fired while the inline filter was still on screen).
+  function _toggle(visible) {
+    stickyBar.classList.toggle('visible', visible);
+    _updateTop(); // recompute scroll-pad whenever visibility changes
+  }
+
+  if (inlineFilter && 'IntersectionObserver' in window) {
+    const obs = new IntersectionObserver(([entry]) => {
+      // Show sticky bar only when the inline filter has scrolled ABOVE the viewport.
+      // entry.boundingClientRect.top < 0  → element is above the viewport top.
+      const offTop = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+      _toggle(offTop);
+    }, { root: null, threshold: 0 });
+    obs.observe(inlineFilter);
+  } else {
+    // Fallback for browsers without IntersectionObserver
+    window.addEventListener('scroll', function() {
+      if (!inlineFilter) return;
+      _toggle(inlineFilter.getBoundingClientRect().bottom < 0);
+    }, { passive: true });
+  }
+}
+
+/* ════════════════════════════════════════════════════════
    INITIALIZE
    ════════════════════════════════════════════════════════ */
 let _leafletMap = null;
@@ -4120,6 +4163,7 @@ let _lastSl     = sessions;
 
 buildVehicleFilter();
 rebuild(sessions);
+initStickyBar();
 initPrint();
 
 // Use window.onload so all external scripts (Leaflet) are guaranteed loaded
