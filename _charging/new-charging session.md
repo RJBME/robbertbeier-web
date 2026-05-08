@@ -1,0 +1,16 @@
+---
+_schema: default
+date: 2026-05-07T00:00:00-04:00
+location: Work
+vehicle: 2025 Mach-E GT
+energy_kwh: 5.7
+cost: 0
+start_date: 2026-05-07T00:00:00-04:00
+start_time: '15:19'
+end_time: '16:19'
+soc_start: 66
+soc_end: 72
+soc_added: 6
+miles_added: 19
+notes: ''
+---
