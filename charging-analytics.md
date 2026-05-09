@@ -13,6 +13,12 @@ permalink: /charging-analytics/
   /* offset hash-jump targets so they clear both sticky bars */
   :root { scroll-padding-top: var(--scroll-pad, 70px); }
 
+  /* On mobile (< 768px) the Jekyll nav is position:relative — it scrolls away.
+     The sticky bar must sit at top:0 on mobile, not below the nav. */
+  @media (max-width: 767px) {
+    #vehicleFilterSticky { top: 0 !important; }
+  }
+
   .analytics-container {
     font-family: -apple-system, sans-serif;
     max-width: 1060px;
@@ -20,6 +26,8 @@ permalink: /charging-analytics/
     margin: auto;
     color: var(--text);
     box-sizing: border-box;
+    /* Prevent child elements from expanding page width on mobile */
+    overflow-x: clip;
   }
 
   /* ── Back link ── */
@@ -1528,9 +1536,11 @@ function setVehicle(v) {
   const stickyBar  = document.getElementById('vehicleFilterSticky');
   const stickyH    = (stickyBar && stickyBar.classList.contains('visible'))
                      ? stickyBar.offsetHeight : 0;
-  const navH       = parseInt(getComputedStyle(document.documentElement)
-                     .getPropertyValue('--sticky-bar-top') || '62', 10);
-  const topEdge    = navH + stickyH + 4; // viewport Y of the sticky bar bottom
+  const navTop     = window.innerWidth >= 768
+                     ? parseInt(getComputedStyle(document.documentElement)
+                       .getPropertyValue('--sticky-bar-top') || '62', 10)
+                     : 0;
+  const topEdge    = navTop + stickyH + 4;
 
   // Find the section-header or chart-card whose top is closest to topEdge
   // (i.e. the section currently "leading" the visible area)
@@ -4141,53 +4151,57 @@ function initStickyBar() {
   const inlineFilter = document.getElementById('vehicleFilterBtns');
   if (!stickyBar) return;
 
-  // ── Measure site nav position → set CSS custom property ──
-  // Use getBoundingClientRect().bottom: gives the EXACT viewport Y of the nav's
-  // bottom edge regardless of whether the nav is sticky or not. This eliminates
-  // the 'gap' caused by margin offsets when measuring .height alone.
+  // ── Measure site nav height for sticky bar positioning ──
+  // Key insight from default.html:
+  //   mobile < 768px: nav is position:relative → scrolls away → sticky bar at top:0
+  //   desktop ≥ 768px: nav is position:sticky; top:0 → sticky bar sits below it
+  // CSS already sets #vehicleFilterSticky { top:0 !important } on mobile,
+  // so _updateTop() only needs to do real work on desktop.
   function _updateTop() {
-    const nav    = document.querySelector('body > nav');
-    const bottom = nav ? nav.getBoundingClientRect().bottom : 0;
-    const top    = bottom > 0 ? Math.round(bottom) - 1 : 62;
+    let top = 0;
+    if (window.innerWidth >= 768) {
+      const nav = document.querySelector('nav');
+      top = nav ? Math.max(nav.offsetHeight, 44) : 62;
+    }
     document.documentElement.style.setProperty('--sticky-bar-top', top + 'px');
-    // Keep scroll-padding-top in sync so hash jumps always clear both sticky bars
     const barH = stickyBar.classList.contains('visible') ? stickyBar.offsetHeight : 0;
-    document.documentElement.style.setProperty('--scroll-pad', (top + barH + 6) + 'px');
+    document.documentElement.style.setProperty('--scroll-pad', (top + barH + 8) + 'px');
   }
-  _updateTop();
-  window.addEventListener('load',   _updateTop, { once: true });
-  window.addEventListener('resize', _updateTop, { passive: true });
-  // Re-measure on scroll too: if the nav is not sticky (e.g. page not yet scrolled to
-  // its threshold) the nav bottom changes with scroll. rAF-throttled to stay smooth.
-  var _utRaf = null;
-  window.addEventListener('scroll', function() {
-    if (_utRaf) return;
-    _utRaf = requestAnimationFrame(function() { _utRaf = null; _updateTop(); });
-  }, { passive: true });
 
-  // ── Show/hide: only after inline filter has scrolled off the top ──
-  // Using IntersectionObserver is far more reliable than a hardcoded scrollY
-  // threshold (the old 140px fired while the inline filter was still on screen).
+  _updateTop();
+  window.addEventListener('load',   () => { _updateTop(); setTimeout(_updateTop, 400); }, { once: true });
+  window.addEventListener('resize', _updateTop, { passive: true });
+
+  // ── Show/hide sticky bar ──
+  // Both IntersectionObserver AND a scroll listener run in parallel.
+  // IO can miss fast-scroll events on Android Chrome; the scroll listener
+  // catches those. The guard prevents them fighting each other.
   function _toggle(visible) {
+    if (stickyBar.classList.contains('visible') === visible) return;
     stickyBar.classList.toggle('visible', visible);
-    _updateTop(); // recompute scroll-pad whenever visibility changes
+    _updateTop();
+  }
+
+  function _check() {
+    if (!inlineFilter) return;
+    _toggle(inlineFilter.getBoundingClientRect().bottom < 0);
   }
 
   if (inlineFilter && 'IntersectionObserver' in window) {
     const obs = new IntersectionObserver(([entry]) => {
-      // Show sticky bar only when the inline filter has scrolled ABOVE the viewport.
-      // entry.boundingClientRect.top < 0  → element is above the viewport top.
-      const offTop = !entry.isIntersecting && entry.boundingClientRect.top < 0;
-      _toggle(offTop);
+      _toggle(!entry.isIntersecting && entry.boundingClientRect.top < 0);
     }, { root: null, threshold: 0 });
     obs.observe(inlineFilter);
-  } else {
-    // Fallback for browsers without IntersectionObserver
-    window.addEventListener('scroll', function() {
-      if (!inlineFilter) return;
-      _toggle(inlineFilter.getBoundingClientRect().bottom < 0);
-    }, { passive: true });
   }
+
+  // Parallel scroll listener for Android Chrome fast-scroll
+  var _raf = null;
+  window.addEventListener('scroll', function() {
+    if (_raf) return;
+    _raf = requestAnimationFrame(function() { _raf = null; _check(); });
+  }, { passive: true });
+
+  _check(); // check immediately in case page loads already scrolled
 }
 
 /* ════════════════════════════════════════════════════════
