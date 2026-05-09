@@ -155,6 +155,9 @@ permalink: /charging-analytics/
     -webkit-backdrop-filter: blur(10px);
     flex-direction: column;
     gap: 0;
+    /* iOS safe area: pad left/right for notch/Dynamic Island */
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
   /* Show via display only — no transform trick (breaks when height is 0 on init) */
   #vehicleFilterSticky.visible { display: flex; }
@@ -217,6 +220,8 @@ permalink: /charging-analytics/
     /* KPI values + cards: reduce size to fit comfortably in 2-col layout */
     .kpi-value { font-size: 1.2rem; }
     .kpi-card  { padding: 12px 10px; }
+    /* Work savings KPI strip: 2 cols on small phones */
+    #workKpiStrip { grid-template-columns: repeat(2, 1fr) !important; }
   }
 
   /* ── Personal records ── */
@@ -652,6 +657,42 @@ permalink: /charging-analytics/
     <p class="chart-title">Net Cumulative Savings Over Time</p>
     <div class="chart-wrap" style="height:220px">
       <canvas id="chartNetSavings"></canvas>
+    </div>
+  </div>
+
+  <!-- Work savings infographic -->
+  <div class="chart-card" style="margin-top:18px" id="workSavingsSection">
+    <p class="chart-title">💼 Work Charging Benefit — what you'd have paid at home</p>
+    <p class="chart-sub" style="font-size:0.72rem;color:#888;margin-bottom:14px">Work charging is free. This shows how much that energy would have cost if you'd added it at home instead.</p>
+    <!-- KPI strip -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px" id="workKpiStrip">
+      <div style="background:rgba(2,136,209,0.07);border:1px solid rgba(2,136,209,0.2);border-radius:10px;padding:12px 14px;text-align:center">
+        <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.09em;color:#0288d1;margin-bottom:4px">Work kWh</div>
+        <div style="font-size:1.4rem;font-weight:900;color:var(--text)" id="workKpiKwh">—</div>
+      </div>
+      <div style="background:rgba(2,136,209,0.07);border:1px solid rgba(2,136,209,0.2);border-radius:10px;padding:12px 14px;text-align:center">
+        <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.09em;color:#0288d1;margin-bottom:4px">Sessions</div>
+        <div style="font-size:1.4rem;font-weight:900;color:var(--text)" id="workKpiSessions">—</div>
+      </div>
+      <div style="background:rgba(46,204,113,0.07);border:1px solid rgba(46,204,113,0.25);border-radius:10px;padding:12px 14px;text-align:center">
+        <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.09em;color:#27ae60;margin-bottom:4px">Home Cost Avoided</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#27ae60" id="workKpiSaved">—</div>
+      </div>
+      <div style="background:rgba(46,204,113,0.07);border:1px solid rgba(46,204,113,0.25);border-radius:10px;padding:12px 14px;text-align:center">
+        <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.09em;color:#27ae60;margin-bottom:4px">Avg Saving/Month</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#27ae60" id="workKpiPerMonth">—</div>
+      </div>
+    </div>
+    <!-- Charts row -->
+    <div class="chart-grid-2">
+      <div>
+        <p style="font-size:0.72rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Monthly Work kWh vs. Equivalent Home Cost</p>
+        <div class="chart-wrap" style="height:220px"><canvas id="chartWorkSavings"></canvas></div>
+      </div>
+      <div>
+        <p style="font-size:0.72rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Cumulative Home Cost Avoided from Work Charging</p>
+        <div class="chart-wrap" style="height:220px"><canvas id="chartWorkCumulative"></canvas></div>
+      </div>
     </div>
   </div>
 
@@ -2015,6 +2056,121 @@ mkChart('chartNetSavings', {
     }
   }
 });
+
+/* ════════════════════════════════════════════════════════
+   WORK CHARGING SAVINGS — what work kWh would have cost at home
+   ════════════════════════════════════════════════════════ */
+(function buildWorkSavings(sl) {
+  const workSessions = sl.filter(s => s.bucket === 'Work');
+  if (!workSessions.length) {
+    const sec = document.getElementById('workSavingsSection');
+    if (sec) sec.style.display = 'none';
+    return;
+  }
+
+  // Per-session: cost if charged at home using the home rate for that date
+  const workByMonth = {};
+  let totalWorkKwh = 0, totalHomeCost = 0;
+
+  workSessions.forEach(s => {
+    const hRate = getStepRate(homeRates, s.date, 'rate', 0.196);
+    const homeCost = s.kwh * hRate;
+    totalWorkKwh += s.kwh;
+    totalHomeCost += homeCost;
+    if (!workByMonth[s.month]) workByMonth[s.month] = { kwh: 0, homeCost: 0, sessions: 0 };
+    workByMonth[s.month].kwh      += s.kwh;
+    workByMonth[s.month].homeCost += homeCost;
+    workByMonth[s.month].sessions++;
+  });
+
+  const wMonths = Object.keys(workByMonth).sort();
+  const monthCount = wMonths.length || 1;
+
+  // KPI strip
+  function setW(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+  setW('workKpiKwh',      totalWorkKwh.toFixed(1) + ' kWh');
+  setW('workKpiSessions', workSessions.length + ' sessions');
+  setW('workKpiSaved',    fmtUSD(totalHomeCost));
+  setW('workKpiPerMonth', fmtUSD(totalHomeCost / monthCount) + '/mo');
+
+  // Chart: monthly work kWh (bar) + home cost avoided (line)
+  if (document.getElementById('chartWorkSavings')) {
+    mkChart('chartWorkSavings', {
+      type: 'bar',
+      data: {
+        labels: wMonths.map(monthLabel),
+        datasets: [
+          {
+            label: 'Work kWh',
+            data: wMonths.map(m => +workByMonth[m].kwh.toFixed(1)),
+            backgroundColor: 'rgba(2,136,209,0.55)',
+            borderColor: '#0288d1', borderWidth: 1.5, borderRadius: 4,
+            yAxisID: 'yKwh'
+          },
+          {
+            label: 'Home Cost Avoided ($)',
+            data: wMonths.map(m => +workByMonth[m].homeCost.toFixed(2)),
+            type: 'line',
+            borderColor: '#27ae60', backgroundColor: 'rgba(46,204,113,0.12)',
+            borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: 4,
+            pointBackgroundColor: '#27ae60',
+            yAxisID: 'yCost'
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
+          datalabels: { display: false },
+          tooltip: { callbacks: {
+            label: ctx => ctx.dataset.yAxisID === 'yCost'
+              ? ` Home cost avoided: ${fmtUSD(ctx.parsed.y)}`
+              : ` Work kWh: ${ctx.parsed.y.toFixed(1)}`
+          }}
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+          yKwh: { position: 'left', grid: { color: gc() }, ticks: { color: '#0288d1' },
+                  title: { display: true, text: 'kWh', color: '#0288d1' }, beginAtZero: true },
+          yCost: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#27ae60', callback: v => '$' + v.toFixed(0) },
+                   title: { display: true, text: '$ avoided', color: '#27ae60' }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // Chart: cumulative home cost avoided
+  if (document.getElementById('chartWorkCumulative')) {
+    let cum = 0;
+    const cumData = wMonths.map(m => { cum += workByMonth[m].homeCost; return +cum.toFixed(2); });
+    mkChart('chartWorkCumulative', {
+      type: 'line',
+      data: {
+        labels: wMonths.map(monthLabel),
+        datasets: [{
+          label: 'Cumulative Home Cost Avoided',
+          data: cumData,
+          borderColor: '#27ae60', backgroundColor: 'rgba(46,204,113,0.15)',
+          fill: true, borderWidth: 2.5, pointRadius: 3, tension: 0.35
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${fmtUSD(ctx.parsed.y)} avoided to date` } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+          y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => '$' + v.toFixed(0) },
+               title: { display: true, text: '$ avoided', color: '#888' }, beginAtZero: true }
+        }
+      }
+    });
+  }
+})(sl);
 
 /* ════════════════════════════════════════════════════════
    CHART 12 — Effective ¢/kWh per month (paid sessions)
@@ -4124,23 +4280,34 @@ function initStickyBar() {
   if (!stickyBar) return;
 
   // ── Measure site nav position → set CSS custom property ──
-  // Use getBoundingClientRect().bottom: gives the EXACT viewport Y of the nav's
-  // bottom edge regardless of whether the nav is sticky or not. This eliminates
-  // the 'gap' caused by margin offsets when measuring .height alone.
+  // On iOS, getBoundingClientRect().bottom races with the browser's sticky
+  // positioning engine during scroll. offsetHeight is stable and doesn't
+  // trigger layout thrashing. We clamp to a safe minimum of 44px (standard
+  // iOS nav bar height) and add env(safe-area-inset-top) for notched iPhones.
   function _updateTop() {
-    const nav    = document.querySelector('body > nav');
-    const bottom = nav ? nav.getBoundingClientRect().bottom : 0;
-    const top    = bottom > 0 ? Math.round(bottom) - 1 : 62;
+    const nav = document.querySelector('body > nav, header nav, .site-nav, nav.site-header__nav, nav[role="navigation"]')
+             || document.querySelector('nav');
+    let top = 62; // safe fallback
+    if (nav) {
+      // offsetHeight is layout-stable; add offsetTop to handle non-zero-top navs
+      const navH = nav.offsetHeight || 0;
+      const navT = nav.getBoundingClientRect().top;
+      // If nav is visible at top (sticky or fixed), use its bottom edge
+      if (navT >= -2 && navT <= 10) {
+        top = Math.round(navT + navH);
+      } else {
+        top = navH;
+      }
+      top = Math.max(top, 44); // never less than 44px (iOS minimum)
+    }
     document.documentElement.style.setProperty('--sticky-bar-top', top + 'px');
     // Keep scroll-padding-top in sync so hash jumps always clear both sticky bars
     const barH = stickyBar.classList.contains('visible') ? stickyBar.offsetHeight : 0;
-    document.documentElement.style.setProperty('--scroll-pad', (top + barH + 6) + 'px');
+    document.documentElement.style.setProperty('--scroll-pad', (top + barH + 8) + 'px');
   }
   _updateTop();
   window.addEventListener('load',   _updateTop, { once: true });
   window.addEventListener('resize', _updateTop, { passive: true });
-  // Re-measure on scroll too: if the nav is not sticky (e.g. page not yet scrolled to
-  // its threshold) the nav bottom changes with scroll. rAF-throttled to stay smooth.
   var _utRaf = null;
   window.addEventListener('scroll', function() {
     if (_utRaf) return;
@@ -4148,23 +4315,18 @@ function initStickyBar() {
   }, { passive: true });
 
   // ── Show/hide: only after inline filter has scrolled off the top ──
-  // Using IntersectionObserver is far more reliable than a hardcoded scrollY
-  // threshold (the old 140px fired while the inline filter was still on screen).
   function _toggle(visible) {
     stickyBar.classList.toggle('visible', visible);
-    _updateTop(); // recompute scroll-pad whenever visibility changes
+    _updateTop();
   }
 
   if (inlineFilter && 'IntersectionObserver' in window) {
     const obs = new IntersectionObserver(([entry]) => {
-      // Show sticky bar only when the inline filter has scrolled ABOVE the viewport.
-      // entry.boundingClientRect.top < 0  → element is above the viewport top.
       const offTop = !entry.isIntersecting && entry.boundingClientRect.top < 0;
       _toggle(offTop);
     }, { root: null, threshold: 0 });
     obs.observe(inlineFilter);
   } else {
-    // Fallback for browsers without IntersectionObserver
     window.addEventListener('scroll', function() {
       if (!inlineFilter) return;
       _toggle(inlineFilter.getBoundingClientRect().bottom < 0);
