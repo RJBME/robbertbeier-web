@@ -58,21 +58,5 @@
       "url": "/charging-history/",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
-  ],
-  "screenshots": [
-    {
-      "src": "/icons/screenshot-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "EV Analytics Dashboard"
-    },
-    {
-      "src": "/icons/screenshot-narrow.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "EV Analytics on Mobile"
-    }
   ]
 }
