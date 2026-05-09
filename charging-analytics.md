@@ -1411,7 +1411,7 @@ sessions.forEach(s => {
 
     // Use real efficiency for gas savings if available, otherwise fall back to assumed
     const effMiPerKwh = s.hasRealEff ? s.realMiPerKwh : (gs.mi_per_kwh || 3.0);
-    s.gasEquiv  = s.kwh * effMiPerKwh / (gs.mpg || 27) * (gs.gas_price || 3.26);
+    s.gasEquiv  = s.kwh * effMiPerKwh / (VEHICLE_MPG[s.vehicle] || gs.mpg || 27) * (gs.gas_price || 3.26);
     s.saving    = s.gasEquiv - s.cost;
     s.bucket    = getBucket(s.location);
     s.isFree    = s.cost < 0.005;
@@ -1766,7 +1766,7 @@ mkChart('chartMonthlyCostVsGas', {
             const monthSess = sl.filter(s => s.month === m);
             const gs = monthSess.length ? getGasSavingsObj(monthSess[monthSess.length - 1].date, monthSess[monthSess.length - 1].vehicle) : null;
             const lines = [`Saved vs. gas: ${fmtUSD(saved)}`];
-            if (gs) lines.push(`Fuel rate: $${gs.gas_price.toFixed(2)}/gal · ${gs.mpg} mpg (last session) · ${gs.mi_per_kwh} mi/kWh`);
+            if (gs) lines.push(`Fuel rate: $${gs.gas_price.toFixed(2)}/gal · ${VEHICLE_MPG[monthSess[monthSess.length-1].vehicle] || gs.mpg} mpg (last session) · ${gs.mi_per_kwh} mi/kWh`);
             return lines;
           }
         }
