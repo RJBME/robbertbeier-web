@@ -12,7 +12,7 @@
   <!-- ── iOS / Safari PWA meta tags ── -->
   <!-- apple-mobile-web-app-capable: enables standalone full-screen mode on iOS -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="EV Dash">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
@@ -272,6 +272,16 @@
       font-size: 0.9rem;
       font-family: inherit;
       transition: all 0.2s;
+    }
+
+    /* ── PWA standalone mode: pad nav for Dynamic Island / notch ── */
+    @media (display-mode: standalone) {
+      nav {
+        padding-top: max(env(safe-area-inset-top), 12px);
+      }
+      body {
+        padding-top: 0;
+      }
     }
 
     /* ── Sticky nav (desktop / tablet ≥ 768 px) ── */
