@@ -2644,10 +2644,12 @@ mkChart('chartHistogram', {
   },
   options: {
     responsive: true, maintainAspectRatio: false,
+    layout: { padding: { top: 24 } },
     plugins: {
       legend: { display: false },
       datalabels: {
-        display: true, anchor: 'end', align: 'top',
+        display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+        anchor: 'end', align: 'end', offset: 2,
         color: tc(), font: { size: 10, weight: 'bold' },
         formatter: v => v || ''
       },
@@ -2656,7 +2658,8 @@ mkChart('chartHistogram', {
     scales: {
       x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
       y: { grid: { color: gc() }, ticks: { color: tc() },
-           title: { display: true, text: 'Sessions', color: '#888' } }
+           title: { display: true, text: 'Sessions', color: '#888' },
+           grace: '15%' }
     }
   }
 });
@@ -4038,8 +4041,23 @@ mkChart('chartHistogram', {
           }]
         },
         options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
-          plugins:{legend:{display:false},datalabels:{display:false},
-            tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x.toFixed(1)} kW avg (incl. idle)`}}},
+          plugins:{
+            legend:{display:false},
+            datalabels:{
+              display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
+              anchor: 'end', align: 'start', offset: 8,
+              color: '#fff',
+              font: { size: 11, weight: 'bold' },
+              formatter: v => {
+                if (!v) return '';
+                // 3 sig figs if ≥ 100, 2 sig figs if < 100
+                return v >= 100
+                  ? v.toPrecision(3) + ' kW'
+                  : v.toPrecision(2) + ' kW';
+              }
+            },
+            tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x.toFixed(1)} kW avg (incl. idle)`}}
+          },
           scales:{
             x:{grid:{color:gc()},ticks:{color:tc(),callback:v=>v+' kW'},beginAtZero:true,
                title:{display:true,text:'kW (avg, includes idle time)',color:'#888'}},
