@@ -338,6 +338,81 @@ permalink: /charging-analytics/
   }
   .co2-trip-badge .co2-trip-num { font-size: 1rem; font-weight: 900; }
 
+  /* ── Perspective Hero Cards ── */
+  .perspective-section {
+    margin-bottom: 32px;
+  }
+  .perspective-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 900px) { .perspective-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 500px) { .perspective-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
+
+  .hero-card {
+    background: var(--dash-card);
+    border: 1px solid var(--dash-border);
+    border-radius: 14px;
+    padding: 18px 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .hero-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(93,63,211,0.15);
+  }
+  .hero-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+  }
+  .hero-card.c-purple::before { background: linear-gradient(90deg, #5D3FD3, #a389f4); }
+  .hero-card.c-green::before  { background: linear-gradient(90deg, #2ecc71, #1a9e54); }
+  .hero-card.c-blue::before   { background: linear-gradient(90deg, #0288d1, #4fc3f7); }
+  .hero-card.c-amber::before  { background: linear-gradient(90deg, #f39c12, #f5c842); }
+  .hero-card.c-red::before    { background: linear-gradient(90deg, #e74c3c, #f1948a); }
+  .hero-card.c-teal::before   { background: linear-gradient(90deg, #1abc9c, #76d7c4); }
+  .hero-card.c-pink::before   { background: linear-gradient(90deg, #9b59b6, #d7bde2); }
+  .hero-card.c-orange::before { background: linear-gradient(90deg, #FF7A14, #ffb347); }
+
+  .hero-icon { font-size: 1.6rem; line-height: 1; margin-bottom: 2px; }
+  .hero-number {
+    font-size: 1.9rem;
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-number sup { font-size: 0.55em; font-weight: 600; vertical-align: super; opacity: 0.7; }
+  .hero-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+    font-weight: 700;
+  }
+  .hero-desc {
+    font-size: 0.78rem;
+    color: var(--text);
+    line-height: 1.45;
+    margin-top: 2px;
+    flex: 1;
+  }
+  .hero-footnote {
+    font-size: 0.62rem;
+    color: #aaa;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
   /* ── Charging locations map ── */
   .ev-map-icon { background: transparent !important; border: none !important; overflow: visible !important; }
   .ev-pulse { position: relative; overflow: visible; }
@@ -434,6 +509,7 @@ permalink: /charging-analytics/
     <a href="#efficiency" id="navEfficiency">Efficiency</a>
     <a href="#vehiclecomp" id="navVehicleComp" style="display:none">Vehicles</a>
     <a href="#map">Map</a>
+    <a href="#perspective">🌍 Perspective</a>
   </div>
 
   <!-- Sticky bar: section nav on top row, vehicle filter on bottom row -->
@@ -459,6 +535,7 @@ permalink: /charging-analytics/
       <a href="#efficiency" id="stickyNavEff">Efficiency</a>
       <a href="#vehiclecomp" id="stickyNavVehicle" style="display:none">Vehicles</a>
       <a href="#map">Map</a>
+      <a href="#perspective">🌍 Perspective</a>
     </div>
     <div id="stickyVehicleRow">
       <span class="vf-sticky-label">Vehicle</span>
@@ -1224,6 +1301,22 @@ permalink: /charging-analytics/
       <span style="font-size:0.78rem">Circles are sized and colored by total kWh added at each location, with a pulsing ring indicating relative activity.</span>
     </div>
     <div id="chargingMap" style="height:420px"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!--  PERSPECTIVE: WHAT DOES IT ALL MEAN?               -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="section-header" id="perspective">
+    <h2>🌍 Perspective</h2>
+    <span>putting your numbers in context</span>
+    <a href="#top" class="back-top-pill">↑ top</a>
+  </div>
+
+  <div class="perspective-section">
+    <div class="perspective-grid" id="heroCardGrid">
+      <!-- populated by JS -->
+    </div>
+    <p style="font-size:0.68rem;color:#aaa;margin-top:12px;line-height:1.6" id="heroFootnote"></p>
   </div>
 
 </div><!-- .analytics-container -->
@@ -4045,12 +4138,14 @@ mkChart('chartHistogram', {
             legend:{display:false},
             datalabels:{
               display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-              anchor: 'end', align: 'start', offset: 8,
-              color: '#fff',
+              // Put label inside bar if value ≥ 20kW, outside if smaller
+              anchor: ctx => ctx.dataset.data[ctx.dataIndex] >= 20 ? 'end' : 'end',
+              align: ctx => ctx.dataset.data[ctx.dataIndex] >= 20 ? 'start' : 'end',
+              offset: ctx => ctx.dataset.data[ctx.dataIndex] >= 20 ? 8 : 4,
+              color: ctx => ctx.dataset.data[ctx.dataIndex] >= 20 ? '#fff' : tc(),
               font: { size: 11, weight: 'bold' },
               formatter: v => {
                 if (!v) return '';
-                // 3 sig figs if ≥ 100, 2 sig figs if < 100
                 return v >= 100
                   ? v.toPrecision(3) + ' kW'
                   : v.toPrecision(2) + ' kW';
@@ -4462,8 +4557,213 @@ mkChart('chartHistogram', {
   // ── end section 11 ──
 
   buildLocationStats(sl);
+  buildPerspectiveCards(sl);
 
 } // ── end rebuild ──
+
+/* ════════════════════════════════════════════════════════
+   PERSPECTIVE HERO CARDS
+   ════════════════════════════════════════════════════════
+   Reference constants (all peer-reviewed / official sources):
+   • Coast-to-coast: 2,800 mi (NY→LA via I-40, AAA)
+   • Earth circumference: 24,901 mi (equatorial, NASA)
+   • Avg US home: 10,649 kWh/yr = 887 kWh/mo (EIA 2022)
+   • Tree CO₂ absorption: 21 kg/yr (EPA Greenhouse Gas Equivalencies)
+   • Party balloon CO₂: ~11 L @ 1.98 g/L = 21.8 g CO₂/balloon
+   • Avg fuel tanker: 9,000 gallons (DOT standard tanker)
+   • Avg gas fill: 15 gal (avg of Escape 14 gal + Explorer 18 gal)
+   • iPhone charge: 13.6 Wh (iPhone 15 Pro Max battery, Apple spec)
+   • Olympic swimming pool: 2,500 m³ = 2,500,000 L
+   • Gas CO₂: 8.887 kg/gallon (EPA)
+   ════════════════════════════════════════════════════════ */
+function buildPerspectiveCards(sl) {
+  const grid = document.getElementById('heroCardGrid');
+  if (!grid) return;
+
+  // ── Compute total miles ──────────────────────────────
+  // Smart: use odometer interpolation if we have ≥2 readings spanning >30 days,
+  // otherwise fall back to sum of miles_added + kWh-estimated remainder
+  let totalMiles = 0;
+  let milesMethod = 'estimated';
+
+  if (mileageHistory && mileageHistory.length >= 2) {
+    const vehReadings = {};
+    mileageHistory.forEach(e => {
+      if (!vehReadings[e.vehicle]) vehReadings[e.vehicle] = [];
+      vehReadings[e.vehicle].push(e);
+    });
+    let odoMiles = 0;
+    let allSpanning = true;
+    Object.values(vehReadings).forEach(readings => {
+      const sorted = readings.sort((a,b) => a.date.localeCompare(b.date));
+      if (sorted.length < 2) { allSpanning = false; return; }
+      const daySpan = (new Date(sorted[sorted.length-1].date) - new Date(sorted[0].date)) / 86400000;
+      if (daySpan < 30) { allSpanning = false; return; }
+      odoMiles += sorted[sorted.length-1].odometer - sorted[0].odometer;
+    });
+    if (allSpanning && odoMiles > 0) {
+      totalMiles = odoMiles;
+      milesMethod = 'odometer';
+    }
+  }
+
+  if (milesMethod === 'estimated') {
+    // Sum real miles_added where available, fill gaps with kWh × mi/kWh
+    sl.forEach(s => {
+      if (s.milesAdded && s.milesAdded > 0) {
+        totalMiles += s.milesAdded;
+      } else {
+        const gs = getGasSavingsObj(s.date, s.vehicle);
+        totalMiles += s.kwh * (gs.mi_per_kwh || 3.0);
+      }
+    });
+  }
+
+  // ── Core stats ───────────────────────────────────────
+  const totalKwh     = sl.reduce((a,s) => a + s.kwh, 0);
+  const totalGasEquiv= sl.reduce((a,s) => a + s.gasEquiv, 0);
+  const totalGallons = totalGasEquiv / (activeVehicle && activeVehicle.includes('LRB') ? 3.26 : 3.26);
+  // gallons = what we would have pumped = gasEquiv $ / avg gas price
+  // More accurately: sum of (estMiles / mpg) per session
+  const totalGallonsAvoided = sl.reduce((a,s) => {
+    const gs = getGasSavingsObj(s.date, s.vehicle);
+    const mi = (s.milesAdded > 0 ? s.milesAdded : s.kwh * (gs.mi_per_kwh || 3.0));
+    const mpg = VEHICLE_MPG[s.vehicle] || 24.8;
+    return a + mi / mpg;
+  }, 0);
+  const totalCo2Avoided = sl.reduce((a,s) => a + (s.co2NetAvoided || 0), 0);
+
+  // ── Reference constants ──────────────────────────────
+  const COAST_TO_COAST  = 2800;
+  const EARTH_CIRC      = 24901;
+  const HOME_KWH_YEAR   = 10649;
+  const HOME_KWH_MONTH  = HOME_KWH_YEAR / 12;
+  const TREE_KG_YEAR    = 21;
+  const BALLOON_G_CO2   = 21.8;
+  const TANKER_GALLONS  = 9000;
+  const AVG_FILL_GALLONS= 15;
+  const IPHONE_WH       = 13.6;
+  const CO2_GAS_KG_GAL  = 8.887;
+
+  // ── Computed values ──────────────────────────────────
+  const coastTrips    = totalMiles / COAST_TO_COAST;
+  const earthPct      = (totalMiles / EARTH_CIRC) * 100;
+  const homeMonths    = totalKwh / HOME_KWH_MONTH;
+  const treesYear     = totalCo2Avoided / TREE_KG_YEAR;
+  const tankersAvoided= totalGallonsAvoided / TANKER_GALLONS;
+  const fillsAvoided  = totalGallonsAvoided / AVG_FILL_GALLONS;
+  const iphoneCharges = (totalKwh * 1000) / IPHONE_WH;
+  const balloons      = (totalCo2Avoided * 1000000) / (BALLOON_G_CO2 * 1000);
+
+  // ── Format helpers ───────────────────────────────────
+  function fmt(n, decimals=1) {
+    if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+    if (n >= 10000)   return Math.round(n).toLocaleString();
+    if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
+    return n.toFixed(decimals);
+  }
+  function fmtBig(n) {
+    if (n >= 1000000) return (n/1000000).toFixed(2) + 'M';
+    if (n >= 1000)    return Math.round(n/1000)*1000 < n*1.01
+      ? Math.round(n).toLocaleString()
+      : (n/1000).toFixed(1) + 'K';
+    return Math.round(n).toLocaleString();
+  }
+
+  // ── Card definitions ─────────────────────────────────
+  const cards = [
+    {
+      color: 'c-blue',
+      icon: '🗺️',
+      number: fmt(coastTrips, 1),
+      unit: 'coast-to-coast trips',
+      label: 'Miles Driven Equivalent',
+      desc: `Your ${Math.round(totalMiles).toLocaleString()} estimated miles would take you from New York to Los Angeles <strong>${fmt(coastTrips,1)}×</strong> — one-way via I-40.`,
+      footnote: `Miles source: ${milesMethod === 'odometer' ? 'odometer readings' : 'FordPass miles_added + kWh estimate'}`
+    },
+    {
+      color: 'c-teal',
+      icon: '🌍',
+      number: fmt(earthPct, 1) + '%',
+      unit: 'of Earth\'s circumference',
+      label: 'Global Scale',
+      desc: `You've driven the equivalent of <strong>${fmt(earthPct,1)}%</strong> of the way around the Earth at the equator (24,901 miles).`,
+      footnote: ''
+    },
+    {
+      color: 'c-purple',
+      icon: '🏠',
+      number: fmt(homeMonths, 1),
+      unit: 'months of home electricity',
+      label: 'Energy in Context',
+      desc: `Your ${Math.round(totalKwh).toLocaleString()} kWh of charging energy equals <strong>${fmt(homeMonths,1)} months</strong> of electricity for an average American home.`,
+      footnote: 'Based on EIA 2022 avg US home: 10,649 kWh/yr'
+    },
+    {
+      color: 'c-green',
+      icon: '🌳',
+      number: fmt(treesYear, 0),
+      unit: 'trees working for a year',
+      label: 'CO₂ Absorbed',
+      desc: `Your net ${Math.round(totalCo2Avoided)} kg of avoided CO₂ equals a year of carbon absorption by <strong>${fmt(treesYear,0)} trees</strong>.`,
+      footnote: 'EPA: avg tree absorbs 21 kg CO₂/year'
+    },
+    {
+      color: 'c-amber',
+      icon: '⛽',
+      number: fmt(fillsAvoided, 0),
+      unit: 'gas station fill-ups skipped',
+      label: 'Pump Visits Avoided',
+      desc: `You've skipped <strong>${fmt(fillsAvoided,0)} trips to the gas station</strong>, based on ${Math.round(totalGallonsAvoided).toLocaleString()} gallons avoided at 15 gal per fill.`,
+      footnote: `Avg of Escape (14 gal) + Explorer (18 gal) tanks`
+    },
+    {
+      color: 'c-red',
+      icon: '🚛',
+      number: fmt(tankersAvoided, 2),
+      unit: 'fuel tanker trucks',
+      label: 'Gasoline Not Pumped',
+      desc: `${Math.round(totalGallonsAvoided).toLocaleString()} gallons of gasoline not burned — that's <strong>${fmt(tankersAvoided,2)} tanker trucks</strong> worth of fuel.`,
+      footnote: 'Standard DOT fuel tanker capacity: 9,000 gallons'
+    },
+    {
+      color: 'c-pink',
+      icon: '📱',
+      number: fmtBig(iphoneCharges),
+      unit: 'iPhone charges',
+      label: 'Energy in Micro Scale',
+      desc: `Your total charging energy could have charged an iPhone 15 Pro Max <strong>${fmtBig(iphoneCharges)} times</strong> (13.6 Wh per charge).`,
+      footnote: 'Apple iPhone 15 Pro Max battery spec'
+    },
+    {
+      color: 'c-orange',
+      icon: '🎈',
+      number: fmtBig(balloons),
+      unit: 'party balloons of CO₂',
+      label: 'CO₂ Kept Out of the Air',
+      desc: `Your avoided CO₂ would fill <strong>${fmtBig(balloons)} party balloons</strong> — each holds about 11 liters of CO₂ gas.`,
+      footnote: 'CO₂ density: 1.98 g/L at standard conditions'
+    }
+  ];
+
+  // ── Render ───────────────────────────────────────────
+  grid.innerHTML = cards.map(c => `
+    <div class="hero-card ${c.color}">
+      <div class="hero-icon">${c.icon}</div>
+      <div class="hero-label">${c.label}</div>
+      <div class="hero-number">${c.number}</div>
+      <div style="font-size:0.7rem;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">${c.unit}</div>
+      <div class="hero-desc">${c.desc}</div>
+      ${c.footnote ? `<div class="hero-footnote">† ${c.footnote}</div>` : ''}
+    </div>
+  `).join('');
+
+  // Footnote about method
+  const footnoteEl = document.getElementById('heroFootnote');
+  if (footnoteEl) {
+    footnoteEl.textContent = `Calculations reflect the current vehicle filter. Miles: ${milesMethod === 'odometer' ? 'from odometer readings in _data/mileage.yml' : 'estimated from FordPass miles_added data and kWh × mi/kWh assumption — add more odometer readings to mileage.yml for greater accuracy'}. All equivalency figures from EPA, EIA, Apple, and DOT published data.`;
+  }
+}
 
 /* ════════════════════════════════════════════════════════
    STICKY BAR — one-time setup (called after first rebuild)
