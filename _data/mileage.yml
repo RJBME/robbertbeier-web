@@ -1,0 +1,53 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  _data/mileage.yml  —  Odometer History
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#  Add a new entry whenever you check the odometer — no required interval.
+#  Newest entries go at the TOP. The dashboard and analytics pages read the
+#  most recent entry per vehicle automatically.
+#
+#  FIELDS:
+#    date        YYYY-MM-DD of the reading
+#    vehicle     Must EXACTLY match the vehicle field in _charging/*.md (case-sensitive)
+#    odometer    Miles on the odometer at this reading
+#    notes       Optional — e.g. "before road trip", "annual swap"
+#
+#  WHEN YOU SWAP CARS (typically each fall):
+#    1. Add a final odometer entry for the outgoing car
+#    2. Start adding entries for the new car with its exact vehicle name
+#    3. Add the new vehicle name to cloudcannon.config.yml and the Shortcut
+#    4. The dashboard and analytics will auto-detect the new vehicle
+#    5. All history from the old car stays intact in this file
+#
+#  VEHICLE NAMES IN USE:
+#    "2025 Mach-E GT"        RJB's car (first session 2025-08-22)
+#    "LRB's 2025 Mach-E GT"  LRB's car (first session 2026-05-02)
+#
+#  HOW THE ANALYTICS PAGE USES THIS:
+#    - Latest odometer per vehicle → cost/mile, kWh/mile on dashboard
+#    - All readings → miles driven per month chart (delta between readings)
+#    - Efficiency trend charts use real miles when available
+#    - CO₂ calculations use real miles when available
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Current readings (today, 2026-05-21) ─────────────────────────────────────
+- date: "2026-05-21"
+  vehicle: "2025 Mach-E GT"
+  odometer: 11847
+  notes: "current reading"
+
+- date: "2026-05-21"
+  vehicle: "LRB's 2025 Mach-E GT"
+  odometer: 12185
+  notes: "current reading"
+
+# ── Previous readings ─────────────────────────────────────────────────────────
+- date: "2026-05-17"
+  vehicle: "2025 Mach-E GT"
+  odometer: 11742
+  notes: ""
+
+- date: "2026-05-17"
+  vehicle: "LRB's 2025 Mach-E GT"
+  odometer: 12010
+  notes: ""

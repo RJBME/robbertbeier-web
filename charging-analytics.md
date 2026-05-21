@@ -422,6 +422,7 @@ permalink: /charging-analytics/
     <a href="#heatmap">Heatmap</a>
     <a href="#monthly">Monthly</a>
     <a href="#sources">Sources</a>
+    <a href="#mileage">🚗 Mileage</a>
     <a href="#economics">Economics</a>
     <a href="#trends">Trends</a>
     <a href="#sessions">Session Dive</a>
@@ -446,6 +447,7 @@ permalink: /charging-analytics/
       <a href="#heatmap">Heatmap</a>
       <a href="#monthly">Monthly</a>
       <a href="#sources">Sources</a>
+      <a href="#mileage">🚗 Mileage</a>
       <a href="#economics">Economics</a>
       <a href="#trends">Trends</a>
       <a href="#sessions">Sessions</a>
@@ -476,6 +478,45 @@ permalink: /charging-analytics/
     <div class="kpi-card"><span class="kpi-label">Avg kWh/Session</span><span class="kpi-value" id="kpi-avg-session">—</span></div>
     <div class="kpi-card"><span class="kpi-label">Months Active</span><span class="kpi-value" id="kpi-months">—</span></div>
   </div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!--  MONTHLY AI SUMMARY                                -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  {% if site.data.monthly_summaries and site.data.monthly_summaries.size > 0 %}
+  {% assign latest = site.data.monthly_summaries | first %}
+  {% if latest.summary and latest.summary != "" and latest.summary != "Paste your first generated summary here after running the tool." %}
+  <div style="background:linear-gradient(135deg,rgba(93,63,211,0.08),rgba(93,63,211,0.04));border:1px solid rgba(93,63,211,0.25);border-radius:14px;padding:20px 22px;margin-bottom:24px;position:relative;overflow:hidden">
+    <div style="position:absolute;top:0;right:0;width:120px;height:120px;background:radial-gradient(circle at top right,rgba(93,63,211,0.15),transparent 70%);pointer-events:none"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--link);font-weight:700">⚡ Monthly Snapshot</span>
+      <span style="background:rgba(93,63,211,0.15);border:1px solid rgba(93,63,211,0.3);border-radius:6px;font-size:0.68rem;font-family:monospace;color:var(--link);padding:2px 10px">{{ latest.label }}</span>
+      <div style="margin-left:auto;display:flex;gap:14px;flex-wrap:wrap">
+        {% if latest.kwh > 0 %}<span style="font-size:0.72rem;color:#888"><strong style="color:var(--text)">{{ latest.kwh }}</strong> kWh</span>{% endif %}
+        {% if latest.saving > 0 %}<span style="font-size:0.72rem;color:#888">saved <strong style="color:#2ecc71">${{ latest.saving }}</strong></span>{% endif %}
+        {% if latest.co2_avoided > 0 %}<span style="font-size:0.72rem;color:#888"><strong style="color:#2ecc71">{{ latest.co2_avoided }}</strong> kg CO₂ avoided</span>{% endif %}
+      </div>
+    </div>
+    <p style="font-size:0.92rem;line-height:1.75;color:var(--text);margin:0">{{ latest.summary }}</p>
+    {% if site.data.monthly_summaries.size > 1 %}
+    <details style="margin-top:14px">
+      <summary style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#888;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">
+        <span style="transition:transform 0.2s" id="summaryArrow">▶</span> Previous months
+      </summary>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px" onclick="this.previousElementSibling.querySelector('#summaryArrow').style.transform='rotate(90deg)'">
+        {% for entry in site.data.monthly_summaries offset:1 limit:5 %}
+        {% if entry.summary and entry.summary != "" %}
+        <div style="border-left:2px solid rgba(93,63,211,0.3);padding:8px 14px;opacity:0.8">
+          <div style="font-size:0.65rem;font-family:monospace;color:var(--link);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.08em">{{ entry.label }}{% if entry.kwh > 0 %} · {{ entry.kwh }} kWh{% endif %}{% if entry.saving > 0 %} · ${{ entry.saving }} saved{% endif %}</div>
+          <p style="font-size:0.84rem;line-height:1.65;color:var(--text);margin:0">{{ entry.summary }}</p>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endif %}
 
   <!-- ═══════════════════════════════════════════════════ -->
   <!--  PERSONAL RECORDS                                  -->
@@ -622,6 +663,41 @@ permalink: /charging-analytics/
         </thead>
         <tbody id="locationStatsBody"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!--  SECTION: MILEAGE & GAS PRICE                      -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="section-header" id="mileage">
+    <h2>🚗 Mileage & Fuel Rates</h2>
+    <span>odometer history, miles driven, and gas price over time</span>
+    <a href="#top" class="back-top-pill">↑ top</a>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <p class="chart-title">Odometer History — miles over time</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:#888">All recorded readings per vehicle</p>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartOdometer"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Miles Driven Per Month (estimated from readings)</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:#888">Interpolated between odometer readings</p>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartMilesPerMonth"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2" style="margin-top:18px">
+    <div class="chart-card">
+      <p class="chart-title">Gas Price History ($/gal)</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:#888">Assumed price used for savings calculations — update in _data/rates.yml</p>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartGasPriceMileage"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Real Efficiency — kWh per 100 miles</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:#888">From sessions with FordPass miles_added data</p>
+      <div class="chart-wrap" style="height:230px"><canvas id="chartEfficiencyReal"></canvas></div>
     </div>
   </div>
 
@@ -1203,6 +1279,7 @@ const VEHICLE_UBE = {
 
 const homeRates       = {{ site.data.rates.home_electricity | jsonify }};
 const gasSavingsRates = {{ site.data.rates.gas_savings       | jsonify }};
+const mileageHistory  = {{ site.data.mileage | jsonify }};
 const locationData    = {{ site.data.locations  | jsonify }} || [];
 const tripNotes       = {{ site.data.trip_notes | jsonify }} || [];
 
@@ -1890,6 +1967,184 @@ mkChart('chartMonthlySourceSplit', {
     }
   }
 });
+
+/* ════════════════════════════════════════════════════════
+   MILEAGE CHARTS — odometer history, miles/month, gas price, real efficiency
+   ════════════════════════════════════════════════════════ */
+(function buildMileageCharts(sl) {
+  if (!mileageHistory || !mileageHistory.length) return;
+
+  // Per-vehicle color map
+  const vehColors = {};
+  const vehList = [...new Set(mileageHistory.map(e => e.vehicle))].sort();
+  const palette = ['#7b1fa2', '#f39c12', '#0288d1', '#2ecc71', '#e74c3c'];
+  vehList.forEach((v, i) => { vehColors[v] = palette[i % palette.length]; });
+
+  // Sort all readings by date asc
+  const sorted = [...mileageHistory].sort((a,b) => a.date.localeCompare(b.date));
+
+  // Chart 1: Odometer history — one line per vehicle
+  if (document.getElementById('chartOdometer')) {
+    const datasets = vehList.map(v => {
+      const pts = sorted.filter(e => e.vehicle === v);
+      return {
+        label: v,
+        data: pts.map(e => ({ x: e.date, y: e.odometer })),
+        borderColor: vehColors[v],
+        backgroundColor: vehColors[v] + '22',
+        borderWidth: 2.5, pointRadius: 5, tension: 0.2, fill: false
+      };
+    });
+    mkChart('chartOdometer', {
+      type: 'line',
+      data: { datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
+          datalabels: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} mi` } }
+        },
+        scales: {
+          x: { type: 'time', time: { unit: 'month', displayFormats: { month: 'MMM \'yy' } },
+               grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+          y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v.toLocaleString() + ' mi' },
+               title: { display: true, text: 'odometer (mi)', color: '#888' } }
+        }
+      }
+    });
+  }
+
+  // Chart 2: Miles driven per month — interpolate between readings
+  // For each month in data range, estimate miles driven per vehicle
+  // from the delta between bracketing odometer readings
+  if (document.getElementById('chartMilesPerMonth')) {
+    // Build month range from first to last reading
+    const firstDate = new Date(sorted[0].date + 'T12:00:00');
+    const lastDate  = new Date(sorted[sorted.length-1].date + 'T12:00:00');
+    const months = [];
+    const d = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+    while (d <= lastDate) {
+      months.push(d.toISOString().slice(0,7));
+      d.setMonth(d.getMonth() + 1);
+    }
+
+    function getOdoAt(vehicle, dateStr) {
+      const pts = sorted.filter(e => e.vehicle === vehicle && e.date <= dateStr);
+      if (!pts.length) return null;
+      return pts[pts.length-1].odometer;
+    }
+
+    const datasets = vehList.map(v => {
+      const data = months.map((m, i) => {
+        if (i === 0) return null;
+        const endDate   = m + '-28';
+        const startDate = months[i-1] + '-28';
+        const odoEnd    = getOdoAt(v, endDate);
+        const odoStart  = getOdoAt(v, startDate);
+        if (odoEnd === null || odoStart === null) return null;
+        return Math.max(0, odoEnd - odoStart);
+      });
+      return {
+        label: v,
+        data,
+        backgroundColor: vehColors[v] + 'aa',
+        borderColor: vehColors[v],
+        borderWidth: 1, borderRadius: 4
+      };
+    });
+
+    mkChart('chartMilesPerMonth', {
+      type: 'bar',
+      data: { labels: months.map(monthLabel), datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
+          datalabels: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ~${ctx.parsed.y?.toLocaleString()} mi` } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } }, stacked: false },
+          y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v.toLocaleString() },
+               title: { display: true, text: 'miles (est.)', color: '#888' }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // Chart 3: Gas price history (duplicate of chartGasPrice in economics, here in mileage section)
+  if (document.getElementById('chartGasPriceMileage')) {
+    mkChart('chartGasPriceMileage', {
+      type: 'line',
+      data: {
+        labels: gasSavingsRates.map(r => r.date),
+        datasets: [{
+          label: '$/gal assumed for savings calc',
+          data: gasSavingsRates.map(r => r.gas_price),
+          borderColor: '#f39c12', backgroundColor: 'rgba(243,156,18,0.1)',
+          borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#f39c12',
+          fill: true, stepped: true
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          datalabels: { display: true, anchor: 'top', align: 'top', color: tc(), font: { size: 10 },
+                        formatter: v => '$' + v.toFixed(2) },
+          tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.y.toFixed(2)}/gal` } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: tc(), maxRotation: 40, minRotation: 30 } },
+          y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => '$' + v.toFixed(2) },
+               title: { display: true, text: '$/gal', color: '#888' },
+               suggestedMin: 2.5, suggestedMax: 5.0 }
+        }
+      }
+    });
+  }
+
+  // Chart 4: Real efficiency from sessions with miles_added (reuse chartVehicleEfficiency logic)
+  if (document.getElementById('chartEfficiencyReal')) {
+    const vehiclesInData = [...new Set(sl.map(s => s.vehicle))].sort();
+    const allMonths = [...new Set(sl.map(s => s.month))].sort();
+    const vehColorMap = {};
+    vehiclesInData.forEach((v, i) => { vehColorMap[v] = palette[i % palette.length]; });
+
+    const datasets = vehiclesInData.map(v => {
+      const data = allMonths.map(m => {
+        const ms = sl.filter(s => s.vehicle === v && s.month === m && s.hasRealEff);
+        if (!ms.length) return null;
+        const kwh = ms.reduce((a,s) => a + s.kwh, 0);
+        const mi  = ms.reduce((a,s) => a + (s.milesAdded || 0), 0);
+        return mi > 0 ? +(kwh / mi * 100).toFixed(2) : null;
+      });
+      return {
+        label: v, data, borderColor: vehColorMap[v], backgroundColor: vehColorMap[v] + '22',
+        borderWidth: 2.5, pointRadius: 4, tension: 0.35, spanGaps: false, fill: false
+      };
+    });
+
+    mkChart('chartEfficiencyReal', {
+      type: 'line',
+      data: { labels: allMonths.map(monthLabel), datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
+          datalabels: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)} kWh/100mi` } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+          y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + ' kWh/100mi' },
+               title: { display: true, text: 'kWh / 100 miles (real)', color: '#888' }, beginAtZero: false }
+        }
+      }
+    });
+  }
+})(sl);
 
 /* ════════════════════════════════════════════════════════
    CHART 8 — Gas price history (step line)

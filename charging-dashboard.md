@@ -20,30 +20,48 @@ permalink: /charging/
 =============================================================
   ODOMETER / COST-PER-MILE CONFIGURATION
   ─────────────────────────────────────────────────────────
-  FORMAT: vehicle_name | odometer_miles | odometer_date | first_session_date |
-
-  vehicle_name    Must EXACTLY match the vehicle field in your
-                  charging files. Case sensitive.
-  odometer_miles  Current odometer reading in miles.
-  odometer_date   Date (YYYY-MM-DD) you took the reading.
-                  Only sessions ON OR BEFORE this date count.
-  first_session_date  Date of your very first session for this
-                  vehicle. Set once, never change.
-
-  HOW TO UPDATE:
-    1. Check FordPass or dashboard for current mileage.
-    2. Update odometer_miles and odometer_date.
-    3. Save, commit, push.
+  Odometer history is now managed in _data/mileage.yml
+  Add a new entry there whenever you check the odometer.
+  This file reads the most recent reading per vehicle
+  automatically — no changes needed here.
 
   WHEN YOU ADD A NEW VEHICLE:
-    Add a new line and update the CloudCannon schema default.
-    An Overall row appears automatically with 2+ vehicles.
+    1. Add entries to _data/mileage.yml with the new vehicle name
+    2. Update cloudcannon.config.yml vehicle dropdown
+    3. Update the Shortcut VEHICLE_NAME/VEHICLE_SLUG options
+    An "Overall" row appears automatically with 2+ vehicles.
 =============================================================
 {% endcomment %}
-{% assign odometer_entries = "
-2025 Mach-E GT | 11742 | 2026-05-17 | 2025-08-22 |
-LRB's 2025 Mach-E GT | 12010 | 2026-05-17 | 2026-05-02 |
-" | strip | split: "
+
+{% comment %} Build odometer_entries from _data/mileage.yml — latest per vehicle {% endcomment %}
+{% assign _seen_vehicles = "" %}
+{% assign odometer_entries = "" %}
+{% assign _mileage_sorted = site.data.mileage | sort: "date" | reverse %}
+{% for entry in _mileage_sorted %}
+  {% assign _veh_key = entry.vehicle | downcase | replace: " ", "_" | replace: "'", "" %}
+  {% unless _seen_vehicles contains _veh_key %}
+    {% assign _seen_vehicles = _seen_vehicles | append: _veh_key | append: "," %}
+    {% comment %} Find first_session_date for this vehicle from charging data {% endcomment %}
+    {% assign _first_date = "9999-99-99" %}
+    {% for log in site.charging %}
+      {% if log.vehicle == entry.vehicle %}
+        {% assign _log_date = log.date | date: "%Y-%m-%d" %}
+        {% if _log_date < _first_date %}
+          {% assign _first_date = _log_date %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    {% if _first_date == "9999-99-99" %}{% assign _first_date = entry.date %}{% endif %}
+    {% assign _row = entry.vehicle | append: " | " | append: entry.odometer | append: " | " | append: entry.date | append: " | " | append: _first_date | append: " |" %}
+    {% if odometer_entries == "" %}
+      {% assign odometer_entries = _row %}
+    {% else %}
+      {% assign odometer_entries = odometer_entries | append: "
+" | append: _row %}
+    {% endif %}
+  {% endunless %}
+{% endfor %}
+{% assign odometer_entries = odometer_entries | split: "
 " %}
 
 <style>

@@ -585,6 +585,70 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════
+       SLIDE 3b — ADDING A SESSION VIA iPHONE SHORTCUT
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #5D3FD3, #2ecc71);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Preferred Method — iPhone Shortcut</div>
+      <h2 class="slide-heading">Adding a session with the <span>⚡ Log Charge</span> Shortcut</h2>
+
+      <div class="two-col">
+        <div class="step-list">
+          <div class="step">
+            <div class="step-num" style="background:rgba(93,63,211,0.2); color:#a389f4;">1</div>
+            <div class="step-content">
+              <h4>Tap ⚡ Log Charge on your home screen</h4>
+              <p>The Shortcut is on your iPhone and LRB's iPhone home screen. No app to open.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(93,63,211,0.2); color:#a389f4;">2</div>
+            <div class="step-content">
+              <h4>Choose which car</h4>
+              <p>RJB GT / LRB GT / RJB SR / LRB SR — pick the right one. Update the menu when you swap cars.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(93,63,211,0.2); color:#a389f4;">3</div>
+            <div class="step-content">
+              <h4>📷 Parse FordPass screenshot OR ✏️ Enter manually</h4>
+              <p>Screenshot path: pick the FordPass "Charge details" photo → Apple Intelligence reads it → all fields pre-filled → confirm/edit.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">4</div>
+            <div class="step-content">
+              <h4>Session committed to GitHub directly</h4>
+              <p>Bypasses CloudCannon entirely. GitHub Pages rebuilds in ~60 seconds. ✅ notification confirms success.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="info-box tip">
+            <strong>💡 Screenshot path captures everything</strong><br>
+            From a FordPass "Charge details" screen, the Shortcut extracts: location, kWh, cost, start date, start time, end time, SOC start/end/added, and miles added. All fields populated automatically.
+          </div>
+          <div class="info-box warn" style="margin-top:12px;">
+            <strong>⚠️ GitHub owner/repo in Shortcut</strong><br>
+            GITHUB_OWNER: <span class="mono">RJBME</span><br>
+            GITHUB_REPO: <span class="mono">robbertbeier-web</span><br>
+            PAT token: stored in Shortcut Text action — regenerate annually or if exposed.
+          </div>
+          <div class="info-box green" style="margin-top:12px;">
+            <strong>✓ When you swap cars</strong><br>
+            Update the vehicle menu in the Shortcut (Block C) with the new car's name and slug. Share updated Shortcut to LRB's phone via iCloud Link.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 03b</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
        SLIDE 4 — LOCATION BADGES & BRANDS
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
@@ -805,56 +869,64 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════
-       SLIDE 7 — ODOMETER / COST PER MILE
+       SLIDE 7 — MILEAGE TRACKING (_data/mileage.yml)
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
     <div class="slide-accent" style="background: linear-gradient(90deg, #FF7A14, #7b1fa2);"></div>
     <div class="slide-body">
-      <div class="slide-section-label">Cost Per Mile Tracking</div>
-      <h2 class="slide-heading">Odometer & <span>cost-per-mile</span> config</h2>
+      <div class="slide-section-label">Mileage & Cost Per Mile</div>
+      <h2 class="slide-heading">Odometer history in <span>_data/mileage.yml</span></h2>
 
-      <div class="code-label">The odometer table — in charging-dashboard.md</div>
+      <div class="code-label">_data/mileage.yml — add a new entry whenever you check</div>
       <div class="code-block">
-<span class="key">{% assign odometer_entries</span> = <span class="val">"</span>
-<span class="val">2025 Mach-E GT</span> <span class="pipe">|</span> <span class="val">18500</span> <span class="pipe">|</span> <span class="val">2026-04-18</span> <span class="pipe">|</span> <span class="val">2025-08-22</span> <span class="pipe">|</span>
-<span class="val">"</span> <span class="pipe">| strip | split:</span> <span class="val">"</span>
-<span class="val">"</span> <span class="key">%}</span>
+<span class="comment"># Newest entries at the TOP</span>
+<span class="key">- date:</span> <span class="val">"2026-05-21"</span>
+  <span class="key">vehicle:</span> <span class="val">"2025 Mach-E GT"</span>
+  <span class="key">odometer:</span> <span class="val">11847</span>
+  <span class="key">notes:</span> <span class="val">""</span>
+
+<span class="key">- date:</span> <span class="val">"2026-05-21"</span>
+  <span class="key">vehicle:</span> <span class="val">"LRB's 2025 Mach-E GT"</span>
+  <span class="key">odometer:</span> <span class="val">12185</span>
+  <span class="key">notes:</span> <span class="val">""</span>
       </div>
 
       <div class="two-col" style="margin-top:14px;">
         <div class="step-list">
           <div class="step">
             <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">→</div>
-            <div class="step-content"><h4>Column 1: Vehicle name</h4><p>Must EXACTLY match the <span class="mono">vehicle</span> field in your charging files. Case-sensitive.</p></div>
+            <div class="step-content"><h4>vehicle: must match exactly</h4><p>Case-sensitive. Must be identical to the vehicle field in your <span class="mono">_charging/*.md</span> files.</p></div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">→</div>
-            <div class="step-content"><h4>Column 2: Odometer miles</h4><p>Current reading. Update this and column 3 regularly (monthly or whenever).</p></div>
+            <div class="step-content"><h4>Add entries anytime</h4><p>No required interval. The dashboard always uses the most recent reading per vehicle. Analytics interpolates miles driven between readings.</p></div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">→</div>
-            <div class="step-content"><h4>Column 3: Reading date</h4><p>Only sessions ON OR BEFORE this date count toward this vehicle's cost/mile.</p></div>
+            <div class="step-content"><h4>Newest entries at top</h4><p>The file is read top-to-bottom. Most recent reading per vehicle wins for the dashboard display.</p></div>
           </div>
           <div class="step">
-            <div class="step-num" style="background:rgba(255,122,20,0.2); color:#ffcc80;">→</div>
-            <div class="step-content"><h4>Column 4: First session date</h4><p>Date of your very first session for this vehicle. Set once, don't change.</p></div>
+            <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">→</div>
+            <div class="step-content"><h4>What it unlocks</h4><p>Odometer timeline chart, miles driven per month, real kWh/100mi efficiency trend, more accurate CO₂ calculations.</p></div>
           </div>
         </div>
         <div>
           <div class="info-box warn">
-            <strong>⚠️ When your 2026 Mach-E arrives</strong><br>
-            1. Add a new line to the table for <span class="mono">2026 Mach-E GT</span><br>
-            2. Update the CloudCannon schema default vehicle<br>
-            3. An "Overall" row auto-appears once you have 2+ vehicles
+            <strong>⚠️ When you swap cars (each fall)</strong><br>
+            1. Add a final odometer entry for the outgoing car<br>
+            2. Start adding entries for the new car with its exact new vehicle name<br>
+            3. Update <span class="mono">cloudcannon.config.yml</span> vehicle dropdown<br>
+            4. Update the iPhone Shortcut vehicle menu<br>
+            5. Old car history stays intact — analytics handles it automatically
           </div>
           <div class="info-box tip" style="margin-top:10px;">
-            <strong>💡 How to update monthly</strong><br>
-            Check FordPass or your dashboard, then update just two numbers: odometer miles and the date. Commit and push.
+            <strong>💡 Dashboard auto-reads this file</strong><br>
+            <span class="mono">charging-dashboard.md</span> no longer has a hardcoded odometer table — it reads the latest entry per vehicle from <span class="mono">_data/mileage.yml</span> at build time. Just edit the YAML file and commit.
           </div>
-          <div class="code-label" style="margin-top:12px;">Example with 2026 car added</div>
-          <div class="code-block" style="font-size:0.7rem;">
-<span class="val">2025 Mach-E GT</span> <span class="pipe">|</span> <span class="val">32000</span> <span class="pipe">|</span> <span class="val">2027-01-01</span> <span class="pipe">|</span> <span class="val">2025-08-22</span> <span class="pipe">|</span>
-<span class="val">2026 Mach-E GT</span> <span class="pipe">|</span> <span class="val">8500</span>  <span class="pipe">|</span> <span class="val">2027-01-01</span> <span class="pipe">|</span> <span class="val">2026-10-15</span> <span class="pipe">|</span>
+          <div class="info-box green" style="margin-top:10px;">
+            <strong>✓ Vehicle names in use</strong><br>
+            <span class="mono">"2025 Mach-E GT"</span> — RJB (first session 2025-08-22)<br>
+            <span class="mono">"LRB's 2025 Mach-E GT"</span> — LRB (first session 2026-05-02)
           </div>
         </div>
       </div>
@@ -1060,6 +1132,70 @@ git push
   </div>
 
   <!-- ══════════════════════════════════════════════════════
+       SLIDE 10b — PWA / INSTALLED APP
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #5D3FD3, #f39c12);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Progressive Web App</div>
+      <h2 class="slide-heading">Running as an <span>installed app</span> on iPhone &amp; Pixel</h2>
+
+      <div class="two-col">
+        <div class="step-list">
+          <div class="step">
+            <div class="step-num" style="background:rgba(93,63,211,0.2); color:#a389f4;">📱</div>
+            <div class="step-content">
+              <h4>iPhone — Safari → Share → Add to Home Screen</h4>
+              <p>Launches full-screen (no browser chrome). Purple status bar. ⚡ ↔ 🚗 icon. Uses the iOS Liquid Glass squircle mask automatically.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(93,63,211,0.2); color:#a389f4;">🤖</div>
+            <div class="step-content">
+              <h4>Pixel — Chrome ⋮ → Install app</h4>
+              <p>A purple install banner appears at the bottom automatically. Long-press the icon for shortcuts to Dashboard, Analytics, or History.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">📁</div>
+            <div class="step-content">
+              <h4>PWA files (repo root)</h4>
+              <p><span class="mono">manifest.json</span> — app name, icon, shortcuts, theme color<br>
+              <span class="mono">sw.js</span> — service worker: caches pages, offline fallback<br>
+              <span class="mono">icons/</span> — 180px, 192px, 512px, maskable 512px PNGs</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">🔄</div>
+            <div class="step-content">
+              <h4>To update the icon</h4>
+              <p>Regenerate PNGs using <span class="mono">generate_icons.py</span>, replace files in <span class="mono">icons/</span>, commit. Then delete and re-add the app on your phone to pick up the new icon.</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="info-box tip">
+            <strong>💡 Theme color</strong><br>
+            <span class="mono">#5D3FD3</span> (purple) in light mode, <span class="mono">#a389f4</span> (lavender) in dark mode. Set in <span class="mono">manifest.json</span> and the <span class="mono">&lt;meta name="theme-color"&gt;</span> tags in <span class="mono">_layouts/default.html</span>.
+          </div>
+          <div class="info-box warn" style="margin-top:12px;">
+            <strong>⚠️ After updating sw.js or manifest.json</strong><br>
+            Clear site cache on your devices (Chrome → Settings → Privacy → Clear browsing data). The service worker caches aggressively — old versions can persist.
+          </div>
+          <div class="info-box green" style="margin-top:12px;">
+            <strong>✓ Offline support</strong><br>
+            Previously visited pages are cached by the service worker. If you're offline, the site shows a purple ⚡ offline page with a "Try Dashboard" link. New data loads when you're back online.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 10b</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
        SLIDE 11 — QUICK REFERENCE CHEATSHEET
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
@@ -1072,10 +1208,11 @@ git push
         <div>
           <p style="font-size:0.75rem; font-weight:600; color:var(--text); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.08em;">Routine tasks</p>
           <div class="checklist">
-            <div class="check-item"><span class="check-icon">⚡</span><span><strong>Add session:</strong> CloudCannon → Charging Sessions → + Add. Fill in all fields including start/end time, SOC fields, and miles added from FordPass.</span></div>
+            <div class="check-item"><span class="check-icon">⚡</span><span><strong>Add session:</strong> iPhone Shortcut (preferred) or CloudCannon → Charging Sessions → + Add. Fill in all fields including start/end time, SOC fields, and miles added from FordPass.</span></div>
             <div class="check-item"><span class="check-icon">🔌</span><span><strong>Update electricity rate:</strong> Add new entry to <span class="mono">_data/rates.yml</span> → <span class="mono">home_electricity:</span> section, commit</span></div>
             <div class="check-item"><span class="check-icon">⛽</span><span><strong>Update gas period:</strong> Add new entry to <span class="mono">_data/rates.yml</span> → <span class="mono">gas_savings:</span> section, commit</span></div>
-            <div class="check-item"><span class="check-icon">🚗</span><span><strong>Update odometer:</strong> Change miles + date in odometer_entries in <span class="mono">charging-dashboard.md</span></span></div>
+            <div class="check-item"><span class="check-icon">🚗</span><span><strong>Update odometer:</strong> Add new entry to <span class="mono">_data/mileage.yml</span> (newest at top). Vehicle name must match exactly. Commit and push.</span></div>
+            <div class="check-item"><span class="check-icon">🔄</span><span><strong>Swap cars (annually):</strong> Add final odo entry for old car → add new car entries to <span class="mono">_data/mileage.yml</span> → update <span class="mono">cloudcannon.config.yml</span> → update Shortcut vehicle menu</span></div>
             <div class="check-item"><span class="check-icon">📍</span><span><strong>Add location:</strong> Add to <span class="mono">cloudcannon.config.yml</span> values list AND <span class="mono">_data/locations.yml</span> with lat/lng, commit</span></div>
             <div class="check-item"><span class="check-icon">🗺</span><span><strong>Annotate a road trip:</strong> Open <span class="mono">_data/trip_notes.yml</span>, copy the template at the bottom, fill in the key (first session date YYYY-MM-DD), destination, description, and notes. Commit.</span></div>
             <div class="check-item"><span class="check-icon">🧹</span><span><strong>Cleanup files:</strong> <span class="mono">python3 fix_charging_files.py</span> then commit — adds new fields (SOC, miles_added etc.) to old session files with empty defaults</span></div>
@@ -1086,13 +1223,15 @@ git push
           <div class="checklist">
             <div class="check-item"><span class="check-icon">📁</span><span><span class="mono">_charging/*.md</span> — one file per charging session</span></div>
             <div class="check-item"><span class="check-icon">📊</span><span><span class="mono">_data/rates.yml</span> — ALL electricity rates &amp; gas savings assumptions</span></div>
+            <div class="check-item"><span class="check-icon">🚗</span><span><span class="mono">_data/mileage.yml</span> — odometer history (all vehicles, newest first)</span></div>
             <div class="check-item"><span class="check-icon">🗺</span><span><span class="mono">_data/trip_notes.yml</span> — road trip destination annotations</span></div>
             <div class="check-item"><span class="check-icon">📍</span><span><span class="mono">_data/locations.yml</span> — charging location coordinates for map</span></div>
-            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-dashboard.md</span> — main /charging/ page (odometer config only)</span></div>
+            <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-dashboard.md</span> — main /charging/ page (reads mileage.yml automatically)</span></div>
             <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-history.md</span> — /charging-history/ full table page</span></div>
             <div class="check-item"><span class="check-icon">⚙️</span><span><span class="mono">cloudcannon.config.yml</span> — CloudCannon UI settings &amp; location dropdown</span></div>
             <div class="check-item"><span class="check-icon">🗂</span><span><span class="mono">.cloudcannon/schemas/charging.md</span> — new session template</span></div>
             <div class="check-item"><span class="check-icon">🐍</span><span><span class="mono">fix_charging_files.py</span> — cleanup/rename script</span></div>
+            <div class="check-item"><span class="check-icon">📱</span><span><span class="mono">sw.js</span> + <span class="mono">manifest.json</span> — PWA service worker &amp; app manifest (repo root)</span></div>
           </div>
 
           <div class="info-box tip" style="margin-top:14px;">
