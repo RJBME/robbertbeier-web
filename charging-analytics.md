@@ -7,7 +7,10 @@ permalink: /charging-analytics/
 
 <style>
   /* ── Page-level overrides ── */
-  body { max-width: 1100px !important; overflow-x: clip; }
+  body { max-width: 1100px !important; overflow-x: clip; overflow-x: hidden; }
+  /* overflow-x:clip preferred (doesn't create scroll container, safer for sticky);
+     overflow-x:hidden is the Safari 15 fallback — both declarations are intentional,
+     browsers take the last valid one they understand. clip is supported in Safari 16+. */
   /* NOTE: do NOT set overflow on <html> — it breaks position:sticky on the site nav.
      overflow-x:clip on body clips horizontal bleed without creating a scroll container. */
   /* offset hash-jump targets so they clear both sticky bars */
@@ -100,7 +103,13 @@ permalink: /charging-analytics/
     border-radius: 12px; padding: 18px 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     max-width: 100%; box-sizing: border-box;
+    /* CSS containment: layout+style prevents child changes from
+       causing reflow outside the card. Safe in all modern browsers. */
+    contain: layout style;
   }
+  /* Promote chart canvases to their own compositor layer only when
+     actively rendering — avoids permanent VRAM usage for static charts */
+  .chart-wrap canvas { will-change: auto; }
   .chart-title {
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.07em; color: #888; margin: 0 0 14px 0;
@@ -494,6 +503,7 @@ permalink: /charging-analytics/
 
   <div class="section-nav">
     <a href="#records">Records</a>
+    <a href="#perspective">🌍 Perspective</a>
     <a href="#heatmap">Heatmap</a>
     <a href="#monthly">Monthly</a>
     <a href="#sources">Sources</a>
@@ -509,7 +519,6 @@ permalink: /charging-analytics/
     <a href="#efficiency" id="navEfficiency">Efficiency</a>
     <a href="#vehiclecomp" id="navVehicleComp" style="display:none">Vehicles</a>
     <a href="#map">Map</a>
-    <a href="#perspective">🌍 Perspective</a>
   </div>
 
   <!-- Sticky bar: section nav on top row, vehicle filter on bottom row -->
@@ -520,6 +529,7 @@ permalink: /charging-analytics/
       <a href="/charging-history/" style="opacity:0.55;font-size:0.62rem;padding:2px 7px">📋 History</a>
       <span style="color:var(--dash-border);margin:0 4px;align-self:center">│</span>
       <a href="#records">Records</a>
+      <a href="#perspective">🌍 Perspective</a>
       <a href="#heatmap">Heatmap</a>
       <a href="#monthly">Monthly</a>
       <a href="#sources">Sources</a>
@@ -535,7 +545,6 @@ permalink: /charging-analytics/
       <a href="#efficiency" id="stickyNavEff">Efficiency</a>
       <a href="#vehiclecomp" id="stickyNavVehicle" style="display:none">Vehicles</a>
       <a href="#map">Map</a>
-      <a href="#perspective">🌍 Perspective</a>
     </div>
     <div id="stickyVehicleRow">
       <span class="vf-sticky-label">Vehicle</span>
@@ -605,6 +614,22 @@ permalink: /charging-analytics/
   </div>
 
   <div class="records-grid" id="recordsGrid"></div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!--  PERSPECTIVE: WHAT DOES IT ALL MEAN?               -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="section-header" id="perspective">
+    <h2>🌍 Perspective</h2>
+    <span>putting your numbers in context</span>
+    <a href="#top" class="back-top-pill">↑ top</a>
+  </div>
+
+  <div class="perspective-section">
+    <div class="perspective-grid" id="heroCardGrid">
+      <!-- populated by JS -->
+    </div>
+    <p style="font-size:0.68rem;color:#aaa;margin-top:12px;line-height:1.6" id="heroFootnote"></p>
+  </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
   <!--  YEAR AT A GLANCE HEATMAP                          -->
@@ -1284,8 +1309,8 @@ permalink: /charging-analytics/
     </div>
   </div><!-- /#efficiencySection -->
 
-  <!-- ─── hm-tip tooltip (heatmap hover) ─── -->
-  <div id="hm-tip" style="position:fixed;background:rgba(0,0,0,0.82);color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;pointer-events:none;display:none;z-index:9999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);"></div>
+  <!-- ─── hm-tip tooltip (heatmap hover) — position via transform not top/left ─── -->
+  <div id="hm-tip" style="position:fixed;top:0;left:0;background:rgba(0,0,0,0.82);color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;pointer-events:none;display:none;z-index:9999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);will-change:transform;"></div>
 
   <div class="section-header" id="map">
     <h2>Charging Locations Map</h2>
@@ -1303,21 +1328,6 @@ permalink: /charging-analytics/
     <div id="chargingMap" style="height:420px"></div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!--  PERSPECTIVE: WHAT DOES IT ALL MEAN?               -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="section-header" id="perspective">
-    <h2>🌍 Perspective</h2>
-    <span>putting your numbers in context</span>
-    <a href="#top" class="back-top-pill">↑ top</a>
-  </div>
-
-  <div class="perspective-section">
-    <div class="perspective-grid" id="heroCardGrid">
-      <!-- populated by JS -->
-    </div>
-    <p style="font-size:0.68rem;color:#aaa;margin-top:12px;line-height:1.6" id="heroFootnote"></p>
-  </div>
 
 </div><!-- .analytics-container -->
 
@@ -1390,9 +1400,65 @@ const gc     = () => isDark() ? '#3a3a3a' : '#e8e8e8'; // grid color
 function getStepRate(arr, date, field, fallback) {
   if (!Array.isArray(arr) || !arr.length) return fallback;
   let val = fallback;
-  // Walk the full array — do NOT break early, rates may not be perfectly contiguous
   for (const r of arr) { if (r.date <= date) val = r[field]; }
   return (val !== undefined && val !== null) ? val : fallback;
+}
+
+// ── Memoized rate lookups — called per-session during enrichment ──────────
+// getGasSavingsObj: cache by "date|vehicle" key since rates change on step boundaries
+const _gasSavingsCache = new Map();
+function getGasSavingsObj(date, vehicle) {
+  const key = date + '|' + (vehicle || '');
+  if (_gasSavingsCache.has(key)) return _gasSavingsCache.get(key);
+  if (!Array.isArray(gasSavingsRates) || !gasSavingsRates.length) {
+    const def = { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
+    _gasSavingsCache.set(key, def);
+    return def;
+  }
+  let obj = gasSavingsRates[0];
+  for (const r of gasSavingsRates) { if (r.date <= date) obj = r; }
+  // Shallow-clone only once, override mpg per vehicle
+  const result = vehicle && VEHICLE_MPG[vehicle] !== undefined
+    ? { ...obj, mpg: VEHICLE_MPG[vehicle] }
+    : obj;
+  _gasSavingsCache.set(key, result);
+  return result;
+}
+
+// getEgridFactor: memoized by location string — regex + array scan is expensive per-session
+const _egridCache = new Map();
+function getEgridFactor(locationStr) {
+  if (_egridCache.has(locationStr)) return _egridCache.get(locationStr);
+  let factor = EGRID_DEFAULT;
+  const locEntry = (locationData || []).find(l =>
+    l.name && l.name.toLowerCase() === locationStr.toLowerCase()
+  );
+  if (locEntry && locEntry.egrid_region && EGRID_FACTORS[locEntry.egrid_region]) {
+    factor = EGRID_FACTORS[locEntry.egrid_region];
+  } else {
+    const m1 = locationStr.match(/\b([A-Z]{2})\s*$/);
+    const m2 = !m1 && locationStr.match(/,\s*([A-Z]{2})\b/);
+    const st  = (m1 || m2 || [])[1];
+    if (st && STATE_TO_EGRID[st]) factor = EGRID_FACTORS[STATE_TO_EGRID[st]];
+  }
+  _egridCache.set(locationStr, factor);
+  return factor;
+}
+
+// getBucket: memoized since location strings repeat constantly
+const _bucketCache = new Map();
+function getBucket(loc) {
+  if (_bucketCache.has(loc)) return _bucketCache.get(loc);
+  const l = loc.toLowerCase();
+  const b = l.includes('work') ? 'Work'
+          : l.includes('home') ? 'Home'
+          : l.includes('tesla') ? 'Tesla SC'
+          : l.includes('chargepoint') ? 'ChargePoint'
+          : l.includes('blink') ? 'Blink'
+          : l.includes('rivian') ? 'Rivian'
+          : 'Other';
+  _bucketCache.set(loc, b);
+  return b;
 }
 // Per-vehicle MPG override for gas savings comparison.
 // Keys must exactly match vehicle field values in session files.
@@ -1435,58 +1501,12 @@ const STATE_TO_EGRID = {
   OH: 'RFCW', IN: 'RFCW', PA: 'RFCE', NY: 'RFCE',
 };
 
-// Derive eGRID factor from a session location string
-// 1. Check locationData for explicit egrid_region field
-// 2. Try to infer state from location string (e.g. "Tesla, Madison WI" → WI)
-// 3. Fall back to RFCM (home grid)
-function getEgridFactor(locationStr) {
-  // Check explicit override in _data/locations.yml
-  const locEntry = (locationData || []).find(l =>
-    l.name && l.name.toLowerCase() === locationStr.toLowerCase()
-  );
-  if (locEntry && locEntry.egrid_region && EGRID_FACTORS[locEntry.egrid_region]) {
-    return EGRID_FACTORS[locEntry.egrid_region];
-  }
-  // Infer state from two-letter abbreviation at end of location string
-  const stateMatch = locationStr.match(/\b([A-Z]{2})\s*$/);
-  if (stateMatch && STATE_TO_EGRID[stateMatch[1]]) {
-    return EGRID_FACTORS[STATE_TO_EGRID[stateMatch[1]]];
-  }
-  // Also try "City ST" pattern mid-string
-  const stateMatch2 = locationStr.match(/,\s*([A-Z]{2})\b/);
-  if (stateMatch2 && STATE_TO_EGRID[stateMatch2[1]]) {
-    return EGRID_FACTORS[STATE_TO_EGRID[stateMatch2[1]]];
-  }
-  return EGRID_DEFAULT;
-}
-
 // Get baseline MPG for a vehicle (for CO2 comparison)
 function getBaselineMpg(vehicle) {
   return VEHICLE_MPG[vehicle] || 24.8;
 }
 
-function getGasSavingsObj(date, vehicle) {
-  if (!Array.isArray(gasSavingsRates) || !gasSavingsRates.length) {
-    return { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
-  }
-  let obj = { ...gasSavingsRates[0] };
-  for (const r of gasSavingsRates) { if (r.date <= date) obj = { ...r }; }
-  // Override mpg with per-vehicle value if defined
-  if (vehicle && VEHICLE_MPG[vehicle] !== undefined) {
-    obj = { ...obj, mpg: VEHICLE_MPG[vehicle] };
-  }
-  return obj;
-}
-function getBucket(loc) {
-  const l = loc.toLowerCase();
-  if (l.includes('work'))        return 'Work';
-  if (l.includes('home'))        return 'Home';
-  if (l.includes('tesla'))       return 'Tesla SC';
-  if (l.includes('chargepoint')) return 'ChargePoint';
-  if (l.includes('blink'))       return 'Blink';
-  if (l.includes('rivian'))      return 'Rivian';
-  return 'Other';
-}
+// (getGasSavingsObj, getEgridFactor, getBucket defined above with memoization)
 function monthLabel(m) {
   const [y, mo] = m.split('-');
   return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo - 1] + " '" + y.slice(2);
@@ -1554,7 +1574,9 @@ sessions.forEach(s => {
     s.bucket    = getBucket(s.location);
     s.isFree    = s.cost < 0.005;
     s.month     = s.date.substring(0, 7);
-    s.dow       = new Date(s.date + 'T12:00:00').getDay();
+    // DOW: parse YYYY-MM-DD directly to avoid locale issues; T12:00:00 prevents DST boundary issues
+    const dp    = s.date.split('-');
+    s.dow       = new Date(+dp[0], +dp[1]-1, +dp[2], 12).getDay();
 
     // CO2 calculations — reuse effMiPerKwh already computed above; cache egridFactor
     const mpg        = getBaselineMpg(s.vehicle);
@@ -1582,18 +1604,35 @@ sessions.forEach(s => {
 Chart.register(ChartDataLabels);
 Chart.defaults.animation = false; // disable all chart animations — prevents CPU spike on rebuild
 
-/* Cubic ease-out count-up animation — RAF ID tracked per element so rapid
-   vehicle-filter clicks cancel in-flight animations instead of stacking */
-const _cuRAF = new Map();
+/* Cubic ease-out count-up animation — WeakMap keyed by element so detached
+   DOM nodes can be garbage collected. RAF IDs also tracked in _cuRAFIds Set
+   for bulk cancellation on tab hide. */
+const _cuRAF    = new WeakMap();
+const _cuRAFIds = new Set(); // parallel Set of active RAF IDs for bulk cancel
 function countUp(el, target, fmt, dur) {
-  if (_cuRAF.has(el)) { cancelAnimationFrame(_cuRAF.get(el)); _cuRAF.delete(el); }
+  if (_cuRAF.has(el)) {
+    const old = _cuRAF.get(el);
+    cancelAnimationFrame(old);
+    _cuRAFIds.delete(old);
+    _cuRAF.delete(el);
+  }
   dur = dur || 900;
   const t0 = performance.now();
   (function tick(now) {
+    if (document.hidden) {
+      el.textContent = fmt(target);
+      _cuRAF.delete(el);
+      return;
+    }
     const p = Math.min((now - t0) / dur, 1);
     el.textContent = fmt((1 - Math.pow(1 - p, 3)) * target);
-    if (p < 1) { _cuRAF.set(el, requestAnimationFrame(tick)); }
-    else        { _cuRAF.delete(el); }
+    if (p < 1) {
+      const id = requestAnimationFrame(tick);
+      _cuRAF.set(el, id);
+      _cuRAFIds.add(id);
+    } else {
+      _cuRAF.delete(el);
+    }
   })(t0);
 }
 
@@ -1604,7 +1643,13 @@ let _hmRender = null;        // current heatmap render fn — updated on each re
 let _heatmapWired = false;  // event listeners on heatmapContainer wired only once
 
 function mkChart(id, config) {
-  const c = new Chart(document.getElementById(id), config);
+  const canvas = document.getElementById(id);
+  if (!canvas) return null;
+  // Destroy any existing Chart instance on this canvas — prevents
+  // "Canvas is already in use" error if rebuild() is called before destroy completes
+  const existing = Chart.getChart(canvas);
+  if (existing) { existing.destroy(); }
+  const c = new Chart(canvas, config);
   allCharts.push(c);
   return c;
 }
@@ -1657,6 +1702,8 @@ function buildVehicleFilter() {
   // Sticky bar positioning and show/hide are handled by initStickyBar() (called once at init).
 
   // Active section highlight in sticky nav via IntersectionObserver
+  // Disconnect previous observer if buildVehicleFilter is ever called again
+  if (window._sectionObs) { window._sectionObs.disconnect(); window._sectionObs = null; }
   const navLinks = document.querySelectorAll('#stickyNavRow a[href^="#"]');
   const sectionEls = Array.from(navLinks)
     .map(a => document.getElementById(a.getAttribute('href').slice(1)))
@@ -1664,19 +1711,18 @@ function buildVehicleFilter() {
 
   if (sectionEls.length && 'IntersectionObserver' in window) {
     let activeId = null;
+    // Cache rects outside the callback; refresh on each intersection event
     const obs = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const id = entry.target.id;
           const vh = window.innerHeight;
-          // Read all rects in a single pass — avoids repeated forced layout
-          const rects = sectionEls.map(el => ({ el, rect: el.getBoundingClientRect() }));
-          const visible = rects.filter(({ rect }) => rect.top < vh * 0.55 && rect.bottom > 0);
+          const rects = sectionEls.map(el => ({ el, top: el.getBoundingClientRect().top }));
+          const visible = rects.filter(({ top }) => top < vh * 0.55 && top > -100);
           if (visible.length) {
-            visible.sort((a, b) => Math.abs(a.rect.top) - Math.abs(b.rect.top));
+            visible.sort((a, b) => Math.abs(a.top) - Math.abs(b.top));
             activeId = visible[0].el.id;
           } else {
-            activeId = id;
+            activeId = entry.target.id;
           }
           navLinks.forEach(a => {
             a.classList.toggle('nav-active', a.getAttribute('href') === '#' + activeId);
@@ -1685,6 +1731,7 @@ function buildVehicleFilter() {
       });
     }, { rootMargin: '-10% 0px -50% 0px', threshold: 0 });
     sectionEls.forEach(el => obs.observe(el));
+    window._sectionObs = obs;
   }
 }
 
@@ -1741,7 +1788,12 @@ function setVehicle(v) {
         const topAfter = _anchorEl.getBoundingClientRect().top;
         const delta    = topAfter - _anchorTopBefore;
         if (Math.abs(delta) > 1) {
-          window.scrollTo({ top: _savedY + delta, behavior: 'instant' });
+          // Safari doesn't support behavior:'instant' — use scrollTo without options as fallback
+          try {
+            window.scrollTo({ top: _savedY + delta, behavior: 'instant' });
+          } catch(e) {
+            window.scrollTo(0, _savedY + delta);
+          }
         }
       }
       if (_leafletMap) buildMap(_lastSl);
@@ -1753,7 +1805,8 @@ function setVehicle(v) {
    REBUILD — called on init and on vehicle filter change
    ════════════════════════════════════════════════════════ */
 function rebuild(sl) {
-  allCharts.forEach(c => c.destroy());
+  // Destroy all tracked chart instances and clear the registry
+  allCharts.forEach(c => { try { c.destroy(); } catch(e) {} });
   allCharts = [];
 
   // Drop any sessions that failed enrichment (missing month = bad date)
@@ -4817,8 +4870,10 @@ function initStickyBar() {
   }
 
   // Parallel scroll listener for Android Chrome fast-scroll
+  // Skip processing when tab is hidden — saves CPU in background
   var _raf = null;
   window.addEventListener('scroll', function() {
+    if (document.hidden) return;
     if (_raf) return;
     _raf = requestAnimationFrame(function() { _raf = null; _check(); });
   }, { passive: true });
@@ -4829,18 +4884,56 @@ function initStickyBar() {
 /* ════════════════════════════════════════════════════════
    INITIALIZE
    ════════════════════════════════════════════════════════ */
-let _leafletMap = null;
-let _lastSl     = sessions;
+let _leafletMap   = null;
+let _markerGroup  = null;
+let _tileLayer    = null; // tracked so we can swap light/dark tiles on theme change
+let _lastSl       = sessions;
+
+// Tile layer URLs — CartoDB is free, no API key, attribution required
+const TILES = {
+  light: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  },
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }
+};
+
+function _applyTiles() {
+  if (!_leafletMap) return;
+  const t = isDark() ? TILES.dark : TILES.light;
+  if (_tileLayer) { _tileLayer.remove(); }
+  _tileLayer = L.tileLayer(t.url, { attribution: t.attribution, maxZoom: 19 });
+  _tileLayer.addTo(_leafletMap);
+  // Ensure tile layer is below the marker group
+  _tileLayer.bringToBack();
+}
 
 buildVehicleFilter();
 rebuild(sessions);
 initStickyBar();
 initPrint();
 
+/* ── Page Visibility API — reduce resource usage in background tabs ──────
+   When the tab is hidden: suppress rAF-based animations, sticky bar scroll
+   listeners continue (passive, negligible cost) but we skip redraws.
+   Chart.js animations are already disabled (Chart.defaults.animation = false)
+   so no work needed there. The main cost in background is the sticky bar's
+   rAF scroll handler — we let it idle since it's already passive+rAF-gated.
+   ──────────────────────────────────────────────────────────────────────── */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Cancel all in-flight countUp animations to free RAF slots
+    _cuRAFIds.forEach(id => cancelAnimationFrame(id));
+    _cuRAFIds.clear();
+  }
+}, { passive: true });
+
 // Use window.onload so all external scripts (Leaflet) are guaranteed loaded
 // and the DOM is fully painted with real dimensions before we call L.map()
 window.addEventListener('load', function() {
-  // Initialise Leaflet map after DOM is fully painted
   var geoLocs  = Array.isArray(locationData) ? locationData.filter(function(l){ return l.lat && l.lng; }) : [];
   var noCoords = document.getElementById('mapNoCoords');
   var mapEl    = document.getElementById('chargingMap');
@@ -4853,10 +4946,9 @@ window.addEventListener('load', function() {
 
   try {
     _leafletMap = L.map('chargingMap', { preferCanvas: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 18
-    }).addTo(_leafletMap);
+    _applyTiles(); // applies light or dark tiles based on current theme
+    // Create marker group once — clearLayers() on rebuild keeps tile cache alive
+    _markerGroup = L.layerGroup().addTo(_leafletMap);
     _leafletMap.invalidateSize();
     buildMap(_lastSl);
   } catch(e) {
@@ -4870,9 +4962,8 @@ window.addEventListener('load', function() {
    CHARGING LOCATIONS MAP
    ════════════════════════════════════════════════════════ */
 function buildMap(sl) {
-  if (!_leafletMap) return; // not yet initialised (window load not fired)
+  if (!_leafletMap || !_markerGroup) return;
 
-  // Per-location stats
   const stats = {};
   sl.forEach(s => {
     if (!stats[s.location]) stats[s.location] = { kwh: 0, sessions: 0, bucket: s.bucket };
@@ -4880,14 +4971,14 @@ function buildMap(sl) {
     stats[s.location].sessions += 1;
   });
 
-  // Only show locations that have sessions in the current (possibly vehicle-filtered) set
   const geoLocs = (locationData || []).filter(l => l.lat && l.lng && stats[l.location]);
+
+  // clearLayers() removes only our markers — base tile layer stays in memory
+  // This is far more efficient than eachLayer/removeLayer on vehicle filter change
+  _markerGroup.clearLayers();
+
   if (!geoLocs.length) return;
 
-  // Clear old markers
-  _leafletMap.eachLayer(l => { if (!(l instanceof L.TileLayer)) _leafletMap.removeLayer(l); });
-
-  // maxKwh from the filtered set so pin sizes scale relative to the active vehicle
   const maxKwh = Math.max(...geoLocs.map(l => stats[l.location].kwh), 1);
   const bounds = [];
 
@@ -4907,7 +4998,7 @@ function buildMap(sl) {
       iconSize:   [sz, sz],
       iconAnchor: [sz / 2, sz / 2]
     });
-    L.marker([loc.lat, loc.lng], { icon }).bindPopup(popup).addTo(_leafletMap);
+    L.marker([loc.lat, loc.lng], { icon }).bindPopup(popup).addTo(_markerGroup);
     bounds.push([loc.lat, loc.lng]);
   });
 
@@ -5295,8 +5386,8 @@ function buildHeatmap(sl) {
       if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
     });
     el.addEventListener('mousemove', function(e) {
-      hmTip.style.left = (e.clientX + 14) + 'px';
-      hmTip.style.top  = (e.clientY - 34) + 'px';
+      // translate3d is compositor-only — no layout recalc on every mousemove
+      hmTip.style.transform = 'translate3d(' + (e.clientX + 14) + 'px,' + (e.clientY - 34) + 'px,0)';
     });
     el.addEventListener('mouseout', function(e) {
       if (e.target.dataset.tip) hmTip.style.display = 'none';
@@ -5306,8 +5397,7 @@ function buildHeatmap(sl) {
       if (t) {
         var touch = e.touches[0];
         hmTip.textContent = t;
-        hmTip.style.left = (touch.clientX + 14) + 'px';
-        hmTip.style.top  = (touch.clientY - 44) + 'px';
+        hmTip.style.transform = 'translate3d(' + (touch.clientX + 14) + 'px,' + (touch.clientY - 44) + 'px,0)';
         hmTip.style.display = 'block';
       }
     }, {passive: true});
@@ -5319,6 +5409,8 @@ function buildHeatmap(sl) {
    THEME REACTIVITY
    ════════════════════════════════════════════════════════ */
 window.addEventListener('themeChanged', () => {
+  // Swap map tiles light ↔ dark
+  _applyTiles();
   allCharts.forEach(chart => {
     // Update plugin colors
     if (chart.options.plugins?.legend?.labels) {
