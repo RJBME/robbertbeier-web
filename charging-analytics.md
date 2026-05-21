@@ -988,6 +988,38 @@ permalink: /charging-analytics/
     </div>
   </div>
 
+  <!-- Gas price sensitivity slider -->
+  <div class="chart-full chart-card" style="margin-top:18px;margin-bottom:18px">
+    <p class="chart-title">⛽ Gas Price Sensitivity — What If Gas Was $X/gal?</p>
+    <span class="chart-sub">Drag the slider to see how your total savings change at different gas prices</span>
+    <div style="display:flex;align-items:center;gap:16px;margin:16px 0 8px;flex-wrap:wrap">
+      <span style="font-size:0.72rem;color:#888;white-space:nowrap">Gas price:</span>
+      <input type="range" id="gasPriceSlider" min="2.00" max="6.00" step="0.05"
+        style="flex:1;min-width:160px;max-width:340px;accent-color:var(--link)">
+      <span style="font-size:1.4rem;font-weight:900;color:#f39c12;min-width:60px" id="gasPriceLabel">$3.26</span>
+      <span style="font-size:0.72rem;color:#aaa">vs. your actual avg</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="sensitivityKpis">
+      <div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 14px;text-align:center">
+        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:4px">Total Savings</div>
+        <div style="font-size:1.25rem;font-weight:900;color:#2ecc71" id="sensTotal">—</div>
+      </div>
+      <div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 14px;text-align:center">
+        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:4px">vs. Actual Rates</div>
+        <div style="font-size:1.25rem;font-weight:900" id="sensDelta">—</div>
+      </div>
+      <div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 14px;text-align:center">
+        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:4px">Avg/Month</div>
+        <div style="font-size:1.25rem;font-weight:900;color:var(--link)" id="sensMonthly">—</div>
+      </div>
+      <div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 14px;text-align:center">
+        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:4px">5-yr Projection</div>
+        <div style="font-size:1.25rem;font-weight:900;color:#f39c12" id="sens5yr">—</div>
+      </div>
+    </div>
+    <div class="chart-wrap" style="height:220px"><canvas id="chartGasSensitivity"></canvas></div>
+  </div>
+
   <!-- ═══════════════════════════════════════════════════ -->
   <!--  SECTION CO2: EMISSIONS AVOIDANCE                  -->
   <!-- ═══════════════════════════════════════════════════ -->
@@ -1123,8 +1155,8 @@ permalink: /charging-analytics/
     </div>
 
     <div class="chart-full chart-card" style="margin-top:18px;margin-bottom:18px">
-      <p class="chart-title">Efficiency Comparison — kWh per Real Mile, Monthly</p>
-      <p class="chart-sub" style="font-size:0.68rem;color:#888">Only months with FordPass miles_added data — gaps = no real data that month</p>
+      <p class="chart-title">Efficiency Comparison — mi/kWh (left) · Wh/mi (right)</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:#888">Only months with FordPass miles_added data — gaps = no real data · hover for both units</p>
       <div class="chart-wrap" style="height:240px"><canvas id="chartVehicleEfficiency"></canvas></div>
       <p style="font-size:0.68rem;color:#888;margin-top:8px">LFP (Standard Range) chemistry maintains better capacity in cold vs. NCM (GT). Watch for winter divergence.</p>
     </div>
@@ -1185,6 +1217,13 @@ permalink: /charging-analytics/
         <span class="chart-sub">Lower SOC → bigger charge — scatter plot</span>
         <div class="chart-wrap" style="height:250px"><canvas id="chartSocScatter"></canvas></div>
       </div>
+    </div>
+
+    <!-- When do I charge — day × hour heatmap -->
+    <div class="chart-full chart-card" style="margin-bottom:18px">
+      <p class="chart-title">When Do I Charge? — Hour × Day of Week</p>
+      <span class="chart-sub">Darker = more sessions starting at that hour/day — only sessions with recorded start time</span>
+      <div id="chargingWhenGrid" style="margin-top:14px;overflow-x:auto"></div>
     </div>
 
     <!-- Battery health -->
@@ -3802,15 +3841,15 @@ mkChart('chartHistogram', {
         labels: allMonths.map(monthLabel),
         datasets: vehiclesInData.map(v => {
           const data = allMonths.map(m => {
-            // Only sessions for this vehicle this month that have real miles_added
             const ms = sl.filter(s => s.vehicle === v && s.month === m && s.hasRealEff);
             if (!ms.length) return null;
             const kwh = ms.reduce((a,s) => a + s.kwh, 0);
             const mi  = ms.reduce((a,s) => a + s.milesAdded, 0);
-            return mi > 0 ? +(kwh / mi * 100).toFixed(2) : null; // real kWh/100mi
+            // Store as mi/kWh — the natural EV driver unit (higher = better)
+            return mi > 0 ? +(mi / kwh).toFixed(3) : null;
           });
           return { label: v, data, borderColor: vehColorMap[v], borderWidth: 2.5,
-                   pointRadius: 4, tension: 0.35, spanGaps: false };
+                   pointRadius: 4, tension: 0.35, spanGaps: false, yAxisID: 'yMiKwh' };
         })
       },
       options: {
@@ -3818,12 +3857,32 @@ mkChart('chartHistogram', {
         plugins: {
           legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10 } },
           datalabels: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)} kWh/100mi (real)` } }
+          tooltip: { callbacks: { label: ctx => {
+            const v = ctx.parsed.y;
+            if (v == null) return '';
+            return ` ${ctx.dataset.label}: ${v.toFixed(2)} mi/kWh  ·  ${Math.round(1000/v)} Wh/mi`;
+          }}}
         },
         scales: {
           x: { grid: { display: false }, ticks: { color: tc() } },
-          y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + ' kWh/100mi' }, beginAtZero: false,
-               title: { display: true, text: 'kWh / 100 miles (real)', color: '#888' } }
+          yMiKwh: {
+            position: 'left',
+            grid: { color: gc() },
+            ticks: { color: tc(), callback: v => v.toFixed(1) + ' mi/kWh' },
+            title: { display: true, text: 'mi / kWh  ↑ better', color: '#888' },
+            beginAtZero: false
+          },
+          yWhMi: {
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { color: '#888', callback: v => Math.round(1000/v) + ' Wh/mi' },
+            title: { display: true, text: 'Wh / mi  ↓ better', color: '#888' },
+            afterDataLimits: axis => {
+              const left = axis.chart.scales.yMiKwh;
+              if (left) { axis.min = left.min; axis.max = left.max; }
+            },
+            beginAtZero: false
+          }
         }
       }
     });
@@ -4621,8 +4680,265 @@ mkChart('chartHistogram', {
 
   buildLocationStats(sl);
   buildPerspectiveCards(sl);
+  buildWhenDoICharge(sl);
+  buildGasSensitivity(sl);
 
 } // ── end rebuild ──
+
+/* ════════════════════════════════════════════════════════
+   WHEN DO I CHARGE — Hour × Day of Week heatmap
+   ════════════════════════════════════════════════════════ */
+function buildWhenDoICharge(sl) {
+  const grid = document.getElementById('chargingWhenGrid');
+  if (!grid) return;
+
+  // Only sessions with a recorded start time
+  const timed = sl.filter(s => s.startTime && s.startTime.match(/^\d{1,2}:\d{2}/));
+  if (!timed.length) {
+    grid.innerHTML = '<p style="color:#888;font-size:0.84rem;padding:12px 0">No sessions with recorded start time yet — start times are captured automatically by the iPhone Shortcut.</p>';
+    return;
+  }
+
+  const DAYS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const HOURS = Array.from({length: 24}, (_,i) => i);
+
+  // Count sessions per (hour, dow) cell
+  const counts = {};
+  let maxCount = 0;
+  timed.forEach(s => {
+    const hour = parseInt(s.startTime.split(':')[0], 10);
+    const dow  = s.dow;
+    const key  = `${hour}_${dow}`;
+    counts[key] = (counts[key] || 0) + 1;
+    if (counts[key] > maxCount) maxCount = counts[key];
+  });
+
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const CELL = 28, GAP = 3;
+  const LABEL_W = 36, LABEL_H = 22;
+
+  // Color by bucket of dominant session type for that cell, intensity by count
+  function cellColor(hour, dow) {
+    const key = `${hour}_${dow}`;
+    const count = counts[key] || 0;
+    if (!count) return dark ? '#2a2a2a' : '#eeeeee';
+    const intensity = count / maxCount;
+
+    // Find dominant bucket for this cell
+    const cellSessions = timed.filter(s => parseInt(s.startTime.split(':')[0],10) === hour && s.dow === dow);
+    const bucketCounts = {};
+    cellSessions.forEach(s => { bucketCounts[s.bucket] = (bucketCounts[s.bucket]||0)+1; });
+    const dominant = Object.entries(bucketCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'Other';
+    const baseColor = BUCKET_COLORS[dominant] || '#888';
+
+    // Interpolate from background to base color based on intensity
+    const hex = baseColor.replace('#','');
+    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+    const bg = dark ? [42,42,42] : [238,238,238];
+    const ir = Math.round(bg[0] + (r-bg[0])*intensity);
+    const ig = Math.round(bg[1] + (g-bg[1])*intensity);
+    const ib = Math.round(bg[2] + (b-bg[2])*intensity);
+    return `rgb(${ir},${ig},${ib})`;
+  }
+
+  // Format hour label
+  function hourLabel(h) {
+    if (h === 0) return '12a';
+    if (h === 12) return '12p';
+    return h < 12 ? h+'a' : (h-12)+'p';
+  }
+
+  let html = `<div style="display:inline-block;min-width:${LABEL_W + DAYS.length*(CELL+GAP)}px">`;
+
+  // Day-of-week column headers
+  html += `<div style="display:flex;margin-left:${LABEL_W}px;margin-bottom:${GAP}px">`;
+  DAYS.forEach(d => {
+    html += `<div style="width:${CELL}px;margin-right:${GAP}px;text-align:center;font-size:10px;font-weight:600;color:${dark?'#aaa':'#666'}">${d}</div>`;
+  });
+  html += '</div>';
+
+  // Rows: one per hour
+  HOURS.forEach(h => {
+    html += `<div style="display:flex;align-items:center;margin-bottom:${GAP}px">`;
+    // Hour label
+    const showLabel = h % 3 === 0;
+    html += `<div style="width:${LABEL_W}px;font-size:10px;text-align:right;padding-right:6px;color:${dark?'#888':'#999'};flex-shrink:0">${showLabel ? hourLabel(h) : ''}</div>`;
+    // Cells for each day
+    DAYS.forEach((_, dow) => {
+      const key = `${h}_${dow}`;
+      const count = counts[key] || 0;
+      const bg = cellColor(h, dow);
+      const tip = count > 0 ? `${hourLabel(h)} on ${DAYS[dow]}: ${count} session${count!==1?'s':''}` : '';
+      html += `<div data-tip="${tip}" style="width:${CELL}px;height:${CELL}px;border-radius:4px;background:${bg};margin-right:${GAP}px;box-sizing:border-box;${!count?`border:1px solid ${dark?'#3a3a3a':'#ddd'}`:''}${count?';cursor:default':''}"></div>`;
+    });
+    html += '</div>';
+  });
+
+  // Legend
+  html += `<div style="display:flex;align-items:center;gap:6px;margin-top:10px;margin-left:${LABEL_W}px;flex-wrap:wrap">`;
+  Object.entries(BUCKET_COLORS).forEach(([b, c]) => {
+    html += `<div style="display:flex;align-items:center;gap:3px;margin-right:8px">
+      <div style="width:12px;height:12px;background:${c};border-radius:2px"></div>
+      <span style="font-size:10px;color:${dark?'#aaa':'#666'}">${b}</span></div>`;
+  });
+  html += `<span style="font-size:10px;color:#aaa;margin-left:8px">color = dominant type · intensity = frequency</span>`;
+  html += '</div>';
+  html += '</div>';
+
+  grid.innerHTML = html;
+
+  // Wire tooltip to the hm-tip element
+  const hmTip = document.getElementById('hm-tip');
+  grid.addEventListener('mouseover', e => {
+    const t = e.target.dataset.tip;
+    if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
+  });
+  grid.addEventListener('mousemove', e => {
+    hmTip.style.transform = 'translate3d(' + (e.clientX+14) + 'px,' + (e.clientY-34) + 'px,0)';
+  });
+  grid.addEventListener('mouseout', e => {
+    if (e.target.dataset.tip) hmTip.style.display = 'none';
+  });
+}
+
+/* ════════════════════════════════════════════════════════
+   GAS PRICE SENSITIVITY SLIDER
+   ════════════════════════════════════════════════════════ */
+function buildGasSensitivity(sl) {
+  const slider    = document.getElementById('gasPriceSlider');
+  const label     = document.getElementById('gasPriceLabel');
+  const chartEl   = document.getElementById('chartGasSensitivity');
+  if (!slider || !chartEl) return;
+
+  // Pre-compute per-session: miles driven and electricity cost (fixed)
+  // Savings at price P = (miles / mpg) * P - electricityCost
+  const sessionData = sl.map(s => {
+    const gs    = getGasSavingsObj(s.date, s.vehicle);
+    const mpg   = VEHICLE_MPG[s.vehicle] || 24.8;
+    const mi    = s.hasRealEff ? s.milesAdded : s.kwh * (gs.mi_per_kwh || 3.0);
+    const gallons = mi / mpg;
+    return { date: s.date, month: s.month, gallons, elecCost: s.cost, actualGasPrice: gs.gas_price };
+  });
+
+  // Actual total savings (using historical gas prices)
+  const actualSavings = sessionData.reduce((a, s) => a + (s.gallons * s.actualGasPrice - s.elecCost), 0);
+
+  // All unique months for chart x-axis
+  const allMonths = [...new Set(sl.map(s => s.month))].sort();
+  const monthCount = allMonths.length || 1;
+
+  function computeAtPrice(gasPrice) {
+    const total = sessionData.reduce((a,s) => a + (s.gallons * gasPrice - s.elecCost), 0);
+    const byMonth = {};
+    allMonths.forEach(m => { byMonth[m] = 0; });
+    sessionData.forEach(s => { byMonth[s.month] = (byMonth[s.month]||0) + (s.gallons * gasPrice - s.elecCost); });
+    let cum = 0;
+    const cumData = allMonths.map(m => { cum += byMonth[m]; return +cum.toFixed(2); });
+    const monthlyAvg = total / monthCount;
+    const proj5yr = monthlyAvg * 60;
+    return { total, byMonth, cumData, monthlyAvg, proj5yr };
+  }
+
+  // Set slider to actual avg gas price initially
+  const avgGasPrice = sessionData.length
+    ? sessionData.reduce((a,s)=>a+s.actualGasPrice,0)/sessionData.length
+    : 3.26;
+  slider.value = avgGasPrice.toFixed(2);
+  label.textContent = '$' + parseFloat(slider.value).toFixed(2);
+
+  // Build initial chart with actual prices as baseline
+  const initData = computeAtPrice(parseFloat(slider.value));
+
+  // Also plot actual (historical variable) cumulative as a reference line
+  const actualCum = [];
+  let cumAct = 0;
+  allMonths.forEach(m => {
+    const mSavings = sessionData.filter(s=>s.month===m).reduce((a,s)=>a+(s.gallons*s.actualGasPrice-s.elecCost),0);
+    cumAct += mSavings;
+    actualCum.push(+cumAct.toFixed(2));
+  });
+
+  let sensitivityChart = mkChart('chartGasSensitivity', {
+    type: 'line',
+    data: {
+      labels: allMonths.map(monthLabel),
+      datasets: [
+        {
+          label: 'At slider price',
+          data: initData.cumData,
+          borderColor: '#f39c12', backgroundColor: 'rgba(243,156,18,0.1)',
+          borderWidth: 2.5, fill: true, tension: 0.35, pointRadius: 2
+        },
+        {
+          label: 'Actual (historical rates)',
+          data: actualCum,
+          borderColor: '#2ecc71', backgroundColor: 'transparent',
+          borderWidth: 2, borderDash: [6,3], fill: false, tension: 0.35, pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
+        datalabels: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+        y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => '$'+v.toFixed(0) },
+             title: { display: true, text: 'Cumulative savings ($)', color: '#888' } }
+      }
+    }
+  });
+
+  function updateSensitivity(gasPrice) {
+    label.textContent = '$' + gasPrice.toFixed(2);
+    const d = computeAtPrice(gasPrice);
+    const delta = d.total - actualSavings;
+    const deltaEl = document.getElementById('sensDelta');
+
+    document.getElementById('sensTotal').textContent = fmtUSD(d.total);
+    if (deltaEl) {
+      deltaEl.textContent = (delta >= 0 ? '+' : '') + fmtUSD(delta);
+      deltaEl.style.color = delta >= 0 ? '#2ecc71' : '#e74c3c';
+    }
+    document.getElementById('sensMonthly').textContent = fmtUSD(d.monthlyAvg) + '/mo';
+    document.getElementById('sens5yr').textContent = fmtUSD(d.proj5yr);
+
+    // Update chart data
+    if (sensitivityChart) {
+      sensitivityChart.data.datasets[0].data = d.cumData;
+      sensitivityChart.data.datasets[0].label = `At $${gasPrice.toFixed(2)}/gal`;
+      sensitivityChart.update('none');
+    }
+  }
+
+  // Init KPIs
+  updateSensitivity(parseFloat(slider.value));
+
+  // Listen for slider — throttle via rAF
+  let _sensRaf = null;
+  slider.addEventListener('input', () => {
+    if (_sensRaf) return;
+    _sensRaf = requestAnimationFrame(() => {
+      _sensRaf = null;
+      updateSensitivity(parseFloat(slider.value));
+    });
+  });
+
+  // Re-init on theme change
+  window.addEventListener('themeChanged', () => {
+    if (sensitivityChart) {
+      sensitivityChart.data.datasets[0].borderColor = '#f39c12';
+      sensitivityChart.data.datasets[1].borderColor = '#2ecc71';
+      sensitivityChart.options.scales.x.ticks.color = tc();
+      sensitivityChart.options.scales.y.ticks.color = tc();
+      sensitivityChart.options.scales.y.grid.color  = gc();
+      sensitivityChart.update('none');
+    }
+  });
+}
 
 /* ════════════════════════════════════════════════════════
    PERSPECTIVE HERO CARDS
