@@ -29,8 +29,9 @@ permalink: /charging-analytics/
     margin: auto;
     color: var(--text);
     box-sizing: border-box;
-    /* Prevent child elements from expanding page width on mobile */
     overflow-x: clip;
+    /* Smooth opacity transition masks the chart destroy/rebuild flash */
+    transition: opacity 0.15s ease;
   }
 
   /* ── Back link ── */
@@ -1778,27 +1779,36 @@ function setVehicle(v) {
   });
 
   const _savedY = window.scrollY;
+  const _container = document.querySelector('.analytics-container');
 
-  rebuild(_lastSl);
+  // Fade out → rebuild → fade in. The 150ms fade-out matches the CSS transition
+  // duration and completely masks the chart destroy/recreate flash.
+  if (_container) _container.style.opacity = '0.15';
 
-  // Defer correction to after layout + paint settle (two rAF frames)
-  requestAnimationFrame(() => {
+  // Use setTimeout to let the fade-out paint before the synchronous rebuild runs
+  setTimeout(() => {
+    rebuild(_lastSl);
+
+    // Defer scroll correction + fade-in to after layout settles (two rAF frames)
     requestAnimationFrame(() => {
-      if (_anchorEl) {
-        const topAfter = _anchorEl.getBoundingClientRect().top;
-        const delta    = topAfter - _anchorTopBefore;
-        if (Math.abs(delta) > 1) {
-          // Safari doesn't support behavior:'instant' — use scrollTo without options as fallback
-          try {
-            window.scrollTo({ top: _savedY + delta, behavior: 'instant' });
-          } catch(e) {
-            window.scrollTo(0, _savedY + delta);
+      requestAnimationFrame(() => {
+        if (_anchorEl) {
+          const topAfter = _anchorEl.getBoundingClientRect().top;
+          const delta    = topAfter - _anchorTopBefore;
+          if (Math.abs(delta) > 1) {
+            try {
+              window.scrollTo({ top: _savedY + delta, behavior: 'instant' });
+            } catch(e) {
+              window.scrollTo(0, _savedY + delta);
+            }
           }
         }
-      }
-      if (_leafletMap) buildMap(_lastSl);
+        if (_leafletMap) buildMap(_lastSl);
+        // Fade back in — CSS transition handles the smooth reveal
+        if (_container) _container.style.opacity = '1';
+      });
     });
-  });
+  }, 120); // 120ms matches ~80% of the 150ms fade-out transition
 }
 
 /* ════════════════════════════════════════════════════════
