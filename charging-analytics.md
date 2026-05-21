@@ -695,8 +695,8 @@ permalink: /charging-analytics/
       <div class="chart-wrap" style="height:230px"><canvas id="chartGasPriceMileage"></canvas></div>
     </div>
     <div class="chart-card">
-      <p class="chart-title">Real Efficiency — kWh per 100 miles</p>
-      <p class="chart-sub" style="font-size:0.68rem;color:#888">From sessions with FordPass miles_added data</p>
+      <p class="chart-title">Real Efficiency — mi/kWh (left) · Wh/mi (right)</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:#888">From sessions with FordPass miles_added data · tooltip shows both units</p>
       <div class="chart-wrap" style="height:230px"><canvas id="chartEfficiencyReal"></canvas></div>
     </div>
   </div>
@@ -2118,7 +2118,8 @@ mkChart('chartMonthlySourceSplit', {
     });
   }
 
-  // Chart 4: Real efficiency from sessions with miles_added (reuse chartVehicleEfficiency logic)
+  // Chart 4: Real efficiency — dual axis: mi/kWh (left) and Wh/mi (right)
+  // Data is stored as kWh/100mi; convert: mi/kWh = 100/x, Wh/mi = x*10
   if (document.getElementById('chartEfficiencyReal')) {
     const vehiclesInData = [...new Set(sl.map(s => s.vehicle))].sort();
     const allMonths = [...new Set(sl.map(s => s.month))].sort();
@@ -2131,11 +2132,14 @@ mkChart('chartMonthlySourceSplit', {
         if (!ms.length) return null;
         const kwh = ms.reduce((a,s) => a + s.kwh, 0);
         const mi  = ms.reduce((a,s) => a + (s.milesAdded || 0), 0);
-        return mi > 0 ? +(kwh / mi * 100).toFixed(2) : null;
+        if (mi <= 0) return null;
+        // Store as mi/kWh for left axis
+        return +(mi / kwh).toFixed(3);
       });
       return {
         label: v, data, borderColor: vehColorMap[v], backgroundColor: vehColorMap[v] + '22',
-        borderWidth: 2.5, pointRadius: 4, tension: 0.35, spanGaps: false, fill: false
+        borderWidth: 2.5, pointRadius: 4, tension: 0.35, spanGaps: false, fill: false,
+        yAxisID: 'yMiKwh'
       };
     });
 
@@ -2147,12 +2151,44 @@ mkChart('chartMonthlySourceSplit', {
         plugins: {
           legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
           datalabels: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)} kWh/100mi` } }
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const miKwh = ctx.parsed.y;
+                if (miKwh == null) return '';
+                const whMi = Math.round(1000 / miKwh);
+                return ` ${ctx.dataset.label}: ${miKwh.toFixed(2)} mi/kWh  ·  ${whMi} Wh/mi`;
+              }
+            }
+          }
         },
         scales: {
           x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
-          y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + ' kWh/100mi' },
-               title: { display: true, text: 'kWh / 100 miles (real)', color: '#888' }, beginAtZero: false }
+          yMiKwh: {
+            position: 'left',
+            grid: { color: gc() },
+            ticks: { color: tc(), callback: v => v.toFixed(1) + ' mi/kWh' },
+            title: { display: true, text: 'mi / kWh  ↑ better', color: '#888' },
+            beginAtZero: false
+          },
+          yWhMi: {
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            // Mirror of left axis: Wh/mi = 1000 / mi/kWh
+            // We define min/max to match the left axis range inverted
+            ticks: {
+              color: '#888',
+              callback: v => Math.round(1000 / v) + ' Wh/mi'
+            },
+            title: { display: true, text: 'Wh / mi  ↓ better', color: '#888' },
+            // Sync with left axis using afterBuildTicks
+            afterDataLimits: axis => {
+              // Right axis shows same tick positions as left, labels converted
+              const left = axis.chart.scales.yMiKwh;
+              if (left) { axis.min = left.min; axis.max = left.max; }
+            },
+            beginAtZero: false
+          }
         }
       }
     });
