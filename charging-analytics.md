@@ -1989,25 +1989,38 @@ mkChart('chartMonthlySourceSplit', {
       const pts = sorted.filter(e => e.vehicle === v);
       return {
         label: v,
-        data: pts.map(e => ({ x: e.date, y: e.odometer })),
+        data: pts.map(e => e.odometer),
         borderColor: vehColors[v],
         backgroundColor: vehColors[v] + '22',
         borderWidth: 2.5, pointRadius: 5, tension: 0.2, fill: false
       };
     });
+    // Use union of all dates as labels
+    const allDates = [...new Set(sorted.map(e => e.date))].sort();
+    // For each vehicle, fill null for dates with no reading
+    const filledDatasets = vehList.map((v, vi) => {
+      const ptMap = {};
+      sorted.filter(e => e.vehicle === v).forEach(e => { ptMap[e.date] = e.odometer; });
+      return {
+        label: v,
+        data: allDates.map(d => ptMap[d] !== undefined ? ptMap[d] : null),
+        borderColor: vehColors[v],
+        backgroundColor: vehColors[v] + '22',
+        borderWidth: 2.5, pointRadius: 5, tension: 0.2, fill: false, spanGaps: true
+      };
+    });
     mkChart('chartOdometer', {
       type: 'line',
-      data: { datasets },
+      data: { labels: allDates, datasets: filledDatasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
           datalabels: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} mi` } }
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toLocaleString()} mi` } }
         },
         scales: {
-          x: { type: 'time', time: { unit: 'month', displayFormats: { month: 'MMM \'yy' } },
-               grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+          x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
           y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v.toLocaleString() + ' mi' },
                title: { display: true, text: 'odometer (mi)', color: '#888' } }
         }
