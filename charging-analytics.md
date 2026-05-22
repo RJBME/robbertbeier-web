@@ -4991,7 +4991,7 @@ function buildWhenDoICharge(sl) {
   // Use CSS grid — cells grow to fill available width responsively
   const labelCol  = '36px';
   const gridCols  = `${labelCol} repeat(7, 1fr)`;
-  const cellStyle = `border-radius:3px;aspect-ratio:1;min-height:18px;`;
+  const cellStyle = `border-radius:3px;height:22px;`;
   const txtColor  = dark ? '#888' : '#999';
   const hdrColor  = dark ? '#aaa' : '#555';
 
