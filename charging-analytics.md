@@ -4779,7 +4779,8 @@ mkChart('chartHistogram', {
   })(sl);
 
   // ── Temperature charts (only when temp data available) ──────────────────
-  const tempSl = effSl.filter(s => s.hasTemp);
+  const tempSl = sl.filter(s => s.hasTemp);
+  const tempEffSl = tempSl.filter(s => s.hasRealEff);
   const tempSection = document.getElementById('tempChartsSection');
   if (tempSl.length >= 5 && tempSection) {
     tempSection.style.display = '';
@@ -4788,7 +4789,7 @@ mkChart('chartHistogram', {
     // Respects "exclude home" toggle since garage temp ≠ outdoor temp
     const buildTempScatter = () => {
       const excludeHome = document.getElementById('tempExcludeHome')?.checked;
-      const scatterSl = excludeHome ? tempSl.filter(s => s.bucket !== 'Home') : tempSl;
+      const scatterSl = excludeHome ? tempEffSl.filter(s => s.bucket !== 'Home') : tempEffSl;
       if (document.getElementById('chartEffVsTemp')) {
         mkChart('chartEffVsTemp', {
           type: 'scatter',
@@ -4839,7 +4840,10 @@ mkChart('chartHistogram', {
       tempSl.forEach(s => {
         if (!monthData[s.month]) monthData[s.month] = { temps: [], effs: [] };
         monthData[s.month].temps.push(s.tempC);
-        if (s.hasRealEff) monthData[s.month].effs.push(s.realMiPerKwh);
+      });
+      tempEffSl.forEach(s => {
+        if (!monthData[s.month]) monthData[s.month] = { temps: [], effs: [] };
+        monthData[s.month].effs.push(s.realMiPerKwh);
       });
       const tempMonths = Object.keys(monthData).sort();
       const avgTemps = tempMonths.map(m => {
@@ -5487,27 +5491,24 @@ let _markerGroup  = null;
 let _tileLayer    = null; // tracked so we can swap light/dark tiles on theme change
 let _lastSl       = sessions;
 
-// Tile layer URLs — CartoDB is free, no API key, attribution required
-const TILES = {
-  light: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  },
-  dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-  }
-};
+// Tile layer — single OSM source, CSS filter for dark mode
+// CartoDB dark tiles caused blank map issues; CSS invert is simpler and more reliable
+const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 function _applyTiles() {
   if (!_leafletMap) return;
-  const t = isDark() ? TILES.dark : TILES.light;
   if (_tileLayer) { _tileLayer.remove(); }
-  _tileLayer = L.tileLayer(t.url, { attribution: t.attribution, maxZoom: 19 });
-  // Add tile layer first — it will naturally sit below the marker group
-  // which was added after map init. No bringToBack() needed and it avoids
-  // pushing tiles below the map container in some browsers.
+  _tileLayer = L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 });
   _tileLayer.addTo(_leafletMap);
+  // Apply CSS invert+hue-rotate for dark mode — reliable cross-browser approach
+  const mapEl = document.getElementById('chargingMap');
+  if (mapEl) {
+    const tiles = mapEl.querySelector('.leaflet-tile-pane');
+    if (tiles) {
+      tiles.style.filter = isDark() ? 'invert(1) hue-rotate(180deg)' : '';
+    }
+  }
 }
 
 buildVehicleFilter();
@@ -5545,7 +5546,9 @@ window.addEventListener('load', function() {
 
   try {
     _leafletMap = L.map('chargingMap', { preferCanvas: true });
-    _applyTiles(); // applies light or dark tiles based on current theme
+    _applyTiles();
+    // Reapply dark filter after tiles finish loading
+    _tileLayer.on('load', () => _applyTiles());
     // Create marker group once — clearLayers() on rebuild keeps tile cache alive
     _markerGroup = L.layerGroup().addTo(_leafletMap);
     _leafletMap.invalidateSize();
