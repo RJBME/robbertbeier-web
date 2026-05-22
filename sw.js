@@ -9,7 +9,7 @@
      - Everything else: Network-first.
    ═══════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION  = 'ev-dash-v1';
+const CACHE_VERSION  = 'ev-dash-v2';
 const SHELL_CACHE    = `${CACHE_VERSION}-shell`;
 const DATA_CACHE     = `${CACHE_VERSION}-data`;
 const CDN_CACHE      = `${CACHE_VERSION}-cdn`;

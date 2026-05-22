@@ -4991,11 +4991,11 @@ function buildWhenDoICharge(sl) {
   // Use CSS grid — cells grow to fill available width responsively
   const labelCol  = '36px';
   const gridCols  = `${labelCol} repeat(7, 1fr)`;
-  const cellStyle = `border-radius:3px;height:22px;`;
+  const cellStyle = `border-radius:3px;`;
   const txtColor  = dark ? '#888' : '#999';
   const hdrColor  = dark ? '#aaa' : '#555';
 
-  let html = `<div style="display:grid;grid-template-columns:${gridCols};gap:3px;width:100%">`;
+  let html = `<div style="display:grid;grid-template-columns:${gridCols};grid-auto-rows:18px;gap:3px;width:100%">`;
 
   // Header row — blank label cell + 7 day names
   html += `<div></div>`;
