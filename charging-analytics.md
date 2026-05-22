@@ -4802,7 +4802,7 @@ mkChart('chartHistogram', {
             datasets: tempVehicles.map(v => ({
               label: v,
               data: scatterSl.filter(s => s.vehicle === v)
-                             .map(s => ({ x: s.tempC, y: s.realMiPerKwh })),
+                             .map(s => ({ x: Math.round(s.tempC*9/5+32), y: s.realMiPerKwh })),
               backgroundColor: vehColors2[v] + 'aa',
               borderColor: vehColors2[v],
               borderWidth: 1, pointRadius: 4, pointHoverRadius: 6
@@ -4813,11 +4813,11 @@ mkChart('chartHistogram', {
             plugins: {
               legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
               datalabels: { display: false },
-              tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)} mi/kWh @ ${ctx.parsed.x}°C (${Math.round(ctx.parsed.x*9/5+32)}°F)` } }
+              tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)} mi/kWh @ ${ctx.parsed.x}°F` } }
             },
             scales: {
-              x: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '°C' },
-                   title: { display: true, text: `Ambient temp (°C)${excludeHome ? ' — home excluded' : ''}`, color: '#888' } },
+              x: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '°F' },
+                   title: { display: true, text: `Ambient temp (°F)${excludeHome ? ' — home excluded' : ''}`, color: '#888' } },
               y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v.toFixed(1) + ' mi/kWh' },
                    title: { display: true, text: 'mi / kWh  ↑ better', color: '#888' }, beginAtZero: false }
             }
@@ -4848,7 +4848,7 @@ mkChart('chartHistogram', {
       const tempMonths = Object.keys(monthData).sort();
       const avgTemps = tempMonths.map(m => {
         const t = monthData[m].temps;
-        return +(t.reduce((a,v)=>a+v,0)/t.length).toFixed(1);
+        return +((t.reduce((a,v)=>a+v,0)/t.length)*9/5+32).toFixed(1);
       });
       const avgEffs = tempMonths.map(m => {
         const e = monthData[m].effs;
@@ -4859,7 +4859,7 @@ mkChart('chartHistogram', {
         data: {
           labels: tempMonths.map(monthLabel),
           datasets: [
-            { label: 'Avg temp (°C)', data: avgTemps, borderColor: '#f39c12',
+            { label: 'Avg temp (°F)', data: avgTemps, borderColor: '#f39c12',
               backgroundColor: 'rgba(243,156,18,0.1)', borderWidth: 2.5,
               pointRadius: 4, tension: 0.35, yAxisID: 'yTemp', fill: true },
             { label: 'Avg efficiency (mi/kWh)', data: avgEffs, borderColor: '#7b1fa2',
@@ -4877,8 +4877,8 @@ mkChart('chartHistogram', {
           scales: {
             x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
             yTemp: { position: 'left', grid: { color: gc() },
-                     ticks: { color: '#f39c12', callback: v => v + '°C' },
-                     title: { display: true, text: 'Avg temp (°C)', color: '#f39c12' } },
+                     ticks: { color: '#f39c12', callback: v => v + '°F' },
+                     title: { display: true, text: 'Avg temp (°F)', color: '#f39c12' } },
             yEff:  { position: 'right', grid: { drawOnChartArea: false },
                      ticks: { color: '#7b1fa2', callback: v => v.toFixed(1) + ' mi/kWh' },
                      title: { display: true, text: 'mi/kWh', color: '#7b1fa2' }, beginAtZero: false }
@@ -4895,20 +4895,20 @@ mkChart('chartHistogram', {
         mTempData[s.month].push(s.tempC);
       });
       const tMonths = Object.keys(mTempData).sort();
-      const tMin  = tMonths.map(m => Math.min(...mTempData[m]));
-      const tMax  = tMonths.map(m => Math.max(...mTempData[m]));
+      const tMin  = tMonths.map(m => Math.round(Math.min(...mTempData[m])*9/5+32));
+      const tMax  = tMonths.map(m => Math.round(Math.max(...mTempData[m])*9/5+32));
       const tAvg  = tMonths.map(m => {
         const arr = mTempData[m];
-        return +(arr.reduce((a,v)=>a+v,0)/arr.length).toFixed(1);
+        return +((arr.reduce((a,v)=>a+v,0)/arr.length)*9/5+32).toFixed(1);
       });
       mkChart('chartTempByMonth', {
         type: 'bar',
         data: {
           labels: tMonths.map(monthLabel),
           datasets: [
-            { label: 'Min °C', data: tMin, backgroundColor: 'rgba(2,136,209,0.5)', borderColor: '#0288d1', borderWidth: 1, borderRadius: 3 },
-            { label: 'Avg °C', data: tAvg, backgroundColor: 'rgba(93,63,211,0.6)', borderColor: '#5D3FD3', borderWidth: 1, borderRadius: 3 },
-            { label: 'Max °C', data: tMax, backgroundColor: 'rgba(243,156,18,0.5)', borderColor: '#f39c12', borderWidth: 1, borderRadius: 3 },
+            { label: 'Min °F', data: tMin, backgroundColor: 'rgba(2,136,209,0.5)', borderColor: '#0288d1', borderWidth: 1, borderRadius: 3 },
+            { label: 'Avg °F', data: tAvg, backgroundColor: 'rgba(93,63,211,0.6)', borderColor: '#5D3FD3', borderWidth: 1, borderRadius: 3 },
+            { label: 'Max °F', data: tMax, backgroundColor: 'rgba(243,156,18,0.5)', borderColor: '#f39c12', borderWidth: 1, borderRadius: 3 },
           ]
         },
         options: {
@@ -4916,12 +4916,12 @@ mkChart('chartHistogram', {
           plugins: {
             legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
             datalabels: { display: false },
-            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}°C (${Math.round(ctx.parsed.y*9/5+32)}°F)` } }
+            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)}°F` } }
           },
           scales: {
             x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
-            y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '°C' },
-                 title: { display: true, text: 'Temperature (°C)', color: '#888' } }
+            y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '°F' },
+                 title: { display: true, text: 'Temperature (°F)', color: '#888' } }
           }
         }
       });
@@ -4946,7 +4946,6 @@ function buildWhenDoICharge(sl) {
   const grid = document.getElementById('chargingWhenGrid');
   if (!grid) return;
 
-  // Only sessions with a recorded start time
   const timed = sl.filter(s => s.startTime && s.startTime.match(/^\d{1,2}:\d{2}/));
   if (!timed.length) {
     grid.innerHTML = '<p style="color:#888;font-size:0.84rem;padding:12px 0">No sessions with recorded start time yet — start times are captured automatically by the iPhone Shortcut.</p>';
@@ -4955,100 +4954,91 @@ function buildWhenDoICharge(sl) {
 
   const DAYS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const HOURS = Array.from({length: 24}, (_,i) => i);
+  const dark  = document.documentElement.getAttribute('data-theme') === 'dark';
 
   // Count sessions per (hour, dow) cell
   const counts = {};
   let maxCount = 0;
   timed.forEach(s => {
     const hour = parseInt(s.startTime.split(':')[0], 10);
-    const dow  = s.dow;
-    const key  = `${hour}_${dow}`;
+    const key  = `${hour}_${s.dow}`;
     counts[key] = (counts[key] || 0) + 1;
     if (counts[key] > maxCount) maxCount = counts[key];
   });
 
-  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const CELL = 28, GAP = 3;
-  const LABEL_W = 36, LABEL_H = 22;
-
-  // Color by bucket of dominant session type for that cell, intensity by count
   function cellColor(hour, dow) {
-    const key = `${hour}_${dow}`;
+    const key   = `${hour}_${dow}`;
     const count = counts[key] || 0;
-    if (!count) return dark ? '#2a2a2a' : '#eeeeee';
+    if (!count) return dark ? '#2a2a2a' : '#eee';
     const intensity = count / maxCount;
-
-    // Find dominant bucket for this cell
-    const cellSessions = timed.filter(s => parseInt(s.startTime.split(':')[0],10) === hour && s.dow === dow);
-    const bucketCounts = {};
-    cellSessions.forEach(s => { bucketCounts[s.bucket] = (bucketCounts[s.bucket]||0)+1; });
-    const dominant = Object.entries(bucketCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'Other';
-    const baseColor = BUCKET_COLORS[dominant] || '#888';
-
-    // Interpolate from background to base color based on intensity
-    const hex = baseColor.replace('#','');
+    const cellSl  = timed.filter(s => parseInt(s.startTime.split(':')[0],10) === hour && s.dow === dow);
+    const bkt     = {};
+    cellSl.forEach(s => { bkt[s.bucket] = (bkt[s.bucket]||0)+1; });
+    const dominant  = Object.entries(bkt).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'Other';
+    const base      = BUCKET_COLORS[dominant] || '#888';
+    const hex = base.replace('#','');
     const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
     const bg = dark ? [42,42,42] : [238,238,238];
-    const ir = Math.round(bg[0] + (r-bg[0])*intensity);
-    const ig = Math.round(bg[1] + (g-bg[1])*intensity);
-    const ib = Math.round(bg[2] + (b-bg[2])*intensity);
-    return `rgb(${ir},${ig},${ib})`;
+    return `rgb(${Math.round(bg[0]+(r-bg[0])*intensity)},${Math.round(bg[1]+(g-bg[1])*intensity)},${Math.round(bg[2]+(b-bg[2])*intensity)})`;
   }
 
-  // Format hour label
   function hourLabel(h) {
-    if (h === 0) return '12a';
+    if (h === 0)  return '12a';
     if (h === 12) return '12p';
     return h < 12 ? h+'a' : (h-12)+'p';
   }
 
-  let html = `<div style="display:inline-block;min-width:${LABEL_W + DAYS.length*(CELL+GAP)}px">`;
+  // Use CSS grid — cells grow to fill available width responsively
+  const labelCol  = '36px';
+  const gridCols  = `${labelCol} repeat(7, 1fr)`;
+  const cellStyle = `border-radius:3px;aspect-ratio:1;min-height:18px;`;
+  const txtColor  = dark ? '#888' : '#999';
+  const hdrColor  = dark ? '#aaa' : '#555';
 
-  // Day-of-week column headers
-  html += `<div style="display:flex;margin-left:${LABEL_W}px;margin-bottom:${GAP}px">`;
+  let html = `<div style="display:grid;grid-template-columns:${gridCols};gap:3px;width:100%">`;
+
+  // Header row — blank label cell + 7 day names
+  html += `<div></div>`;
   DAYS.forEach(d => {
-    html += `<div style="width:${CELL}px;margin-right:${GAP}px;text-align:center;font-size:10px;font-weight:600;color:${dark?'#aaa':'#666'}">${d}</div>`;
+    html += `<div style="text-align:center;font-size:10px;font-weight:600;color:${hdrColor};padding-bottom:2px">${d}</div>`;
   });
-  html += '</div>';
 
-  // Rows: one per hour
+  // 24 hour rows
   HOURS.forEach(h => {
-    html += `<div style="display:flex;align-items:center;margin-bottom:${GAP}px">`;
     // Hour label
-    const showLabel = h % 3 === 0;
-    html += `<div style="width:${LABEL_W}px;font-size:10px;text-align:right;padding-right:6px;color:${dark?'#888':'#999'};flex-shrink:0">${showLabel ? hourLabel(h) : ''}</div>`;
-    // Cells for each day
+    html += `<div style="font-size:10px;color:${txtColor};text-align:right;padding-right:5px;display:flex;align-items:center;justify-content:flex-end">${h % 3 === 0 ? hourLabel(h) : ''}</div>`;
+    // 7 day cells
     DAYS.forEach((_, dow) => {
-      const key = `${h}_${dow}`;
+      const key   = `${h}_${dow}`;
       const count = counts[key] || 0;
-      const bg = cellColor(h, dow);
-      const tip = count > 0 ? `${hourLabel(h)} on ${DAYS[dow]}: ${count} session${count!==1?'s':''}` : '';
-      html += `<div data-tip="${tip}" style="width:${CELL}px;height:${CELL}px;border-radius:4px;background:${bg};margin-right:${GAP}px;box-sizing:border-box;${!count?`border:1px solid ${dark?'#3a3a3a':'#ddd'}`:''}${count?';cursor:default':''}"></div>`;
+      const bg    = cellColor(h, dow);
+      const tip   = count > 0 ? `${hourLabel(h)} on ${DAYS[dow]}: ${count} session${count!==1?'s':''}` : '';
+      const border = !count ? `border:1px solid ${dark?'#363636':'#ddd'};` : '';
+      html += `<div data-tip="${tip}" style="${cellStyle}background:${bg};${border}"></div>`;
     });
-    html += '</div>';
   });
+
+  html += '</div>';
 
   // Legend
-  html += `<div style="display:flex;align-items:center;gap:6px;margin-top:10px;margin-left:${LABEL_W}px;flex-wrap:wrap">`;
+  html += `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center">`;
   Object.entries(BUCKET_COLORS).forEach(([b, c]) => {
-    html += `<div style="display:flex;align-items:center;gap:3px;margin-right:8px">
-      <div style="width:12px;height:12px;background:${c};border-radius:2px"></div>
-      <span style="font-size:10px;color:${dark?'#aaa':'#666'}">${b}</span></div>`;
+    html += `<div style="display:flex;align-items:center;gap:4px">
+      <div style="width:11px;height:11px;background:${c};border-radius:2px;flex-shrink:0"></div>
+      <span style="font-size:10px;color:${hdrColor}">${b}</span></div>`;
   });
-  html += `<span style="font-size:10px;color:#aaa;margin-left:8px">color = dominant type · intensity = frequency</span>`;
-  html += '</div>';
-  html += '</div>';
+  html += `<span style="font-size:10px;color:#888;margin-left:4px">color = charging type · intensity = frequency</span></div>`;
 
   grid.innerHTML = html;
 
-  // Wire tooltip to the hm-tip element
+  // Tooltip wiring
   const hmTip = document.getElementById('hm-tip');
   grid.addEventListener('mouseover', e => {
     const t = e.target.dataset.tip;
     if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
   });
   grid.addEventListener('mousemove', e => {
-    hmTip.style.transform = 'translate3d(' + (e.clientX+14) + 'px,' + (e.clientY-34) + 'px,0)';
+    hmTip.style.transform = `translate3d(${e.clientX+14}px,${e.clientY-34}px,0)`;
   });
   grid.addEventListener('mouseout', e => {
     if (e.target.dataset.tip) hmTip.style.display = 'none';
