@@ -74,8 +74,11 @@ def load_locations():
             name = e.get('location') or e.get('name') or ''
             lat  = e.get('lat')  or e.get('latitude')
             lng  = e.get('lng')  or e.get('longitude')
-            if name and lat and lng:
-                coords[name.strip()] = (float(lat), float(lng))
+            if name and lat is not None and lng is not None:
+                try:
+                    coords[name.strip()] = (float(lat), float(lng))
+                except (ValueError, TypeError):
+                    pass  # skip entries with blank or non-numeric coords
     else:
         # Simple regex parser — handles basic YAML list
         with open(LOCATIONS_YML) as f:
@@ -83,10 +86,14 @@ def load_locations():
         blocks = re.split(r'\n- ', '\n' + content)
         for block in blocks:
             name = re.search(r'(?:location|name):\s*["\']?([^"\'\\n]+)["\']?', block)
-            lat  = re.search(r'lat(?:itude)?:\s*([\d.\-]+)', block)
-            lng  = re.search(r'lng|lon(?:gitude)?:\s*([\d.\-]+)', block)
+            lat  = re.search(r'\blat(?:itude)?:\s*([\d.\-]+)', block)
+            lng  = re.search(r'\blng|lon(?:gitude)?:\s*([\d.\-]+)', block)
+            # Only add if ALL three fields are present — skip blocks missing coords
             if name and lat and lng:
-                coords[name.group(1).strip()] = (float(lat.group(1)), float(lng.group(1)))
+                try:
+                    coords[name.group(1).strip()] = (float(lat.group(1)), float(lng.group(1)))
+                except (ValueError, TypeError):
+                    pass  # skip malformed entries
     print(f'  Loaded {len(coords)} locations with coordinates')
     return coords
 

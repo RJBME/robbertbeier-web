@@ -1113,6 +1113,7 @@ git push
             <div class="check-item"><span class="check-icon">🌡️</span><span><strong>Backfill temperature:</strong> <span class="mono">python3 backfill_temperature.py</span> (preview) then <span class="mono">--write</span>. Run monthly on new sessions. Requires lat/lng in locations.yml.</span></div>
             <div class="check-item"><span class="check-icon">📍</span><span><strong>Add new location:</strong> Add to <span class="mono">cloudcannon.config.yml</span> dropdown AND <span class="mono">_data/locations.yml</span> with lat/lng AND iPhone Shortcut menu. Commit.</span></div>
             <div class="check-item"><span class="check-icon">🗺</span><span><strong>Annotate road trip:</strong> Open <span class="mono">_data/trip_notes.yml</span>, copy template, fill in key (first session date YYYY-MM-DD), destination, description. Commit.</span></div>
+            <div class="check-item"><span class="check-icon">📊</span><span><strong>Add trip energy screen data:</strong> At trip end, photo the Mach-E "Where did my energy go?" screen (Trip 2 tab). Add <span class="mono">energy_screen: true</span> and the extracted fields to the trip entry in <span class="mono">_data/trip_notes.yml</span>. Shows energy breakdown bar + driving scores on the road trip card.</span></div>
             <div class="check-item"><span class="check-icon">🧹</span><span><strong>Cleanup files:</strong> <span class="mono">python3 fix_charging_files.py</span> — adds missing fields, fixes dates, normalizes front matter. Run monthly or after bulk changes.</span></div>
           </div>
 
@@ -1132,7 +1133,7 @@ git push
             <div class="check-item"><span class="check-icon">📊</span><span><span class="mono">_data/rates.yml</span> — electricity rates &amp; gas savings by date period</span></div>
             <div class="check-item"><span class="check-icon">🚗</span><span><span class="mono">_data/mileage.yml</span> — odometer history, all vehicles, newest first</span></div>
             <div class="check-item"><span class="check-icon">📍</span><span><span class="mono">_data/locations.yml</span> — lat/lng for map + temperature backfill</span></div>
-            <div class="check-item"><span class="check-icon">🗺</span><span><span class="mono">_data/trip_notes.yml</span> — road trip destination annotations</span></div>
+            <div class="check-item"><span class="check-icon">🗺</span><span><span class="mono">_data/trip_notes.yml</span> — road trip annotations: destination, itinerary, AND trip computer data (miles, efficiency, energy breakdown %, driving scores) from the Mach-E screen photo</span></div>
             <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-dashboard.md</span> — /charging/ dashboard (reads mileage.yml automatically)</span></div>
             <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-analytics.md</span> — /charging-analytics/ full analytics page</span></div>
             <div class="check-item"><span class="check-icon">📄</span><span><span class="mono">charging-history.md</span> — /charging-history/ full session table</span></div>

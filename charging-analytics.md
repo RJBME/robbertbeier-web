@@ -1347,6 +1347,38 @@ permalink: /charging-analytics/
       <div class="chart-wrap" style="height:240px"><canvas id="chartSavingsRealVsAssumed"></canvas></div>
       <p style="font-size:0.68rem;color:#888;margin-top:8px">† Sessions without miles_added data use the assumed rate from _data/rates.yml for both lines.</p>
     </div>
+
+    <!-- Temperature charts — only shown when temperature data is available -->
+    <div id="tempChartsSection" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.82rem;color:var(--text)">
+          <input type="checkbox" id="tempExcludeHome" style="accent-color:var(--link);width:15px;height:15px">
+          Exclude Home sessions from scatter
+          <span style="font-size:0.72rem;color:#888">(garage temp ≠ outdoor temp)</span>
+        </label>
+      </div>
+      <div class="chart-grid-2" style="margin-bottom:18px">
+        <div class="chart-card">
+          <p class="chart-title">🌡️ Efficiency vs. Temperature</p>
+          <p class="chart-sub" style="font-size:0.68rem;color:#888">mi/kWh at each session's ambient temperature — cold weather penalty clearly visible</p>
+          <div class="chart-wrap" style="height:260px"><canvas id="chartEffVsTemp"></canvas></div>
+          <p style="font-size:0.62rem;color:#aaa;margin-top:6px">† Temperatures from Open-Meteo ERA5 outdoor ambient. Home sessions charged in garage — actual battery temp may be warmer in winter, cooler in summer.</p>
+        </div>
+        <div class="chart-card">
+          <p class="chart-title">🌡️ Monthly Avg Temperature vs. Efficiency</p>
+          <p class="chart-sub" style="font-size:0.68rem;color:#888">Seasonal pattern — both axes move together in winter</p>
+          <div class="chart-wrap" style="height:260px"><canvas id="chartTempVsEffMonth"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-full chart-card" style="margin-bottom:18px">
+        <p class="chart-title">🌡️ Temperature at Charging — Monthly Distribution</p>
+        <p class="chart-sub" style="font-size:0.68rem;color:#888">What outdoor temperatures you've charged in — min, avg, max per month</p>
+        <div class="chart-wrap" style="height:240px"><canvas id="chartTempByMonth"></canvas></div>
+        <p style="font-size:0.62rem;color:#aaa;margin-top:6px">† All sessions included regardless of location. Outdoor ambient temperature from Open-Meteo ERA5 historical archive.</p>
+      </div>
+    </div>
+
   </div><!-- /#efficiencySection -->
 
   <!-- ─── hm-tip tooltip (heatmap hover) — position via transform not top/left ─── -->
@@ -1406,7 +1438,7 @@ permalink: /charging-analytics/
    RAW DATA FROM JEKYLL LIQUID
    ════════════════════════════════════════════════════════ */
 const sessions = [
-  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }}, milesAdded: {{ entry.miles_added | default: 0 }} }{% unless forloop.last %},{% endunless %}
+  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }}, milesAdded: {{ entry.miles_added | default: 0 }}, tempC: {{ entry.temperature_c | default: "null" }}, tempF: {{ entry.temperature_f | default: "null" }} }{% unless forloop.last %},{% endunless %}
   {% endfor %}
 ];
 
@@ -1622,10 +1654,15 @@ sessions.forEach(s => {
     const mpg        = getBaselineMpg(s.vehicle);
     const estMiles   = s.kwh * effMiPerKwh;
     const egridFactor = getEgridFactor(s.location);
-    s.co2GasCould    = (estMiles / mpg) * CO2_GAS_KG_PER_GAL;   // kg CO2 if driven on gas
-    s.co2GridEmit    = s.kwh * egridFactor;                        // kg CO2 from grid
-    s.co2NetAvoided  = s.co2GasCould - s.co2GridEmit;             // net kg CO2 avoided
-    s.egridFactor    = egridFactor;                                 // store for display
+    s.co2GasCould    = (estMiles / mpg) * CO2_GAS_KG_PER_GAL;
+    s.co2GridEmit    = s.kwh * egridFactor;
+    s.co2NetAvoided  = s.co2GasCould - s.co2GridEmit;
+    s.egridFactor    = egridFactor;
+
+    // Temperature — from backfill_temperature.py via Open-Meteo ERA5
+    s.tempC   = (s.tempC !== null && s.tempC !== undefined && s.tempC !== '' && !isNaN(+s.tempC)) ? +s.tempC : null;
+    s.tempF   = (s.tempF !== null && s.tempF !== undefined && s.tempF !== '' && !isNaN(+s.tempF)) ? +s.tempF : null;
+    s.hasTemp = s.tempC !== null;
   } catch(e) {
     console.error('[EV] Session enrichment failed for', s.date, s.location, e);
     s.cost     = s.rawCost || 0;
@@ -1635,6 +1672,7 @@ sessions.forEach(s => {
     s.month    = (s.date || '').substring(0, 7);
     s.dow      = 0;
     s.hasRealEff = false; s.realMiPerKwh = null; s.realWhPerMi = null;
+    s.tempC = null; s.tempF = null; s.hasTemp = false;
   }
 });
 
@@ -3669,6 +3707,67 @@ mkChart('chartHistogram', {
           </div>
         </div>
         ${hasUnknownTimes ? '<p style="font-size:0.65rem;color:#888;margin:8px 0 0">* Some DCFC sessions missing start/end time — add to session in CloudCannon for accurate charge time.</p>' : ''}
+
+        ${note?.energy_screen ? (() => {
+          const mi      = note.trip_miles;
+          const hrs     = note.trip_hours;
+          const eff     = note.trip_mi_per_kwh;
+          const drv     = note.energy_driving_pct    || 0;
+          const clm     = note.energy_climate_pct    || 0;
+          const acc     = note.energy_accessories_pct|| 0;
+          const ext     = note.energy_ext_temp_pct   || 0;
+          const sAcc    = note.score_acceleration;
+          const sDec    = note.score_deceleration;
+          const sSpd    = note.score_speed;
+          const scoreColor = s => s >= 80 ? '#2ecc71' : s >= 60 ? '#f39c12' : '#e74c3c';
+          return `
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--dash-border)">
+          <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:#888;font-weight:700;margin-bottom:10px">📊 Trip Computer — Where did my energy go?</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+            <!-- Left: trip stats + energy bar -->
+            <div>
+              <div style="display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap">
+                ${mi ? `<div style="text-align:center"><div style="font-size:0.58rem;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Trip Miles</div><div style="font-weight:800;font-size:1rem">${mi.toLocaleString()}</div></div>` : ''}
+                ${hrs ? `<div style="text-align:center"><div style="font-size:0.58rem;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Drive Time</div><div style="font-weight:800;font-size:1rem">${hrs}</div></div>` : ''}
+                ${eff ? `<div style="text-align:center"><div style="font-size:0.58rem;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Efficiency</div><div style="font-weight:800;font-size:1rem;color:${eff >= 3.0 ? '#2ecc71' : eff >= 2.5 ? '#f39c12' : '#e74c3c'}">${eff} mi/kWh</div></div>` : ''}
+              </div>
+
+              <!-- Stacked energy bar -->
+              <div style="font-size:0.6rem;color:#888;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.07em">Energy breakdown</div>
+              <div style="height:18px;border-radius:6px;overflow:hidden;display:flex;margin-bottom:8px;background:var(--dash-border)">
+                ${drv ? `<div style="width:${drv}%;background:#0288d1;display:flex;align-items:center;justify-content:center" title="Driving ${drv}%"><span style="font-size:9px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;padding:0 3px">${drv > 10 ? drv+'%' : ''}</span></div>` : ''}
+                ${clm ? `<div style="width:${clm}%;background:#7b1fa2;display:flex;align-items:center;justify-content:center" title="Climate ${clm}%"><span style="font-size:9px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;padding:0 3px">${clm > 6 ? clm+'%' : ''}</span></div>` : ''}
+                ${acc ? `<div style="width:${acc}%;background:#f39c12;display:flex;align-items:center;justify-content:center" title="Accessories ${acc}%"><span style="font-size:9px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;padding:0 3px">${acc > 6 ? acc+'%' : ''}</span></div>` : ''}
+                ${ext ? `<div style="width:${ext}%;background:#e74c3c;display:flex;align-items:center;justify-content:center" title="Ext Temp ${ext}%"><span style="font-size:9px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;padding:0 3px">${ext > 6 ? ext+'%' : ''}</span></div>` : ''}
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                ${drv ? `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#0288d1;border-radius:2px"></span>Driving ${drv}%</span>` : ''}
+                ${clm ? `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#7b1fa2;border-radius:2px"></span>Climate ${clm}%</span>` : ''}
+                ${acc ? `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#f39c12;border-radius:2px"></span>Accessories ${acc}%</span>` : ''}
+                ${ext ? `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#e74c3c;border-radius:2px"></span>Ext Temp ${ext}%</span>` : ''}
+              </div>
+            </div>
+
+            <!-- Right: driving scores -->
+            <div>
+              <div style="font-size:0.6rem;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.07em">How is my driving?</div>
+              ${[['Acceleration', sAcc], ['Deceleration', sDec], ['Speed', sSpd]].map(([label, score]) => score != null ? `
+              <div style="margin-bottom:7px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+                  <span style="font-size:0.72rem;color:var(--text)">${label}</span>
+                  <span style="font-size:0.72rem;font-weight:700;color:${scoreColor(score)}">${score}%</span>
+                </div>
+                <div style="height:7px;background:var(--dash-border);border-radius:4px;overflow:hidden">
+                  <div style="height:100%;width:${score}%;background:${scoreColor(score)};border-radius:4px;transition:width 0.6s ease"></div>
+                </div>
+              </div>` : '').join('')}
+              <div style="font-size:0.62rem;color:#aaa;margin-top:6px">From Mach-E trip computer</div>
+            </div>
+
+          </div>
+        </div>`;
+        })() : ''}
       </div>`;
     }).join('');
 
@@ -4675,6 +4774,154 @@ mkChart('chartHistogram', {
     });
 
   })(sl);
+
+  // ── Temperature charts (only when temp data available) ──────────────────
+  const tempSl = effSl.filter(s => s.hasTemp);
+  const tempSection = document.getElementById('tempChartsSection');
+  if (tempSl.length >= 5 && tempSection) {
+    tempSection.style.display = '';
+
+  // Chart 1: Efficiency vs temperature scatter — one point per session
+    // Respects "exclude home" toggle since garage temp ≠ outdoor temp
+    const buildTempScatter = () => {
+      const excludeHome = document.getElementById('tempExcludeHome')?.checked;
+      const scatterSl = excludeHome ? tempSl.filter(s => s.bucket !== 'Home') : tempSl;
+      if (document.getElementById('chartEffVsTemp')) {
+        mkChart('chartEffVsTemp', {
+          type: 'scatter',
+          data: {
+            datasets: vehiclesInData.map(v => ({
+              label: v,
+              data: scatterSl.filter(s => s.vehicle === v && s.hasRealEff)
+                             .map(s => ({ x: s.tempC, y: s.realMiPerKwh })),
+              backgroundColor: vehColors2[v] + 'aa',
+              borderColor: vehColors2[v],
+              borderWidth: 1, pointRadius: 4, pointHoverRadius: 6
+            }))
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
+              datalabels: { display: false },
+              tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} mi/kWh @ ${ctx.parsed.x}°C (${Math.round(ctx.parsed.x*9/5+32)}°F)` } }
+            },
+            scales: {
+              x: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '°C' },
+                   title: { display: true, text: `Ambient temp (°C)${excludeHome ? ' — home excluded' : ''}`, color: '#888' } },
+              y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v.toFixed(1) + ' mi/kWh' },
+                   title: { display: true, text: 'mi / kWh  ↑ better', color: '#888' }, beginAtZero: false }
+            }
+          }
+        });
+      }
+    };
+    const vehColors2 = {};
+    vehiclesInData.forEach((v, i) => {
+      const palette = ['#7b1fa2','#f39c12','#0288d1','#2ecc71'];
+      vehColors2[v] = palette[i % palette.length];
+    });
+    buildTempScatter();
+    const toggleEl = document.getElementById('tempExcludeHome');
+    if (toggleEl) {
+      // Remove old listener if rebuild fires (vehicle filter change)
+      const newToggle = toggleEl.cloneNode(true);
+      toggleEl.parentNode.replaceChild(newToggle, toggleEl);
+      newToggle.addEventListener('change', buildTempScatter);
+    }
+
+    // Chart 2: Monthly avg temp vs avg efficiency — dual axis line
+    if (document.getElementById('chartTempVsEffMonth')) {
+      const monthData = {};
+      tempSl.forEach(s => {
+        if (!monthData[s.month]) monthData[s.month] = { temps: [], effs: [] };
+        monthData[s.month].temps.push(s.tempC);
+        if (s.hasRealEff) monthData[s.month].effs.push(s.realMiPerKwh);
+      });
+      const tempMonths = Object.keys(monthData).sort();
+      const avgTemps = tempMonths.map(m => {
+        const t = monthData[m].temps;
+        return +(t.reduce((a,v)=>a+v,0)/t.length).toFixed(1);
+      });
+      const avgEffs = tempMonths.map(m => {
+        const e = monthData[m].effs;
+        return e.length ? +(e.reduce((a,v)=>a+v,0)/e.length).toFixed(3) : null;
+      });
+      mkChart('chartTempVsEffMonth', {
+        type: 'line',
+        data: {
+          labels: tempMonths.map(monthLabel),
+          datasets: [
+            { label: 'Avg temp (°C)', data: avgTemps, borderColor: '#f39c12',
+              backgroundColor: 'rgba(243,156,18,0.1)', borderWidth: 2.5,
+              pointRadius: 4, tension: 0.35, yAxisID: 'yTemp', fill: true },
+            { label: 'Avg efficiency (mi/kWh)', data: avgEffs, borderColor: '#7b1fa2',
+              backgroundColor: 'transparent', borderWidth: 2.5,
+              pointRadius: 4, tension: 0.35, yAxisID: 'yEff', spanGaps: true }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
+            datalabels: { display: false },
+            tooltip: { mode: 'index', intersect: false }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+            yTemp: { position: 'left', grid: { color: gc() },
+                     ticks: { color: '#f39c12', callback: v => v + '°C' },
+                     title: { display: true, text: 'Avg temp (°C)', color: '#f39c12' } },
+            yEff:  { position: 'right', grid: { drawOnChartArea: false },
+                     ticks: { color: '#7b1fa2', callback: v => v.toFixed(1) + ' mi/kWh' },
+                     title: { display: true, text: 'mi/kWh', color: '#7b1fa2' }, beginAtZero: false }
+          }
+        }
+      });
+    }
+
+    // Chart 3: Temperature distribution by month — min/avg/max bar chart
+    if (document.getElementById('chartTempByMonth')) {
+      const mTempData = {};
+      tempSl.forEach(s => {
+        if (!mTempData[s.month]) mTempData[s.month] = [];
+        mTempData[s.month].push(s.tempC);
+      });
+      const tMonths = Object.keys(mTempData).sort();
+      const tMin  = tMonths.map(m => Math.min(...mTempData[m]));
+      const tMax  = tMonths.map(m => Math.max(...mTempData[m]));
+      const tAvg  = tMonths.map(m => {
+        const arr = mTempData[m];
+        return +(arr.reduce((a,v)=>a+v,0)/arr.length).toFixed(1);
+      });
+      mkChart('chartTempByMonth', {
+        type: 'bar',
+        data: {
+          labels: tMonths.map(monthLabel),
+          datasets: [
+            { label: 'Min °C', data: tMin, backgroundColor: 'rgba(2,136,209,0.5)', borderColor: '#0288d1', borderWidth: 1, borderRadius: 3 },
+            { label: 'Avg °C', data: tAvg, backgroundColor: 'rgba(93,63,211,0.6)', borderColor: '#5D3FD3', borderWidth: 1, borderRadius: 3 },
+            { label: 'Max °C', data: tMax, backgroundColor: 'rgba(243,156,18,0.5)', borderColor: '#f39c12', borderWidth: 1, borderRadius: 3 },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
+            datalabels: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}°C (${Math.round(ctx.parsed.y*9/5+32)}°F)` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
+            y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '°C' },
+                 title: { display: true, text: 'Temperature (°C)', color: '#888' } }
+          }
+        }
+      });
+    }
+  } else if (tempSection) {
+    tempSection.style.display = 'none';
+  }
 
   // ── end section 11 ──
 

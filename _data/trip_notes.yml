@@ -3,29 +3,47 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #
 #  The analytics page auto-detects road trips from your charging session data.
-#  Use this file to add destination info, itinerary, and notes to each trip.
+#  Use this file to add destination info, itinerary, notes, and energy screen
+#  data captured from the Mach-E's "Where did my energy go?" trip computer.
 #
 #  HOW TO FIND A TRIP'S KEY:
 #    Each trip is keyed by the date of its FIRST charging session (YYYY-MM-DD).
-#    Look at the Road Trips section — the date range on each card starts with
-#    the key date. If two trips start on the same date, append -2, -3, etc.
+#    Look at the Road Trips section on the analytics page — the date range on
+#    each card starts with the key date.
 #
 #  FIELDS:
 #    key            REQUIRED. First session date: "YYYY-MM-DD"
 #    destination    Short headline name for the trip.
-#    arrive         Date you arrived at the final destination (YYYY-MM-DD).
-#    depart         Date you departed the final destination (YYYY-MM-DD).
+#    arrive         Date you arrived at destination (YYYY-MM-DD).
+#    depart         Date you departed destination (YYYY-MM-DD).
 #    dest_lat       Decimal latitude of actual final destination.
 #    dest_lng       Decimal longitude of actual final destination.
 #    description    One-sentence summary shown on the card.
-#    notes          Free-form notes (passengers, weather, etc.)
+#    notes          Free-form notes (passengers, weather, hotel, etc.)
 #    blog_tag       Future use — tag slug for blog posts about this trip.
-#                   e.g. "chicago-2026" will eventually link to /blog/tag/chicago-2026/
-#    itinerary      Optional chronological list of stops.
-#                   Each entry: date (YYYY-MM-DD), place, note.
 #
-#  HOW TO GET COORDINATES:
-#    Right-click any location in Google Maps -> "What's here?" -> copy lat/lng.
+#  TRIP COMPUTER DATA (from Mach-E "Where did my energy go?" screen):
+#    energy_screen: true to indicate data was captured
+#    trip_miles     Total odometer miles for the trip (from car screen)
+#    trip_hours     Drive time as "HH:MM:SS" (from car screen)
+#    trip_mi_per_kwh  Efficiency shown on car screen (e.g. 2.7)
+#    energy_driving_pct    % of energy used for driving (e.g. 96)
+#    energy_climate_pct    % for climate (HVAC) (e.g. 2)
+#    energy_accessories_pct  % for accessories (e.g. 2)
+#    energy_ext_temp_pct   % for exterior temperature conditioning (e.g. 0)
+#    score_acceleration    Driving score 0-100 (e.g. 85)
+#    score_deceleration    Driving score 0-100 (e.g. 99)
+#    score_speed           Driving score 0-100 (e.g. 43)
+#
+#  HOW TO CAPTURE TRIP COMPUTER DATA:
+#    At the end of a road trip, go to the car's energy screen (Trip 2 tab),
+#    take a photo, then run the ⚡ Log Trip Energy shortcut (same Apple
+#    Intelligence pattern as the charging shortcut). It extracts all fields
+#    automatically and appends to this file via GitHub.
+#    OR add the fields manually below.
+#
+#  itinerary: Optional chronological list of stops.
+#             Each entry: date (YYYY-MM-DD), place, note.
 #
 #  ADD A NEW ENTRY: Copy the TEMPLATE block at the bottom, fill in, commit.
 #
@@ -128,6 +146,17 @@
   description: "Mall of America weekend — Madison WI overnight stop outbound, Madison + Chicago return."
   notes: "Hampton Inn Madison (Mar 28-29). Hilton Garden Inn Bloomington (Mar 29-31). Hilton Magnificent Mile Chicago (Mar 31-Apr 3) on return."
   blog_tag: "moa-2026"
+  energy_screen: true
+  trip_miles: 1112.7
+  trip_hours: "22:01:57"
+  trip_mi_per_kwh: 2.6
+  energy_driving_pct: 95
+  energy_climate_pct: 3
+  energy_accessories_pct: 2
+  energy_ext_temp_pct: 0
+  score_acceleration: 87
+  score_deceleration: 99
+  score_speed: 37
   itinerary:
     - date: "2026-03-28"
       place: "Tesla, Stevensville MI"
@@ -157,6 +186,17 @@
   description: "Fencing Masterclass — Palatine Saturday night, Chicago Fencing Center Sunday before returning home."
   notes: ""
   blog_tag: "chicago-fencing-2026"
+  energy_screen: true
+  trip_miles: 763.6
+  trip_hours: "15:30:02"
+  trip_mi_per_kwh: 2.7
+  energy_driving_pct: 96
+  energy_climate_pct: 2
+  energy_accessories_pct: 2
+  energy_ext_temp_pct: 0
+  score_acceleration: 85
+  score_deceleration: 99
+  score_speed: 43
   itinerary:
     - date: "2026-04-11"
       place: "Tesla, Lansing"
@@ -187,6 +227,18 @@
 #   description: ""
 #   notes: ""
 #   blog_tag: ""
+#   # Remove the energy_screen block if you don't have a photo of the trip computer
+#   energy_screen: true
+#   trip_miles:
+#   trip_hours: "HH:MM:SS"
+#   trip_mi_per_kwh:
+#   energy_driving_pct:
+#   energy_climate_pct:
+#   energy_accessories_pct:
+#   energy_ext_temp_pct:
+#   score_acceleration:
+#   score_deceleration:
+#   score_speed:
 #   itinerary:
 #     - date: "YYYY-MM-DD"
 #       place: ""
