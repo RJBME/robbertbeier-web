@@ -4779,14 +4779,19 @@ mkChart('chartHistogram', {
   })(sl);
 
   // ── Temperature charts (only when temp data available) ──────────────────
-  const tempSl = sl.filter(s => s.hasTemp);
+  const tempSl    = sl.filter(s => s.hasTemp);
   const tempEffSl = tempSl.filter(s => s.hasRealEff);
   const tempSection = document.getElementById('tempChartsSection');
   if (tempSl.length >= 5 && tempSection) {
     tempSection.style.display = '';
 
-  // Chart 1: Efficiency vs temperature scatter — one point per session
-    // Respects "exclude home" toggle since garage temp ≠ outdoor temp
+    // Redefine locally — these are inside the efficiency IIFE and not in scope here
+    const tempVehicles = [...new Set(sl.map(s => s.vehicle))].sort();
+    const tempPalette  = ['#7b1fa2','#f39c12','#0288d1','#2ecc71'];
+    const vehColors2   = {};
+    tempVehicles.forEach((v, i) => { vehColors2[v] = tempPalette[i % tempPalette.length]; });
+
+    // Chart 1: Efficiency vs temperature scatter
     const buildTempScatter = () => {
       const excludeHome = document.getElementById('tempExcludeHome')?.checked;
       const scatterSl = excludeHome ? tempEffSl.filter(s => s.bucket !== 'Home') : tempEffSl;
@@ -4794,9 +4799,9 @@ mkChart('chartHistogram', {
         mkChart('chartEffVsTemp', {
           type: 'scatter',
           data: {
-            datasets: vehiclesInData.map(v => ({
+            datasets: tempVehicles.map(v => ({
               label: v,
-              data: scatterSl.filter(s => s.vehicle === v && s.hasRealEff)
+              data: scatterSl.filter(s => s.vehicle === v)
                              .map(s => ({ x: s.tempC, y: s.realMiPerKwh })),
               backgroundColor: vehColors2[v] + 'aa',
               borderColor: vehColors2[v],
@@ -4808,7 +4813,7 @@ mkChart('chartHistogram', {
             plugins: {
               legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
               datalabels: { display: false },
-              tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} mi/kWh @ ${ctx.parsed.x}°C (${Math.round(ctx.parsed.x*9/5+32)}°F)` } }
+              tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(2)} mi/kWh @ ${ctx.parsed.x}°C (${Math.round(ctx.parsed.x*9/5+32)}°F)` } }
             },
             scales: {
               x: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '°C' },
@@ -4820,11 +4825,6 @@ mkChart('chartHistogram', {
         });
       }
     };
-    const vehColors2 = {};
-    vehiclesInData.forEach((v, i) => {
-      const palette = ['#7b1fa2','#f39c12','#0288d1','#2ecc71'];
-      vehColors2[v] = palette[i % palette.length];
-    });
     buildTempScatter();
     const toggleEl = document.getElementById('tempExcludeHome');
     if (toggleEl) {
