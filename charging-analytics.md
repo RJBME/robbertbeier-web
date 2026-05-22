@@ -18,8 +18,11 @@ permalink: /charging-analytics/
 
   /* On mobile (< 768px) the Jekyll nav is position:relative — it scrolls away.
      The sticky bar must sit at top:0 on mobile, not below the nav. */
+  /* Safe area inset as CSS variable — works once viewport-fit=cover is set */
+  :root { --sat: env(safe-area-inset-top, 0px); }
+
   @media (max-width: 767px) {
-    #vehicleFilterSticky { top: 0 !important; }
+    #vehicleFilterSticky { top: var(--sat) !important; }
   }
 
   .analytics-container {
@@ -5442,13 +5445,15 @@ function initStickyBar() {
     if (window.innerWidth >= 768) {
       const nav = document.querySelector('nav');
       if (nav) {
-        // offsetHeight is stable and doesn't include margins.
-        // The nav uses negative horizontal margins for edge-to-edge bleed
-        // but these don't affect offsetHeight. Add a 1px fudge for subpixel rendering.
         top = Math.max(nav.offsetHeight - 1, 44);
       } else {
         top = 62;
       }
+    } else {
+      // On mobile, respect the safe area inset (Dynamic Island, notch, etc.)
+      // Read the CSS variable we set from env(safe-area-inset-top)
+      const sat = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0;
+      top = sat; // CSS also sets top: var(--sat) !important so these stay in sync
     }
     document.documentElement.style.setProperty('--sticky-bar-top', top + 'px');
     const barH = stickyBar.classList.contains('visible') ? stickyBar.offsetHeight : 0;

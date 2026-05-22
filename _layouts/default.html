@@ -5,35 +5,6 @@
   <title>{{ page.title }} | Robert Beier</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-
-  <!-- ── PWA / Web App Manifest ── -->
-  <link rel="manifest" href="/manifest.json">
-
-  <!-- ── iOS / Safari PWA meta tags ── -->
-  <!-- apple-mobile-web-app-capable: enables standalone full-screen mode on iOS -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="EV Dash">
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
-  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png">
-
-  <!-- ── Android / Chrome PWA ── -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="application-name" content="EV Dash">
-
-  <!-- ── Theme color — matches --link purple, adapts to dark mode ── -->
-  <meta name="theme-color" content="#5D3FD3" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#a389f4" media="(prefers-color-scheme: dark)">
-
-  <!-- ── iOS splash screens (iPhone 17 Pro = 393×852 points @3x) ── -->
-  <!-- These prevent the white flash on launch in standalone mode -->
-  <meta name="apple-touch-startup-image" content="/icons/splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)">
-  <!-- iPhone 15/16 Pro Max -->
-  <meta name="apple-touch-startup-image" content="/icons/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)">
-  <!-- Generic fallback -->
-  <meta name="apple-touch-startup-image" content="/icons/splash-1179x2556.png">
   <style>
     /* ── Global Variables ── */
     :root {
@@ -274,16 +245,6 @@
       transition: all 0.2s;
     }
 
-    /* ── PWA standalone mode: pad nav for Dynamic Island / notch ── */
-    @media (display-mode: standalone) {
-      nav {
-        padding-top: max(env(safe-area-inset-top), 12px);
-      }
-      body {
-        padding-top: 0;
-      }
-    }
-
     /* ── Sticky nav (desktop / tablet ≥ 768 px) ── */
     @media (min-width: 768px) {
       nav {
@@ -516,82 +477,6 @@
   }
 
   toggle.onclick = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-
-  /* ── PWA: Service Worker registration ── */
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' })
-        .then(reg => {
-          console.log('[PWA] Service worker registered, scope:', reg.scope);
-          // Check for updates in the background
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('[PWA] New content available — will load on next visit');
-              }
-            });
-          });
-        })
-        .catch(err => console.warn('[PWA] Service worker registration failed:', err));
-    });
-  }
-
-  /* ── PWA: Android Chrome install prompt ── */
-  // Capture the beforeinstallprompt event so we can show our own
-  // install button/banner rather than relying on the browser's default.
-  let _installPrompt = null;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    _installPrompt = e;
-    // Show a subtle install button in the nav if not already installed
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-                      || window.navigator.standalone === true;
-    if (!isStandalone && !localStorage.getItem('pwa-install-dismissed')) {
-      showInstallBanner();
-    }
-  });
-
-  function showInstallBanner() {
-    if (document.getElementById('pwa-install-banner')) return;
-    const banner = document.createElement('div');
-    banner.id = 'pwa-install-banner';
-    banner.style.cssText = `
-      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-      background: var(--link); color: #fff; padding: 12px 20px;
-      border-radius: 24px; font-size: 0.85rem; font-weight: 600;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 9998;
-      display: flex; align-items: center; gap: 10px; white-space: nowrap;
-      animation: slideUp 0.3s cubic-bezier(0.22,1,0.36,1);
-    `;
-    banner.innerHTML = `
-      <style>@keyframes slideUp { from { transform: translateX(-50%) translateY(80px); opacity:0; } to { transform: translateX(-50%) translateY(0); opacity:1; } }</style>
-      <span>⚡ Add EV Dash to Home Screen</span>
-      <button onclick="triggerInstall()" style="background:#fff;color:var(--link);border:none;border-radius:16px;padding:5px 14px;font-weight:700;cursor:pointer;font-size:0.82rem">Install</button>
-      <button onclick="dismissInstallBanner()" style="background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;font-size:1.1rem;padding:0 4px;line-height:1">×</button>
-    `;
-    document.body.appendChild(banner);
-  }
-
-  window.triggerInstall = async () => {
-    if (!_installPrompt) return;
-    _installPrompt.prompt();
-    const { outcome } = await _installPrompt.userChoice;
-    console.log('[PWA] Install prompt outcome:', outcome);
-    _installPrompt = null;
-    dismissInstallBanner();
-  };
-
-  window.dismissInstallBanner = () => {
-    const b = document.getElementById('pwa-install-banner');
-    if (b) b.remove();
-    localStorage.setItem('pwa-install-dismissed', '1');
-  };
-
-  // Track when running as installed PWA
-  window.matchMedia('(display-mode: standalone)').addEventListener('change', e => {
-    if (e.matches) console.log('[PWA] Running in standalone mode');
-  });
 </script>
 </body>
 </html>
