@@ -3562,10 +3562,13 @@ mkChart('chartHistogram', {
       // Trip annotation
       const note = tripNote(firstDate);
 
-      // Distance stats
+      // Distance stats — use actual trip computer miles if available, else estimate
       const maxDist    = Math.round(Math.max(...locs.map(l => distFromHome(l))));
       const distLabel  = maxDist < 999 ? maxDist + ' mi from home' : '';
-      const estMiles   = estimateTripMiles(locs, note);
+      const actualMiles = note?.trip_miles ? parseFloat(note.trip_miles) : 0;
+      const estMiles   = actualMiles > 0 ? actualMiles : estimateTripMiles(locs, note);
+      const milesLabel = actualMiles > 0 ? estMiles.toLocaleString() : (estMiles > 0 ? '~'+estMiles : '—');
+      const milesTitle = actualMiles > 0 ? 'Trip Miles' : 'Est. Miles';
 
       // Vehicle attribution (most common vehicle in trip)
       const vehCounts = {};
@@ -3690,8 +3693,8 @@ mkChart('chartHistogram', {
             <div style="font-weight:800;font-size:1rem">${chargeTimeStr}</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Est. Miles</div>
-            <div style="font-weight:800;font-size:1rem">${estMiles > 0 ? '~'+estMiles : '—'}</div>
+            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">${milesTitle}</div>
+            <div style="font-weight:800;font-size:1rem">${milesLabel}</div>
           </div>
           <div style="text-align:center">
             <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Gas Stops (${spec.mpg}mpg)</div>
@@ -5144,20 +5147,26 @@ function buildGasSensitivity(sl) {
     const d = computeAtPrice(gasPrice);
     const delta = d.total - actualSavings;
     const deltaEl = document.getElementById('sensDelta');
+    const safe = (v, fn) => (!isNaN(v) && isFinite(v)) ? fn(v) : '—';
 
-    document.getElementById('sensTotal').textContent = fmtUSD(d.total);
+    const totEl = document.getElementById('sensTotal');
+    const moEl  = document.getElementById('sensMonthly');
+    const yrEl  = document.getElementById('sens5yr');
+    if (totEl) totEl.textContent = safe(d.total, fmtUSD);
     if (deltaEl) {
-      deltaEl.textContent = (delta >= 0 ? '+' : '') + fmtUSD(delta);
+      deltaEl.textContent = safe(delta, v => (v >= 0 ? '+' : '') + fmtUSD(v));
       deltaEl.style.color = delta >= 0 ? '#2ecc71' : '#e74c3c';
     }
-    document.getElementById('sensMonthly').textContent = fmtUSD(d.monthlyAvg) + '/mo';
-    document.getElementById('sens5yr').textContent = fmtUSD(d.proj5yr);
+    if (moEl) moEl.textContent = safe(d.monthlyAvg, v => fmtUSD(v) + '/mo');
+    if (yrEl) yrEl.textContent = safe(d.proj5yr, fmtUSD);
 
-    // Update chart data
-    if (sensitivityChart) {
-      sensitivityChart.data.datasets[0].data = d.cumData;
-      sensitivityChart.data.datasets[0].label = `At $${gasPrice.toFixed(2)}/gal`;
-      sensitivityChart.update('none');
+    // Update chart data — re-fetch from allCharts since sensitivityChart ref may be stale
+    const canvas = document.getElementById('chartGasSensitivity');
+    const liveChart = canvas ? Chart.getChart(canvas) : null;
+    if (liveChart) {
+      liveChart.data.datasets[0].data = d.cumData;
+      liveChart.data.datasets[0].label = `At $${gasPrice.toFixed(2)}/gal`;
+      liveChart.update('none');
     }
   }
 
@@ -5176,13 +5185,15 @@ function buildGasSensitivity(sl) {
 
   // Re-init on theme change
   window.addEventListener('themeChanged', () => {
-    if (sensitivityChart) {
-      sensitivityChart.data.datasets[0].borderColor = '#f39c12';
-      sensitivityChart.data.datasets[1].borderColor = '#2ecc71';
-      sensitivityChart.options.scales.x.ticks.color = tc();
-      sensitivityChart.options.scales.y.ticks.color = tc();
-      sensitivityChart.options.scales.y.grid.color  = gc();
-      sensitivityChart.update('none');
+    const canvas2 = document.getElementById('chartGasSensitivity');
+    const liveChart2 = canvas2 ? Chart.getChart(canvas2) : null;
+    if (liveChart2) {
+      liveChart2.data.datasets[0].borderColor = '#f39c12';
+      liveChart2.data.datasets[1].borderColor = '#2ecc71';
+      liveChart2.options.scales.x.ticks.color = tc();
+      liveChart2.options.scales.y.ticks.color = tc();
+      liveChart2.options.scales.y.grid.color  = gc();
+      liveChart2.update('none');
     }
   });
 }
@@ -5409,7 +5420,14 @@ function initStickyBar() {
     let top = 0;
     if (window.innerWidth >= 768) {
       const nav = document.querySelector('nav');
-      top = nav ? Math.max(nav.offsetHeight, 44) : 62;
+      if (nav) {
+        // offsetHeight is stable and doesn't include margins.
+        // The nav uses negative horizontal margins for edge-to-edge bleed
+        // but these don't affect offsetHeight. Add a 1px fudge for subpixel rendering.
+        top = Math.max(nav.offsetHeight - 1, 44);
+      } else {
+        top = 62;
+      }
     }
     document.documentElement.style.setProperty('--sticky-bar-top', top + 'px');
     const barH = stickyBar.classList.contains('visible') ? stickyBar.offsetHeight : 0;
@@ -5417,7 +5435,14 @@ function initStickyBar() {
   }
 
   _updateTop();
-  window.addEventListener('load',   () => { _updateTop(); setTimeout(_updateTop, 400); }, { once: true });
+  console.log('[EV Sticky] initial nav height:', document.querySelector('nav')?.offsetHeight, '→ top:', document.documentElement.style.getPropertyValue('--sticky-bar-top'));
+  window.addEventListener('load', () => {
+    _updateTop();
+    setTimeout(() => {
+      _updateTop();
+      console.log('[EV Sticky] post-load nav height:', document.querySelector('nav')?.offsetHeight, '→ top:', document.documentElement.style.getPropertyValue('--sticky-bar-top'));
+    }, 500);
+  }, { once: true });
   window.addEventListener('resize', _updateTop, { passive: true });
 
   // ── Show/hide sticky bar ──
@@ -5479,9 +5504,10 @@ function _applyTiles() {
   const t = isDark() ? TILES.dark : TILES.light;
   if (_tileLayer) { _tileLayer.remove(); }
   _tileLayer = L.tileLayer(t.url, { attribution: t.attribution, maxZoom: 19 });
+  // Add tile layer first — it will naturally sit below the marker group
+  // which was added after map init. No bringToBack() needed and it avoids
+  // pushing tiles below the map container in some browsers.
   _tileLayer.addTo(_leafletMap);
-  // Ensure tile layer is below the marker group
-  _tileLayer.bringToBack();
 }
 
 buildVehicleFilter();
