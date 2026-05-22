@@ -465,7 +465,7 @@
       <h2 class="slide-heading">How the <span>whole thing</span> fits together</h2>
 
       <div class="flow">
-        <div class="flow-box">You add session<br>in CloudCannon</div>
+        <div class="flow-box">Add session<br>in CloudCannon</div>
         <div class="flow-arrow">→</div>
         <div class="flow-box">CloudCannon commits<br>.md file to GitHub</div>
         <div class="flow-arrow">→</div>
@@ -473,19 +473,29 @@
         <div class="flow-arrow">→</div>
         <div class="flow-box">Site rebuilds at<br>robertbeier.com</div>
       </div>
+      <p style="font-size:0.72rem;color:var(--muted);margin:6px 0 14px;text-align:center">An iPhone Shortcut alternative exists — see the Appendix (last slide) for migration steps when ready</p>
 
       <hr class="divider">
 
       <div class="two-col">
         <div>
-          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">Each charging session is a separate <span class="mono">.md</span> file in <span class="mono">_charging/</span> with front matter like:</p>
-          <div class="code-block">
+          <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">Each charging session is a <span class="mono">.md</span> file in <span class="mono">_charging/</span> with front matter:</p>
+          <div class="code-block" style="font-size:0.7rem;">
 <span class="comment">---</span>
 <span class="key">date</span>: <span class="val">"2026-04-18"</span>
 <span class="key">location</span>: <span class="val">"Work"</span>
 <span class="key">vehicle</span>: <span class="val">"2025 Mach-E GT"</span>
 <span class="key">energy_kwh</span>: <span class="val">29.3</span>
 <span class="key">cost</span>: <span class="val">0.0</span>
+<span class="key">start_date</span>: <span class="val">"2026-04-18"</span>
+<span class="key">start_time</span>: <span class="val">"07:42"</span>
+<span class="key">end_time</span>: <span class="val">"15:30"</span>
+<span class="key">soc_start</span>: <span class="val">52</span>
+<span class="key">soc_end</span>: <span class="val">90</span>
+<span class="key">soc_added</span>: <span class="val">38</span>
+<span class="key">miles_added</span>: <span class="val">101</span>
+<span class="key">temperature_c</span>: <span class="val">12.4</span>
+<span class="key">temperature_f</span>: <span class="val">54.3</span>
 <span class="key">notes</span>: <span class="val">""</span>
 <span class="comment">---</span>
           </div>
@@ -495,21 +505,21 @@
             <div class="step-num" style="background:rgba(2,136,209,0.2); color:#4fc3f7;">1</div>
             <div class="step-content">
               <h4>Jekyll reads _charging/</h4>
-              <p>All .md files are loaded as a collection called <span class="mono">site.charging</span> and iterated in your Liquid templates.</p>
+              <p>All .md files load as <span class="mono">site.charging</span> — iterated by dashboard, history, and analytics pages.</p>
             </div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(123,31,162,0.2); color:#ce93d8;">2</div>
             <div class="step-content">
-              <h4>Liquid does the math</h4>
-              <p>The dashboard and history pages loop over sessions, calculate costs, savings, and stats at build time.</p>
+              <h4>Analytics page enriches data in JS</h4>
+              <p>Sessions are injected as JSON and enriched client-side — savings, CO₂, efficiency, temperature correlation.</p>
             </div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">3</div>
             <div class="step-content">
-              <h4>Static HTML is served</h4>
-              <p>No database, no server logic — GitHub Pages serves plain HTML files for free.</p>
+              <h4>Static HTML served free</h4>
+              <p>No database, no server — GitHub Pages serves plain HTML. The site costs nothing to host.</p>
             </div>
           </div>
         </div>
@@ -528,7 +538,7 @@
     <div class="slide-accent" style="background: linear-gradient(90deg, #5D3FD3, #0288d1);"></div>
     <div class="slide-body">
       <div class="slide-section-label">Day-to-Day Use</div>
-      <h2 class="slide-heading">Adding a <span>new session</span> in CloudCannon</h2>
+      <h2 class="slide-heading">Adding a session <span>via CloudCannon</span></h2>
 
       <div class="two-col">
         <div class="step-list">
@@ -550,14 +560,14 @@
             <div class="step-num" style="background:rgba(2,136,209,0.2); color:#4fc3f7;">3</div>
             <div class="step-content">
               <h4>Fill in all fields</h4>
-              <p>Location is a dropdown. Vehicle defaults to your current car. Cost = 0 for free charging. Add notes if relevant.</p>
+              <p>Location is a dropdown. Vehicle defaults to current car. Include start/end time, SOC start/end/added, and miles added from FordPass. Cost = 0 for free charging.</p>
             </div>
           </div>
           <div class="step">
             <div class="step-num" style="background:rgba(46,204,113,0.2); color:#a5d6a7;">4</div>
             <div class="step-content">
               <h4>Save → site rebuilds in ~2 min</h4>
-              <p>CloudCannon commits the file to GitHub. GitHub Actions builds the site automatically.</p>
+              <p>CloudCannon commits the file to GitHub. GitHub Actions builds the site. Run <span class="mono">backfill_temperature.py</span> periodically to fill in temperature data.</p>
             </div>
           </div>
         </div>
@@ -565,15 +575,19 @@
         <div>
           <div class="info-box tip">
             <strong>💡 Home charging cost</strong><br>
-            Leave cost as <span class="mono">0</span> for Home sessions — the dashboard calculates it automatically using your configured electricity rate.
+            Leave cost as <span class="mono">0</span> for Home sessions — the analytics page calculates it using your configured electricity rate from <span class="mono">_data/rates.yml</span>.
           </div>
           <div class="info-box warn" style="margin-top:12px;">
             <strong>⚠️ Date timezone</strong><br>
-            CloudCannon shows UTC time. If you charge after 8pm Eastern, the UTC date may show as the next day. Always verify the date matches your actual charge date and correct it if needed.
+            CloudCannon may show UTC time. If you charge after 8pm Eastern, the UTC date may show as the next day. Always verify the date and correct it if needed.
           </div>
           <div class="info-box green" style="margin-top:12px;">
             <strong>✓ Notes field</strong><br>
-            Anything in Notes appears as a 📝 tooltip on the history page. Good for logging rate info, trip context, or unusual circumstances.
+            Anything in Notes appears as a 📝 tooltip on the history page. Good for logging trip context or unusual circumstances.
+          </div>
+          <div class="info-box tip" style="margin-top:12px;">
+            <strong>💡 Want to automate this?</strong><br>
+            An iPhone Shortcut that parses FordPass screenshots and pushes directly to GitHub is documented in the Appendix (last slide). Not currently in use but ready to build when wanted.
           </div>
         </div>
       </div>
@@ -1093,6 +1107,54 @@ git push
   </div>
 
   <!-- ══════════════════════════════════════════════════════
+       SLIDE 10b — ANALYTICS PAGE & TRIP NOTES
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #5D3FD3, #2ecc71);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label">Analytics & Road Trips</div>
+      <h2 class="slide-heading">Analytics <span>sections</span> &amp; trip notes</h2>
+
+      <div class="two-col">
+        <div>
+          <p style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em">Analytics page sections (in order)</p>
+          <div class="step-list" style="font-size:0.78rem">
+            <div class="step"><div class="step-num" style="background:rgba(93,63,211,0.2);color:#b39ddb;">🌍</div><div class="step-content"><h4>Perspective</h4><p>8 hero cards — coast-to-coast trips, Earth %, home electricity months, trees, gas fill-ups, tanker trucks, iPhone charges, CO₂ balloons. Vehicle-filter aware.</p></div></div>
+            <div class="step"><div class="step-num" style="background:rgba(93,63,211,0.2);color:#b39ddb;">🚗</div><div class="step-content"><h4>Mileage &amp; Fuel Rates</h4><p>Odometer history, miles/month, gas price history, real efficiency (mi/kWh ↔ Wh/mi dual axis). Reads from <span class="mono">_data/mileage.yml</span>.</p></div></div>
+            <div class="step"><div class="step-num" style="background:rgba(93,63,211,0.2);color:#b39ddb;">⛽</div><div class="step-content"><h4>Gas Price Sensitivity</h4><p>Interactive slider $2–$6/gal. Updates total savings, monthly avg, 5-yr projection, and cumulative chart in real time.</p></div></div>
+            <div class="step"><div class="step-num" style="background:rgba(93,63,211,0.2);color:#b39ddb;">🕐</div><div class="step-content"><h4>When Do I Charge</h4><p>Hour × day-of-week heatmap. Color = dominant charging type, intensity = frequency. Only sessions with recorded start time.</p></div></div>
+            <div class="step"><div class="step-num" style="background:rgba(93,63,211,0.2);color:#b39ddb;">🌡️</div><div class="step-content"><h4>Temperature Charts</h4><p>Efficiency vs. temp scatter (exclude-home toggle), monthly temp vs. efficiency dual-axis, monthly temp distribution. Hidden until 5+ sessions have temperature data.</p></div></div>
+          </div>
+        </div>
+        <div>
+          <p style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em">Road trip cards — trip_notes.yml</p>
+          <div class="info-box tip">
+            <strong>💡 Auto-detected trips</strong><br>
+            Road trips are detected automatically from public charging sessions &gt;50 miles from home, clustered in 5-day windows. No manual entry needed for detection.
+          </div>
+          <div class="info-box green" style="margin-top:10px;">
+            <strong>✓ Enriching a trip card</strong><br>
+            1. Open <span class="mono">_data/trip_notes.yml</span><br>
+            2. Copy the template block at the bottom<br>
+            3. Key = date of first charging session (YYYY-MM-DD)<br>
+            4. Fill in destination, description, itinerary<br>
+            5. If you photographed the Mach-E energy screen at trip end, add the <span class="mono">energy_screen: true</span> block with miles, efficiency, energy %, and driving scores<br>
+            6. Commit and push
+          </div>
+          <div class="info-box warn" style="margin-top:10px;">
+            <strong>⚠️ Energy screen data</strong><br>
+            Use the <strong>Trip 2 tab</strong> on the car's energy screen (not "This Trip" — that resets too often). Photograph it at trip end before you reset it. Add data manually to trip_notes.yml within a day or two while you still have the photo.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">slide 10b</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
        SLIDE 11 — QUICK REFERENCE CHEATSHEET
   ══════════════════════════════════════════════════════ -->
   <div class="slide">
@@ -1105,8 +1167,7 @@ git push
         <div>
           <p style="font-size:0.75rem; font-weight:600; color:var(--text); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.08em;">Routine tasks</p>
           <div class="checklist">
-            <div class="check-item"><span class="check-icon">⚡</span><span><strong>Add session (preferred):</strong> Tap ⚡ Log Charge on iPhone → choose car → 📷 FordPass screenshot or ✏️ manual → confirm → auto-pushes to GitHub</span></div>
-            <div class="check-item"><span class="check-icon">⚡</span><span><strong>Add session (alt):</strong> CloudCannon → Charging Sessions → + Add. Fill in all fields including start/end time, SOC, and miles from FordPass.</span></div>
+            <div class="check-item"><span class="check-icon">⚡</span><span><strong>Add session:</strong> CloudCannon → Charging Sessions → + Add. Fill in date, location, vehicle, kWh, cost, start/end time, SOC start/end/added, and miles added from FordPass. Save → rebuilds in ~2 min.</span></div>
             <div class="check-item"><span class="check-icon">🔌</span><span><strong>Update electricity rate:</strong> Add new entry to <span class="mono">_data/rates.yml</span> → <span class="mono">home_electricity:</span> section, commit</span></div>
             <div class="check-item"><span class="check-icon">⛽</span><span><strong>Update gas price period:</strong> Add new entry to <span class="mono">_data/rates.yml</span> → <span class="mono">gas_savings:</span> section, commit</span></div>
             <div class="check-item"><span class="check-icon">🚗</span><span><strong>Update odometer:</strong> Add new entry (newest first) to <span class="mono">_data/mileage.yml</span> with date, vehicle, odometer. Dashboard auto-reads. Commit.</span></div>
@@ -1153,6 +1214,72 @@ git push
     </div>
     <div class="slide-footer">
       <span class="slide-footer-label">slide 11</span>
+      <div class="slide-dot-nav" id="dots"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       APPENDIX — MIGRATING TO iPHONE SHORTCUT (FUTURE)
+  ══════════════════════════════════════════════════════ -->
+  <div class="slide">
+    <div class="slide-accent" style="background: linear-gradient(90deg, #555, #333);"></div>
+    <div class="slide-body">
+      <div class="slide-section-label" style="color:#f39c12">📋 Appendix — Future Reference</div>
+      <h2 class="slide-heading">Migrating to the <span>iPhone Shortcut</span></h2>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px">Not currently in use — CloudCannon is the active workflow (slide 3). This appendix documents everything needed when you're ready to migrate. No data changes required — the session file format is identical either way.</p>
+
+      <div class="two-col">
+        <div>
+          <p style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em">What the shortcut does</p>
+          <div class="step-list">
+            <div class="step">
+              <div class="step-num" style="background:rgba(93,63,211,0.2);color:#a389f4;">📷</div>
+              <div class="step-content">
+                <h4>Parse FordPass screenshot automatically</h4>
+                <p>Uses Apple Intelligence "Use Cloud model" to extract all session fields from a FordPass "Charge details" screenshot — date, kWh, cost, start/end time, SOC, miles. No manual typing.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="background:rgba(93,63,211,0.2);color:#a389f4;">✏️</div>
+              <div class="step-content">
+                <h4>Manual fallback also supported</h4>
+                <p>If no screenshot is available, the Shortcut prompts for each field. Same end result.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num" style="background:rgba(46,204,113,0.2);color:#a5d6a7;">📤</div>
+              <div class="step-content">
+                <h4>Pushes directly to GitHub</h4>
+                <p>Creates the <span class="mono">.md</span> file via GitHub API — bypasses CloudCannon. Site rebuilds in ~60 seconds. Works entirely from your phone.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em">Migration checklist</p>
+          <div class="checklist">
+            <div class="check-item"><span class="check-icon">1</span><span>Open <span class="mono">shortcut-guide.html</span> from the repo — full build-from-scratch guide</span></div>
+            <div class="check-item"><span class="check-icon">2</span><span>Generate a GitHub PAT: GitHub → Settings → Developer Settings → Personal Access Tokens → Fine-grained → repo write on <span class="mono">robbertbeier-web</span></span></div>
+            <div class="check-item"><span class="check-icon">3</span><span>Build the Shortcut on iPhone following the guide. Owner: <span class="mono">RJBME</span> · Repo: <span class="mono">robbertbeier-web</span></span></div>
+            <div class="check-item"><span class="check-icon">4</span><span>Update vehicle menu (Block C) to match current car names in <span class="mono">cloudcannon.config.yml</span></span></div>
+            <div class="check-item"><span class="check-icon">5</span><span>Test with a real FordPass screenshot — verify the <span class="mono">.md</span> file in GitHub looks correct</span></div>
+            <div class="check-item"><span class="check-icon">6</span><span>Share Shortcut iCloud link to LRB's phone</span></div>
+            <div class="check-item"><span class="check-icon">7</span><span>PAT tokens expire annually — regenerate and update the Text action block in the Shortcut</span></div>
+          </div>
+          <div class="info-box green" style="margin-top:10px;">
+            <strong>✓ No data migration</strong><br>
+            CloudCannon sessions and Shortcut sessions are identical <span class="mono">.md</span> files. Switch at any time — existing history is unaffected.
+          </div>
+          <div class="info-box warn" style="margin-top:10px;">
+            <strong>⚠️ After switching</strong><br>
+            Remove the CloudCannon step from your routine checklist and update this guide's slide 2 flow diagram back to "iPhone Shortcut → GitHub API" when you make the switch permanent.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span class="slide-footer-label">appendix</span>
       <div class="slide-dot-nav" id="dots"></div>
     </div>
   </div>

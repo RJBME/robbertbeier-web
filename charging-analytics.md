@@ -45,7 +45,8 @@ permalink: /charging-analytics/
   /* ── Page header ── */
   .analytics-header { margin-bottom: 22px; }
   .analytics-header h1 { font-size: 1.85rem; margin: 0 0 4px 0; }
-  .analytics-header p  { color: #888; font-size: 0.85rem; margin: 0; }
+  .analytics-header p  { color: #666; font-size: 0.85rem; margin: 0; }
+  [data-theme="dark"] .analytics-header p { color: #aaa; }
 
   /* ── Section quick-nav pills ── */
   .section-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -91,7 +92,8 @@ permalink: /charging-analytics/
     border-bottom: 2px solid var(--dash-border); padding-bottom: 8px;
   }
   .section-header h2 { margin: 0; font-size: 1.05rem; }
-  .section-header span { font-size: 0.75rem; color: #888; }
+  .section-header span { font-size: 0.75rem; color: #666; }
+  [data-theme="dark"] .section-header span { color: #aaa; }
 
   /* ── Chart grids ── */
   .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
@@ -113,8 +115,9 @@ permalink: /charging-analytics/
   .chart-wrap canvas { will-change: auto; }
   .chart-title {
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.07em; color: #888; margin: 0 0 14px 0;
+    letter-spacing: 0.07em; color: #666; margin: 0 0 14px 0;
   }
+  [data-theme="dark"] .chart-title { color: #bbb; }
   .chart-wrap { position: relative; }
 
   /* ── Top sessions table ── */
@@ -122,7 +125,7 @@ permalink: /charging-analytics/
   .top-table th {
     text-align: left; padding: 7px 10px; background: var(--table-head);
     border-bottom: 2px solid var(--dash-border); font-size: 0.68rem;
-    text-transform: uppercase; letter-spacing: 0.05em; color: #888;
+    text-transform: uppercase; letter-spacing: 0.05em; color: #666;
   }
   .top-table td { padding: 7px 10px; border-bottom: 1px solid var(--dash-border); }
   .top-table tr:last-child td { border-bottom: none; }
@@ -180,8 +183,19 @@ permalink: /charging-analytics/
     display: flex; flex-wrap: wrap; gap: 6px;
     padding: 6px 20px 5px;
     border-bottom: 1px solid var(--dash-border);
-    /* constrain to same width as page body so rows align with site nav content */
     max-width: 1060px; margin: 0 auto; box-sizing: border-box; width: 100%;
+  }
+  @media (max-width: 767px) {
+    #stickyNavRow {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* Firefox */
+      padding: 6px 12px 5px;
+      gap: 4px;
+    }
+    #stickyNavRow::-webkit-scrollbar { display: none; } /* Safari/Chrome */
+    #stickyVehicleRow { padding: 5px 12px 6px; gap: 6px; }
   }
   #stickyNavRow a {
     font-size: 0.68rem; font-weight: 600; color: var(--link);
@@ -423,7 +437,20 @@ permalink: /charging-analytics/
     line-height: 1.4;
   }
 
-  /* ── Charging locations map ── */
+  /* ── Mobile overrides ── */
+  @media (max-width: 600px) {
+    /* Gas sensitivity KPIs: 4-col → 2×2 */
+    #sensitivityKpis { grid-template-columns: repeat(2, 1fr) !important; }
+    /* Top-10 table: allow horizontal scroll instead of truncating */
+    .top-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .top-table { min-width: 480px; }
+    /* Perspective hero cards: 2-col on small screens */
+    .perspective-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    /* KPI strips: 2-col on small screens */
+    .kpi-strip { grid-template-columns: repeat(2, 1fr) !important; }
+    /* Chart grid: single col */
+    .chart-grid-2 { grid-template-columns: 1fr !important; }
+  }
   .ev-map-icon { background: transparent !important; border: none !important; overflow: visible !important; }
   .ev-pulse { position: relative; overflow: visible; }
   .ev-dot { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; border-radius: 50%; opacity: 0.35; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
@@ -629,7 +656,7 @@ permalink: /charging-analytics/
     <div class="perspective-grid" id="heroCardGrid">
       <!-- populated by JS -->
     </div>
-    <p style="font-size:0.68rem;color:#aaa;margin-top:12px;line-height:1.6" id="heroFootnote"></p>
+    <p style="font-size:0.68rem;color:#777;margin-top:12px;line-height:1.6" id="heroFootnote"></p>
   </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
@@ -906,7 +933,7 @@ permalink: /charging-analytics/
     </div>
     <div class="chart-card">
       <p class="chart-title">Top 10 Largest Sessions</p>
-      <div style="overflow-x:auto; margin-top:4px">
+      <div class="top-table-wrap" style="overflow-x:auto; margin-top:4px">
         <table class="top-table">
           <thead>
             <tr><th>#</th><th>Date</th><th>Location</th><th>kWh</th><th>Cost</th><th>Saved †</th></tr>
@@ -999,7 +1026,7 @@ permalink: /charging-analytics/
       <span style="font-size:1.4rem;font-weight:900;color:#f39c12;min-width:60px" id="gasPriceLabel">$3.26</span>
       <span style="font-size:0.72rem;color:#aaa">vs. your actual avg</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="sensitivityKpis">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;container-type:inline-size" id="sensitivityKpis">
       <div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 14px;text-align:center">
         <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:4px">Total Savings</div>
         <div style="font-size:1.25rem;font-weight:900;color:#2ecc71" id="sensTotal">—</div>
@@ -1466,7 +1493,7 @@ let _locHdrsWired = false; // guard: only wire sort-header onclick once
    UTILITIES
    ════════════════════════════════════════════════════════ */
 const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
-const tc     = () => isDark() ? '#c0c0c0' : '#444';   // tick / label color
+const tc     = () => isDark() ? '#c8c8c8' : '#555';   // tick / label color
 const gc     = () => isDark() ? '#3a3a3a' : '#e8e8e8'; // grid color
 
 function getStepRate(arr, date, field, fallback) {
