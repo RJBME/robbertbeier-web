@@ -382,6 +382,10 @@ permalink: /charging/
       {% else %}
         {% assign cpm = 0 %}{% assign kpm = 0 %}
       {% endif %}
+
+      {% comment %} Only show per-mile metrics if we have enough odometer coverage {% endcomment %}
+      {% assign show_per_mile = false %}
+      {% if tracked_miles >= 500 %}{% assign show_per_mile = true %}{% endif %}
       {% assign cpm_cents = cpm | times: 100 | round | modulo: 100 %}
       {% assign vc_cents  = v_cost | times: 100 | round | modulo: 100 %}
 
@@ -402,11 +406,20 @@ permalink: /charging/
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
-          <span class="cpm-stat-value">${{ cpm | split: "." | first }}.{% if cpm_cents < 10 %}0{{ cpm_cents }}{% else %}{{ cpm_cents }}{% endif %}</span>
+          {% if show_per_mile %}
+            <span class="cpm-stat-value">${{ cpm | split: "." | first }}.{% if cpm_cents < 10 %}0{{ cpm_cents }}{% else %}{{ cpm_cents }}{% endif %}</span>
+          {% else %}
+            <span class="cpm-stat-value" title="Add more odometer readings to mileage.yml — need 500+ tracked miles" style="color:#aaa">—</span>
+            <span style="font-size:0.62rem;color:#aaa">need more odo data</span>
+          {% endif %}
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">kWh / Mile</span>
-          <span class="cpm-stat-value">{{ kpm | round: 3 }}</span>
+          {% if show_per_mile %}
+            <span class="cpm-stat-value">{{ kpm | round: 3 }}</span>
+          {% else %}
+            <span class="cpm-stat-value" title="Add more odometer readings to mileage.yml — need 500+ tracked miles" style="color:#aaa">—</span>
+          {% endif %}
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Charged</span>
@@ -423,18 +436,29 @@ permalink: /charging/
       {% assign overall_cpm = total_cost | divided_by: overall_odo_miles %}
       {% assign overall_kpm = total_kwh  | divided_by: overall_odo_miles %}
       {% assign overall_cpm_cents = overall_cpm | times: 100 | round | modulo: 100 %}
+      {% assign show_overall_per_mile = false %}
+      {% if overall_odo_miles >= 500 %}{% assign show_overall_per_mile = true %}{% endif %}
       <div class="cpm-row cpm-overall">
         <div class="cpm-vehicle">
           Overall (all vehicles)
-          <small>{{ overall_odo_miles }} combined miles</small>
+          <small>{{ overall_odo_miles }} combined miles tracked</small>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
-          <span class="cpm-stat-value">${{ overall_cpm | split: "." | first }}.{% if overall_cpm_cents < 10 %}0{{ overall_cpm_cents }}{% else %}{{ overall_cpm_cents }}{% endif %}</span>
+          {% if show_overall_per_mile %}
+            <span class="cpm-stat-value">${{ overall_cpm | split: "." | first }}.{% if overall_cpm_cents < 10 %}0{{ overall_cpm_cents }}{% else %}{{ overall_cpm_cents }}{% endif %}</span>
+          {% else %}
+            <span class="cpm-stat-value" style="color:#aaa">—</span>
+            <span style="font-size:0.62rem;color:#aaa">need more odo data</span>
+          {% endif %}
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">kWh / Mile</span>
-          <span class="cpm-stat-value">{{ overall_kpm | round: 3 }}</span>
+          {% if show_overall_per_mile %}
+            <span class="cpm-stat-value">{{ overall_kpm | round: 3 }}</span>
+          {% else %}
+            <span class="cpm-stat-value" style="color:#aaa">—</span>
+          {% endif %}
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Charged</span>
