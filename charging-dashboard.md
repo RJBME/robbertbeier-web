@@ -37,22 +37,43 @@ permalink: /charging/
 {% assign _seen_vehicles = "" %}
 {% assign odometer_entries = "" %}
 {% assign _mileage_sorted = site.data.mileage | sort: "date" | reverse %}
+{% assign _mileage_asc    = site.data.mileage | sort: "date" %}
 {% for entry in _mileage_sorted %}
   {% assign _veh_key = entry.vehicle | downcase | replace: " ", "_" | replace: "'", "" | prepend: "|" | append: "|" %}
   {% unless _seen_vehicles contains _veh_key %}
     {% assign _seen_vehicles = _seen_vehicles | append: _veh_key %}
-    {% comment %} Find first_session_date for this vehicle from charging data {% endcomment %}
+
+    {% comment %} Find first_session_date and first_odo for this vehicle {% endcomment %}
     {% assign _first_date = "9999-99-99" %}
     {% for log in site.charging %}
       {% if log.vehicle == entry.vehicle %}
         {% assign _log_date = log.date | date: "%Y-%m-%d" %}
-        {% if _log_date < _first_date %}
-          {% assign _first_date = _log_date %}
-        {% endif %}
+        {% if _log_date < _first_date %}{% assign _first_date = _log_date %}{% endif %}
       {% endif %}
     {% endfor %}
     {% if _first_date == "9999-99-99" %}{% assign _first_date = entry.date %}{% endif %}
-    {% assign _row = entry.vehicle | append: " | " | append: entry.odometer | append: " | " | append: entry.date | append: " | " | append: _first_date | append: " |" %}
+
+    {% comment %} Find the oldest odometer reading on or before first_session_date for this vehicle {% endcomment %}
+    {% assign _first_odo = 0 %}
+    {% for mentry in _mileage_asc %}
+      {% if mentry.vehicle == entry.vehicle and mentry.date <= _first_date %}
+        {% assign _first_odo = mentry.odometer %}
+      {% endif %}
+    {% endfor %}
+    {% comment %} If no odo reading before first session, use earliest available reading {% endcomment %}
+    {% if _first_odo == 0 %}
+      {% for mentry in _mileage_asc %}
+        {% if mentry.vehicle == entry.vehicle and _first_odo == 0 %}
+          {% assign _first_odo = mentry.odometer %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% comment %} Miles driven during tracked period = current odo - odo at first session {% endcomment %}
+    {% assign _tracked_miles = entry.odometer | minus: _first_odo %}
+    {% if _tracked_miles <= 0 %}{% assign _tracked_miles = entry.odometer %}{% endif %}
+
+    {% assign _row = entry.vehicle | append: " | " | append: entry.odometer | append: " | " | append: entry.date | append: " | " | append: _first_date | append: " | " | append: _tracked_miles | append: " |" %}
     {% if odometer_entries == "" %}
       {% assign odometer_entries = _row %}
     {% else %}
@@ -339,13 +360,14 @@ permalink: /charging/
     {% assign overall_odo_miles = 0 %}
 
     {% for odo in odometer_entries %}
-      {% assign op          = odo | strip | split: " | " %}
-      {% assign odo_vehicle = op[0] | strip %}
-      {% assign odo_miles   = op[1] | strip | plus: 0 %}
-      {% assign odo_date    = op[2] | strip %}
-      {% assign idx         = forloop.index0 %}
+      {% assign op             = odo | strip | split: " | " %}
+      {% assign odo_vehicle    = op[0] | strip %}
+      {% assign odo_miles      = op[1] | strip | plus: 0 %}
+      {% assign odo_date       = op[2] | strip %}
+      {% assign tracked_miles  = op[4] | strip | plus: 0 %}
+      {% assign idx            = forloop.index0 %}
 
-      {% assign overall_odo_miles = overall_odo_miles | plus: odo_miles %}
+      {% assign overall_odo_miles = overall_odo_miles | plus: tracked_miles %}
 
       {% case idx %}
         {% when 0 %}{% assign v_cost = veh_cost_0 %}{% assign v_kwh = veh_kwh_0 %}
@@ -354,9 +376,9 @@ permalink: /charging/
         {% when 3 %}{% assign v_cost = veh_cost_3 %}{% assign v_kwh = veh_kwh_3 %}
       {% endcase %}
 
-      {% if odo_miles > 0 %}
-        {% assign cpm = v_cost | divided_by: odo_miles %}
-        {% assign kpm = v_kwh  | divided_by: odo_miles %}
+      {% if tracked_miles > 0 %}
+        {% assign cpm = v_cost | divided_by: tracked_miles %}
+        {% assign kpm = v_kwh  | divided_by: tracked_miles %}
       {% else %}
         {% assign cpm = 0 %}{% assign kpm = 0 %}
       {% endif %}
@@ -376,7 +398,7 @@ permalink: /charging/
       <div class="cpm-row" style="{{ row_accent }}">
         <div class="cpm-vehicle" style="{{ veh_color }}">
           {{ odo_vehicle }}
-          <small style="color:#888">{{ odo_miles }} mi as of {{ odo_date }}</small>
+          <small style="color:#888">{{ odo_miles }} mi as of {{ odo_date }} · {{ tracked_miles }} mi tracked</small>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
