@@ -38,9 +38,9 @@ permalink: /charging/
 {% assign odometer_entries = "" %}
 {% assign _mileage_sorted = site.data.mileage | sort: "date" | reverse %}
 {% for entry in _mileage_sorted %}
-  {% assign _veh_key = entry.vehicle | downcase | replace: " ", "_" | replace: "'", "" %}
+  {% assign _veh_key = entry.vehicle | downcase | replace: " ", "_" | replace: "'", "" | prepend: "|" | append: "|" %}
   {% unless _seen_vehicles contains _veh_key %}
-    {% assign _seen_vehicles = _seen_vehicles | append: _veh_key | append: "," %}
+    {% assign _seen_vehicles = _seen_vehicles | append: _veh_key %}
     {% comment %} Find first_session_date for this vehicle from charging data {% endcomment %}
     {% assign _first_date = "9999-99-99" %}
     {% for log in site.charging %}
