@@ -13,6 +13,11 @@ home_electricity:
     rate: 0.181
   - date: "2026-02-19"
     rate: 0.204
+  - date: "2026-03-20"
+    rate: 0.204
+  - date: "2026-04-22"
+    rate: 0.206
+  
 
 gas_savings:
   - date: "2025-08-22"
@@ -53,5 +58,5 @@ gas_savings:
     mi_per_kwh: 3.0
   - date: "2026-05-01"
     mpg: 27
-    gas_price: 4.79
+    gas_price: 4.73
     mi_per_kwh: 3.0
