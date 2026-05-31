@@ -31,9 +31,9 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Current readings (today, 2026-05-21) ─────────────────────────────────────
-- date: "2026-05-21"
+- date: "2026-05-31"
   vehicle: "2025 Mach-E GT"
-  odometer: 11847
+  odometer: 12420
   notes: "current reading"
 
 - date: "2026-05-21"
@@ -42,6 +42,11 @@
   notes: "current reading"
 
 # ── Previous readings ─────────────────────────────────────────────────────────
+- date: "2026-05-21"
+  vehicle: "2025 Mach-E GT"
+  odometer: 11847
+  notes: ""
+
 - date: "2026-05-17"
   vehicle: "2025 Mach-E GT"
   odometer: 11742

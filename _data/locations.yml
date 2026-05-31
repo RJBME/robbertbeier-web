@@ -133,3 +133,8 @@
   lat: 41.6937
   lng: -87.6012
   city: "Chicago, IL"
+
+- location: "Tesla, Brighton, MI"
+  lat: 42.5404
+  lng: -83.7886
+  city: "Brighton, MI"
