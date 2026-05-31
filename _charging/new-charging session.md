@@ -1,0 +1,16 @@
+---
+_schema: default
+date: 2026-05-26T00:00:00-04:00
+location: Home
+vehicle: LRB's 2025 Mach-E GT
+energy_kwh: 49.9
+cost: 0
+start_date: 2026-05-25T00:00:00-04:00
+start_time: '22:21'
+end_time: '06:11'
+soc_start: 20
+soc_end: 80
+soc_added: 60
+miles_added: 165
+notes: ''
+---
