@@ -389,56 +389,43 @@
 <footer style="margin-top: 80px; text-align: center; font-size: 0.9rem; border-top: 1px solid var(--border); padding-top: 20px;">
   <p><a href="#">↑ Back to Top</a></p>
   <p>&copy; {{ "now" | date: "%Y" }} Robert Beier. <small>Updated: {{ "now" | date: "%m/%d/%y" }}</small></p>
-  <div id="gc-counter" style="margin-top:10px;opacity:0.55;transform:scale(0.85);transform-origin:center"></div>
+  <div id="gc-counter" style="margin-top:10px;min-height:22px"></div>
 </footer>
 
 <script>
 (function() {
-  var t = setInterval(function() {
-    if (window.goatcounter && window.goatcounter.visit_count) {
-      clearInterval(t);
-      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-      window.goatcounter.visit_count({
-        append: '#gc-counter',
-        path: 'TOTAL',
-        no_branding: false,
-        style: (dark ? `
-          div { display:inline-block !important; white-space:nowrap !important; border:1px solid rgba(163,137,244,0.2) !important; background:transparent !important; border-radius:20px !important; padding:4px 14px !important; font-size:0.68rem !important; color:#a389f4 !important; font-family:-apple-system,sans-serif !important; line-height:1.6 !important; }
-          #gcvc-for { color:#666; font-size:0.65rem; }
-          #gcvc-views { color:#a389f4; font-weight:600; font-size:0.75rem; margin:0 4px; }
-          #gcvc-by { color:#444; font-size:0.6rem; margin-left:4px; }
-        ` : `
-          div { display:inline-block; white-space:nowrap; border:1px solid #ddd; background:#f8f6ff; border-radius:20px; padding:5px 16px; font-size:0.72rem; color:#5D3FD3; font-family:-apple-system,sans-serif; line-height:1.6; }
-          #gcvc-for { color:#999; font-size:0.68rem; }
-          #gcvc-views { color:#5D3FD3; font-weight:700; font-size:0.82rem; margin:0 4px; }
-          #gcvc-by { color:#bbb; font-size:0.62rem; margin-left:4px; }
-        `)
-      });
-
-      // Re-style when theme toggles
-      window.addEventListener('themeChanged', function() {
-        var el = document.getElementById('gc-counter');
-        if (el) el.innerHTML = '';
-        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        window.goatcounter.visit_count({
-          append: '#gc-counter',
-          path: 'TOTAL',
-          no_branding: false,
-          style: (isDark ? `
-            div { display:inline-block !important; white-space:nowrap !important; border:1px solid rgba(163,137,244,0.2) !important; background:transparent !important; border-radius:20px !important; padding:4px 14px !important; font-size:0.68rem !important; color:#a389f4 !important; font-family:-apple-system,sans-serif !important; line-height:1.6 !important; }
-            #gcvc-for { color:#666; font-size:0.65rem; }
-            #gcvc-views { color:#a389f4; font-weight:600; font-size:0.75rem; margin:0 4px; }
-            #gcvc-by { color:#444; font-size:0.6rem; margin-left:4px; }
-          ` : `
-            div { display:inline-block; white-space:nowrap; border:1px solid #ddd; background:#f8f6ff; border-radius:20px; padding:5px 16px; font-size:0.72rem; color:#5D3FD3; font-family:-apple-system,sans-serif; line-height:1.6; }
-            #gcvc-for { color:#999; font-size:0.68rem; }
-            #gcvc-views { color:#5D3FD3; font-weight:700; font-size:0.82rem; margin:0 4px; }
-            #gcvc-by { color:#bbb; font-size:0.62rem; margin-left:4px; }
-          `)
-        });
-      });
-    }
-  }, 100);
+  function renderCounter() {
+    var el = document.getElementById('gc-counter');
+    if (!el) return;
+    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var pillStyle = dark
+      ? 'display:inline-block;border:1px solid rgba(163,137,244,0.2);background:transparent;border-radius:20px;padding:3px 12px;font-size:0.65rem;font-family:-apple-system,sans-serif;line-height:1.8;color:#666'
+      : 'display:inline-block;border:1px solid #e0d9f7;background:#f8f6ff;border-radius:20px;padding:3px 12px;font-size:0.65rem;font-family:-apple-system,sans-serif;line-height:1.8;color:#999';
+    var numStyle = dark
+      ? 'color:#a389f4;font-weight:600;margin:0 3px'
+      : 'color:#5D3FD3;font-weight:600;margin:0 3px';
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://robertbeier.goatcounter.com/counter/TOTAL.json');
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        try {
+          var count = JSON.parse(xhr.responseText).count;
+          el.innerHTML = '<span style="' + pillStyle + '">visits <span style="' + numStyle + '">' + count + '</span></span>';
+        } catch(e) {}
+      }
+    };
+    xhr.onerror = function() {};
+    xhr.send();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderCounter);
+  } else {
+    renderCounter();
+  }
+  window.addEventListener('themeChanged', function() {
+    document.getElementById('gc-counter').innerHTML = '';
+    renderCounter();
+  });
 })();
 </script>
 
