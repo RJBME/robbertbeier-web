@@ -389,7 +389,58 @@
 <footer style="margin-top: 80px; text-align: center; font-size: 0.9rem; border-top: 1px solid var(--border); padding-top: 20px;">
   <p><a href="#">↑ Back to Top</a></p>
   <p>&copy; {{ "now" | date: "%Y" }} Robert Beier. <small>Updated: {{ "now" | date: "%m/%d/%y" }}</small></p>
+  <div id="gc-counter" style="margin-top:10px"></div>
 </footer>
+
+<script>
+(function() {
+  var t = setInterval(function() {
+    if (window.goatcounter && window.goatcounter.visit_count) {
+      clearInterval(t);
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      window.goatcounter.visit_count({
+        append: '#gc-counter',
+        path: 'TOTAL',
+        no_branding: false,
+        style: (dark ? `
+          div { display:inline-flex; align-items:center; gap:8px; border:1px solid #3a3255; background:#1e1830; border-radius:20px; padding:4px 14px 4px 10px; font-size:0.72rem; color:#a389f4; font-family:-apple-system,sans-serif; }
+          #gcvc-for { color:#888; font-size:0.68rem; }
+          #gcvc-views { color:#a389f4; font-weight:700; font-size:0.82rem; }
+          #gcvc-by { color:#555; font-size:0.62rem; }
+        ` : `
+          div { display:inline-flex; align-items:center; gap:8px; border:1px solid #ddd; background:#f8f6ff; border-radius:20px; padding:4px 14px 4px 10px; font-size:0.72rem; color:#5D3FD3; font-family:-apple-system,sans-serif; }
+          #gcvc-for { color:#999; font-size:0.68rem; }
+          #gcvc-views { color:#5D3FD3; font-weight:700; font-size:0.82rem; }
+          #gcvc-by { color:#bbb; font-size:0.62rem; }
+        `)
+      });
+
+      // Re-style when theme toggles
+      window.addEventListener('themeChanged', function() {
+        var el = document.getElementById('gc-counter');
+        if (el) el.innerHTML = '';
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        window.goatcounter.visit_count({
+          append: '#gc-counter',
+          path: 'TOTAL',
+          no_branding: false,
+          style: (isDark ? `
+            div { display:inline-flex; align-items:center; gap:8px; border:1px solid #3a3255; background:#1e1830; border-radius:20px; padding:4px 14px 4px 10px; font-size:0.72rem; color:#a389f4; font-family:-apple-system,sans-serif; }
+            #gcvc-for { color:#888; font-size:0.68rem; }
+            #gcvc-views { color:#a389f4; font-weight:700; font-size:0.82rem; }
+            #gcvc-by { color:#555; font-size:0.62rem; }
+          ` : `
+            div { display:inline-flex; align-items:center; gap:8px; border:1px solid #ddd; background:#f8f6ff; border-radius:20px; padding:4px 14px 4px 10px; font-size:0.72rem; color:#5D3FD3; font-family:-apple-system,sans-serif; }
+            #gcvc-for { color:#999; font-size:0.68rem; }
+            #gcvc-views { color:#5D3FD3; font-weight:700; font-size:0.82rem; }
+            #gcvc-by { color:#bbb; font-size:0.62rem; }
+          `)
+        });
+      });
+    }
+  }, 100);
+})();
+</script>
 
 <script>
   /* ── Lightbox ── */
