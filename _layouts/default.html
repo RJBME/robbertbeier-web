@@ -392,40 +392,42 @@
   <div id="gc-counter" style="margin-top:10px;min-height:22px"></div>
 </footer>
 
+<style>
+  /* Force GoatCounter widget to match site theme */
+  #gc-counter div {
+    border-radius: 20px !important;
+    padding: 3px 12px !important;
+    font-size: 0.65rem !important;
+    font-family: -apple-system, sans-serif !important;
+    line-height: 1.8 !important;
+    border: 1px solid #e0d9f7 !important;
+    background: #f8f6ff !important;
+    color: #999 !important;
+    box-shadow: none !important;
+  }
+  #gc-counter #gcvc-views { color: #5D3FD3 !important; font-weight: 600 !important; }
+  #gc-counter #gcvc-for   { color: #bbb !important; font-size: 0.62rem !important; }
+  #gc-counter #gcvc-by    { color: #ccc !important; font-size: 0.6rem !important; }
+
+  [data-theme="dark"] #gc-counter div {
+    border: 1px solid rgba(163,137,244,0.2) !important;
+    background: transparent !important;
+    color: #666 !important;
+    box-shadow: none !important;
+  }
+  [data-theme="dark"] #gc-counter #gcvc-views { color: #a389f4 !important; }
+  [data-theme="dark"] #gc-counter #gcvc-for   { color: #555 !important; }
+  [data-theme="dark"] #gc-counter #gcvc-by    { color: #444 !important; }
+</style>
+
 <script>
 (function() {
-  function renderCounter() {
-    var el = document.getElementById('gc-counter');
-    if (!el) return;
-    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var pillStyle = dark
-      ? 'display:inline-block;border:1px solid rgba(163,137,244,0.2);background:transparent;border-radius:20px;padding:3px 12px;font-size:0.65rem;font-family:-apple-system,sans-serif;line-height:1.8;color:#666'
-      : 'display:inline-block;border:1px solid #e0d9f7;background:#f8f6ff;border-radius:20px;padding:3px 12px;font-size:0.65rem;font-family:-apple-system,sans-serif;line-height:1.8;color:#999';
-    var numStyle = dark
-      ? 'color:#a389f4;font-weight:600;margin:0 3px'
-      : 'color:#5D3FD3;font-weight:600;margin:0 3px';
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://robertbeier.goatcounter.com/counter/TOTAL.json');
-    xhr.onload = function() {
-      if (xhr.status === 200) {
-        try {
-          var count = JSON.parse(xhr.responseText).count;
-          el.innerHTML = '<span style="' + pillStyle + '">visits <span style="' + numStyle + '">' + count + '</span></span>';
-        } catch(e) {}
-      }
-    };
-    xhr.onerror = function() {};
-    xhr.send();
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', renderCounter);
-  } else {
-    renderCounter();
-  }
-  window.addEventListener('themeChanged', function() {
-    document.getElementById('gc-counter').innerHTML = '';
-    renderCounter();
-  });
+  var t = setInterval(function() {
+    if (window.goatcounter && window.goatcounter.visit_count) {
+      clearInterval(t);
+      window.goatcounter.visit_count({ append: '#gc-counter', path: 'TOTAL' });
+    }
+  }, 100);
 })();
 </script>
 
