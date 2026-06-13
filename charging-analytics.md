@@ -98,6 +98,14 @@ permalink: /charging-analytics/
   .section-header span { font-size: 0.75rem; color: #666; }
   [data-theme="dark"] .section-header span { color: #aaa; }
 
+  /* ── New-feature badge ── */
+  .new-badge {
+    display: inline-block;
+    font-size: 0.6rem; font-weight: 600; letter-spacing: 0.04em;
+    color: #888; margin-left: 6px; vertical-align: middle;
+    white-space: nowrap;
+  }
+
   /* ── Chart grids ── */
   .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
   .chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 18px; }
@@ -1172,7 +1180,7 @@ permalink: /charging-analytics/
 
     <div class="chart-grid-2" style="margin-top:18px">
       <div class="chart-card">
-        <p class="chart-title">Cost per Estimated Mile — Vehicle Comparison</p>
+        <p class="chart-title">Cost per Estimated Mile — Vehicle Comparison<span class="new-badge">✨ new · Jun '26</span></p>
         <div class="chart-wrap" style="height:240px"><canvas id="chartVehicleCpm"></canvas></div>
       </div>
       <div class="chart-card">
@@ -1226,7 +1234,7 @@ permalink: /charging-analytics/
         <div class="chart-wrap" style="height:230px"><canvas id="chartDuration"></canvas></div>
       </div>
       <div class="chart-card">
-        <p class="chart-title">Avg Charge Rate by Location (kW)</p>
+        <p class="chart-title">Avg Charge Rate by Location (kW)<span class="new-badge">✨ new · Jun '26</span></p>
         <span class="chart-sub">energy_kwh ÷ duration — includes idle time for Work &amp; Home overnight</span>
         <div class="chart-wrap" style="height:230px"><canvas id="chartAvgRate"></canvas></div>
       </div>
@@ -1248,7 +1256,7 @@ permalink: /charging-analytics/
 
     <!-- When do I charge — day × hour heatmap -->
     <div class="chart-full chart-card" style="margin-bottom:18px">
-      <p class="chart-title">When Do I Charge? — Hour × Day of Week</p>
+      <p class="chart-title">When Do I Charge? — Hour × Day of Week<span class="new-badge">✨ new · Jun '26</span></p>
       <span class="chart-sub">Darker = more sessions starting at that hour/day — only sessions with recorded start time</span>
       <div id="chargingWhenGrid" style="margin-top:14px;overflow-x:auto"></div>
     </div>
@@ -1386,7 +1394,7 @@ permalink: /charging-analytics/
       </div>
       <div class="chart-grid-2" style="margin-bottom:18px">
         <div class="chart-card">
-          <p class="chart-title">🌡️ Efficiency vs. Temperature</p>
+          <p class="chart-title">🌡️ Efficiency vs. Temperature<span class="new-badge">✨ new · Jun '26</span></p>
           <p class="chart-sub" style="font-size:0.68rem;color:#888">mi/kWh at each session's ambient temperature — cold weather penalty clearly visible</p>
           <div class="chart-wrap" style="height:260px"><canvas id="chartEffVsTemp"></canvas></div>
           <p style="font-size:0.62rem;color:#aaa;margin-top:6px">† Temperatures from Open-Meteo ERA5 outdoor ambient. Home sessions charged in garage — actual battery temp may be warmer in winter, cooler in summer.</p>
