@@ -477,6 +477,7 @@ permalink: /charging/
     <div class="card">
       <h4 style="margin:0 0 15px 0; font-size:0.9rem;">Energy Distribution (MWh)</h4>
       <canvas id="energyChart" height="200"></canvas>
+      <div id="donutLegend" style="display:flex;justify-content:center;gap:24px;margin-top:14px;flex-wrap:wrap"></div>
     </div>
     <div class="card">
       <h4 style="margin:0 0 15px 0; font-size:0.9rem;">Ranked Energy (kWh)</h4>
@@ -544,38 +545,44 @@ permalink: /charging/
   const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
   const getThemeColor = () => isDark() ? '#eee' : '#333';
 
+  const donutData = [
+    { label: 'Work',       val: {{ work_kwh | divided_by: 1000.0 }}, color: '#0288d1' },
+    { label: 'Home/Other', val: {{ total_kwh | minus: work_kwh | divided_by: 1000.0 }}, color: '#7b1fa2' }
+  ];
+  const donutTotal = donutData.reduce((s, d) => s + d.val, 0);
+
   const donutChart = new Chart(document.getElementById('energyChart'), {
     type: 'doughnut',
     data: {
-      labels: ['Work', 'Home/Other'],
+      labels: donutData.map(d => d.label),
       datasets: [{
-        data: [{{ work_kwh | divided_by: 1000.0 }}, {{ total_kwh | minus: work_kwh | divided_by: 1000.0 }}],
-        backgroundColor: ['#0288d1', '#7b1fa2'],
+        data: donutData.map(d => d.val),
+        backgroundColor: donutData.map(d => d.color),
         borderWidth: 0
       }]
     },
     options: {
-      cutout: '68%',
-      layout: { padding: 32 },
+      cutout: '65%',
+      layout: { padding: 8 },
       plugins: {
         legend: { display: false },
-        datalabels: {
-          display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-          anchor: 'end',
-          align: 'end',
-          offset: 12,
-          color: ctx => ['#0288d1', '#7b1fa2'][ctx.dataIndex],
-          font: { weight: '700', size: 13 },
-          formatter: (v, ctx) => {
-            const label = ctx.chart.data.labels[ctx.dataIndex];
-            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-            const pct   = total > 0 ? Math.round(v / total * 100) : 0;
-            return label + '\n' + v.toFixed(2) + ' MWh (' + pct + '%)';
-          }
-        }
+        datalabels: { display: false }
       }
     }
   });
+
+  (function buildDonutLegend() {
+    const legend = document.getElementById('donutLegend');
+    donutData.forEach(d => {
+      const pct = donutTotal > 0 ? Math.round(d.val / donutTotal * 100) : 0;
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex;align-items:center;gap:7px;font-size:0.82rem;';
+      item.innerHTML = `<span style="width:11px;height:11px;border-radius:3px;background:${d.color};flex-shrink:0;display:inline-block"></span>`
+        + `<span style="color:var(--text)">${d.label}</span>`
+        + `<span style="color:#888;font-weight:600">${d.val.toFixed(2)} MWh (${pct}%)</span>`;
+      legend.appendChild(item);
+    });
+  })();
 
   const rawData = [
     { label: 'Work',   val: {{ work_kwh }},   color: '#0288d1' },
