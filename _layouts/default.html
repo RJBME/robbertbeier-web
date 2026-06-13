@@ -28,12 +28,9 @@
 
     html { background-color: var(--bg); }
 
-    /* Shield the Dynamic Island / notch zone from scrolling content.
-       This fixed layer sits above everything and matches the page background,
-       so content scrolling through the safe area is masked rather than visible
-       next to the Dynamic Island in web app (PWA) mode. */
-    html::before {
-      content: '';
+    /* Shield the Dynamic Island / notch zone — real DOM element, more
+       reliable than ::before pseudo-element in Safari PWA mode. */
+    #di-shield {
       position: fixed;
       top: 0; left: 0; right: 0;
       height: env(safe-area-inset-top, 0px);
@@ -306,6 +303,7 @@
   </style>
 </head>
 <body>
+<div id="di-shield"></div>
 
 <nav>
   <div class="nav-links">
@@ -466,12 +464,15 @@
   function closeMobileMenu() { document.getElementById('mobile-menu').classList.remove('open'); document.body.style.overflow = ''; }
 
   /* ── Theme ── */
-  const toggle = document.getElementById('theme-toggle');
+  const toggle  = document.getElementById('theme-toggle');
+  const shield  = document.getElementById('di-shield');
 
   const setTheme = (t) => {
     document.documentElement.setAttribute('data-theme', t);
     const label = t === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
     toggle.textContent = label;
+    // Keep shield colour in sync with the page background
+    if (shield) shield.style.background = t === 'dark' ? '#1a1a1a' : '#f8f8f8';
     localStorage.setItem('theme', t);
     window.dispatchEvent(new Event('themeChanged'));
   };
