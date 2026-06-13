@@ -439,9 +439,14 @@ document.addEventListener('click', function(e) {
     rows.sort((a, b) => {
       const av = a.getAttribute(attr) || '';
       const bv = b.getAttribute(attr) || '';
-      const an = parseFloat(av), bn = parseFloat(bv);
-      const cmp = isNaN(an) || isNaN(bn) ? av.localeCompare(bv) : an - bn;
-      return sortDir === 'asc' ? cmp : -cmp;
+      // Date column: ISO string compare (YYYY-MM-DDThh:mm is lexicographically sortable)
+      if (col === 'date') {
+        return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      // Numeric columns: missing/empty treated as 0
+      const an = parseFloat(av) || 0;
+      const bn = parseFloat(bv) || 0;
+      return sortDir === 'asc' ? an - bn : bn - an;
     });
     rows.forEach(r => tbody.appendChild(r));
   }
