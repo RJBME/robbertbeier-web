@@ -174,9 +174,6 @@ permalink: /charging-analytics/
     z-index: 490;           /* intentionally BELOW site nav (z-index:500) */
     background: var(--bg);
     border-bottom: 2px solid var(--dash-border);
-    box-shadow: 0 3px 16px rgba(0,0,0,0.12);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     flex-direction: column;
     gap: 0;
   }
@@ -1458,10 +1455,12 @@ permalink: /charging-analytics/
 <!-- ─────────────────────────────────────────────────── -->
 <!--  SCRIPTS                                           -->
 <!-- ─────────────────────────────────────────────────── -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+{% assign has_geo = false %}
+{% for loc in site.data.locations %}{% if loc.lat and loc.lng %}{% assign has_geo = true %}{% break %}{% endif %}{% endfor %}
+{% if has_geo %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>{% endif %}
 
 <script>
 /* ════════════════════════════════════════════════════════
@@ -1947,8 +1946,15 @@ function toggleVehicle(v) {
    REBUILD — called on init and on vehicle filter change
    ════════════════════════════════════════════════════════ */
 function rebuild(sl) {
-  // Destroy all tracked chart instances and clear the registry
-  allCharts.forEach(c => { try { c.destroy(); } catch(e) {} });
+  // Destroy all tracked chart instances — null plugin callbacks first to drop
+  // any closures holding DOM/data references before Chart.js teardown runs
+  allCharts.forEach(c => {
+    try {
+      if (c.options?.plugins?.legend) c.options.plugins.legend.onClick = null;
+      if (c.options?.plugins?.tooltip) c.options.plugins.tooltip.callbacks = {};
+      c.destroy();
+    } catch(e) {}
+  });
   allCharts = [];
 
   // Drop any sessions that failed enrichment (missing month = bad date)
@@ -5088,12 +5094,17 @@ function buildWhenDoICharge(sl) {
 
   // Tooltip wiring
   const hmTip = document.getElementById('hm-tip');
+  let _hmRafId = null;
   grid.addEventListener('mouseover', e => {
     const t = e.target.dataset.tip;
     if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
   });
   grid.addEventListener('mousemove', e => {
-    hmTip.style.transform = `translate3d(${e.clientX+14}px,${e.clientY-34}px,0)`;
+    if (_hmRafId) return;
+    _hmRafId = requestAnimationFrame(() => {
+      _hmRafId = null;
+      hmTip.style.transform = `translate3d(${e.clientX+14}px,${e.clientY-34}px,0)`;
+    });
   });
   grid.addEventListener('mouseout', e => {
     if (e.target.dataset.tip) hmTip.style.display = 'none';
@@ -5486,13 +5497,9 @@ function initStickyBar() {
   }
 
   _updateTop();
-  console.log('[EV Sticky] initial nav height:', document.querySelector('nav')?.offsetHeight, '→ top:', document.documentElement.style.getPropertyValue('--sticky-bar-top'));
   window.addEventListener('load', () => {
     _updateTop();
-    setTimeout(() => {
-      _updateTop();
-      console.log('[EV Sticky] post-load nav height:', document.querySelector('nav')?.offsetHeight, '→ top:', document.documentElement.style.getPropertyValue('--sticky-bar-top'));
-    }, 500);
+    setTimeout(_updateTop, 500);
   }, { once: true });
   window.addEventListener('resize', _updateTop, { passive: true });
 
@@ -6030,13 +6037,17 @@ function buildHeatmap(sl) {
 
     /* Tooltip — delegated on the container, wired once */
     var hmTip = document.getElementById('hm-tip');
+    var _tipRaf = null;
     el.addEventListener('mouseover', function(e) {
       var t = e.target.dataset.tip;
       if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
     });
     el.addEventListener('mousemove', function(e) {
-      // translate3d is compositor-only — no layout recalc on every mousemove
-      hmTip.style.transform = 'translate3d(' + (e.clientX + 14) + 'px,' + (e.clientY - 34) + 'px,0)';
+      if (_tipRaf) return;
+      _tipRaf = requestAnimationFrame(function() {
+        _tipRaf = null;
+        hmTip.style.transform = 'translate3d(' + (e.clientX + 14) + 'px,' + (e.clientY - 34) + 'px,0)';
+      });
     });
     el.addEventListener('mouseout', function(e) {
       if (e.target.dataset.tip) hmTip.style.display = 'none';
