@@ -265,7 +265,7 @@
       body { padding: 1.2rem; padding-top: calc(1.2rem + env(safe-area-inset-top, 0px)); }
       .nav-links { display: none; }
       #hamburger { display: block; }
-      #theme-toggle { display: none; }
+      #theme-toggle { font-size: 0.75rem; padding: 4px 10px; }
     }
 
     /* ── Global elements ── */
@@ -374,9 +374,6 @@
         <span class="mobile-ref-sub">EV deep dive visual analysis</span>
       </span>
     </a>
-    <div class="mobile-theme-btn">
-      <button id="mobile-theme-toggle" onclick="mobileThemeToggle()">🌙 Dark Mode</button>
-    </div>
   </div>
 </div>
 
@@ -457,21 +454,15 @@
   function closeMobileMenu() { document.getElementById('mobile-menu').classList.remove('open'); document.body.style.overflow = ''; }
 
   /* ── Theme ── */
-  const toggle       = document.getElementById('theme-toggle');
-  const mobileToggle = document.getElementById('mobile-theme-toggle');
+  const toggle = document.getElementById('theme-toggle');
 
   const setTheme = (t) => {
     document.documentElement.setAttribute('data-theme', t);
     const label = t === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-    toggle.textContent       = label;
-    mobileToggle.textContent = label;
+    toggle.textContent = label;
     localStorage.setItem('theme', t);
     window.dispatchEvent(new Event('themeChanged'));
   };
-
-  function mobileThemeToggle() {
-    setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-  }
 
   if (localStorage.getItem('theme') === 'dark' ||
       (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
