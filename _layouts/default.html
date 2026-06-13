@@ -262,7 +262,7 @@
 
     /* ── Responsive (phones < 768 px) ── */
     @media (max-width: 767px) {
-      body { padding: 1.2rem; }
+      body { padding: 1.2rem; padding-top: calc(1.2rem + env(safe-area-inset-top, 0px)); }
       .nav-links { display: none; }
       #hamburger { display: block; }
       #theme-toggle { display: none; }
