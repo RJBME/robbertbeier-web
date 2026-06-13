@@ -28,6 +28,20 @@
 
     html { background-color: var(--bg); }
 
+    /* Shield the Dynamic Island / notch zone from scrolling content.
+       This fixed layer sits above everything and matches the page background,
+       so content scrolling through the safe area is masked rather than visible
+       next to the Dynamic Island in web app (PWA) mode. */
+    html::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: env(safe-area-inset-top, 0px);
+      background: var(--bg);
+      z-index: 99999;
+      pointer-events: none;
+    }
+
     body {
       background-color: var(--bg);
       color: var(--text);
