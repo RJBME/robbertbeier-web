@@ -555,19 +555,23 @@ permalink: /charging/
       }]
     },
     options: {
-      cutout: '70%',
+      cutout: '68%',
+      layout: { padding: 32 },
       plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: getThemeColor(), usePointStyle: false, boxWidth: 14, padding: 16 }
-        },
+        legend: { display: false },
         datalabels: {
           display: ctx => ctx.dataset.data[ctx.dataIndex] > 0,
-          color: '#ffffff',
-          formatter: (v) => v.toFixed(2) + ' MWh',
-          font: { weight: 'bold', size: 13 },
-          textShadowColor: 'rgba(0,0,0,0.6)',
-          textShadowBlur: 5
+          anchor: 'end',
+          align: 'end',
+          offset: 12,
+          color: ctx => ['#0288d1', '#7b1fa2'][ctx.dataIndex],
+          font: { weight: '700', size: 13 },
+          formatter: (v, ctx) => {
+            const label = ctx.chart.data.labels[ctx.dataIndex];
+            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+            const pct   = total > 0 ? Math.round(v / total * 100) : 0;
+            return label + '\n' + v.toFixed(2) + ' MWh (' + pct + '%)';
+          }
         }
       }
     }
@@ -601,7 +605,6 @@ permalink: /charging/
 
   window.addEventListener('themeChanged', () => {
     const color = getThemeColor();
-    donutChart.options.plugins.legend.labels.color = color;
     donutChart.update();
     barChart.options.scales.y.ticks.color = color;
     barChart.options.scales.x.grid.color = isDark() ? '#444' : '#ddd';
