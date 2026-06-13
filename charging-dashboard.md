@@ -476,8 +476,14 @@ permalink: /charging/
   <div class="media-grid">
     <div class="card">
       <h4 style="margin:0 0 15px 0; font-size:0.9rem;">Energy Distribution (MWh)</h4>
-      <canvas id="energyChart" height="200"></canvas>
-      <div id="donutLegend" style="display:flex;justify-content:center;gap:24px;margin-top:14px;flex-wrap:wrap"></div>
+      <div style="position:relative;display:inline-block;width:100%">
+        <canvas id="energyChart" height="200"></canvas>
+        <div id="donutCenter" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;line-height:1.2">
+          <div style="font-size:1.3rem;font-weight:700;color:var(--text)" id="donutTotalVal"></div>
+          <div style="font-size:0.7rem;color:#888">MWh total</div>
+        </div>
+      </div>
+      <div id="donutLegend" style="display:flex;justify-content:center;gap:20px;margin-top:10px;flex-wrap:wrap"></div>
     </div>
     <div class="card">
       <h4 style="margin:0 0 15px 0; font-size:0.9rem;">Ranked Energy (kWh)</h4>
@@ -572,12 +578,13 @@ permalink: /charging/
   });
 
   (function buildDonutLegend() {
+    document.getElementById('donutTotalVal').textContent = donutTotal.toFixed(2);
     const legend = document.getElementById('donutLegend');
     donutData.forEach(d => {
       const pct = donutTotal > 0 ? Math.round(d.val / donutTotal * 100) : 0;
       const item = document.createElement('div');
-      item.style.cssText = 'display:flex;align-items:center;gap:7px;font-size:0.82rem;';
-      item.innerHTML = `<span style="width:11px;height:11px;border-radius:3px;background:${d.color};flex-shrink:0;display:inline-block"></span>`
+      item.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:0.78rem;';
+      item.innerHTML = `<span style="width:9px;height:9px;border-radius:2px;background:${d.color};flex-shrink:0;display:inline-block"></span>`
         + `<span style="color:var(--text)">${d.label}</span>`
         + `<span style="color:#888;font-weight:600">${d.val.toFixed(2)} MWh (${pct}%)</span>`;
       legend.appendChild(item);
