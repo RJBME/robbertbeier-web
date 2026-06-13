@@ -605,23 +605,37 @@ permalink: /charging/
     type: 'bar',
     data: {
       labels: rawData.map(d => d.label),
-      datasets: [{ data: rawData.map(d => d.val), backgroundColor: rawData.map(d => d.color), borderRadius: 4 }]
+      datasets: [{ data: rawData.map(d => d.val), backgroundColor: rawData.map(d => d.color), borderRadius: 6 }]
     },
     options: {
       indexAxis: 'y',
-      plugins: { legend: { display: false }, datalabels: { display: false } },
+      layout: { padding: { right: 16 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          display: true,
+          anchor: 'end',
+          align: 'end',
+          color: ctx => rawData[ctx.dataIndex].color,
+          font: { weight: '600', size: 12 },
+          formatter: v => v >= 1000 ? (v / 1000).toFixed(2) + ' MWh' : Math.round(v) + ' kWh'
+        }
+      },
       scales: {
-        x: { grid: { color: isDark() ? '#444' : '#ddd' }, ticks: { color: '#888' }, display: true },
-        y: { grid: { display: false }, ticks: { color: getThemeColor() } }
+        x: { display: false, grid: { display: false } },
+        y: {
+          grid: { display: false },
+          ticks: {
+            color: ctx => rawData[ctx.index]?.color ?? getThemeColor(),
+            font: { weight: '600' }
+          }
+        }
       }
     }
   });
 
   window.addEventListener('themeChanged', () => {
-    const color = getThemeColor();
     donutChart.update();
-    barChart.options.scales.y.ticks.color = color;
-    barChart.options.scales.x.grid.color = isDark() ? '#444' : '#ddd';
     barChart.update();
   });
 </script>
