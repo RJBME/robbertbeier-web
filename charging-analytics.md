@@ -1745,7 +1745,7 @@ function countUp(el, target, fmt, dur) {
 }
 
 const allVehicles = [...new Set(sessions.map(s => s.vehicle))].sort();
-let activeVehicle = 'all';
+let activeVehicles = new Set(['all']); // 'all' means no individual filter
 let allCharts = [];
 let _hmRender = null;        // current heatmap render fn — updated on each rebuild
 let _heatmapWired = false;  // event listeners on heatmapContainer wired only once
@@ -1785,10 +1785,10 @@ function buildVehicleFilter() {
     el.innerHTML = '';
     ['all', ...allVehicles].forEach(v => {
       const btn = document.createElement('button');
-      btn.className = 'vf-btn' + (v === activeVehicle ? ' active' : '');
+      btn.className = 'vf-btn' + (isVehicleActive(v) ? ' active' : '');
       btn.textContent = v === 'all' ? 'All Vehicles' : v;
       btn.dataset.vehicle = v;
-      btn.onclick = () => setVehicle(v);
+      btn.onclick = () => toggleVehicle(v);
       el.appendChild(btn);
     });
 
@@ -1798,10 +1798,10 @@ function buildVehicleFilter() {
       stickyRow.querySelectorAll('.vf-btn').forEach(b => b.remove());
       ['all', ...allVehicles].forEach(v => {
         const btn = document.createElement('button');
-        btn.className = 'vf-btn' + (v === activeVehicle ? ' active' : '');
+        btn.className = 'vf-btn' + (isVehicleActive(v) ? ' active' : '');
         btn.textContent = v === 'all' ? 'All Vehicles' : v;
         btn.dataset.vehicle = v;
-        btn.onclick = () => setVehicle(v);
+        btn.onclick = () => toggleVehicle(v);
         stickyRow.appendChild(btn);
       });
     }
@@ -1843,14 +1843,39 @@ function buildVehicleFilter() {
   }
 }
 
-function setVehicle(v) {
-  activeVehicle = v;
+function isVehicleActive(v) {
+  if (v === 'all') return activeVehicles.has('all');
+  return !activeVehicles.has('all') && activeVehicles.has(v);
+}
+
+function toggleVehicle(v) {
+  if (v === 'all') {
+    // Reset to all-vehicles mode
+    activeVehicles = new Set(['all']);
+  } else {
+    // Remove the 'all' sentinel and toggle this vehicle
+    activeVehicles.delete('all');
+    if (activeVehicles.has(v)) {
+      activeVehicles.delete(v);
+      // If nothing selected, fall back to all
+      if (activeVehicles.size === 0) activeVehicles = new Set(['all']);
+    } else {
+      activeVehicles.add(v);
+    }
+    // If every individual vehicle is selected, treat as 'all'
+    if (allVehicles.every(veh => activeVehicles.has(veh))) {
+      activeVehicles = new Set(['all']);
+    }
+  }
+
   // Sync active state on ALL .vf-btn elements (inline + sticky)
   document.querySelectorAll('.vf-btn').forEach(b => {
-    const label = v === 'all' ? 'All Vehicles' : v;
-    b.classList.toggle('active', b.textContent === label);
+    b.classList.toggle('active', isVehicleActive(b.dataset.vehicle));
   });
-  _lastSl = v === 'all' ? sessions : sessions.filter(s => s.vehicle === v);
+
+  _lastSl = activeVehicles.has('all')
+    ? sessions
+    : sessions.filter(s => activeVehicles.has(s.vehicle));
 
   // ── Scroll preservation across rebuild ──
   // Strategy: find the section-header currently closest to (but below) the sticky
@@ -3274,8 +3299,8 @@ mkChart('chartHistogram', {
         `"All sites" scenario assumes solar/storage at every charging location — theoretical best-case. ` +
         `Source: IPCC AR6 WG3 §6.4, NREL lifecycle LCA 2022.`;
     }
-    const isLRB   = activeVehicle && activeVehicle.includes('LRB');
-    const isMixed = !activeVehicle || activeVehicle === 'all';
+    const isLRB   = !activeVehicles.has('all') && activeVehicles.size === 1 && [...activeVehicles][0].includes('LRB');
+    const isMixed = activeVehicles.has('all') || activeVehicles.size > 1;
     const baseNote = document.getElementById('co2BaselineNote');
     if (baseNote) {
       if (isMixed)    baseNote.textContent = 'RJB → 2023 Escape (24.8 MPG actual) · LRB → 2016 Explorer (23.0 MPG)';
@@ -5283,7 +5308,7 @@ function buildPerspectiveCards(sl) {
   // ── Core stats ───────────────────────────────────────
   const totalKwh     = sl.reduce((a,s) => a + s.kwh, 0);
   const totalGasEquiv= sl.reduce((a,s) => a + s.gasEquiv, 0);
-  const totalGallons = totalGasEquiv / (activeVehicle && activeVehicle.includes('LRB') ? 3.26 : 3.26);
+  const totalGallons = totalGasEquiv / 3.26;
   // gallons = what we would have pumped = gasEquiv $ / avg gas price
   // More accurately: sum of (estMiles / mpg) per session
   const totalGallonsAvoided = sl.reduce((a,s) => {
@@ -5857,8 +5882,8 @@ function buildHeatmap(sl) {
     'ChargePoint': 'ChargePoint', 'Blink': 'Blink', 'Rivian': 'Rivian', 'Other': 'Public/Other'
   };
 
-  // Are we in single-vehicle mode?
-  var singleVehicle = activeVehicle && activeVehicle !== 'all';
+  // Are we in single-vehicle mode? (exactly one vehicle selected, not 'all')
+  var singleVehicle = !activeVehicles.has('all') && activeVehicles.size === 1;
 
   function getPalette(bucket) {
     var theme = isDark() ? 'dark' : 'light';
@@ -5889,7 +5914,7 @@ function buildHeatmap(sl) {
 
   function render() {
     var p = isDark() ? PALS.dark : PALS.light;
-    singleVehicle = activeVehicle && activeVehicle !== 'all';
+    singleVehicle = !activeVehicles.has('all') && activeVehicles.size === 1;
 
     /* Month labels */
     var mHtml = '<div style="display:flex;margin-left:' + DOW_LEFT + 'px;margin-bottom:4px;">';
