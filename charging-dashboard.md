@@ -609,19 +609,27 @@ permalink: /charging/
     },
     options: {
       indexAxis: 'y',
-      layout: { padding: { right: 16 } },
+      layout: { padding: { right: 80 } },
       plugins: {
         legend: { display: false },
         datalabels: {
           display: true,
-          anchor: 'end',
-          align: 'start',
-          offset: 8,
+          anchor: ctx => {
+            const max = Math.max(...rawData.map(d => d.val));
+            return rawData[ctx.dataIndex].val / max > 0.25 ? 'center' : 'end';
+          },
+          align: ctx => {
+            const max = Math.max(...rawData.map(d => d.val));
+            return rawData[ctx.dataIndex].val / max > 0.25 ? 'center' : 'end';
+          },
+          offset: 6,
           color: ctx => {
-            const hex = rawData[ctx.dataIndex].color.replace('#','');
+            const max = Math.max(...rawData.map(d => d.val));
+            const d = rawData[ctx.dataIndex];
+            if (d.val / max <= 0.25) return d.color;
+            const hex = d.color.replace('#','');
             const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-            const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
-            return lum > 0.45 ? '#222' : '#fff';
+            return (0.299*r + 0.587*g + 0.114*b) / 255 > 0.45 ? '#222' : '#fff';
           },
           font: { weight: '600', size: 12 },
           formatter: v => v >= 1000 ? (v / 1000).toFixed(2) + ' MWh' : Math.round(v) + ' kWh'
