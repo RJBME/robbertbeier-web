@@ -48,6 +48,14 @@ permalink: /trip-calculator/
   }
   .quick-row button:hover { border-color: var(--link); color: var(--link); }
 
+  .wp-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .wp-row input[type=text] { flex: 1; min-width: 0; padding: 8px 11px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.82rem; }
+  .wp-row .wp-charge { display: flex; align-items: center; gap: 4px; font-size: 0.68rem; color: #888; white-space: nowrap; }
+  .wp-row .wp-charge input { width: 52px; padding: 8px 6px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.82rem; text-align: center; }
+  .wp-row .wp-del { border: none; background: none; color: #ef4444; font-size: 1.1rem; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .stop.wp-stop .stop-num { background: #16a34a; }
+  .net-wp { background: #16a34a20; color: #16a34a; }
+
   .opt-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; margin-top: 16px; }
   .opt-row .field { flex: 1; min-width: 130px; }
   .check { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--text); }
@@ -181,6 +189,12 @@ permalink: /trip-calculator/
         <input id="endAddr" type="text" placeholder="Address, city, or place" autocomplete="off">
         <div class="quick-row"><button type="button" onclick="useHome('endAddr')">🏠 Home</button></div>
       </div>
+    </div>
+
+    <div class="field full" style="margin-top:12px">
+      <label>Waypoints <span style="font-weight:400;text-transform:none">(optional — e.g. an overnight hotel with charging)</span></label>
+      <div id="waypointList"></div>
+      <div class="quick-row"><button type="button" onclick="addWaypoint()">＋ Add waypoint</button></div>
     </div>
 
     <div class="opt-row">
@@ -388,6 +402,26 @@ function vehModel(name){ return MODEL.veh[name] || { baseEff: MODEL.fleetEff, tR
 const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
 function useHome(id){ document.getElementById(id).value = HOME.label; document.getElementById(id).dataset.home = '1'; }
 
+// ── Waypoints (optional intermediate stops, e.g. an overnight hotel) ──
+function addWaypoint(addr, charge){
+  const row = document.createElement('div');
+  row.className = 'wp-row';
+  row.innerHTML =
+    `<input type="text" class="wp-addr" placeholder="Waypoint — address or place">`
+    + `<span class="wp-charge">charge to <input type="number" class="wp-pct" min="0" max="100" placeholder="—">%</span>`
+    + `<button type="button" class="wp-del" title="Remove">×</button>`;
+  row.querySelector('.wp-addr').value = addr || '';
+  if (charge != null) row.querySelector('.wp-pct').value = charge;
+  row.querySelector('.wp-del').onclick = () => row.remove();
+  document.getElementById('waypointList').appendChild(row);
+}
+function getWaypoints(){
+  return [...document.querySelectorAll('#waypointList .wp-row')].map(r => ({
+    addr: r.querySelector('.wp-addr').value.trim(),
+    chargeTo: parseFloat(r.querySelector('.wp-pct').value)
+  })).filter(w => w.addr);
+}
+
 function setStatus(msg, isErr){
   const el = document.getElementById('status');
   el.textContent = msg || '';
@@ -406,12 +440,21 @@ async function geocode(q, el){
   return { lat: +j[0].lat, lon: +j[0].lon, name: j[0].display_name };
 }
 
-async function route(a, b){
-  const url = `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=full&geometries=geojson&alternatives=3`;
+// Route through an ordered list of points. With exactly 2 points we ask for
+// alternatives; with waypoints we get one route. legMiles[i] = cumulative miles
+// at input point i (so waypoint SoC anchors land at the right distance).
+async function route(points){
+  const coordStr = points.map(p => `${p.lon},${p.lat}`).join(';');
+  const alt = points.length === 2;
+  const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&alternatives=${alt ? '3' : 'false'}`;
   const r = await fetch(url);
   const j = await r.json();
   if (!j.routes || !j.routes.length) throw new Error('No driving route found between those points.');
-  return j.routes.slice(0, 3).map(rt => ({ miles: rt.distance / 1609.34, hours: rt.duration / 3600, geometry: rt.geometry }));
+  return j.routes.slice(0, alt ? 3 : 1).map(rt => {
+    const legMiles = [0]; let acc = 0;
+    (rt.legs || []).forEach(l => { acc += l.distance / 1609.34; legMiles.push(acc); });
+    return { miles: rt.distance / 1609.34, hours: rt.duration / 3600, geometry: rt.geometry, legMiles };
+  });
 }
 
 async function tripTemp(lat, lon, dateStr){
@@ -455,15 +498,20 @@ async function planTrip(){
     setStatus('Finding locations…');
     const [A, B] = await Promise.all([ geocode(startEl.value.trim(), startEl), geocode(endEl.value.trim(), endEl) ]);
 
+    // Geocode any waypoints, keep their charge-to %
+    const wpInputs = getWaypoints();
+    const wpGeo = await Promise.all(wpInputs.map(w => geocode(w.addr)));
+    const waypoints = wpInputs.map((w, i) => ({ addr: w.addr, chargeTo: w.chargeTo, lat: wpGeo[i].lat, lon: wpGeo[i].lon }));
+
     setStatus('Planning route…');
-    const routes = await route(A, B);
+    const routes = await route([A, ...waypoints, B]);
 
     const mid = { lat: (A.lat + B.lat) / 2, lon: (A.lon + B.lon) / 2 };
     setStatus('Checking the weather…');
     const temp = await tripTemp(mid.lat, mid.lon, document.getElementById('depDate').value);
 
     setStatus('');
-    STATE = { A, B, routes, temp, sel: 0 };
+    STATE = { A, B, routes, temp, sel: 0, waypoints };
     renderRouteOptions();
     compute(A, B, routes[0], temp);
     document.getElementById('results').style.display = 'block';
@@ -737,17 +785,18 @@ function chargeMinutes(from, to, batt, capKW){
   return mins;
 }
 
-// Greedy plan: stop as far along as range-to-buffer allows, prefer fast/preferred
-// chargers, charge only enough to reach the next stop or the destination + buffer.
-function planStops(destMi, effEff, batt, startSoc, reserve, chargers){
+// Greedy plan for ONE segment [fromMi, toMi]: stop as far along as range-to-buffer
+// allows, prefer fast/preferred chargers, charge only enough to reach the next stop
+// or the segment end + buffer.
+function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt){
   const milesPerPct = batt * effEff / 100;
   const stops = [];
-  let pos = 0, soc = startSoc, guard = 0;
-  const usable = chargers.filter(c => c.alongMi > 1 && c.alongMi < destMi - 1);
+  let pos = fromMi, soc = startSoc, guard = 0;
+  const usable = chargers.filter(c => c.alongMi > fromMi + 1 && c.alongMi < toMi - 1);
   while (guard++ < 30){  // enough for cross-country
     const reach = pos + (soc - reserve) * milesPerPct;
-    if (destMi <= reach){
-      return { needed: stops.length > 0, feasible: true, stops, arriveSoc: soc - (destMi - pos)/milesPerPct };
+    if (toMi <= reach){
+      return { feasible: true, stops, arriveSoc: soc - (toMi - pos)/milesPerPct };
     }
     // Candidates: reachable while keeping a 2% cushion above reserve; if none,
     // relax to the hard reserve floor before giving up.
@@ -775,18 +824,43 @@ function planStops(destMi, effEff, batt, startSoc, reserve, chargers){
     cluster.sort((a,b) => (espeed(b)-espeed(a)) || (NET_PREF[b.net]-NET_PREF[a.net]) || (b.alongMi-a.alongMi));
     const c = cluster[0];
     const arriveSoc = soc - (c.alongMi - pos)/milesPerPct;
-    const remAfter = destMi - c.alongMi;
-    const finishSoc = reserve + remAfter / milesPerPct;        // charge needed to finish + buffer
-    // If the destination is reachable on this one charge, top up just enough to
-    // finish (even into the taper — needed before a long gap). Otherwise charge
-    // to the efficient 80% ceiling and stop again.
+    const remAfter = toMi - c.alongMi;
+    const finishSoc = reserve + remAfter / milesPerPct;        // charge needed to reach segment end + buffer
+    // If the segment end is reachable on this one charge, top up just enough
+    // (even into the taper — needed before a long gap). Otherwise charge to the
+    // efficient 80% ceiling and stop again.
     let target = finishSoc <= 100 ? Math.ceil(finishSoc) : 80;
     target = Math.min(100, Math.max(target, arriveSoc + 2));
     stops.push({ ...c, arriveSoc, target, addedKWh: (target-arriveSoc)/100*batt,
       mins: chargeMinutes(arriveSoc, target, batt, c.maxKW) });
     pos = c.alongMi; soc = target;
   }
-  return { needed: true, feasible: false, stops };
+  return { feasible: false, stops, gapFrom: Math.round(pos), reachMi: Math.round(pos + (soc-reserve)*milesPerPct) };
+}
+
+// Full journey: split into segments at charging waypoints (e.g. an overnight
+// hotel where you AC-charge to X%). Each charging waypoint resets SoC for the
+// next segment. DCFC stops and waypoint charges are returned in route order.
+function planJourney(totalMi, legMiles, waypoints, effEff, batt, startSoc, reserve, chargers){
+  const anchors = (waypoints || [])
+    .map((w, i) => ({ ...w, mile: (legMiles && legMiles[i+1] != null) ? legMiles[i+1] : null }))
+    .filter(w => w.mile != null && !isNaN(w.chargeTo) && w.chargeTo > 0)
+    .sort((a,b) => a.mile - b.mile);
+  const all = [];
+  let segStart = 0, soc = startSoc;
+  for (const wp of anchors){
+    const r = planSegment(segStart, wp.mile, soc, reserve, chargers, effEff, batt);
+    r.stops.forEach(s => all.push(s));
+    if (!r.feasible) return { needed: true, feasible: false, stops: all, gapFrom: r.gapFrom, reachMi: r.reachMi };
+    all.push({ waypoint: true, name: wp.addr, net: 'AC', alongMi: wp.mile,
+      arriveSoc: r.arriveSoc, target: wp.chargeTo, lat: wp.lat, lon: wp.lon });
+    soc = wp.chargeTo;
+    segStart = wp.mile;
+  }
+  const rf = planSegment(segStart, totalMi, soc, reserve, chargers, effEff, batt);
+  rf.stops.forEach(s => all.push(s));
+  if (!rf.feasible) return { needed: true, feasible: false, stops: all, gapFrom: rf.gapFrom, reachMi: rf.reachMi };
+  return { needed: all.length > 0, feasible: true, stops: all, arriveSoc: rf.arriveSoc };
 }
 
 let CHARGER_LAYER = [];
@@ -804,8 +878,10 @@ async function updateChargingPlan(rt, e, temp){
 
   const startSoc = Math.max(0, Math.min(100, +socEl.value));
   const reserve = Math.max(0, Math.min(50, +document.getElementById('reserve').value || 0));
-  // Reachable without charging? Then no key or API call is needed.
-  if (e.miles <= (startSoc - reserve)/100 * e.batt * e.effEff){
+  const waypoints = (STATE && STATE.waypoints) || [];
+  const chargingWps = waypoints.filter(w => !isNaN(w.chargeTo) && w.chargeTo > 0);
+  // Reachable without charging AND no charge-waypoints? Then no key/API call needed.
+  if (!chargingWps.length && e.miles <= (startSoc - reserve)/100 * e.batt * e.effEff){
     card.style.display = 'block';
     body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
     return;
@@ -833,11 +909,38 @@ async function updateChargingPlan(rt, e, temp){
     body.innerHTML = `<div class="stops-note">No preferred DCFC (Tesla / EA / ChargePoint, ≥50 kW) found near this route in Open Charge Map.</div>`;
     return;
   }
-  // One-way distance for stop planning even if round trip is on
-  const destMi = rt.miles;
-  const plan = planStops(destMi, e.effEff, e.batt, startSoc, reserve, chargers);
+  // Plan the one-way journey (segment by segment across any charge-waypoints)
+  const plan = planJourney(rt.miles, rt.legMiles, waypoints, e.effEff, e.batt, startSoc, reserve, chargers);
   renderStops(plan, e, reserve, document.getElementById('roundTrip').checked);
-  drawChargerMarkers(plan.stops);
+  drawChargerMarkers(plan.stops, waypoints);
+  rerouteThroughStops(rt, plan, e);
+}
+
+// Redraw the map route so it actually passes through the chosen stops + waypoints
+// (the energy plan is computed on the direct corridor; detours are a few mi each).
+let DRIVE_DIST_NOTE = null;
+async function rerouteThroughStops(rt, plan, e){
+  if (!STATE || !plan || !plan.feasible) return;
+  const via = [];
+  plan.stops.forEach(s => { if (s.lat && s.lon && !s.waypoint) via.push({ lat: s.lat, lon: s.lon, mi: s.alongMi }); });
+  (STATE.waypoints || []).forEach((w, i) => { if (w.lat && w.lon) via.push({ lat: w.lat, lon: w.lon, mi: (rt.legMiles && rt.legMiles[i+1]) || 0 }); });
+  via.sort((a,b) => a.mi - b.mi);
+  if (!via.length || via.length > 12) return; // OSRM via limit; skip very long trips
+  try {
+    const rr = (await route([STATE.A, ...via.map(v => ({ lat: v.lat, lon: v.lon })), STATE.B]))[0];
+    await loadLeaflet();
+    if (MAP && ROUTE_LAYER && ROUTE_LAYER[0]){
+      MAP.removeLayer(ROUTE_LAYER[0]);
+      const line = L.geoJSON(rr.geometry, { style: { color: '#5d3fd3', weight: 5, opacity: 0.85 } }).addTo(MAP);
+      ROUTE_LAYER[0] = line;
+      MAP.fitBounds(line.getBounds(), { padding: [30, 30] });
+    }
+    // Show the true via-stops driving distance next to the hero distance
+    const mult = e.round ? 2 : 1;
+    const driven = Math.round(rr.miles * mult);
+    if (Math.abs(driven - Math.round(e.miles)) >= 3)
+      document.getElementById('rDistSub').textContent = `${driven} mi via stops`;
+  } catch(err){ /* keep the direct route */ }
 }
 
 function setVerdict(cls, icon, html){
@@ -860,32 +963,59 @@ function renderStops(plan, e, reserve, roundTrip){
     body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you'll arrive around ${Math.round(plan.arriveSoc)}%.</div>`;
     return;
   }
-  const totalMin = plan.stops.reduce((s,x)=>s+x.mins,0);
-  setVerdict('ok', '✅', `Doable with <b>${plan.stops.length} charging stop${plan.stops.length>1?'s':''}</b> (~${Math.round(totalMin)} min charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
-  let html = `<div class="stops-summary">${plan.stops.length} stop${plan.stops.length>1?'s':''} · ~${Math.round(totalMin)} min total charging · arrive around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
+  const dcfc = plan.stops.filter(s => !s.waypoint);
+  const totalMin = dcfc.reduce((s,x)=>s+x.mins,0);
+  const nWp = plan.stops.length - dcfc.length;
+  const wpNote = nWp ? ` + ${nWp} waypoint charge${nWp>1?'s':''}` : '';
+  setVerdict('ok', '✅', `Doable with <b>${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}</b>${wpNote} (~${Math.round(totalMin)} min fast-charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
+  let html = `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
   plan.stops.forEach((s,i) => {
-    html += `<div class="stop">
-      <div class="stop-num">${i+1}</div>
-      <div class="stop-main">
-        <div class="stop-name">${s.name}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span></div>
-        <div class="stop-sub">${s.town ? s.town + ' · ' : ''}mile ${Math.round(s.alongMi)} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
-        <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min</div>
-      </div>
-    </div>`;
+    if (s.waypoint){
+      html += `<div class="stop wp-stop">
+        <div class="stop-num">★</div>
+        <div class="stop-main">
+          <div class="stop-name">${s.name}<span class="net-badge net-wp">Waypoint · AC</span></div>
+          <div class="stop-sub">your stop · mile ${Math.round(s.alongMi)}</div>
+          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here (Level 2 / overnight)</div>
+        </div>
+      </div>`;
+    } else {
+      html += `<div class="stop">
+        <div class="stop-num">${i+1}</div>
+        <div class="stop-main">
+          <div class="stop-name">${s.name}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span></div>
+          <div class="stop-sub">${s.town ? s.town + ' · ' : ''}mile ${Math.round(s.alongMi)} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
+          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min</div>
+        </div>
+      </div>`;
+    }
   });
   if (roundTrip) html += `<div class="stops-summary" style="margin-top:10px">↩︎ Stops shown for the outbound leg only.</div>`;
   body.innerHTML = html;
 }
 
 function clearChargerMarkers(){ if (MAP && CHARGER_LAYER.length){ CHARGER_LAYER.forEach(m => MAP.removeLayer(m)); } CHARGER_LAYER = []; }
-async function drawChargerMarkers(stops){
-  if (!stops || !stops.length) return;
+async function drawChargerMarkers(stops, waypoints){
   await loadLeaflet();
   if (!MAP) return;
   const colors = { 'Tesla':'#e82222', 'Electrify America':'#00963f', 'ChargePoint':'#f97316' };
-  stops.forEach((s,i) => {
-    const m = L.circleMarker([s.lat, s.lon], { radius: 9, color: '#fff', weight: 2, fillColor: colors[s.net]||'#5d3fd3', fillOpacity: 1 })
-      .addTo(MAP).bindPopup(`<b>Stop ${i+1}: ${s.name}</b><br>${s.net} · up to ${Math.round(s.maxKW)} kW<br>Charge to ${Math.round(s.target)}% (~${Math.round(s.mins)} min)`);
+  let n = 0;
+  (stops || []).forEach(s => {
+    if (s.waypoint){
+      const m = L.circleMarker([s.lat, s.lon], { radius: 9, color: '#fff', weight: 2, fillColor: '#16a34a', fillOpacity: 1 })
+        .addTo(MAP).bindPopup(`<b>★ ${s.name}</b><br>Waypoint · AC charge to ${Math.round(s.target)}%`);
+      CHARGER_LAYER.push(m);
+    } else {
+      n++;
+      const m = L.circleMarker([s.lat, s.lon], { radius: 9, color: '#fff', weight: 2, fillColor: colors[s.net]||'#5d3fd3', fillOpacity: 1 })
+        .addTo(MAP).bindPopup(`<b>Stop ${n}: ${s.name}</b><br>${s.net} · up to ${Math.round(s.maxKW)} kW<br>Charge to ${Math.round(s.target)}% (~${Math.round(s.mins)} min)`);
+      CHARGER_LAYER.push(m);
+    }
+  });
+  // Non-charging waypoints (routing-only) as hollow green markers
+  (waypoints || []).filter(w => isNaN(w.chargeTo) || !(w.chargeTo > 0)).forEach(w => {
+    const m = L.circleMarker([w.lat, w.lon], { radius: 8, color: '#16a34a', weight: 2, fillColor: '#fff', fillOpacity: 1 })
+      .addTo(MAP).bindPopup(`<b>★ ${w.addr}</b><br>Waypoint (no charge)`);
     CHARGER_LAYER.push(m);
   });
 }
