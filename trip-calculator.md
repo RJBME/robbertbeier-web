@@ -90,6 +90,26 @@ permalink: /trip-calculator/
 
   .fleet-note { font-size: 0.74rem; color: var(--text); background: #3b82f614; border: 1px solid #3b82f640; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; }
 
+  /* Charging stops */
+  .stop { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--dash-border); }
+  .stop:last-child { border-bottom: none; }
+  .stop-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--link); color: #fff; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .stop-main { flex: 1; min-width: 0; }
+  .stop-name { font-weight: 600; font-size: 0.9rem; }
+  .stop-sub { font-size: 0.72rem; color: #888; margin-top: 1px; }
+  .stop-charge { font-size: 0.8rem; margin-top: 5px; }
+  .stop-charge b { color: var(--link); }
+  .net-badge { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
+  .net-tesla { background: #e8222220; color: #e82222; }
+  .net-ea    { background: #00b04f20; color: #00963f; }
+  .net-cp    { background: #f9731620; color: #f97316; }
+  .stops-summary { font-size: 0.78rem; color: #888; margin: 6px 0 14px; }
+  .stops-note { font-size: 0.78rem; color: var(--text); padding: 4px 0; }
+  .stops-key { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .stops-key input { flex: 1; min-width: 160px; padding: 8px 11px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
+  .stops-key button { padding: 8px 14px; border-radius: 8px; border: none; background: var(--link); color: #fff; font-weight: 600; font-size: 0.8rem; cursor: pointer; }
+  .stops-key a { color: var(--link); }
+
   .verdict { border-radius: 12px; padding: 16px 20px; margin-bottom: 18px; font-size: 0.92rem; font-weight: 600; display: flex; align-items: center; gap: 12px; }
   .verdict .vicon { font-size: 1.6rem; }
   .verdict.ok    { background: #22c55e1a; border: 1px solid #22c55e55; color: var(--text); }
@@ -221,6 +241,11 @@ permalink: /trip-calculator/
         </div>
         <div class="soc-labels"><span id="socStartLbl"></span><span id="socEndLbl"></span></div>
       </div>
+    </div>
+
+    <div class="trip-card" id="stopsCard" style="display:none">
+      <h4 style="margin:0 0 4px 0;font-size:0.9rem;">⚡ Charging stops</h4>
+      <div id="stopsBody"></div>
     </div>
 
     <div id="map"></div>
@@ -555,6 +580,250 @@ function compute(A, B, rt, temp){
   buildVerdict(e.energy, e.batt, e.effEff);
 
   drawMap(A, B, rt.geometry);
+  updateChargingPlan(rt, e, temp);
+}
+
+// ============================================================
+//  CHARGING-STOP PLANNER
+//  Data: Open Charge Map (your free key, kept in localStorage).
+//  Only DCFC >= 50 kW on your preferred networks are considered.
+// ============================================================
+const PREFERRED_NETS = ['Tesla', 'Electrify America', 'ChargePoint'];
+const NET_DEFAULT_KW = { 'Tesla': 250, 'Electrify America': 150, 'ChargePoint': 62.5 };
+const NET_CLASS = { 'Tesla': 'net-tesla', 'Electrify America': 'net-ea', 'ChargePoint': 'net-cp' };
+const MIN_DCFC_KW = 50;
+
+// Mach-E (extended range / GT) DC charging curve: power (kW) vs SoC (%).
+// Effective rate = min(this, the charger's max kW). Peak ~150 kW, tapers hard >70%.
+const CAR_CURVE = [[5,115],[10,150],[20,150],[35,135],[45,108],[55,88],[65,68],[75,50],[85,34],[92,24],[100,16]];
+
+function getOCMKey(){ try { return localStorage.getItem('ocmKey') || ''; } catch(e){ return ''; } }
+function saveOCMKey(){
+  const v = document.getElementById('ocmKeyInput').value.trim();
+  try { localStorage.setItem('ocmKey', v); } catch(e){}
+  // re-plan the current route now that we have a key
+  if (STATE){ STATE.routes.forEach(r => delete r.chargers); refresh(); }
+}
+
+function matchNetwork(operator){
+  const t = (operator || '').toLowerCase();
+  if (t.includes('tesla')) return 'Tesla';
+  if (t.includes('electrify america')) return 'Electrify America';
+  if (t.includes('chargepoint')) return 'ChargePoint';
+  return null;
+}
+
+function haversine(la1, lo1, la2, lo2){
+  const R = 3958.8, p = Math.PI/180;
+  const a = Math.sin((la2-la1)*p/2)**2 + Math.cos(la1*p)*Math.cos(la2*p)*Math.sin((lo2-lo1)*p/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+// Sample points along the polyline roughly every stepMi miles (for corridor queries)
+function sampleAlong(coords, stepMi){
+  const pts = [{ lat: coords[0][1], lon: coords[0][0] }];
+  let acc = 0;
+  for (let i=1;i<coords.length;i++){
+    acc += haversine(coords[i-1][1],coords[i-1][0],coords[i][1],coords[i][0]);
+    if (acc >= stepMi){ pts.push({ lat: coords[i][1], lon: coords[i][0] }); acc = 0; }
+  }
+  pts.push({ lat: coords[coords.length-1][1], lon: coords[coords.length-1][0] });
+  return pts;
+}
+// Cumulative miles at each route vertex
+function routeCum(coords){
+  const cum = [0];
+  for (let i=1;i<coords.length;i++) cum.push(cum[i-1] + haversine(coords[i-1][1],coords[i-1][0],coords[i][1],coords[i][0]));
+  return cum;
+}
+// Nearest route vertex for a charger → distance along route + how far off-route
+function projectCharger(coords, cum, lat, lon){
+  let best = 1e9, bi = 0;
+  for (let i=0;i<coords.length;i++){
+    const d = haversine(lat, lon, coords[i][1], coords[i][0]);
+    if (d < best){ best = d; bi = i; }
+  }
+  return { alongMi: cum[bi], offMi: best };
+}
+
+async function fetchChargers(geometry){
+  const key = getOCMKey();
+  if (!key) return null;
+  const coords = geometry.coordinates;
+  const samples = sampleAlong(coords, 28);
+  const reqs = samples.map(p => {
+    const u = `https://api.openchargemap.io/v3/poi/?key=${encodeURIComponent(key)}&output=json&countrycode=US&latitude=${p.lat}&longitude=${p.lon}&distance=12&distanceunit=Miles&levelid=3&maxresults=40&compact=false&verbose=false`;
+    return fetch(u).then(r => r.ok ? r.json() : []).catch(() => []);
+  });
+  const results = await Promise.all(reqs);
+  const cum = routeCum(coords);
+  const seen = new Set(), out = [];
+  results.flat().forEach(p => {
+    if (!p || !p.AddressInfo || seen.has(p.ID)) return;
+    seen.add(p.ID);
+    const net = matchNetwork((p.OperatorInfo && p.OperatorInfo.Title) || '')
+             || matchNetwork(p.AddressInfo.Title || '');  // fall back to the site name
+    if (!net) return;
+    const dc = (p.Connections || []).filter(c => (c.PowerKW >= MIN_DCFC_KW) || (c.Level && c.Level.IsFastChargeCapable && c.PowerKW == null));
+    if (!dc.length) return;
+    let maxKW = Math.max(0, ...dc.map(c => c.PowerKW || 0));
+    if (maxKW < MIN_DCFC_KW) maxKW = NET_DEFAULT_KW[net];
+    if (maxKW < MIN_DCFC_KW) return;
+    const pr = projectCharger(coords, cum, p.AddressInfo.Latitude, p.AddressInfo.Longitude);
+    if (pr.offMi > 6) return; // keep it close to the route
+    out.push({ id: p.ID, name: p.AddressInfo.Title, net, maxKW,
+      town: p.AddressInfo.Town || p.AddressInfo.StateOrProvince || '',
+      lat: p.AddressInfo.Latitude, lon: p.AddressInfo.Longitude,
+      alongMi: pr.alongMi, offMi: pr.offMi });
+  });
+  out.sort((a,b) => a.alongMi - b.alongMi);
+  return out;
+}
+
+function carCurveKW(soc){
+  const c = CAR_CURVE;
+  if (soc <= c[0][0]) return c[0][1];
+  if (soc >= c[c.length-1][0]) return c[c.length-1][1];
+  for (let i=0;i<c.length-1;i++) if (soc>=c[i][0] && soc<=c[i+1][0]){
+    const [x0,y0]=c[i],[x1,y1]=c[i+1]; return y0+(y1-y0)*(soc-x0)/(x1-x0);
+  }
+  return c[c.length-1][1];
+}
+// Minutes to charge from→to SoC, capped by the charger's max kW (curve-aware)
+function chargeMinutes(from, to, batt, capKW){
+  let mins = 0;
+  for (let s=from; s<to; s+=1){
+    const kw = Math.min(carCurveKW(s + 0.5), capKW);
+    mins += (batt*0.01) / kw * 60;
+  }
+  return mins;
+}
+
+// Greedy plan: stop as far along as range-to-buffer allows, prefer fast/preferred
+// chargers, charge only enough to reach the next stop or the destination + buffer.
+function planStops(destMi, effEff, batt, startSoc, reserve, chargers){
+  const milesPerPct = batt * effEff / 100;
+  const stops = [];
+  let pos = 0, soc = startSoc, guard = 0;
+  const usable = chargers.filter(c => c.alongMi > 1 && c.alongMi < destMi - 1);
+  while (guard++ < 8){
+    const reach = pos + (soc - reserve) * milesPerPct;
+    if (destMi <= reach){
+      return { needed: stops.length > 0, feasible: true, stops, arriveSoc: soc - (destMi - pos)/milesPerPct };
+    }
+    const cands = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= reach);
+    if (!cands.length){
+      return { needed: true, feasible: false, stops,
+        gapFrom: Math.round(pos), reachMi: Math.round(reach) };
+    }
+    // Prefer good progress (upper part of reachable window) + high power
+    const hiBand = cands.filter(c => c.alongMi >= pos + (reach - pos) * 0.5);
+    const pool = hiBand.length ? hiBand : cands;
+    pool.sort((a,b) => (b.maxKW - a.maxKW) || (b.alongMi - a.alongMi));
+    const c = pool[0];
+    const arriveSoc = soc - (c.alongMi - pos)/milesPerPct;
+    const remAfter = destMi - c.alongMi;
+    const finishSoc = reserve + remAfter / milesPerPct;        // charge needed to finish + buffer
+    let target = finishSoc <= 82 ? Math.ceil(finishSoc) : 80;  // top up just enough, or 80% ceiling
+    target = Math.max(target, arriveSoc + 2);
+    target = Math.min(target, 100);
+    stops.push({ ...c, arriveSoc, target, addedKWh: (target-arriveSoc)/100*batt,
+      mins: chargeMinutes(arriveSoc, target, batt, c.maxKW) });
+    pos = c.alongMi; soc = target;
+  }
+  return { needed: true, feasible: false, stops };
+}
+
+let CHARGER_LAYER = [];
+async function updateChargingPlan(rt, e, temp){
+  const card = document.getElementById('stopsCard');
+  const body = document.getElementById('stopsBody');
+  const socEl = document.getElementById('startSoc');
+  clearChargerMarkers();
+
+  if (socEl.value === '' || isNaN(+socEl.value)){
+    card.style.display = 'block';
+    body.innerHTML = `<div class="stops-summary">Enter your <b>start charge %</b> above to plan charging stops.</div>`;
+    return;
+  }
+
+  const startSoc = Math.max(0, Math.min(100, +socEl.value));
+  const reserve = Math.max(0, Math.min(50, +document.getElementById('reserve').value || 0));
+  // Reachable without charging? Then no key or API call is needed.
+  if (e.miles <= (startSoc - reserve)/100 * e.batt * e.effEff){
+    card.style.display = 'block';
+    body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
+    return;
+  }
+
+  if (!getOCMKey()){
+    card.style.display = 'block';
+    body.innerHTML = `<div class="stops-summary">Charging-stop suggestions need a free <a href="https://openchargemap.org/site/profile/applications" target="_blank" rel="noopener">Open Charge Map API key</a> (kept only in this browser).</div>`
+      + `<div class="stops-key"><input id="ocmKeyInput" type="text" placeholder="Paste OCM API key"><button onclick="saveOCMKey()">Save key</button></div>`;
+    return;
+  }
+
+  card.style.display = 'block';
+  body.innerHTML = `<div class="stops-summary">Finding DC fast chargers along the route…</div>`;
+
+  if (!rt.chargers){
+    try { rt.chargers = await fetchChargers(rt.geometry); }
+    catch(err){ rt.chargers = []; }
+  }
+  // Guard against stale renders if the user changed routes meanwhile
+  if (STATE && STATE.routes[STATE.sel] !== rt) return;
+
+  const chargers = rt.chargers || [];
+  if (!chargers.length){
+    body.innerHTML = `<div class="stops-note">No preferred DCFC (Tesla / EA / ChargePoint, ≥50 kW) found near this route in Open Charge Map.</div>`;
+    return;
+  }
+  // One-way distance for stop planning even if round trip is on
+  const destMi = rt.miles;
+  const plan = planStops(destMi, e.effEff, e.batt, startSoc, reserve, chargers);
+  renderStops(plan, e, reserve, document.getElementById('roundTrip').checked);
+  drawChargerMarkers(plan.stops);
+}
+
+function renderStops(plan, e, reserve, roundTrip){
+  const body = document.getElementById('stopsBody');
+  if (plan.needed && !plan.feasible){
+    let msg = `<div class="stops-note">⚠️ Couldn't build a complete plan with your preferred networks`;
+    if (plan.gapFrom != null) msg += ` — no qualifying DCFC between mile ${plan.gapFrom} and your range limit (~mile ${plan.reachMi})`;
+    msg += `. The gap may be too long, or there's no Tesla/EA/ChargePoint site in range there.</div>`;
+    body.innerHTML = msg + (plan.stops.length ? `<div class="stops-summary">Partial plan: ${plan.stops.length} stop(s) before the gap.</div>` : '');
+    return;
+  }
+  if (!plan.stops.length){
+    body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you'll arrive around ${Math.round(plan.arriveSoc)}%.</div>`;
+    return;
+  }
+  const totalMin = plan.stops.reduce((s,x)=>s+x.mins,0);
+  let html = `<div class="stops-summary">${plan.stops.length} stop${plan.stops.length>1?'s':''} · ~${Math.round(totalMin)} min total charging · arrive around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
+  plan.stops.forEach((s,i) => {
+    html += `<div class="stop">
+      <div class="stop-num">${i+1}</div>
+      <div class="stop-main">
+        <div class="stop-name">${s.name}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span></div>
+        <div class="stop-sub">${s.town ? s.town + ' · ' : ''}mile ${Math.round(s.alongMi)} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
+        <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min</div>
+      </div>
+    </div>`;
+  });
+  if (roundTrip) html += `<div class="stops-summary" style="margin-top:10px">↩︎ Stops shown for the outbound leg only.</div>`;
+  body.innerHTML = html;
+}
+
+function clearChargerMarkers(){ if (MAP && CHARGER_LAYER.length){ CHARGER_LAYER.forEach(m => MAP.removeLayer(m)); } CHARGER_LAYER = []; }
+async function drawChargerMarkers(stops){
+  if (!stops || !stops.length) return;
+  await loadLeaflet();
+  if (!MAP) return;
+  const colors = { 'Tesla':'#e82222', 'Electrify America':'#00963f', 'ChargePoint':'#f97316' };
+  stops.forEach((s,i) => {
+    const m = L.circleMarker([s.lat, s.lon], { radius: 9, color: '#fff', weight: 2, fillColor: colors[s.net]||'#5d3fd3', fillOpacity: 1 })
+      .addTo(MAP).bindPopup(`<b>Stop ${i+1}: ${s.name}</b><br>${s.net} · up to ${Math.round(s.maxKW)} kW<br>Charge to ${Math.round(s.target)}% (~${Math.round(s.mins)} min)`);
+    CHARGER_LAYER.push(m);
+  });
 }
 
 function buildVerdict(energy, batt, effEff){
