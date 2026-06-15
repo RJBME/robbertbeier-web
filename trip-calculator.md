@@ -928,7 +928,7 @@ async function updateChargingPlan(rt, e, temp){
   }
   // Plan the one-way journey (segment by segment across any charge-waypoints)
   const plan = planJourney(rt.miles, rt.legMiles, waypoints, e.effEff, e.batt, startSoc, reserve, chargers);
-  renderStops(plan, e, reserve, document.getElementById('roundTrip').checked);
+  renderStops(plan, e, reserve, document.getElementById('roundTrip').checked, startSoc);
   drawChargerMarkers(plan.stops, waypoints);
   rerouteThroughStops(rt, plan, e);
 }
@@ -966,14 +966,34 @@ function setVerdict(cls, icon, html){
   vEl.innerHTML = `<span class="vicon">${icon}</span><span>${html}</span>`;
 }
 
-function renderStops(plan, e, reserve, roundTrip){
+function renderStops(plan, e, reserve, roundTrip, startSoc){
   const body = document.getElementById('stopsBody');
   if (plan.needed && !plan.feasible){
+    const milesPerPct = e.batt * e.effEff / 100;
+    const oneWayMi = e.round ? e.miles / 2 : e.miles;
+    const usableMi  = Math.max(0, (startSoc - reserve) * milesPerPct);
+    const neededStart = Math.ceil(reserve + oneWayMi / milesPerPct);
+    // "Stuck at the start": couldn't even place a first stop — almost always the
+    // starting charge is too low to reach any charger, not a real route gap.
+    if (!plan.stops.length && (plan.gapFrom == null || plan.gapFrom < 12)){
+      let note, verdict;
+      if (neededStart <= 100){
+        note = `At a <b>${Math.round(startSoc)}%</b> start minus your <b>${reserve}%</b> reserve you have only ~${Math.round(usableMi)} mi of usable range, and there's no compatible fast charger within that distance of the start. But this trip needs <b>no charging at all</b> if you leave at <b>≥${neededStart}%</b> — charge before you go, raise your start %, or lower the reserve.`;
+        verdict = `Start charge is low — at ${Math.round(startSoc)}% you can only go ~${Math.round(usableMi)} mi before your reserve, with no charger in range. Leave at <b>≥${neededStart}%</b> and you'll make it with no stops.`;
+      } else {
+        note = `At <b>${Math.round(startSoc)}%</b> you have only ~${Math.round(usableMi)} mi before your reserve and there's no compatible fast charger within reach of the start. Charge before you leave, or start with a higher %.`;
+        verdict = `Start charge too low to reach the first charger — charge before leaving or start higher.`;
+      }
+      setVerdict('tight', '⚠️', verdict);
+      body.innerHTML = `<div class="stops-note">⚠️ ${note}</div>`;
+      return;
+    }
+    // A genuine mid-route gap between chargers.
     let msg = `<div class="stops-note">⚠️ Couldn't build a complete plan with your preferred networks`;
-    if (plan.gapFrom != null) msg += ` — no compatible DCFC (Tesla open-to-NACS / EA / ChargePoint, ≥50 kW) between mile ${plan.gapFrom} and your range limit (~mile ${plan.reachMi})`;
-    msg += `. The gap may be too long for one charge.</div>`;
+    if (plan.gapFrom != null) msg += ` — no compatible DCFC (Tesla open-to-NACS / EA / ChargePoint, ≥50 kW) between mile ${plan.gapFrom} and ~mile ${plan.reachMi}`;
+    msg += `. The gap may be too long for one charge — add a waypoint there, or use a non-preferred charger.</div>`;
     body.innerHTML = msg + (plan.stops.length ? `<div class="stops-summary">Partial plan: ${plan.stops.length} stop(s) before the gap.</div>` : '');
-    setVerdict('no', '🛑', `Couldn't complete a charging plan${plan.gapFrom!=null?` — gap near mile ${plan.gapFrom}`:''}. You may need a non-preferred charger or a waypoint there.`);
+    setVerdict('no', '🛑', `Couldn't complete a charging plan — gap near mile ${plan.gapFrom}. Add a waypoint there or use a non-preferred charger.`);
     return;
   }
   if (!plan.stops.length){
