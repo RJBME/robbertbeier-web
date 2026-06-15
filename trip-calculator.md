@@ -646,6 +646,7 @@ const NET_DEFAULT_KW = { 'Tesla': 250, 'Electrify America': 150, 'ChargePoint': 
 const NET_CLASS = { 'Tesla': 'net-tesla', 'Electrify America': 'net-ea', 'ChargePoint': 'net-cp' };
 const NET_PREF = { 'Tesla': 3, 'Electrify America': 2, 'ChargePoint': 1 }; // tie-break order
 const MIN_DCFC_KW = 50;
+const TESLA_MIN_KW = 200; // V3+ Superchargers (250 kW) work with the Ford NACS adapter; V2 (150) don't
 
 // Mach-E (extended range / GT) DC charging curve: power (kW) vs SoC (%).
 // Effective rate = min(this, the charger's max kW). Peak ~150 kW, tapers hard >70%.
@@ -746,15 +747,16 @@ async function fetchChargers(geometry){
     const opTitle = (p.OperatorInfo && p.OperatorInfo.Title) || '';
     const net = matchNetwork(opTitle) || matchNetwork(p.AddressInfo.Title || '');  // fall back to the site name
     if (!net) return;
-    // NACS compatibility: a Mach-E can only use Tesla sites that are OPEN to
-    // non-Tesla EVs. OCM tags these "Tesla (including non-tesla)"; the restricted
-    // ones are "Tesla (Tesla-only charging)". Exclude anything not confirmed open.
-    if (net === 'Tesla' && !opTitle.toLowerCase().includes('non-tesla')) return;
     const dc = (p.Connections || []).filter(c => (c.PowerKW >= MIN_DCFC_KW) || (c.Level && c.Level.IsFastChargeCapable && c.PowerKW == null));
     if (!dc.length) return;
     let maxKW = Math.max(0, ...dc.map(c => c.PowerKW || 0));
     if (maxKW < MIN_DCFC_KW) maxKW = NET_DEFAULT_KW[net];
     if (maxKW < MIN_DCFC_KW) return;
+    // NACS compatibility: the Mach-E's Ford NACS adapter works on V3+ Superchargers
+    // (250 kW), NOT V2 (150 kW). OCM's "Tesla-only / including-non-tesla" tag is
+    // unreliable (Stevensville & Cadillac are both "Tesla-only", but only the
+    // 250 kW V3 Stevensville works), so we gate Tesla on power instead.
+    if (net === 'Tesla' && maxKW < TESLA_MIN_KW) return;
     const pr = projectCharger(coords, cum, p.AddressInfo.Latitude, p.AddressInfo.Longitude);
     if (pr.offMi > 8) return; // keep it reasonably close to the route
     out.push({ id: p.ID, name: p.AddressInfo.Title, net, maxKW,
@@ -788,8 +790,13 @@ function chargeMinutes(from, to, batt, capKW){
 // Greedy plan for ONE segment [fromMi, toMi]: stop as far along as range-to-buffer
 // allows, prefer fast/preferred chargers, charge only enough to reach the next stop
 // or the segment end + buffer.
-function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt){
+const DCFC_TOP = 80;       // never charge past this on DC fast (charge curve too slow above)
+const TESLA_REACH_TOL = 40; // mi — prefer Tesla unless a non-Tesla gets you this much farther
+function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt, maxTop){
+  maxTop = maxTop || DCFC_TOP;
   const milesPerPct = batt * effEff / 100;
+  const peak = Math.max(...CAR_CURVE.map(p => p[1]));
+  const espeed = c => Math.min(c.maxKW, peak);
   const stops = [];
   let pos = fromMi, soc = startSoc, guard = 0;
   const usable = chargers.filter(c => c.alongMi > fromMi + 1 && c.alongMi < toMi - 1);
@@ -803,39 +810,49 @@ function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt){
     let all = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= pos + (soc - reserve - 2) * milesPerPct);
     if (!all.length) all = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= reach);
     if (!all.length){
-      return { needed: true, feasible: false, stops,
-        gapFrom: Math.round(pos), reachMi: Math.round(reach) };
+      return { feasible: false, stops, gapFrom: Math.round(pos), reachMi: Math.round(reach) };
     }
-    // Strongly prefer fast chargers (>=100 kW) — a fast charger slightly deeper
-    // into the buffer beats a slow one with more margin. Fall back to slow only
-    // if no fast charger is reachable. Then take the farthest such charger
-    // (fewest stops, arrive low = fast part of the curve), best power among the
-    // farthest cluster.
+    // Prefer fast chargers (>=100 kW); fall back to slow only if none reachable.
     const fast = all.filter(c => c.maxKW >= 100);
     const pool = fast.length ? fast : all;
-    const maxAlong = Math.max(...pool.map(c => c.alongMi));
-    const cluster = pool.filter(c => c.alongMi >= maxAlong - 20);
-    // Rank by EFFECTIVE speed for this car: the Mach-E caps around 150 kW, so a
-    // 350 kW EA and a 150 kW+ Tesla charge it equally fast. Treat anything at/above
-    // the car's peak as equal, then prefer your network (Tesla > EA > ChargePoint),
-    // then the charger farthest along.
-    const peak = Math.max(...CAR_CURVE.map(p => p[1]));
-    const espeed = c => Math.min(c.maxKW, peak);
+    // TESLA-FIRST: you prefer Tesla (cheaper, more reliable). Use Tesla unless a
+    // non-Tesla charger gets you meaningfully farther (likely saving a stop).
+    const maxAll  = Math.max(...pool.map(c => c.alongMi));
+    const teslas  = pool.filter(c => c.net === 'Tesla');
+    const maxTesla = teslas.length ? Math.max(...teslas.map(c => c.alongMi)) : -Infinity;
+    const basis = (teslas.length && maxTesla >= maxAll - TESLA_REACH_TOL) ? teslas : pool;
+    // Among the chosen network basis, take the farthest cluster (fewest stops,
+    // arrive low = fast part of the curve), best effective speed within it.
+    const top = Math.max(...basis.map(c => c.alongMi));
+    const cluster = basis.filter(c => c.alongMi >= top - 20);
     cluster.sort((a,b) => (espeed(b)-espeed(a)) || (NET_PREF[b.net]-NET_PREF[a.net]) || (b.alongMi-a.alongMi));
     const c = cluster[0];
     const arriveSoc = soc - (c.alongMi - pos)/milesPerPct;
     const remAfter = toMi - c.alongMi;
     const finishSoc = reserve + remAfter / milesPerPct;        // charge needed to reach segment end + buffer
-    // If the segment end is reachable on this one charge, top up just enough
-    // (even into the taper — needed before a long gap). Otherwise charge to the
-    // efficient 80% ceiling and stop again.
-    let target = finishSoc <= 100 ? Math.ceil(finishSoc) : 80;
-    target = Math.min(100, Math.max(target, arriveSoc + 2));
+    // Charge only enough to reach the segment end + buffer, but never above the
+    // DCFC cap (default 80%). If 80% can't reach the end, the loop adds a stop.
+    let target = finishSoc <= maxTop ? Math.ceil(finishSoc) : maxTop;
+    target = Math.min(maxTop, Math.max(target, arriveSoc + 1));
     stops.push({ ...c, arriveSoc, target, addedKWh: (target-arriveSoc)/100*batt,
       mins: chargeMinutes(arriveSoc, target, batt, c.maxKW) });
     pos = c.alongMi; soc = target;
   }
   return { feasible: false, stops, gapFrom: Math.round(pos), reachMi: Math.round(pos + (soc-reserve)*milesPerPct) };
+}
+
+// Plan a segment with the 80% DCFC cap; only if that's infeasible (a leg with no
+// charger in range) raise the cap in small steps and use the lowest that works,
+// flagging any stop forced above 80%.
+function planSegmentCapped(fromMi, toMi, soc, reserve, chargers, effEff, batt){
+  for (const cap of [DCFC_TOP, 85, 90, 95, 100]){
+    const r = planSegment(fromMi, toMi, soc, reserve, chargers, effEff, batt, cap);
+    if (r.feasible){
+      if (cap > DCFC_TOP) r.stops.forEach(s => { if (s.target > DCFC_TOP) s.overCap = true; });
+      return r;
+    }
+  }
+  return planSegment(fromMi, toMi, soc, reserve, chargers, effEff, batt, 100); // infeasible → gap info
 }
 
 // Full journey: split into segments at charging waypoints (e.g. an overnight
@@ -847,20 +864,20 @@ function planJourney(totalMi, legMiles, waypoints, effEff, batt, startSoc, reser
     .filter(w => w.mile != null && !isNaN(w.chargeTo) && w.chargeTo > 0)
     .sort((a,b) => a.mile - b.mile);
   const all = [];
-  let segStart = 0, soc = startSoc;
+  let segStart = 0, soc = startSoc, overCap = false;
   for (const wp of anchors){
-    const r = planSegment(segStart, wp.mile, soc, reserve, chargers, effEff, batt);
-    r.stops.forEach(s => all.push(s));
+    const r = planSegmentCapped(segStart, wp.mile, soc, reserve, chargers, effEff, batt);
+    r.stops.forEach(s => { all.push(s); if (s.overCap) overCap = true; });
     if (!r.feasible) return { needed: true, feasible: false, stops: all, gapFrom: r.gapFrom, reachMi: r.reachMi };
     all.push({ waypoint: true, name: wp.addr, net: 'AC', alongMi: wp.mile,
       arriveSoc: r.arriveSoc, target: wp.chargeTo, lat: wp.lat, lon: wp.lon });
     soc = wp.chargeTo;
     segStart = wp.mile;
   }
-  const rf = planSegment(segStart, totalMi, soc, reserve, chargers, effEff, batt);
-  rf.stops.forEach(s => all.push(s));
+  const rf = planSegmentCapped(segStart, totalMi, soc, reserve, chargers, effEff, batt);
+  rf.stops.forEach(s => { all.push(s); if (s.overCap) overCap = true; });
   if (!rf.feasible) return { needed: true, feasible: false, stops: all, gapFrom: rf.gapFrom, reachMi: rf.reachMi };
-  return { needed: all.length > 0, feasible: true, stops: all, arriveSoc: rf.arriveSoc };
+  return { needed: all.length > 0, feasible: true, stops: all, arriveSoc: rf.arriveSoc, overCap };
 }
 
 let CHARGER_LAYER = [];
@@ -985,7 +1002,7 @@ function renderStops(plan, e, reserve, roundTrip){
         <div class="stop-main">
           <div class="stop-name">${s.name}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span></div>
           <div class="stop-sub">${s.town ? s.town + ' · ' : ''}mile ${Math.round(s.alongMi)} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
-          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min</div>
+          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min${s.overCap?` <span style="color:#eab308">⚠ above 80% — no closer charger</span>`:''}</div>
         </div>
       </div>`;
     }
