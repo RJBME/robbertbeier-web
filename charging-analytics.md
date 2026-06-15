@@ -52,7 +52,9 @@ permalink: /charging-analytics/
   [data-theme="dark"] .analytics-header p { color: #aaa; }
 
   /* ── Section quick-nav pills ── */
-  .charge-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--dash-border); align-items: center; }
+  /* justify/width/position are reset to override the global site `nav {}` rule
+     (this page uses layout:default, whose nav is justify-content:space-between) */
+  .charge-nav { display: flex; justify-content: flex-start; width: auto; position: static; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--dash-border); align-items: center; }
   .charge-nav a { font-size: 0.78rem; font-weight: 600; text-decoration: none; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; transition: all 0.15s; }
   .charge-nav a:hover  { border-color: var(--link); color: var(--link); }
   .charge-nav a.active { background: var(--link); border-color: var(--link); color: #fff; font-weight: 700; }
