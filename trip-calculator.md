@@ -176,6 +176,11 @@ permalink: /trip-calculator/
           <option value="city">Mostly city</option>
         </select>
       </div>
+      <div class="field">
+        <label>Efficiency override <span style="font-weight:400;text-transform:none">(optional)</span></label>
+        <input id="effOverride" type="number" step="0.05" min="0.5" max="6" placeholder="use model">
+        <span class="hint">mi/kWh — blank = use model</span>
+      </div>
     </div>
 
     <div class="opt-row">
@@ -445,17 +450,20 @@ function refresh(){ if (STATE){ renderRouteOptions(); compute(STATE.A, STATE.B, 
 
 // Shared math — used by both the route cards and the full result render
 function estimate(rt, temp){
-  const round   = document.getElementById('roundTrip').checked;
-  const miles   = rt.miles * (round ? 2 : 1);
-  const vehName = document.getElementById('vehSel').value;
-  const m       = vehModel(vehName);
-  const tempEff = predictEff(vehName, temp.f);
-  const road    = roadFactor(rt);
-  const effEff  = tempEff * road.f;
-  const energy  = miles / effEff;
+  const round    = document.getElementById('roundTrip').checked;
+  const miles    = rt.miles * (round ? 2 : 1);
+  const vehName  = document.getElementById('vehSel').value;
+  const m        = vehModel(vehName);
+  const tempEff  = predictEff(vehName, temp.f);
+  const road     = roadFactor(rt);
+  const modelEff = tempEff * road.f;
+  const ovr      = parseFloat(document.getElementById('effOverride').value);
+  const hasOvr   = !isNaN(ovr) && ovr > 0;
+  const effEff   = hasOvr ? ovr : modelEff;
+  const energy   = miles / effEff;
   return { round, miles, hours: rt.hours * (round ? 2 : 1), vehName, m, batt: m.battery,
-           baseEff: m.baseEff, tempEff, tempMult: tempEff / m.baseEff, road, effEff,
-           energy, pctBatt: energy / m.battery * 100 };
+           baseEff: m.baseEff, tempEff, tempMult: tempEff / m.baseEff, road, modelEff,
+           hasOvr, effEff, energy, pctBatt: energy / m.battery * 100 };
 }
 
 function renderRouteOptions(){
@@ -495,11 +503,15 @@ function renderRouteOptions(){
 
 function roadFactor(rt){
   const sel = document.getElementById('roadType').value;
-  if (sel === 'highway') return { f: lerp(SPEED_CURVE, 68), label: 'Mostly highway' };
+  if (sel === 'highway') return { f: lerp(SPEED_CURVE, 70), label: 'Mostly highway' };
   if (sel === 'city')    return { f: lerp(SPEED_CURVE, 28), label: 'Mostly city' };
   if (sel === 'mixed')   return { f: lerp(SPEED_CURVE, 42), label: 'Mixed' };
-  const mph = rt.miles / Math.max(rt.hours, 0.01);
-  return { f: lerp(SPEED_CURVE, mph), label: `Auto · ${Math.round(mph)} mph avg` };
+  // Auto: door-to-door average understates cruising speed on longer trips —
+  // city miles at each end drag it down — so estimate a cruising speed that
+  // leans toward highway as the trip gets longer. Caps at 75 mph.
+  const avg = rt.miles / Math.max(rt.hours, 0.01);
+  const cruise = Math.min(avg + Math.min(rt.miles, 220) / 220 * 20, 75);
+  return { f: lerp(SPEED_CURVE, cruise), label: `Auto · ${Math.round(avg)} mph avg` };
 }
 
 function compute(A, B, rt, temp){
@@ -525,11 +537,18 @@ function compute(A, B, rt, temp){
   }
 
   // Breakdown
-  document.getElementById('bBase').textContent = e.baseEff.toFixed(2) + ' mi/kWh  '
-    + (e.m.ownEff ? '(your avg @ ' + Math.round(e.m.tRef) + '°F)' : '(fleet avg)');
-  document.getElementById('bTemp').textContent = (e.tempMult>=1?'+':'') + ((e.tempMult-1)*100).toFixed(0) + '%  (' + Math.round(temp.f) + '°F)';
-  document.getElementById('bRoad').textContent = (e.road.f>=1?'+':'') + ((e.road.f-1)*100).toFixed(0) + '%  · ' + e.road.label;
-  document.getElementById('bEff').textContent = e.effEff.toFixed(2) + ' mi/kWh';
+  if (e.hasOvr){
+    document.getElementById('bBase').textContent = 'overridden';
+    document.getElementById('bTemp').textContent = '—';
+    document.getElementById('bRoad').textContent = '—';
+    document.getElementById('bEff').textContent  = e.effEff.toFixed(2) + ' mi/kWh  (your manual override)';
+  } else {
+    document.getElementById('bBase').textContent = e.baseEff.toFixed(2) + ' mi/kWh  '
+      + (e.m.ownEff ? '(your avg @ ' + Math.round(e.m.tRef) + '°F)' : '(fleet avg)');
+    document.getElementById('bTemp').textContent = (e.tempMult>=1?'+':'') + ((e.tempMult-1)*100).toFixed(0) + '%  (' + Math.round(temp.f) + '°F)';
+    document.getElementById('bRoad').textContent = (e.road.f>=1?'+':'') + ((e.road.f-1)*100).toFixed(0) + '%  · ' + e.road.label;
+    document.getElementById('bEff').textContent  = e.effEff.toFixed(2) + ' mi/kWh';
+  }
   document.getElementById('bBatt').textContent = e.batt.toFixed(1) + ' kWh  (' + e.m.battSrc + ')';
 
   // SoC + verdict
@@ -621,7 +640,8 @@ async function drawMap(A, B, geometry){
 
 // Tweaking vehicle / road / charge after a route is loaded → live re-estimate
 // (no re-routing or weather call needed — same route, new numbers)
-['vehSel','roadType','startSoc','reserve','roundTrip'].forEach(id => {
+['vehSel','roadType','startSoc','reserve','roundTrip','effOverride'].forEach(id => {
   document.getElementById(id).addEventListener('change', refresh);
 });
+document.getElementById('effOverride').addEventListener('input', refresh);
 </script>
