@@ -114,18 +114,28 @@ permalink: /charging/
   .media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
   .card { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-  .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
-  .badge-work   { background: #e3f2fd; color: #0288d1; }
-  .badge-home   { background: #f3e5f5; color: #7b1fa2; }
-  .badge-tesla  { background: #ffebee; color: #CC0000; }
-  .badge-cp     { background: #fff3e0; color: #FF7A14; }
-  .badge-blink  { background: #e8f5e9; color: #65A844; }
-  .badge-rivian { background: #fffde7; color: #ffa500; }
-  .badge-other  { background: #f5f5f5; color: #616161; }
+  .badge { padding: 3px 9px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; display: inline-block; letter-spacing: 0.03em; }
+  .badge-work   { background: #3b82f620; color: #3b82f6; }
+  .badge-home   { background: #8b5cf620; color: #8b5cf6; }
+  .badge-tesla  { background: #ef444420; color: #ef4444; }
+  .badge-cp     { background: #f9731620; color: #f97316; }
+  .badge-blink  { background: #22c55e20; color: #22c55e; }
+  .badge-rivian { background: #eab30820; color: #d97706; }
+  .badge-other  { background: #6b728020; color: #6b7280; }
 
-  .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; color: var(--text) !important; }
-  .charging-table th { background: var(--table-head); padding: 12px; text-align: left; border-bottom: 2px solid var(--dash-border); }
-  .charging-table td { padding: 12px; border-bottom: 1px solid var(--dash-border); }
+  .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.84rem; color: var(--text) !important; }
+  .charging-table th { background: var(--table-head); padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--dash-border); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #888; font-weight: 700; }
+  .charging-table td { padding: 9px 12px; border-bottom: 1px solid var(--dash-border); vertical-align: middle; }
+  .charging-table tr:last-child td { border-bottom: none; }
+  .charging-table tr:hover td { background: var(--dash-border); }
+  .charging-table td:first-child { white-space: nowrap; font-size: 0.8rem; color: #888; }
+  .charging-table td:nth-child(3) { white-space: nowrap; font-size: 0.72rem; color: #888; }
+  .charging-table td:nth-child(4),
+  .charging-table td:nth-child(5),
+  .charging-table td:nth-child(6) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .charging-table th:nth-child(4),
+  .charging-table th:nth-child(5),
+  .charging-table th:nth-child(6) { text-align: right; }
   .charging-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
   /* ── Mobile layout ── */
