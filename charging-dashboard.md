@@ -112,6 +112,11 @@ permalink: /charging/
   .assumptions-link { color: #888; font-size: 0.6rem; text-decoration: none; }
 
   .media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+  .charge-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--dash-border); align-items: center; }
+  .charge-nav a { font-size: 0.78rem; font-weight: 600; text-decoration: none; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; transition: all 0.15s; }
+  .charge-nav a:hover  { border-color: var(--link); color: var(--link); }
+  .charge-nav a.active { background: var(--link); border-color: var(--link); color: #fff; font-weight: 700; }
+
   .card { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
   .badge { padding: 3px 9px; border-radius: 20px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; display: inline-block; letter-spacing: 0.03em; }
@@ -288,12 +293,11 @@ permalink: /charging/
   if (!lnk.parentNode) document.head.appendChild(lnk);
 })();</script>
 
-  <!-- Cross-page charging nav -->
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);">
-    <a href="/charging/"         style="font-size:0.78rem;font-weight:700;color:#fff;text-decoration:none;padding:5px 14px;border:1px solid var(--link);border-radius:20px;background:var(--link)">⚡ Dashboard</a>
-    <a href="/charging-history/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📋 History</a>
-    <a href="/charging-analytics/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📊 Analytics</a>
-  </div>
+  <nav class="charge-nav">
+    <a href="/charging/"          class="active">⚡ Dashboard</a>
+    <a href="/charging-history/"             >📋 History</a>
+    <a href="/charging-analytics/"           >📊 Analytics</a>
+  </nav>
 
   <div class="status-bar">
     <div class="status-item">

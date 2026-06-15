@@ -53,13 +53,9 @@ permalink: /charging-analytics/
 
   /* ── Section quick-nav pills ── */
   .section-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
-  .section-nav a {
-    background: var(--dash-card); border: 1px solid var(--dash-border);
-    padding: 6px 14px; border-radius: 20px; font-size: 0.76rem;
-    color: var(--link); text-decoration: none; font-weight: 600;
-    transition: all 0.15s;
-  }
-  .section-nav a:hover { background: var(--link); color: #fff; border-color: var(--link); }
+  .section-nav a { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 5px 14px; border-radius: 20px; font-size: 0.76rem; color: #888; text-decoration: none; font-weight: 600; transition: all 0.15s; }
+  .section-nav a:hover  { border-color: var(--link); color: var(--link); }
+  .section-nav a.active { background: var(--link); border-color: var(--link); color: #fff; font-weight: 700; }
 
   /* ── KPI strip ── */
   .kpi-strip {
