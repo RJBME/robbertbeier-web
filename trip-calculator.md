@@ -710,22 +710,33 @@ function planStops(destMi, effEff, batt, startSoc, reserve, chargers){
     if (destMi <= reach){
       return { needed: stops.length > 0, feasible: true, stops, arriveSoc: soc - (destMi - pos)/milesPerPct };
     }
-    const cands = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= reach);
-    if (!cands.length){
+    // Candidates: reachable while keeping a 2% cushion above reserve; if none,
+    // relax to the hard reserve floor before giving up.
+    let all = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= pos + (soc - reserve - 2) * milesPerPct);
+    if (!all.length) all = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= reach);
+    if (!all.length){
       return { needed: true, feasible: false, stops,
         gapFrom: Math.round(pos), reachMi: Math.round(reach) };
     }
-    // Prefer good progress (upper part of reachable window) + high power
-    const hiBand = cands.filter(c => c.alongMi >= pos + (reach - pos) * 0.5);
-    const pool = hiBand.length ? hiBand : cands;
-    pool.sort((a,b) => (b.maxKW - a.maxKW) || (b.alongMi - a.alongMi));
-    const c = pool[0];
+    // Strongly prefer fast chargers (>=100 kW) — a fast charger slightly deeper
+    // into the buffer beats a slow one with more margin. Fall back to slow only
+    // if no fast charger is reachable. Then take the farthest such charger
+    // (fewest stops, arrive low = fast part of the curve), best power among the
+    // farthest cluster.
+    const fast = all.filter(c => c.maxKW >= 100);
+    const pool = fast.length ? fast : all;
+    const maxAlong = Math.max(...pool.map(c => c.alongMi));
+    const cluster = pool.filter(c => c.alongMi >= maxAlong - 20);
+    cluster.sort((a,b) => (b.maxKW - a.maxKW) || (b.alongMi - a.alongMi));
+    const c = cluster[0];
     const arriveSoc = soc - (c.alongMi - pos)/milesPerPct;
     const remAfter = destMi - c.alongMi;
     const finishSoc = reserve + remAfter / milesPerPct;        // charge needed to finish + buffer
-    let target = finishSoc <= 82 ? Math.ceil(finishSoc) : 80;  // top up just enough, or 80% ceiling
-    target = Math.max(target, arriveSoc + 2);
-    target = Math.min(target, 100);
+    // If the destination is reachable on this one charge, top up just enough to
+    // finish (even into the taper — needed before a long gap). Otherwise charge
+    // to the efficient 80% ceiling and stop again.
+    let target = finishSoc <= 100 ? Math.ceil(finishSoc) : 80;
+    target = Math.min(100, Math.max(target, arriveSoc + 2));
     stops.push({ ...c, arriveSoc, target, addedKWh: (target-arriveSoc)/100*batt,
       mins: chargeMinutes(arriveSoc, target, batt, c.maxKW) });
     pos = c.alongMi; soc = target;
