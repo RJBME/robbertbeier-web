@@ -137,6 +137,9 @@ permalink: /trip-calculator/
   .disclaimer { font-size: 0.66rem; color: #888; line-height: 1.5; margin-top: 6px; }
   .disclaimer b { color: var(--text); }
 
+  .dev-banner { font-size: 0.76rem; background: #eab30818; border: 1px solid #eab30855; color: var(--text); border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; line-height: 1.45; }
+  .dev-banner b { color: #b45309; }
+
   @media (max-width: 600px) {
     .field-grid { grid-template-columns: 1fr; }
     .hero-stat .big { font-size: 1.4rem; }
@@ -158,6 +161,8 @@ permalink: /trip-calculator/
     <a href="/charging-analytics/">📊 Analytics</a>
     <a href="/trip-calculator/" class="active">🧭 Trip</a>
   </nav>
+
+  <div class="dev-banner">🚧 <b>Under development</b> — actively being built and tuned. Charging suggestions are estimates; always sanity-check against your car or a tool like ABRP before relying on them.</div>
 
   <div class="trip-header">
     <h1>🧭 EV Trip Calculator</h1>
@@ -646,31 +651,64 @@ function projectCharger(coords, cum, lat, lon){
   return { alongMi: cum[bi], offMi: best };
 }
 
+// Fetch JSON with one retry — OCM drops bursts, so a brief backoff recovers them
+async function fetchJSON(url){
+  for (let attempt = 0; attempt < 2; attempt++){
+    try { const r = await fetch(url); if (r.ok) return await r.json(); } catch(e){ /* retry */ }
+    await new Promise(res => setTimeout(res, 450));
+  }
+  return [];
+}
+// Run async tasks with limited concurrency + a small stagger, so we don't burst
+// past OCM's rate limit (which silently kills later requests → missing chargers)
+async function fetchPool(items, fn, concurrency){
+  const results = new Array(items.length);
+  let i = 0;
+  async function worker(){
+    while (i < items.length){
+      const idx = i++;
+      results[idx] = await fn(items[idx]);
+      await new Promise(res => setTimeout(res, 120));
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return results;
+}
+
 async function fetchChargers(geometry){
   const key = getOCMKey();
   if (!key) return null;
   const coords = geometry.coordinates;
-  const samples = sampleAlong(coords, 28);
-  const reqs = samples.map(p => {
-    const u = `https://api.openchargemap.io/v3/poi/?key=${encodeURIComponent(key)}&output=json&countrycode=US&latitude=${p.lat}&longitude=${p.lon}&distance=12&distanceunit=Miles&levelid=3&maxresults=40&compact=false&verbose=false`;
-    return fetch(u).then(r => r.ok ? r.json() : []).catch(() => []);
-  });
-  const results = await Promise.all(reqs);
   const cum = routeCum(coords);
+  const totalMi = cum[cum.length-1] || 0;
+  // Corridor sampling. Keep the query COUNT bounded (~25 max) so we don't trip
+  // OCM's burst limit on long trips, and make the radius exceed half the spacing
+  // so there are no coverage holes between samples (radius = stepMi/2 + 8).
+  const stepMi = Math.max(22, Math.min(100, totalMi / 24));
+  const radius = Math.ceil(stepMi / 2) + 8;
+  const samples = sampleAlong(coords, stepMi);
+  const results = await fetchPool(samples, p => {
+    const u = `https://api.openchargemap.io/v3/poi/?key=${encodeURIComponent(key)}&output=json&countrycode=US&latitude=${p.lat}&longitude=${p.lon}&distance=${radius}&distanceunit=Miles&levelid=3&maxresults=80&compact=false&verbose=false`;
+    return fetchJSON(u);
+  }, 3);
   const seen = new Set(), out = [];
   results.flat().forEach(p => {
     if (!p || !p.AddressInfo || seen.has(p.ID)) return;
     seen.add(p.ID);
-    const net = matchNetwork((p.OperatorInfo && p.OperatorInfo.Title) || '')
-             || matchNetwork(p.AddressInfo.Title || '');  // fall back to the site name
+    const opTitle = (p.OperatorInfo && p.OperatorInfo.Title) || '';
+    const net = matchNetwork(opTitle) || matchNetwork(p.AddressInfo.Title || '');  // fall back to the site name
     if (!net) return;
+    // NACS compatibility: a Mach-E can only use Tesla sites that are OPEN to
+    // non-Tesla EVs. OCM tags these "Tesla (including non-tesla)"; the restricted
+    // ones are "Tesla (Tesla-only charging)". Exclude anything not confirmed open.
+    if (net === 'Tesla' && !opTitle.toLowerCase().includes('non-tesla')) return;
     const dc = (p.Connections || []).filter(c => (c.PowerKW >= MIN_DCFC_KW) || (c.Level && c.Level.IsFastChargeCapable && c.PowerKW == null));
     if (!dc.length) return;
     let maxKW = Math.max(0, ...dc.map(c => c.PowerKW || 0));
     if (maxKW < MIN_DCFC_KW) maxKW = NET_DEFAULT_KW[net];
     if (maxKW < MIN_DCFC_KW) return;
     const pr = projectCharger(coords, cum, p.AddressInfo.Latitude, p.AddressInfo.Longitude);
-    if (pr.offMi > 6) return; // keep it close to the route
+    if (pr.offMi > 8) return; // keep it reasonably close to the route
     out.push({ id: p.ID, name: p.AddressInfo.Title, net, maxKW,
       town: p.AddressInfo.Town || p.AddressInfo.StateOrProvince || '',
       lat: p.AddressInfo.Latitude, lon: p.AddressInfo.Longitude,
@@ -706,7 +744,7 @@ function planStops(destMi, effEff, batt, startSoc, reserve, chargers){
   const stops = [];
   let pos = 0, soc = startSoc, guard = 0;
   const usable = chargers.filter(c => c.alongMi > 1 && c.alongMi < destMi - 1);
-  while (guard++ < 8){
+  while (guard++ < 30){  // enough for cross-country
     const reach = pos + (soc - reserve) * milesPerPct;
     if (destMi <= reach){
       return { needed: stops.length > 0, feasible: true, stops, arriveSoc: soc - (destMi - pos)/milesPerPct };
@@ -802,13 +840,20 @@ async function updateChargingPlan(rt, e, temp){
   drawChargerMarkers(plan.stops);
 }
 
+function setVerdict(cls, icon, html){
+  const vEl = document.getElementById('verdict');
+  vEl.className = 'verdict ' + cls;
+  vEl.innerHTML = `<span class="vicon">${icon}</span><span>${html}</span>`;
+}
+
 function renderStops(plan, e, reserve, roundTrip){
   const body = document.getElementById('stopsBody');
   if (plan.needed && !plan.feasible){
     let msg = `<div class="stops-note">⚠️ Couldn't build a complete plan with your preferred networks`;
-    if (plan.gapFrom != null) msg += ` — no qualifying DCFC between mile ${plan.gapFrom} and your range limit (~mile ${plan.reachMi})`;
-    msg += `. The gap may be too long, or there's no Tesla/EA/ChargePoint site in range there.</div>`;
+    if (plan.gapFrom != null) msg += ` — no compatible DCFC (Tesla open-to-NACS / EA / ChargePoint, ≥50 kW) between mile ${plan.gapFrom} and your range limit (~mile ${plan.reachMi})`;
+    msg += `. The gap may be too long for one charge.</div>`;
     body.innerHTML = msg + (plan.stops.length ? `<div class="stops-summary">Partial plan: ${plan.stops.length} stop(s) before the gap.</div>` : '');
+    setVerdict('no', '🛑', `Couldn't complete a charging plan${plan.gapFrom!=null?` — gap near mile ${plan.gapFrom}`:''}. You may need a non-preferred charger or a waypoint there.`);
     return;
   }
   if (!plan.stops.length){
@@ -816,6 +861,7 @@ function renderStops(plan, e, reserve, roundTrip){
     return;
   }
   const totalMin = plan.stops.reduce((s,x)=>s+x.mins,0);
+  setVerdict('ok', '✅', `Doable with <b>${plan.stops.length} charging stop${plan.stops.length>1?'s':''}</b> (~${Math.round(totalMin)} min charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
   let html = `<div class="stops-summary">${plan.stops.length} stop${plan.stops.length>1?'s':''} · ~${Math.round(totalMin)} min total charging · arrive around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
   plan.stops.forEach((s,i) => {
     html += `<div class="stop">
@@ -869,9 +915,11 @@ function buildVerdict(energy, batt, effEff){
   document.getElementById('socEndLbl').textContent = endSoc >= 0 ? ('Arrive ' + Math.round(endSoc) + '%  ·  ' + Math.round(endMiles) + ' mi left') : ('Short by ' + Math.round(-endSoc) + '%');
 
   if (endSoc < 0){
-    const deficitKwh = (-endSoc) / 100 * batt;
-    vEl.className = 'verdict no';
-    vEl.innerHTML = `<span class="vicon">🛑</span><span>You won't make it — short by about <b>${(-endSoc).toFixed(0)}%</b> (${deficitKwh.toFixed(1)} kWh). Plan a charging stop along the way.</span>`;
+    // Beyond a single charge — the charging planner (below) handles this and
+    // will set the real verdict. The single-charge SoC bar doesn't apply.
+    socCard.style.display = 'none';
+    vEl.className = 'verdict tight';
+    vEl.innerHTML = `<span class="vicon">🔌</span><span>This trip needs charging along the way — planning stops…</span>`;
   } else if (endSoc < reserve){
     vEl.className = 'verdict tight';
     vEl.innerHTML = `<span class="vicon">⚠️</span><span>Cutting it close — you'd arrive around <b>${endSoc.toFixed(0)}%</b>, below your ${reserve}% buffer. Doable, but top up if you can.</span>`;
