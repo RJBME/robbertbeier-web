@@ -591,6 +591,7 @@ function compute(A, B, rt, temp){
 const PREFERRED_NETS = ['Tesla', 'Electrify America', 'ChargePoint'];
 const NET_DEFAULT_KW = { 'Tesla': 250, 'Electrify America': 150, 'ChargePoint': 62.5 };
 const NET_CLASS = { 'Tesla': 'net-tesla', 'Electrify America': 'net-ea', 'ChargePoint': 'net-cp' };
+const NET_PREF = { 'Tesla': 3, 'Electrify America': 2, 'ChargePoint': 1 }; // tie-break order
 const MIN_DCFC_KW = 50;
 
 // Mach-E (extended range / GT) DC charging curve: power (kW) vs SoC (%).
@@ -727,7 +728,13 @@ function planStops(destMi, effEff, batt, startSoc, reserve, chargers){
     const pool = fast.length ? fast : all;
     const maxAlong = Math.max(...pool.map(c => c.alongMi));
     const cluster = pool.filter(c => c.alongMi >= maxAlong - 20);
-    cluster.sort((a,b) => (b.maxKW - a.maxKW) || (b.alongMi - a.alongMi));
+    // Rank by EFFECTIVE speed for this car: the Mach-E caps around 150 kW, so a
+    // 350 kW EA and a 150 kW+ Tesla charge it equally fast. Treat anything at/above
+    // the car's peak as equal, then prefer your network (Tesla > EA > ChargePoint),
+    // then the charger farthest along.
+    const peak = Math.max(...CAR_CURVE.map(p => p[1]));
+    const espeed = c => Math.min(c.maxKW, peak);
+    cluster.sort((a,b) => (espeed(b)-espeed(a)) || (NET_PREF[b.net]-NET_PREF[a.net]) || (b.alongMi-a.alongMi));
     const c = cluster[0];
     const arriveSoc = soc - (c.alongMi - pos)/milesPerPct;
     const remAfter = destMi - c.alongMi;
