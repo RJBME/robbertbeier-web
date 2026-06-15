@@ -71,6 +71,25 @@ permalink: /trip-calculator/
   .hero-stat .lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-top: 4px; }
   .hero-stat .sub { font-size: 0.7rem; color: #888; margin-top: 3px; }
 
+  /* Route options */
+  .routes-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; font-weight: 700; margin-bottom: 8px; }
+  .routes-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .route-card {
+    flex: 1; min-width: 140px; text-align: left; cursor: pointer; font-family: inherit;
+    background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 12px;
+    padding: 12px 14px; transition: all 0.15s; color: var(--text);
+  }
+  .route-card:hover { border-color: var(--link); }
+  .route-card.sel { border-color: var(--link); box-shadow: inset 0 0 0 1px var(--link); background: rgba(93,63,211,0.06); }
+  .route-card .rc-top { font-size: 1.05rem; font-weight: 700; }
+  .route-card .rc-dim { color: #888; font-weight: 400; font-size: 0.8rem; }
+  .route-card .rc-energy { font-size: 0.8rem; color: var(--link); font-weight: 600; margin-top: 3px; }
+  .route-card .rc-tags { margin-top: 7px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .rtag { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: var(--dash-border); color: #888; }
+  .rtag.eff { background: #22c55e22; color: #16a34a; }
+
+  .fleet-note { font-size: 0.74rem; color: var(--text); background: #3b82f614; border: 1px solid #3b82f640; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; }
+
   .verdict { border-radius: 12px; padding: 16px 20px; margin-bottom: 18px; font-size: 0.92rem; font-weight: 600; display: flex; align-items: center; gap: 12px; }
   .verdict .vicon { font-size: 1.6rem; }
   .verdict.ok    { background: #22c55e1a; border: 1px solid #22c55e55; color: var(--text); }
@@ -177,6 +196,8 @@ permalink: /trip-calculator/
   </div>
 
   <div id="results">
+    <div id="routeOptions"></div>
+    <div class="fleet-note" id="fleetNote" style="display:none"></div>
     <div class="verdict" id="verdict"></div>
 
     <div class="result-hero">
@@ -224,13 +245,16 @@ permalink: /trip-calculator/
 //  REAL SESSION DATA (embedded by Jekyll at build time)
 // ============================================================
 const RAW_SESSIONS = [
-{% assign ss = site.charging | sort: "date" %}{% for s in ss %}{% if s.energy_kwh and s.energy_kwh != "" %}{"v":{{ s.vehicle | jsonify }},"kwh":{{ s.energy_kwh }},"mi":{% if s.miles_added and s.miles_added != "" %}{{ s.miles_added }}{% else %}0{% endif %},"tf":{% if s.temperature_f and s.temperature_f != "" %}{{ s.temperature_f }}{% else %}null{% endif %}},
+{% assign ss = site.charging | sort: "date" %}{% for s in ss %}{% if s.energy_kwh and s.energy_kwh != "" %}{"v":{{ s.vehicle | jsonify }},"kwh":{{ s.energy_kwh }},"mi":{% if s.miles_added and s.miles_added != "" %}{{ s.miles_added }}{% else %}0{% endif %},"tf":{% if s.temperature_f and s.temperature_f != "" %}{{ s.temperature_f }}{% else %}null{% endif %},"soc":{% if s.soc_added and s.soc_added != "" %}{{ s.soc_added }}{% else %}null{% endif %}},
 {% endif %}{% endfor %}
 ];
 
-// Usable battery capacity (kWh) — matches analytics page
+// Known usable battery capacity (kWh) — fallback only; the model also derives
+// this straight from your data (energy added ÷ %SoC added), so a new car
+// self-calibrates as it logs sessions.
 const BATTERY = { '2025 Mach-E GT': 91.7, "LRB's 2025 Mach-E GT": 91.7 };
 const DEFAULT_BATTERY = 91.7;
+const MIN_OWN_SESSIONS = 5; // below this, a vehicle borrows the fleet average
 const FLEET_FALLBACK_EFF = 3.0; // mi/kWh if a vehicle has no usable data
 
 // SE-Michigan monthly avg temp (°F) — last-resort fallback for temperature
@@ -261,7 +285,7 @@ const MODEL = (function buildModel(){
   let usableCount = 0;
   RAW_SESSIONS.forEach(s => {
     if (!(s.kwh > 0)) return;
-    if (!(s.v in veh)) veh[s.v] = { effs: [], temps: [] };
+    if (!(s.v in veh)) veh[s.v] = { effs: [], temps: [], batt: [] };
     if (s.mi > 0){
       const e = s.mi / s.kwh;
       if (e > 1 && e < 6){ // sanity bounds — drop guess-o-meter outliers
@@ -270,26 +294,45 @@ const MODEL = (function buildModel(){
         usableCount++;
       }
     }
+    // Usable battery = energy added ÷ fraction of pack added (ignore tiny charges)
+    if (s.soc != null && s.soc >= 15) veh[s.v].batt.push(s.kwh / (s.soc / 100));
   });
-  // For each vehicle:
-  //   baseEff = robust median of real mi/kWh (the MAGNITUDE — straight from your data)
-  //   tRef    = the temperature those sessions typically happened at (the anchor point)
-  // The DIRECTION of temperature sensitivity comes from the published EV curve,
-  // because charging-log range estimates are far too noisy to fit a slope from.
+
+  // Fleet averages from vehicles that already have enough of their own data —
+  // these become the prior a brand-new car inherits the day you switch.
+  const estEffs = [], estBatts = [];
   for (const v in veh){
-    veh[v].baseEff = veh[v].effs.length ? median(veh[v].effs) : FLEET_FALLBACK_EFF;
-    veh[v].tRef    = veh[v].temps.length ? median(veh[v].temps) : 60;
+    if (veh[v].effs.length >= MIN_OWN_SESSIONS) estEffs.push(median(veh[v].effs));
+    if (veh[v].batt.length >= MIN_OWN_SESSIONS) estBatts.push(median(veh[v].batt));
   }
-  return { veh, usableCount };
+  const fleetEff  = estEffs.length  ? median(estEffs)  : FLEET_FALLBACK_EFF;
+  const fleetBatt = estBatts.length ? median(estBatts) : DEFAULT_BATTERY;
+
+  // Per vehicle: use its OWN data when it has enough, otherwise borrow the fleet.
+  //   baseEff = median mi/kWh magnitude (direction of temp comes from the curve)
+  //   tRef    = the temperature those sessions typically happened at
+  //   battery = data-derived usable kWh, or known spec, or fleet average
+  for (const v in veh){
+    const d = veh[v];
+    d.ownEff  = d.effs.length >= MIN_OWN_SESSIONS;
+    d.ownBatt = d.batt.length >= MIN_OWN_SESSIONS;
+    d.nEff    = d.effs.length;
+    d.baseEff = d.ownEff ? median(d.effs) : (d.effs.length ? (median(d.effs) + fleetEff) / 2 : fleetEff);
+    d.tRef    = d.temps.length ? median(d.temps) : 60;
+    d.battery = d.ownBatt ? median(d.batt) : (BATTERY[v] || fleetBatt);
+    d.battSrc = d.ownBatt ? 'your data' : (BATTERY[v] ? 'spec' : 'fleet avg');
+  }
+  return { veh, usableCount, fleetEff, fleetBatt };
 })();
 
 // Predict absolute mi/kWh for a vehicle at a given temperature.
 // Anchors your real efficiency at its typical temperature, then scales by the
 // canonical temperature curve so cold correctly reduces range and warm restores it.
 function predictEff(vehName, tempF){
-  const v = MODEL.veh[vehName] || { baseEff: FLEET_FALLBACK_EFF, tRef: 60 };
+  const v = MODEL.veh[vehName] || { baseEff: MODEL.fleetEff, tRef: 60 };
   return v.baseEff * lerp(TEMP_CURVE, tempF) / lerp(TEMP_CURVE, v.tRef);
 }
+function vehModel(name){ return MODEL.veh[name] || { baseEff: MODEL.fleetEff, tRef: 60, battery: MODEL.fleetBatt, battSrc: 'fleet avg', ownEff: false, nEff: 0 }; }
 
 // ============================================================
 //  UI setup
@@ -329,12 +372,11 @@ async function geocode(q, el){
 }
 
 async function route(a, b){
-  const url = `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=full&geometries=geojson`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=full&geometries=geojson&alternatives=3`;
   const r = await fetch(url);
   const j = await r.json();
   if (!j.routes || !j.routes.length) throw new Error('No driving route found between those points.');
-  const rt = j.routes[0];
-  return { miles: rt.distance / 1609.34, hours: rt.duration / 3600, geometry: rt.geometry };
+  return j.routes.slice(0, 3).map(rt => ({ miles: rt.distance / 1609.34, hours: rt.duration / 3600, geometry: rt.geometry }));
 }
 
 async function tripTemp(lat, lon, dateStr){
@@ -368,7 +410,7 @@ async function tripTemp(lat, lon, dateStr){
 // ============================================================
 //  Main flow
 // ============================================================
-let MAP, ROUTE_LAYER;
+let MAP, ROUTE_LAYER, STATE = null;
 async function planTrip(){
   const btn = document.getElementById('goBtn');
   const startEl = document.getElementById('startAddr'), endEl = document.getElementById('endAddr');
@@ -379,19 +421,76 @@ async function planTrip(){
     const [A, B] = await Promise.all([ geocode(startEl.value.trim(), startEl), geocode(endEl.value.trim(), endEl) ]);
 
     setStatus('Planning route…');
-    const rt = await route(A, B);
+    const routes = await route(A, B);
 
     const mid = { lat: (A.lat + B.lat) / 2, lon: (A.lon + B.lon) / 2 };
     setStatus('Checking the weather…');
     const temp = await tripTemp(mid.lat, mid.lon, document.getElementById('depDate').value);
 
     setStatus('');
-    compute(A, B, rt, temp);
+    STATE = { A, B, routes, temp, sel: 0 };
+    renderRouteOptions();
+    compute(A, B, routes[0], temp);
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(e){
     setStatus(e.message || 'Something went wrong. Try a more specific address.', true);
   } finally {
     btn.disabled = false;
   }
+}
+
+// Recompute everything from inputs when a route is already loaded
+function refresh(){ if (STATE){ renderRouteOptions(); compute(STATE.A, STATE.B, STATE.routes[STATE.sel], STATE.temp); } }
+
+// Shared math — used by both the route cards and the full result render
+function estimate(rt, temp){
+  const round   = document.getElementById('roundTrip').checked;
+  const miles   = rt.miles * (round ? 2 : 1);
+  const vehName = document.getElementById('vehSel').value;
+  const m       = vehModel(vehName);
+  const tempEff = predictEff(vehName, temp.f);
+  const road    = roadFactor(rt);
+  const effEff  = tempEff * road.f;
+  const energy  = miles / effEff;
+  return { round, miles, hours: rt.hours * (round ? 2 : 1), vehName, m, batt: m.battery,
+           baseEff: m.baseEff, tempEff, tempMult: tempEff / m.baseEff, road, effEff,
+           energy, pctBatt: energy / m.battery * 100 };
+}
+
+function renderRouteOptions(){
+  const box = document.getElementById('routeOptions');
+  box.innerHTML = '';
+  const routes = STATE.routes;
+  const ests = routes.map(rt => estimate(rt, STATE.temp));
+  if (routes.length > 1){
+    const t = document.createElement('div');
+    t.className = 'routes-title';
+    t.textContent = routes.length + ' route options — tap to compare';
+    box.appendChild(t);
+  }
+  const minE = Math.min(...ests.map(e => e.energy)), maxE = Math.max(...ests.map(e => e.energy));
+  const minT = Math.min(...ests.map(e => e.hours)), maxT = Math.max(...ests.map(e => e.hours));
+  const grid = document.createElement('div');
+  grid.className = 'routes-grid';
+  routes.forEach((rt, i) => {
+    const e = ests[i];
+    const tags = [];
+    if (routes.length > 1){
+      if (e.energy === minE && minE !== maxE) tags.push('<span class="rtag eff">⚡ least energy</span>');
+      if (e.hours === minT && minT !== maxT)  tags.push('<span class="rtag">fastest</span>');
+    }
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'route-card' + (i === STATE.sel ? ' sel' : '');
+    card.innerHTML =
+      `<div class="rc-top">${e.miles.toFixed(0)} mi <span class="rc-dim">· ${fmtDur(e.hours)}</span></div>`
+      + `<div class="rc-energy">${e.energy.toFixed(1)} kWh · ${e.pctBatt.toFixed(0)}%</div>`
+      + (tags.length ? `<div class="rc-tags">${tags.join('')}</div>` : '');
+    card.onclick = () => { STATE.sel = i; refresh(); };
+    grid.appendChild(card);
+  });
+  box.appendChild(grid);
 }
 
 function roadFactor(rt){
@@ -404,43 +503,39 @@ function roadFactor(rt){
 }
 
 function compute(A, B, rt, temp){
-  const round = document.getElementById('roundTrip').checked;
-  const miles = rt.miles * (round ? 2 : 1);
-  const vehName = document.getElementById('vehSel').value;
-  const batt = BATTERY[vehName] || DEFAULT_BATTERY;
-
-  const m = MODEL.veh[vehName] || { baseEff: FLEET_FALLBACK_EFF, tRef: 60 };
-  const baseEff = m.baseEff;                         // your typical real-world mi/kWh
-  const tempEff = predictEff(vehName, temp.f);      // adjusted to the trip's temperature
-  const tempMult = tempEff / baseEff;
-  const road = roadFactor(rt);
-  const effEff = tempEff * road.f;                  // final mi/kWh
-  const energy = miles / effEff;
-  const pctBatt = energy / batt * 100;
+  const e = estimate(rt, temp);
 
   // Hero stats
-  document.getElementById('rDist').textContent = miles.toFixed(0) + ' mi';
-  document.getElementById('rDistSub').textContent = round ? 'round trip' : fmtDur(rt.hours * (round?2:1));
-  document.getElementById('rEnergy').textContent = energy.toFixed(1) + ' kWh';
-  document.getElementById('rEnergySub').textContent = pctBatt.toFixed(0) + '% of battery';
-  document.getElementById('rEff').textContent = effEff.toFixed(2);
+  document.getElementById('rDist').textContent = e.miles.toFixed(0) + ' mi';
+  document.getElementById('rDistSub').textContent = e.round ? 'round trip' : fmtDur(e.hours);
+  document.getElementById('rEnergy').textContent = e.energy.toFixed(1) + ' kWh';
+  document.getElementById('rEnergySub').textContent = e.pctBatt.toFixed(0) + '% of battery';
+  document.getElementById('rEff').textContent = e.effEff.toFixed(2);
   document.getElementById('rEffSub').textContent = 'mi / kWh';
   document.getElementById('rTemp').textContent = Math.round(temp.f) + '°F';
   document.getElementById('rTempSub').textContent = temp.src;
 
+  // "Running on fleet average" note for a freshly-added car
+  const fn = document.getElementById('fleetNote');
+  if (!e.m.ownEff){
+    fn.style.display = 'block';
+    fn.innerHTML = `ℹ️ <b>${e.vehName}</b> has only ${e.m.nEff} session${e.m.nEff===1?'':'s'} with range data so far — using your fleet average until it builds its own profile.`;
+  } else {
+    fn.style.display = 'none';
+  }
+
   // Breakdown
-  document.getElementById('bBase').textContent = baseEff.toFixed(2) + ' mi/kWh  (your avg @ ' + Math.round(m.tRef) + '°F)';
-  document.getElementById('bTemp').textContent = (tempMult>=1?'+':'') + ((tempMult-1)*100).toFixed(0) + '%  (' + Math.round(temp.f) + '°F)';
-  document.getElementById('bRoad').textContent = (road.f>=1?'+':'') + ((road.f-1)*100).toFixed(0) + '%  · ' + road.label;
-  document.getElementById('bEff').textContent = effEff.toFixed(2) + ' mi/kWh';
-  document.getElementById('bBatt').textContent = batt.toFixed(1) + ' kWh';
+  document.getElementById('bBase').textContent = e.baseEff.toFixed(2) + ' mi/kWh  '
+    + (e.m.ownEff ? '(your avg @ ' + Math.round(e.m.tRef) + '°F)' : '(fleet avg)');
+  document.getElementById('bTemp').textContent = (e.tempMult>=1?'+':'') + ((e.tempMult-1)*100).toFixed(0) + '%  (' + Math.round(temp.f) + '°F)';
+  document.getElementById('bRoad').textContent = (e.road.f>=1?'+':'') + ((e.road.f-1)*100).toFixed(0) + '%  · ' + e.road.label;
+  document.getElementById('bEff').textContent = e.effEff.toFixed(2) + ' mi/kWh';
+  document.getElementById('bBatt').textContent = e.batt.toFixed(1) + ' kWh  (' + e.m.battSrc + ')';
 
   // SoC + verdict
-  buildVerdict(energy, batt, effEff);
+  buildVerdict(e.energy, e.batt, e.effEff);
 
-  document.getElementById('results').style.display = 'block';
   drawMap(A, B, rt.geometry);
-  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function buildVerdict(energy, batt, effEff){
@@ -522,5 +617,11 @@ async function drawMap(A, B, geometry){
 ['startAddr','endAddr'].forEach(id => {
   document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') planTrip(); });
   document.getElementById(id).addEventListener('input', e => { delete e.target.dataset.home; });
+});
+
+// Tweaking vehicle / road / charge after a route is loaded → live re-estimate
+// (no re-routing or weather call needed — same route, new numbers)
+['vehSel','roadType','startSoc','reserve','roundTrip'].forEach(id => {
+  document.getElementById(id).addEventListener('change', refresh);
 });
 </script>
