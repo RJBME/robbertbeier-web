@@ -559,6 +559,7 @@ permalink: /charging-analytics/
       <!-- Cross-page shortcuts (compact, separated from section nav) -->
       <a href="/charging/" style="opacity:0.55;font-size:0.62rem;padding:2px 7px">⚡ Dash</a>
       <a href="/charging-history/" style="opacity:0.55;font-size:0.62rem;padding:2px 7px">📋 History</a>
+      <a href="/trip-calculator/" style="opacity:0.55;font-size:0.62rem;padding:2px 7px">🧭 Trip</a>
       <span style="color:var(--dash-border);margin:0 4px;align-self:center">│</span>
       <a href="#records">Records</a>
       <a href="#perspective">🌍 Perspective</a>

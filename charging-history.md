@@ -166,6 +166,7 @@ permalink: /charging-history/
     <a href="/charging/">⚡ Dashboard</a>
     <a href="/charging-history/" class="active">📋 History</a>
     <a href="/charging-analytics/">📊 Analytics</a>
+    <a href="/trip-calculator/">🧭 Trip</a>
   </nav>
 
   <div class="summary-bar" id="filterSummary">
