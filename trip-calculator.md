@@ -232,7 +232,10 @@ permalink: /trip-calculator/
         <input id="reserve" type="number" min="0" max="50" value="10">
         <span class="hint">Don't plan to arrive below this</span>
       </div>
-      <label class="check" style="flex:1;min-width:130px"><input type="checkbox" id="roundTrip"> Round trip</label>
+      <div style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:6px">
+        <label class="check"><input type="checkbox" id="roundTrip" onchange="onRoundTripToggle()"> Round trip</label>
+        <label class="check" id="destChargeWrap" style="display:none"><input type="checkbox" id="canChargeDest"> Can charge at destination</label>
+      </div>
     </div>
 
     <button class="go-btn" id="goBtn" onclick="planTrip()">Estimate trip ⚡</button>
@@ -929,21 +932,19 @@ function planSegmentCapped(fromMi, toMi, soc, reserve, chargers, nrg){
   return planSegment(fromMi, toMi, soc, reserve, chargers, nrg, 100); // infeasible → gap info
 }
 
-// Full journey: split into segments at charging waypoints (e.g. an overnight
-// hotel where you AC-charge to X%). Each charging waypoint resets SoC for the
-// next segment. DCFC stops and waypoint charges are returned in route order.
-function planJourney(totalMi, legMiles, waypoints, nrg, startSoc, reserve, chargers){
-  const anchors = (waypoints || [])
-    .map((w, i) => ({ ...w, mile: (legMiles && legMiles[i+1] != null) ? legMiles[i+1] : null }))
-    .filter(w => w.mile != null && !isNaN(w.chargeTo) && w.chargeTo > 0)
-    .sort((a,b) => a.mile - b.mile);
+// Full journey over [0, totalMi]. `anchors` are SoC-reset points (a charging
+// waypoint, or a round-trip destination where you can charge): each splits the
+// trip into a segment and resets SoC to its chargeTo for the next leg. DCFC
+// stops and anchor charges are returned in route order.
+function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers){
+  anchors = (anchors || []).filter(a => a.mile > 0 && a.mile < totalMi).sort((a,b) => a.mile - b.mile);
   const all = [];
   let segStart = 0, soc = startSoc, overCap = false;
   for (const wp of anchors){
     const r = planSegmentCapped(segStart, wp.mile, soc, reserve, chargers, nrg);
     r.stops.forEach(s => { all.push(s); if (s.overCap) overCap = true; });
     if (!r.feasible) return { needed: true, feasible: false, stops: all, gapFrom: r.gapFrom, reachMi: r.reachMi };
-    all.push({ waypoint: true, name: wp.addr, net: 'AC', alongMi: wp.mile,
+    all.push({ waypoint: true, name: wp.name, net: wp.acNet || 'AC', alongMi: wp.mile,
       arriveSoc: r.arriveSoc, target: wp.chargeTo, lat: wp.lat, lon: wp.lon });
     soc = wp.chargeTo;
     segStart = wp.mile;
@@ -954,11 +955,29 @@ function planJourney(totalMi, legMiles, waypoints, nrg, startSoc, reserve, charg
   return { needed: all.length > 0, feasible: true, stops: all, arriveSoc: rf.arriveSoc, overCap };
 }
 
+// Mirror chargers + elevation onto the return leg of a round trip: a charger at
+// outbound mile X is hit again at (2·oneWay − X); elevation reverses.
+function mirrorForRoundTrip(chargers, elev, oneWay){
+  const full = oneWay * 2;
+  const out = [];
+  (chargers || []).forEach(c => {
+    out.push(c);
+    if (c.alongMi < oneWay - 0.5) out.push({ ...c, alongMi: full - c.alongMi, id: (c.id||'') + '_r', returnLeg: true });
+  });
+  out.sort((a,b) => a.alongMi - b.alongMi);
+  let mElev = null;
+  if (elev && elev.length > 1){
+    mElev = elev.map(p => ({ mi: p.mi, elev: p.elev }));
+    for (let i = elev.length - 2; i >= 0; i--) mElev.push({ mi: full - elev[i].mi, elev: elev[i].elev });
+  }
+  return { chargers: out, elev: mElev, full };
+}
+
 // Fold elevation into the hero energy/efficiency once the profile is loaded.
-function applyElevationToHero(rt, e, nrg){
-  const mult = e.round ? 2 : 1;
-  const energy = nrg.energyKWh(0, rt.miles) * mult;       // elevation-adjusted
-  const miles  = rt.miles * mult;
+// nrg + totalMi already span the whole trip (round trips pass the mirrored model).
+function applyElevationToHero(e, nrg, totalMi){
+  const energy = nrg.energyKWh(0, totalMi);
+  const miles  = totalMi;
   const effEff = energy > 0 ? miles / energy : e.effEff;
   document.getElementById('rEnergy').textContent = energy.toFixed(1) + ' kWh';
   document.getElementById('rEnergySub').textContent = (energy / e.batt * 100).toFixed(0) + '% of battery';
@@ -999,22 +1018,38 @@ async function updateChargingPlan(rt, e, temp){
   }
   if (STATE && STATE.routes[STATE.sel] !== rt) return;
   const nrg = buildEnergyModel(e.effEff, e.batt, rt.elev);
-  applyElevationToHero(rt, e, nrg);
 
-  // Reachable without charging AND no charge-waypoints? Then no key/API call needed.
-  if (!chargingWps.length && rt.miles <= nrg.reachMi(0, startSoc, reserve)){
-    card.style.display = 'block';
-    const round = document.getElementById('roundTrip').checked;
-    const oneChargeRoundTrip = nrg.reachMi(0, startSoc, reserve) >= rt.miles * 2;
-    if (round && !oneChargeRoundTrip){
-      // Each leg fits on a charge, but the round trip doesn't — charge at the destination.
-      body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — but you'll need to charge at your destination before the return drive (the full round trip is beyond one charge).</div>`;
-      setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
-    } else {
+  // Round-trip setup: we plan the full out-and-back continuously (mirroring the
+  // route) so RETURN-leg stops get planned. A destination charge is assumed ONLY
+  // if you check "Can charge at destination".
+  const round = document.getElementById('roundTrip').checked;
+  const canChargeDest = round && document.getElementById('canChargeDest').checked;
+  const oneWay = rt.miles;
+  const planMi = round ? oneWay * 2 : oneWay;
+  const planNrg = round ? buildEnergyModel(e.effEff, e.batt, mirrorForRoundTrip([], rt.elev, oneWay).elev) : nrg;
+  applyElevationToHero(e, planNrg, planMi);
+
+  // Reachable without charging? (no key/API call needed)
+  if (!chargingWps.length){
+    const reachStart = nrg.reachMi(0, startSoc, reserve);
+    if (!round && oneWay <= reachStart){
+      card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — you'll make it on the starting charge.`);
+      return;
     }
-    return;
+    if (round && canChargeDest && oneWay <= reachStart){
+      card.style.display = 'block';
+      body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — you'll charge at your destination before the return.</div>`;
+      setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
+      return;
+    }
+    if (round && !canChargeDest && planMi <= planNrg.reachMi(0, startSoc, reserve)){
+      card.style.display = 'block';
+      body.innerHTML = `<div class="stops-note">✅ No charging stop needed — the whole round trip fits on your starting charge.</div>`;
+      setVerdict('ok', '✅', `No charging stop needed — the whole round trip is within range.`);
+      return;
+    }
   }
 
   if (!getOCMKey()){
@@ -1041,11 +1076,27 @@ async function updateChargingPlan(rt, e, temp){
     setVerdict('no', '🛑', `No compatible fast chargers found along this route.`);
     return;
   }
-  // Plan the one-way journey (segment by segment across any charge-waypoints)
-  const plan = planJourney(rt.miles, rt.legMiles, waypoints, nrg, startSoc, reserve, chargers);
-  renderStops(plan, e, reserve, document.getElementById('roundTrip').checked, startSoc, nrg);
-  drawChargerMarkers(plan.stops, waypoints);
-  rerouteThroughStops(rt, plan, e);
+  // Build plan inputs. Round trips mirror chargers + elevation onto the return
+  // leg; a destination charge becomes a SoC-reset anchor only if allowed.
+  let planChargers, useNrg, anchors;
+  if (round){
+    const m = mirrorForRoundTrip(chargers, rt.elev, oneWay);
+    planChargers = m.chargers;
+    useNrg = buildEnergyModel(e.effEff, e.batt, m.elev);
+    anchors = canChargeDest
+      ? [{ mile: oneWay, chargeTo: 90, name: 'Destination charge', lat: STATE.B.lat, lon: STATE.B.lon }]
+      : [];
+  } else {
+    planChargers = chargers;
+    useNrg = nrg;
+    anchors = waypoints
+      .map((w,i) => ({ mile: (rt.legMiles && rt.legMiles[i+1]), chargeTo: w.chargeTo, name: w.addr, lat: w.lat, lon: w.lon }))
+      .filter(a => a.mile != null && !isNaN(a.chargeTo) && a.chargeTo > 0);
+  }
+  const plan = planJourney(planMi, anchors, useNrg, startSoc, reserve, planChargers);
+  renderStops(plan, e, reserve, round, startSoc, useNrg, oneWay);
+  drawChargerMarkers(plan.stops, round ? [] : waypoints);
+  if (!round) rerouteThroughStops(rt, plan, e);
 }
 
 // Redraw the map route so it actually passes through the chosen stops + waypoints
@@ -1081,7 +1132,7 @@ function setVerdict(cls, icon, html){
   vEl.innerHTML = `<span class="vicon">${icon}</span><span>${html}</span>`;
 }
 
-function renderStops(plan, e, reserve, roundTrip, startSoc, nrg){
+function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   const body = document.getElementById('stopsBody');
   if (plan.needed && !plan.feasible){
     const oneWayMi = e.round ? e.miles / 2 : e.miles;
@@ -1120,29 +1171,37 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg){
   const nWp = plan.stops.length - dcfc.length;
   const wpNote = nWp ? ` + ${nWp} waypoint charge${nWp>1?'s':''}` : '';
   setVerdict('ok', '✅', `Doable with <b>${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}</b>${wpNote} (~${Math.round(totalMin)} min fast-charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
-  let html = `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
-  plan.stops.forEach((s,i) => {
+  let html = `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive ${roundTrip?'home':''} around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
+  let dividerShown = false, n = 0;
+  plan.stops.forEach((s) => {
+    // For round trips, drop a "turnaround" divider when stops cross into the return leg.
+    if (roundTrip && oneWay && s.alongMi > oneWay && !dividerShown){
+      html += `<div class="stops-summary" style="margin-top:6px">↩︎ turnaround at destination — return leg</div>`;
+      dividerShown = true;
+    }
+    const onReturn = roundTrip && oneWay && s.alongMi > oneWay;
+    const mileLabel = onReturn ? `${Math.round(2*oneWay - s.alongMi)} mi from home` : `mile ${Math.round(s.alongMi)}`;
     if (s.waypoint){
       html += `<div class="stop wp-stop">
         <div class="stop-num">★</div>
         <div class="stop-main">
-          <div class="stop-name">${s.name}<span class="net-badge net-wp">Waypoint · AC</span></div>
-          <div class="stop-sub">your stop · mile ${Math.round(s.alongMi)}</div>
-          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here (Level 2 / overnight)</div>
+          <div class="stop-name">${s.name}<span class="net-badge net-wp">${s.net==='AC'?'charge here':s.net}</span></div>
+          <div class="stop-sub">${mileLabel}</div>
+          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here</div>
         </div>
       </div>`;
     } else {
+      n++;
       html += `<div class="stop">
-        <div class="stop-num">${i+1}</div>
+        <div class="stop-num">${n}</div>
         <div class="stop-main">
-          <div class="stop-name">${s.name}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span></div>
-          <div class="stop-sub">${s.town ? s.town + ' · ' : ''}mile ${Math.round(s.alongMi)} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
+          <div class="stop-name">${s.name}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span>${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
+          <div class="stop-sub">${s.town ? s.town + ' · ' : ''}${mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
           <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min${s.overCap?` <span style="color:#eab308">⚠ above 80% — no closer charger</span>`:''}</div>
         </div>
       </div>`;
     }
   });
-  if (roundTrip) html += `<div class="stops-summary" style="margin-top:10px">↩︎ Stops shown for the outbound leg only.</div>`;
   body.innerHTML = html;
 }
 
@@ -1257,8 +1316,14 @@ async function drawMap(A, B, geometry){
 
 // Tweaking vehicle / road / charge after a route is loaded → live re-estimate
 // (no re-routing or weather call needed — same route, new numbers)
-['vehSel','roadType','startSoc','reserve','roundTrip','effOverride'].forEach(id => {
+['vehSel','roadType','startSoc','reserve','roundTrip','effOverride','canChargeDest'].forEach(id => {
   document.getElementById(id).addEventListener('change', refresh);
 });
 document.getElementById('effOverride').addEventListener('input', refresh);
+
+// Show the "can charge at destination" option only when round trip is on.
+function onRoundTripToggle(){
+  document.getElementById('destChargeWrap').style.display =
+    document.getElementById('roundTrip').checked ? 'flex' : 'none';
+}
 </script>
