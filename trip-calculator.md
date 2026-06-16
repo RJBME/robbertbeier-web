@@ -792,7 +792,7 @@ function chargeMinutes(from, to, batt, capKW){
 // or the segment end + buffer.
 const DCFC_TOP = 80;       // never charge past this on DC fast (charge curve too slow above)
 const TESLA_REACH_TOL = 40; // mi — prefer Tesla unless a non-Tesla gets you this much farther
-const CHARGER_FLOOR = 10;   // % — willing to run this low to REACH a charger (reserve is for the destination)
+const CHARGER_FLOOR = 6;    // % — willing to run this low to REACH a charger (reserve is for the destination)
 function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt, maxTop){
   maxTop = maxTop || DCFC_TOP;
   const milesPerPct = batt * effEff / 100;
