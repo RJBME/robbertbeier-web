@@ -1004,7 +1004,16 @@ async function updateChargingPlan(rt, e, temp){
   // Reachable without charging AND no charge-waypoints? Then no key/API call needed.
   if (!chargingWps.length && rt.miles <= nrg.reachMi(0, startSoc, reserve)){
     card.style.display = 'block';
-    body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
+    const round = document.getElementById('roundTrip').checked;
+    const oneChargeRoundTrip = nrg.reachMi(0, startSoc, reserve) >= rt.miles * 2;
+    if (round && !oneChargeRoundTrip){
+      // Each leg fits on a charge, but the round trip doesn't — charge at the destination.
+      body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — but you'll need to charge at your destination before the return drive (the full round trip is beyond one charge).</div>`;
+      setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
+    } else {
+      body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
+      setVerdict('ok', '✅', `No charging stop needed — you'll make it on the starting charge.`);
+    }
     return;
   }
 
@@ -1012,6 +1021,7 @@ async function updateChargingPlan(rt, e, temp){
     card.style.display = 'block';
     body.innerHTML = `<div class="stops-summary">Charging-stop suggestions need a free <a href="https://openchargemap.org/site/profile/applications" target="_blank" rel="noopener">Open Charge Map API key</a> (kept only in this browser).</div>`
       + `<div class="stops-key"><input id="ocmKeyInput" type="text" placeholder="Paste OCM API key"><button onclick="saveOCMKey()">Save key</button></div>`;
+    setVerdict('tight', '🔌', `This trip needs charging — add a free Open Charge Map key below to plan the stops.`);
     return;
   }
 
@@ -1027,7 +1037,8 @@ async function updateChargingPlan(rt, e, temp){
 
   const chargers = rt.chargers || [];
   if (!chargers.length){
-    body.innerHTML = `<div class="stops-note">No preferred DCFC (Tesla / EA / ChargePoint, ≥50 kW) found near this route in Open Charge Map.</div>`;
+    body.innerHTML = `<div class="stops-note">No compatible DCFC (Tesla V3 / EA / ChargePoint, ≥50 kW) found near this route in Open Charge Map.</div>`;
+    setVerdict('no', '🛑', `No compatible fast chargers found along this route.`);
     return;
   }
   // Plan the one-way journey (segment by segment across any charge-waypoints)
