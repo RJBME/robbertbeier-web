@@ -792,25 +792,28 @@ function chargeMinutes(from, to, batt, capKW){
 // or the segment end + buffer.
 const DCFC_TOP = 80;       // never charge past this on DC fast (charge curve too slow above)
 const TESLA_REACH_TOL = 40; // mi — prefer Tesla unless a non-Tesla gets you this much farther
+const CHARGER_FLOOR = 10;   // % — willing to run this low to REACH a charger (reserve is for the destination)
 function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt, maxTop){
   maxTop = maxTop || DCFC_TOP;
   const milesPerPct = batt * effEff / 100;
   const peak = Math.max(...CAR_CURVE.map(p => p[1]));
   const espeed = c => Math.min(c.maxKW, peak);
+  // You can dip below the reserve to reach a charger (you're about to refill);
+  // the reserve still governs arriving at the final destination.
+  const chargerFloor = Math.min(reserve, CHARGER_FLOOR);
   const stops = [];
   let pos = fromMi, soc = startSoc, guard = 0;
   const usable = chargers.filter(c => c.alongMi > fromMi + 1 && c.alongMi < toMi - 1);
   while (guard++ < 30){  // enough for cross-country
-    const reach = pos + (soc - reserve) * milesPerPct;
-    if (toMi <= reach){
+    const destReach = pos + (soc - reserve) * milesPerPct;       // reach the END keeping the reserve
+    if (toMi <= destReach){
       return { feasible: true, stops, arriveSoc: soc - (toMi - pos)/milesPerPct };
     }
-    // Candidates: reachable while keeping a 2% cushion above reserve; if none,
-    // relax to the hard reserve floor before giving up.
-    let all = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= pos + (soc - reserve - 2) * milesPerPct);
-    if (!all.length) all = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= reach);
+    // Chargers reachable while staying at/above the charger floor.
+    const chargerReach = pos + (soc - chargerFloor) * milesPerPct;
+    let all = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= chargerReach);
     if (!all.length){
-      return { feasible: false, stops, gapFrom: Math.round(pos), reachMi: Math.round(reach) };
+      return { feasible: false, stops, gapFrom: Math.round(pos), reachMi: Math.round(chargerReach) };
     }
     // Prefer fast chargers (>=100 kW); fall back to slow only if none reachable.
     const fast = all.filter(c => c.maxKW >= 100);
@@ -971,7 +974,8 @@ function renderStops(plan, e, reserve, roundTrip, startSoc){
   if (plan.needed && !plan.feasible){
     const milesPerPct = e.batt * e.effEff / 100;
     const oneWayMi = e.round ? e.miles / 2 : e.miles;
-    const usableMi  = Math.max(0, (startSoc - reserve) * milesPerPct);
+    const chargerFloor = Math.min(reserve, CHARGER_FLOOR);  // matches the planner
+    const usableMi  = Math.max(0, (startSoc - chargerFloor) * milesPerPct);
     const neededStart = Math.ceil(reserve + oneWayMi / milesPerPct);
     // "Stuck at the start": couldn't even place a first stop — almost always the
     // starting charge is too low to reach any charger, not a real route gap.
