@@ -252,6 +252,7 @@ permalink: /trip-calculator/
       <div class="hero-stat"><div class="big" id="rEnergy">–</div><div class="lbl">Energy needed</div><div class="sub" id="rEnergySub"></div></div>
       <div class="hero-stat"><div class="big" id="rEff">–</div><div class="lbl">Est. efficiency</div><div class="sub" id="rEffSub"></div></div>
       <div class="hero-stat"><div class="big" id="rTemp">–</div><div class="lbl">Trip temp</div><div class="sub" id="rTempSub"></div></div>
+      <div class="hero-stat"><div class="big" id="rCost">–</div><div class="lbl">Est. cost</div><div class="sub" id="rCostSub"></div></div>
     </div>
 
     <div class="trip-card" id="socCard" style="display:none">
@@ -298,7 +299,7 @@ permalink: /trip-calculator/
 //  REAL SESSION DATA (embedded by Jekyll at build time)
 // ============================================================
 const RAW_SESSIONS = [
-{% assign ss = site.charging | sort: "date" %}{% for s in ss %}{% if s.energy_kwh and s.energy_kwh != "" %}{"v":{{ s.vehicle | jsonify }},"kwh":{{ s.energy_kwh }},"mi":{% if s.miles_added and s.miles_added != "" %}{{ s.miles_added }}{% else %}0{% endif %},"tf":{% if s.temperature_f and s.temperature_f != "" %}{{ s.temperature_f }}{% else %}null{% endif %},"soc":{% if s.soc_added and s.soc_added != "" %}{{ s.soc_added }}{% else %}null{% endif %}},
+{% assign ss = site.charging | sort: "date" %}{% for s in ss %}{% if s.energy_kwh and s.energy_kwh != "" %}{"v":{{ s.vehicle | jsonify }},"kwh":{{ s.energy_kwh }},"mi":{% if s.miles_added and s.miles_added != "" %}{{ s.miles_added }}{% else %}0{% endif %},"tf":{% if s.temperature_f and s.temperature_f != "" %}{{ s.temperature_f }}{% else %}null{% endif %},"soc":{% if s.soc_added and s.soc_added != "" %}{{ s.soc_added }}{% else %}null{% endif %},"cost":{% if s.cost and s.cost != "" %}{{ s.cost }}{% else %}0{% endif %},"loc":{{ s.location | jsonify }}},
 {% endif %}{% endfor %}
 ];
 
@@ -386,6 +387,39 @@ function predictEff(vehName, tempF){
   return v.baseEff * lerp(TEMP_CURVE, tempF) / lerp(TEMP_CURVE, v.tRef);
 }
 function vehModel(name){ return MODEL.veh[name] || { baseEff: MODEL.fleetEff, tRef: 60, battery: MODEL.fleetBatt, battSrc: 'fleet avg', ownEff: false, nEff: 0 }; }
+
+// ── Your real charging COSTS: $/kWh per place, from your sessions ──
+function costBucket(loc){
+  const l = (loc || '').toLowerCase();
+  if (l.includes('home')) return 'home';
+  if (l.includes('work')) return 'work';
+  if (l.includes('tesla')) return 'Tesla';
+  if (l.includes('electrify')) return 'Electrify America';
+  if (l.includes('chargepoint')) return 'ChargePoint';
+  return 'other';
+}
+const COST = (function buildCost(){
+  const b = {};
+  RAW_SESSIONS.forEach(s => {
+    if (!(s.kwh > 0)) return;
+    const k = costBucket(s.loc);
+    (b[k] ??= { kwh: 0, paidKwh: 0, paidCost: 0 });
+    b[k].kwh += s.kwh;
+    if ((s.cost || 0) > 0){ b[k].paidKwh += s.kwh; b[k].paidCost += s.cost; }
+  });
+  const rate = k => (b[k] && b[k].paidKwh > 0) ? b[k].paidCost / b[k].paidKwh : null;
+  // overall paid public DCFC average (fallback for networks you haven't used, e.g. EA)
+  let pk = 0, pc = 0;
+  ['Tesla', 'Electrify America', 'ChargePoint', 'other'].forEach(k => { if (b[k]){ pk += b[k].paidKwh; pc += b[k].paidCost; } });
+  const publicAvg = pk > 0 ? pc / pk : 0.35;
+  return {
+    home: rate('home') ?? 0.20,
+    Tesla: rate('Tesla') ?? publicAvg,
+    'Electrify America': rate('Electrify America') ?? publicAvg,
+    ChargePoint: rate('ChargePoint') ?? publicAvg,
+    publicAvg
+  };
+})();
 
 // ============================================================
 //  UI setup
@@ -994,6 +1028,25 @@ function applyElevationToHero(e, nrg, totalMi){
   }
 }
 
+// Estimate trip cost from YOUR real $/kWh: the starting charge (home rate when
+// you leave from home) + each DCFC stop at that network's average rate.
+function renderCost(plan, energyTrip, fromHome){
+  let dcfcKWh = 0, dcfcCost = 0;
+  (plan && plan.stops || []).forEach(s => {
+    if (s.waypoint) return;
+    const r = (COST[s.net] != null) ? COST[s.net] : COST.publicAvg;
+    dcfcKWh += s.addedKWh; dcfcCost += s.addedKWh * r;
+  });
+  const startKWh  = Math.max(0, energyTrip - dcfcKWh);     // energy from the starting charge
+  const startRate = fromHome ? COST.home : COST.publicAvg;
+  const startCost = startKWh * startRate;
+  const total = startCost + dcfcCost;
+  document.getElementById('rCost').textContent = '$' + total.toFixed(2);
+  let sub = `$${startCost.toFixed(2)} ${fromHome ? 'home' : 'start'} charge`;
+  if (dcfcCost > 0) sub += ` + $${dcfcCost.toFixed(2)} charging`;
+  document.getElementById('rCostSub').textContent = sub;
+}
+
 let CHARGER_LAYER = [];
 async function updateChargingPlan(rt, e, temp){
   const card = document.getElementById('stopsCard');
@@ -1028,6 +1081,8 @@ async function updateChargingPlan(rt, e, temp){
   const planMi = round ? oneWay * 2 : oneWay;
   const planNrg = round ? buildEnergyModel(e.effEff, e.batt, mirrorForRoundTrip([], rt.elev, oneWay).elev) : nrg;
   applyElevationToHero(e, planNrg, planMi);
+  const energyTrip = planNrg.energyKWh(0, planMi);
+  const fromHome = STATE && STATE.A && haversine(STATE.A.lat, STATE.A.lon, HOME.lat, HOME.lon) < 3;
 
   // Reachable without charging? (no key/API call needed)
   if (!chargingWps.length){
@@ -1036,18 +1091,21 @@ async function updateChargingPlan(rt, e, temp){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — you'll make it on the starting charge.`);
+      renderCost(null, energyTrip, fromHome);
       return;
     }
     if (round && canChargeDest && oneWay <= reachStart){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — you'll charge at your destination before the return.</div>`;
       setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
+      renderCost(null, energyTrip, fromHome);
       return;
     }
     if (round && !canChargeDest && planMi <= planNrg.reachMi(0, startSoc, reserve)){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — the whole round trip fits on your starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — the whole round trip is within range.`);
+      renderCost(null, energyTrip, fromHome);
       return;
     }
   }
@@ -1095,6 +1153,7 @@ async function updateChargingPlan(rt, e, temp){
   }
   const plan = planJourney(planMi, anchors, useNrg, startSoc, reserve, planChargers);
   renderStops(plan, e, reserve, round, startSoc, useNrg, oneWay);
+  renderCost(plan, energyTrip, fromHome);
   drawChargerMarkers(plan.stops, round ? [] : waypoints);
   rerouteThroughStops(rt, plan, e, round, oneWay);
 }
@@ -1205,7 +1264,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
         <div class="stop-main">
           <div class="stop-name">${s.name}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span>${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
           <div class="stop-sub">${s.town ? s.town + ' · ' : ''}${mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
-          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min${s.overCap?` <span style="color:#eab308">⚠ above 80% — no closer charger</span>`:''}</div>
+          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min &nbsp;·&nbsp; ~$${(s.addedKWh * ((COST[s.net]!=null)?COST[s.net]:COST.publicAvg)).toFixed(2)}${s.overCap?` <span style="color:#eab308">⚠ above 80% — no closer charger</span>`:''}</div>
         </div>
       </div>`;
     }
