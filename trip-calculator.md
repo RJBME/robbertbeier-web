@@ -275,6 +275,7 @@ permalink: /trip-calculator/
         <tr><td>Base efficiency <span class="factor-src src-data">✓ from your sessions</span></td><td id="bBase"></td></tr>
         <tr><td>Temperature adjustment <span class="factor-src src-model">≈ EV temp curve, anchored to your data</span></td><td id="bTemp"></td></tr>
         <tr><td>Road-type adjustment <span class="factor-src src-model">≈ physics estimate</span></td><td id="bRoad"></td></tr>
+        <tr id="bElevRow" style="display:none"><td>Elevation <span class="factor-src src-model">≈ physics (m·g·h, partial regen)</span></td><td id="bElev"></td></tr>
         <tr><td>Effective efficiency</td><td id="bEff"></td></tr>
         <tr><td>Usable battery</td><td id="bBatt"></td></tr>
       </table>
@@ -787,15 +788,87 @@ function chargeMinutes(from, to, batt, capKW){
   return mins;
 }
 
+// ── Elevation-aware energy model ──────────────────────────────────────────
+// Sample N points evenly along the route, each with its cumulative miles.
+function sampleWithMiles(coords, n){
+  const cum = routeCum(coords);
+  const total = cum[cum.length-1] || 0;
+  const out = []; let j = 0;
+  for (let k=0;k<n;k++){
+    const target = total * k / (n-1);
+    while (j < cum.length-1 && cum[j] < target) j++;
+    out.push({ lat: coords[j][1], lon: coords[j][0], mi: cum[j] });
+  }
+  return out;
+}
+async function fetchElevation(geometry){
+  const pts = sampleWithMiles(geometry.coordinates, 90);
+  const lats = pts.map(p => p.lat.toFixed(4)).join(',');
+  const lons = pts.map(p => p.lon.toFixed(4)).join(',');
+  try {
+    const j = await (await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lons}`)).json();
+    const el = j.elevation || [];
+    if (el.length !== pts.length) return null;
+    return pts.map((p,i) => ({ mi: p.mi, elev: el[i] }));
+  } catch(e){ return null; }
+}
+// Build the energy model: flat term from your efficiency + elevation physics.
+// Climbing costs m·g·Δh; descending recovers REGEN_FRAC of it. Falls back to a
+// flat model when elevation isn't available.
+const CAR_MASS_KG = 2300;   // Mach-E GT + typical load
+const REGEN_FRAC = 0.7;     // fraction of potential energy recovered on descent
+function buildEnergyModel(effEff, batt, elev){
+  let pts = null, gainM = 0, dropM = 0, elevKWh = 0;
+  if (elev && elev.length > 1){
+    pts = [{ mi: elev[0].mi, cum: 0 }];
+    for (let i=1;i<elev.length;i++){
+      const dMi = elev[i].mi - elev[i-1].mi;
+      const flat = dMi / effEff;
+      const dh = elev[i].elev - elev[i-1].elev;       // meters
+      let eK = CAR_MASS_KG * 9.81 * dh / 3.6e6;        // kWh (potential)
+      if (dh >= 0) gainM += dh; else { dropM += -dh; eK *= REGEN_FRAC; }
+      elevKWh += eK;
+      pts.push({ mi: elev[i].mi, cum: pts[i-1].cum + flat + eK });
+    }
+  }
+  function eAt(mi){
+    if (!pts) return Math.max(0, mi) / effEff;
+    if (mi <= pts[0].mi) return 0;
+    const last = pts[pts.length-1];
+    if (mi >= last.mi) return last.cum + (mi - last.mi) / effEff;
+    for (let i=1;i<pts.length;i++) if (pts[i].mi >= mi){
+      const a=pts[i-1], b=pts[i], f=(mi-a.mi)/((b.mi-a.mi)||1);
+      return a.cum + (b.cum-a.cum)*f;
+    }
+    return last.cum;
+  }
+  const energyKWh = (fromMi, toMi) => Math.max(0, eAt(toMi) - eAt(fromMi));
+  const socDrop   = (fromMi, toMi) => energyKWh(fromMi, toMi) / batt * 100;
+  // Farthest mile reachable from fromMi at fromSoc, not dropping below floorSoc.
+  function reachMi(fromMi, fromSoc, floorSoc){
+    const budget = (fromSoc - floorSoc) / 100 * batt;     // kWh available
+    if (budget <= 0) return fromMi;
+    const target = eAt(fromMi) + budget;
+    if (!pts) return fromMi + budget * effEff;
+    const last = pts[pts.length-1];
+    if (target >= eAt(last.mi)) return last.mi + (target - eAt(last.mi)) * effEff;
+    let lo = fromMi, hi = last.mi;
+    for (let it=0; it<36; it++){ const mid=(lo+hi)/2; if (eAt(mid) < target) lo=mid; else hi=mid; }
+    return lo;
+  }
+  return { batt, effEff, eAt, energyKWh, socDrop, reachMi,
+           hasElev: !!pts, gainM: Math.round(gainM), dropM: Math.round(dropM), elevKWh };
+}
+
 // Greedy plan for ONE segment [fromMi, toMi]: stop as far along as range-to-buffer
 // allows, prefer fast/preferred chargers, charge only enough to reach the next stop
 // or the segment end + buffer.
 const DCFC_TOP = 80;       // never charge past this on DC fast (charge curve too slow above)
 const TESLA_REACH_TOL = 40; // mi — prefer Tesla unless a non-Tesla gets you this much farther
 const CHARGER_FLOOR = 6;    // % — willing to run this low to REACH a charger (reserve is for the destination)
-function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt, maxTop){
+function planSegment(fromMi, toMi, startSoc, reserve, chargers, nrg, maxTop){
   maxTop = maxTop || DCFC_TOP;
-  const milesPerPct = batt * effEff / 100;
+  const batt = nrg.batt;
   const peak = Math.max(...CAR_CURVE.map(p => p[1]));
   const espeed = c => Math.min(c.maxKW, peak);
   // You can dip below the reserve to reach a charger (you're about to refill);
@@ -805,12 +878,11 @@ function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt, ma
   let pos = fromMi, soc = startSoc, guard = 0;
   const usable = chargers.filter(c => c.alongMi > fromMi + 1 && c.alongMi < toMi - 1);
   while (guard++ < 30){  // enough for cross-country
-    const destReach = pos + (soc - reserve) * milesPerPct;       // reach the END keeping the reserve
-    if (toMi <= destReach){
-      return { feasible: true, stops, arriveSoc: soc - (toMi - pos)/milesPerPct };
+    if (toMi <= nrg.reachMi(pos, soc, reserve)){            // reach the END keeping the reserve
+      return { feasible: true, stops, arriveSoc: soc - nrg.socDrop(pos, toMi) };
     }
     // Chargers reachable while staying at/above the charger floor.
-    const chargerReach = pos + (soc - chargerFloor) * milesPerPct;
+    const chargerReach = nrg.reachMi(pos, soc, chargerFloor);
     let all = usable.filter(c => c.alongMi > pos + 4 && c.alongMi <= chargerReach);
     if (!all.length){
       return { feasible: false, stops, gapFrom: Math.round(pos), reachMi: Math.round(chargerReach) };
@@ -830,9 +902,8 @@ function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt, ma
     const cluster = basis.filter(c => c.alongMi >= top - 20);
     cluster.sort((a,b) => (espeed(b)-espeed(a)) || (NET_PREF[b.net]-NET_PREF[a.net]) || (b.alongMi-a.alongMi));
     const c = cluster[0];
-    const arriveSoc = soc - (c.alongMi - pos)/milesPerPct;
-    const remAfter = toMi - c.alongMi;
-    const finishSoc = reserve + remAfter / milesPerPct;        // charge needed to reach segment end + buffer
+    const arriveSoc = soc - nrg.socDrop(pos, c.alongMi);
+    const finishSoc = reserve + nrg.socDrop(c.alongMi, toMi);  // charge needed to reach segment end + buffer
     // Charge only enough to reach the segment end + buffer, but never above the
     // DCFC cap (default 80%). If 80% can't reach the end, the loop adds a stop.
     let target = finishSoc <= maxTop ? Math.ceil(finishSoc) : maxTop;
@@ -841,27 +912,27 @@ function planSegment(fromMi, toMi, startSoc, reserve, chargers, effEff, batt, ma
       mins: chargeMinutes(arriveSoc, target, batt, c.maxKW) });
     pos = c.alongMi; soc = target;
   }
-  return { feasible: false, stops, gapFrom: Math.round(pos), reachMi: Math.round(pos + (soc-reserve)*milesPerPct) };
+  return { feasible: false, stops, gapFrom: Math.round(pos), reachMi: Math.round(nrg.reachMi(pos, soc, reserve)) };
 }
 
 // Plan a segment with the 80% DCFC cap; only if that's infeasible (a leg with no
 // charger in range) raise the cap in small steps and use the lowest that works,
 // flagging any stop forced above 80%.
-function planSegmentCapped(fromMi, toMi, soc, reserve, chargers, effEff, batt){
+function planSegmentCapped(fromMi, toMi, soc, reserve, chargers, nrg){
   for (const cap of [DCFC_TOP, 85, 90, 95, 100]){
-    const r = planSegment(fromMi, toMi, soc, reserve, chargers, effEff, batt, cap);
+    const r = planSegment(fromMi, toMi, soc, reserve, chargers, nrg, cap);
     if (r.feasible){
       if (cap > DCFC_TOP) r.stops.forEach(s => { if (s.target > DCFC_TOP) s.overCap = true; });
       return r;
     }
   }
-  return planSegment(fromMi, toMi, soc, reserve, chargers, effEff, batt, 100); // infeasible → gap info
+  return planSegment(fromMi, toMi, soc, reserve, chargers, nrg, 100); // infeasible → gap info
 }
 
 // Full journey: split into segments at charging waypoints (e.g. an overnight
 // hotel where you AC-charge to X%). Each charging waypoint resets SoC for the
 // next segment. DCFC stops and waypoint charges are returned in route order.
-function planJourney(totalMi, legMiles, waypoints, effEff, batt, startSoc, reserve, chargers){
+function planJourney(totalMi, legMiles, waypoints, nrg, startSoc, reserve, chargers){
   const anchors = (waypoints || [])
     .map((w, i) => ({ ...w, mile: (legMiles && legMiles[i+1] != null) ? legMiles[i+1] : null }))
     .filter(w => w.mile != null && !isNaN(w.chargeTo) && w.chargeTo > 0)
@@ -869,7 +940,7 @@ function planJourney(totalMi, legMiles, waypoints, effEff, batt, startSoc, reser
   const all = [];
   let segStart = 0, soc = startSoc, overCap = false;
   for (const wp of anchors){
-    const r = planSegmentCapped(segStart, wp.mile, soc, reserve, chargers, effEff, batt);
+    const r = planSegmentCapped(segStart, wp.mile, soc, reserve, chargers, nrg);
     r.stops.forEach(s => { all.push(s); if (s.overCap) overCap = true; });
     if (!r.feasible) return { needed: true, feasible: false, stops: all, gapFrom: r.gapFrom, reachMi: r.reachMi };
     all.push({ waypoint: true, name: wp.addr, net: 'AC', alongMi: wp.mile,
@@ -877,10 +948,31 @@ function planJourney(totalMi, legMiles, waypoints, effEff, batt, startSoc, reser
     soc = wp.chargeTo;
     segStart = wp.mile;
   }
-  const rf = planSegmentCapped(segStart, totalMi, soc, reserve, chargers, effEff, batt);
+  const rf = planSegmentCapped(segStart, totalMi, soc, reserve, chargers, nrg);
   rf.stops.forEach(s => { all.push(s); if (s.overCap) overCap = true; });
   if (!rf.feasible) return { needed: true, feasible: false, stops: all, gapFrom: rf.gapFrom, reachMi: rf.reachMi };
   return { needed: all.length > 0, feasible: true, stops: all, arriveSoc: rf.arriveSoc, overCap };
+}
+
+// Fold elevation into the hero energy/efficiency once the profile is loaded.
+function applyElevationToHero(rt, e, nrg){
+  const mult = e.round ? 2 : 1;
+  const energy = nrg.energyKWh(0, rt.miles) * mult;       // elevation-adjusted
+  const miles  = rt.miles * mult;
+  const effEff = energy > 0 ? miles / energy : e.effEff;
+  document.getElementById('rEnergy').textContent = energy.toFixed(1) + ' kWh';
+  document.getElementById('rEnergySub').textContent = (energy / e.batt * 100).toFixed(0) + '% of battery';
+  document.getElementById('rEff').textContent = effEff.toFixed(2);
+  if (nrg.hasElev && (nrg.gainM > 60 || nrg.dropM > 60)){
+    const row = document.getElementById('bElevRow');
+    if (row){
+      row.style.display = '';
+      const sign = nrg.elevKWh >= 0 ? '+' : '−';
+      document.getElementById('bElev').textContent =
+        `${sign}${Math.abs(nrg.elevKWh).toFixed(1)} kWh  ·  ↑${nrg.gainM} m / ↓${nrg.dropM} m`;
+    }
+    document.getElementById('bEff').textContent = effEff.toFixed(2) + ' mi/kWh  (incl. terrain)';
+  }
 }
 
 let CHARGER_LAYER = [];
@@ -900,8 +992,17 @@ async function updateChargingPlan(rt, e, temp){
   const reserve = Math.max(0, Math.min(50, +document.getElementById('reserve').value || 0));
   const waypoints = (STATE && STATE.waypoints) || [];
   const chargingWps = waypoints.filter(w => !isNaN(w.chargeTo) && w.chargeTo > 0);
+
+  // Elevation-aware energy model (keyless). Cache the profile on the route.
+  if (rt.elev === undefined){
+    try { rt.elev = await fetchElevation(rt.geometry); } catch(err){ rt.elev = null; }
+  }
+  if (STATE && STATE.routes[STATE.sel] !== rt) return;
+  const nrg = buildEnergyModel(e.effEff, e.batt, rt.elev);
+  applyElevationToHero(rt, e, nrg);
+
   // Reachable without charging AND no charge-waypoints? Then no key/API call needed.
-  if (!chargingWps.length && e.miles <= (startSoc - reserve)/100 * e.batt * e.effEff){
+  if (!chargingWps.length && rt.miles <= nrg.reachMi(0, startSoc, reserve)){
     card.style.display = 'block';
     body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
     return;
@@ -930,8 +1031,8 @@ async function updateChargingPlan(rt, e, temp){
     return;
   }
   // Plan the one-way journey (segment by segment across any charge-waypoints)
-  const plan = planJourney(rt.miles, rt.legMiles, waypoints, e.effEff, e.batt, startSoc, reserve, chargers);
-  renderStops(plan, e, reserve, document.getElementById('roundTrip').checked, startSoc);
+  const plan = planJourney(rt.miles, rt.legMiles, waypoints, nrg, startSoc, reserve, chargers);
+  renderStops(plan, e, reserve, document.getElementById('roundTrip').checked, startSoc, nrg);
   drawChargerMarkers(plan.stops, waypoints);
   rerouteThroughStops(rt, plan, e);
 }
@@ -969,14 +1070,13 @@ function setVerdict(cls, icon, html){
   vEl.innerHTML = `<span class="vicon">${icon}</span><span>${html}</span>`;
 }
 
-function renderStops(plan, e, reserve, roundTrip, startSoc){
+function renderStops(plan, e, reserve, roundTrip, startSoc, nrg){
   const body = document.getElementById('stopsBody');
   if (plan.needed && !plan.feasible){
-    const milesPerPct = e.batt * e.effEff / 100;
     const oneWayMi = e.round ? e.miles / 2 : e.miles;
     const chargerFloor = Math.min(reserve, CHARGER_FLOOR);  // matches the planner
-    const usableMi  = Math.max(0, (startSoc - chargerFloor) * milesPerPct);
-    const neededStart = Math.ceil(reserve + oneWayMi / milesPerPct);
+    const usableMi  = Math.max(0, nrg.reachMi(0, startSoc, chargerFloor));
+    const neededStart = Math.ceil(reserve + nrg.socDrop(0, oneWayMi));
     // "Stuck at the start": couldn't even place a first stop — almost always the
     // starting charge is too low to reach any charger, not a real route gap.
     if (!plan.stops.length && (plan.gapFrom == null || plan.gapFrom < 12)){
