@@ -1096,21 +1096,30 @@ async function updateChargingPlan(rt, e, temp){
   const plan = planJourney(planMi, anchors, useNrg, startSoc, reserve, planChargers);
   renderStops(plan, e, reserve, round, startSoc, useNrg, oneWay);
   drawChargerMarkers(plan.stops, round ? [] : waypoints);
-  if (!round) rerouteThroughStops(rt, plan, e);
+  rerouteThroughStops(rt, plan, e, round, oneWay);
 }
 
-// Redraw the map route so it actually passes through the chosen stops + waypoints
-// (the energy plan is computed on the direct corridor; detours are a few mi each).
-let DRIVE_DIST_NOTE = null;
-async function rerouteThroughStops(rt, plan, e){
+// Redraw the map route so it actually passes through the chosen stops. For a
+// round trip we draw the FULL loop (A → stops → destination → return stops → A)
+// and report the true driven round-trip mileage.
+async function rerouteThroughStops(rt, plan, e, round, oneWay){
   if (!STATE || !plan || !plan.feasible) return;
-  const via = [];
-  plan.stops.forEach(s => { if (s.lat && s.lon && !s.waypoint) via.push({ lat: s.lat, lon: s.lon, mi: s.alongMi }); });
-  (STATE.waypoints || []).forEach((w, i) => { if (w.lat && w.lon) via.push({ lat: w.lat, lon: w.lon, mi: (rt.legMiles && rt.legMiles[i+1]) || 0 }); });
-  via.sort((a,b) => a.mi - b.mi);
-  if (!via.length || via.length > 12) return; // OSRM via limit; skip very long trips
+  const pts = [{ lat: STATE.A.lat, lon: STATE.A.lon }];
+  const withLatLon = plan.stops.filter(s => s.lat && s.lon);
+  if (round){
+    const out = withLatLon.filter(s => s.alongMi <= oneWay).sort((a,b)=>a.alongMi-b.alongMi);
+    const ret = withLatLon.filter(s => s.alongMi >  oneWay).sort((a,b)=>a.alongMi-b.alongMi);
+    out.forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
+    pts.push({ lat: STATE.B.lat, lon: STATE.B.lon });            // turnaround
+    ret.forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
+    pts.push({ lat: STATE.A.lat, lon: STATE.A.lon });            // back home
+  } else {
+    withLatLon.sort((a,b)=>a.alongMi-b.alongMi).forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
+    pts.push({ lat: STATE.B.lat, lon: STATE.B.lon });
+  }
+  if (pts.length > 14) return; // OSRM waypoint limit
   try {
-    const rr = (await route([STATE.A, ...via.map(v => ({ lat: v.lat, lon: v.lon })), STATE.B]))[0];
+    const rr = (await route(pts))[0];
     await loadLeaflet();
     if (MAP && ROUTE_LAYER && ROUTE_LAYER[0]){
       MAP.removeLayer(ROUTE_LAYER[0]);
@@ -1118,11 +1127,10 @@ async function rerouteThroughStops(rt, plan, e){
       ROUTE_LAYER[0] = line;
       MAP.fitBounds(line.getBounds(), { padding: [30, 30] });
     }
-    // Show the true via-stops driving distance next to the hero distance
-    const mult = e.round ? 2 : 1;
-    const driven = Math.round(rr.miles * mult);
+    // rr.miles is the true driven distance (full loop for round trips).
+    const driven = Math.round(rr.miles);
     if (Math.abs(driven - Math.round(e.miles)) >= 3)
-      document.getElementById('rDistSub').textContent = `${driven} mi via stops`;
+      document.getElementById('rDistSub').textContent = `${driven} mi via stops${round ? ' · round trip' : ''}`;
   } catch(err){ /* keep the direct route */ }
 }
 
