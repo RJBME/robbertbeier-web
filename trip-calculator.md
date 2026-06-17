@@ -66,12 +66,39 @@ permalink: /trip-calculator/
   .rs-del { visibility: hidden; }
   .route-row.removable .rs-del { visibility: visible; color: #ef4444; }
   /* charge slider row (full width under the stop) */
-  .rs-slider { grid-column: 3 / -1; display: none; align-items: center; gap: 10px; padding: 4px 2px 8px; }
+  .rs-slider { grid-column: 3 / -1; display: none; align-items: center; flex-wrap: wrap; gap: 10px; padding: 4px 2px 8px; }
   .rs-slider.show { display: flex; }
-  .rs-slider input[type=range] { flex: 1; accent-color: #16a34a; }
+  .rs-slider input[type=range] {
+    flex: 1; margin: 0; height: 18px; cursor: pointer;
+    -webkit-appearance: none; appearance: none; background: transparent;
+  }
+  .rs-slider input[type=range]:focus { outline: none; }
+  /* WebKit: track is a neutral bar with a green fill sized by --fill (set in JS) */
+  .rs-slider input[type=range]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 4px; background-color: var(--dash-border);
+    background-image: linear-gradient(#16a34a, #16a34a);
+    background-repeat: no-repeat; background-size: var(--fill, 60%) 100%;
+  }
+  .rs-slider input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; margin-top: -5px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #16a34a; border: 2px solid var(--dash-card); box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  /* Firefox: native progress + track + thumb */
+  .rs-slider input[type=range]::-moz-range-track { height: 6px; border-radius: 4px; background: var(--dash-border); }
+  .rs-slider input[type=range]::-moz-range-progress { height: 6px; border-radius: 4px; background: #16a34a; }
+  .rs-slider input[type=range]::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #16a34a; border: 2px solid var(--dash-card); box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
   .rs-slider .rs-pct { font-size: 0.78rem; font-weight: 700; color: #16a34a; min-width: 56px; }
   .rs-slider .rs-pct small { font-weight: 400; color: #888; }
-
+  /* optional $/kWh cost for charging at this stop (default free) */
+  .rs-slider .rs-cost { display: flex; align-items: center; gap: 3px; font-size: 0.72rem; color: #888; white-space: nowrap; cursor: text; }
+  .rs-slider .rs-cost-input {
+    width: 56px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--dash-border);
+    background: var(--bg); color: var(--text); font-size: 0.74rem; text-align: right;
+  }
   .stop.wp-stop .stop-num { background: #16a34a; }
   .net-wp { background: #16a34a20; color: #16a34a; }
 
@@ -98,6 +125,14 @@ permalink: /trip-calculator/
   .hero-stat .lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-top: 4px; }
   .hero-stat .sub { font-size: 0.7rem; color: #888; margin-top: 3px; }
 
+  /* Departure → arrival estimate */
+  .eta-banner { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; color: var(--text);
+    background: rgba(93,63,211,0.08); border: 1px solid rgba(93,63,211,0.35); border-radius: 12px;
+    padding: 12px 16px; margin-bottom: 18px; }
+  .eta-ico { font-size: 1.4rem; line-height: 1; }
+  .eta-text b { font-weight: 800; }
+  .eta-sub { display: block; font-size: 0.7rem; color: #888; margin-top: 3px; }
+
   /* Route options */
   .routes-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; font-weight: 700; margin-bottom: 8px; }
   .routes-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -114,6 +149,12 @@ permalink: /trip-calculator/
   .route-card .rc-tags { margin-top: 7px; display: flex; gap: 5px; flex-wrap: wrap; }
   .rtag { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: var(--dash-border); color: #888; }
   .rtag.eff { background: #22c55e22; color: #16a34a; }
+  .route-card .rc-role { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+  .rc-role-quickest { color: #2563eb; }
+  .rc-role-efficient { color: #16a34a; }
+  .rc-role-scenic { color: #b45309; }
+  .ors-save { padding: 0 14px; border: 1px solid var(--link); background: var(--link); color: #fff; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+  .ors-save:hover { filter: brightness(1.07); }
 
   .fleet-note { font-size: 0.74rem; color: var(--text); background: #3b82f614; border: 1px solid #3b82f640; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; }
 
@@ -125,7 +166,9 @@ permalink: /trip-calculator/
   .sg-val { font-weight: 800; font-size: 1rem; }
   .sg-green { color: #2ecc71; }
   .sg-amber { color: #f39c12; }
-
+  /* cost-breakdown caption under the stat grid (e.g. "$29 home + $17 DCFC") */
+  .sg-costnote { text-align: center; font-size: 0.7rem; color: #888; margin-top: 12px; }
+  .sg-costnote b { color: var(--text); font-weight: 600; }
   /* Charging stops */
   .stop { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--dash-border); }
   .stop:last-child { border-bottom: none; }
@@ -135,6 +178,22 @@ permalink: /trip-calculator/
   .stop-sub { font-size: 0.72rem; color: #888; margin-top: 1px; }
   .stop-charge { font-size: 0.8rem; margin-top: 5px; }
   .stop-charge b { color: var(--link); }
+  /* Address + map deep-links under each suggested DC fast stop */
+  .stop-links { margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.72rem; }
+  .stop-addr { color: #888; }
+  .stop-links a { color: var(--link); text-decoration: none; font-weight: 600; border: 1px solid var(--dash-border); border-radius: 999px; padding: 2px 9px; transition: all 0.15s; }
+  .stop-links a:hover { border-color: var(--link); background: rgba(93,63,211,0.08); }
+  /* Hand-off to a phone maps app */
+  .export-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+  .export-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700;
+    text-decoration: none; padding: 9px 16px; border-radius: 10px; border: 1px solid var(--dash-border); transition: all 0.15s; }
+  .export-btn.gmaps { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+  .export-btn.gmaps:hover { background: #1666cf; }
+  .export-btn.amaps { background: var(--dash-card); color: var(--text); }
+  .export-btn.amaps:hover { border-color: var(--link); background: rgba(93,63,211,0.06); }
+  .export-btn.tlog { background: var(--link); border-color: var(--link); color: #fff; cursor: pointer; font-family: inherit; }
+  .export-btn.tlog:hover { background: #4d33b8; }
+  .export-note { font-size: 0.7rem; color: #888; margin-top: 10px; line-height: 1.5; }
   .net-badge { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
   .net-tesla { background: #e8222220; color: #e82222; }
   .net-ea    { background: #00b04f20; color: #00963f; }
@@ -218,8 +277,12 @@ permalink: /trip-calculator/
         <select id="vehSel"></select>
       </div>
       <div class="field">
-        <label>Departure date</label>
-        <input id="depDate" type="date">
+        <label>Departure</label>
+        <div style="display:flex;gap:6px">
+          <input id="depDate" type="date" style="flex:1 1 auto;min-width:0">
+          <input id="depTime" type="time" step="300" title="24-hour clock" style="flex:0 0 7.25rem">
+        </div>
+        <span class="hint">Date &amp; time (24h) — sets the arrival estimate</span>
       </div>
       <div class="field">
         <label>Road type</label>
@@ -249,7 +312,19 @@ permalink: /trip-calculator/
       </div>
       <div style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:6px">
         <label class="check"><input type="checkbox" id="roundTrip" onchange="onRoundTripToggle()"> Round trip</label>
-        <label class="check" id="destChargeWrap" style="display:none"><input type="checkbox" id="canChargeDest"> Can charge at destination</label>
+        <label class="check" id="destChargeWrap" style="display:none"><input type="checkbox" id="canChargeDest" onchange="onRoundTripToggle()"> Can charge at destination</label>
+        <label class="check" id="destRateWrap" style="display:none;gap:4px"><small style="color:#888">$</small><input id="destRate" type="number" min="0" step="0.01" style="width:64px"><small style="color:#888">/kWh at destination</small></label>
+      </div>
+    </div>
+
+    <div class="opt-row">
+      <div class="field" style="flex:1;min-width:240px">
+        <label>Route alternatives <span style="font-weight:400;text-transform:none">(optional)</span></label>
+        <div style="display:flex;gap:6px">
+          <input id="orsKeyInput" type="password" autocomplete="off" placeholder="openrouteservice API key" style="flex:1 1 auto;min-width:0" onchange="saveORSKey()">
+          <button type="button" class="ors-save" onclick="saveORSKey()">Save</button>
+        </div>
+        <span class="hint">Free key from <a href="https://openrouteservice.org/dev/#/signup" target="_blank" rel="noopener">openrouteservice.org</a> — adds quickest / most efficient / scenic routes (kept only in this browser)</span>
       </div>
     </div>
 
@@ -269,6 +344,8 @@ permalink: /trip-calculator/
       <div class="hero-stat"><div class="big" id="rTemp">–</div><div class="lbl">Trip temp</div><div class="sub" id="rTempSub"></div></div>
     </div>
 
+    <div class="eta-banner" id="etaBanner" style="display:none"></div>
+
     <!-- Cost / gas report — same stat-grid format as Road Trips on Analytics -->
     <div class="trip-card summary-card" id="tripSummary" style="display:none">
       <div class="summary-grid">
@@ -280,6 +357,7 @@ permalink: /trip-calculator/
         <div><div class="sg-lbl">Time vs Gas</div><div class="sg-val" id="sgTimeVsGas">–</div></div>
         <div><div class="sg-lbl">Stops</div><div class="sg-val" id="sgStops">–</div></div>
       </div>
+      <div class="sg-costnote" id="sgCostNote"></div>
     </div>
 
     <div class="trip-card" id="socCard" style="display:none">
@@ -298,6 +376,20 @@ permalink: /trip-calculator/
       <div id="stopsBody"></div>
     </div>
 
+    <div class="trip-card" id="exportCard" style="display:none">
+      <h4 style="margin:0 0 10px 0;font-size:0.9rem;">📲 Send route to your maps app</h4>
+      <div class="export-btns" id="exportBtns"></div>
+      <div class="export-note" id="exportNote"></div>
+    </div>
+
+    <div class="trip-card" id="logCard" style="display:none">
+      <h4 style="margin:0 0 10px 0;font-size:0.9rem;">📝 Printable trip log</h4>
+      <div class="export-btns">
+        <button type="button" class="export-btn tlog" onclick="printTripLog()">🖨 Generate trip log (print / PDF)</button>
+      </div>
+      <div class="export-note">Opens a printable sheet with your plan plus blank fields to record actuals on the road — odometer &amp; battery % at each stop, leg efficiency, trip totals, and a notes area.</div>
+    </div>
+
     <div id="map"></div>
 
     <div class="trip-card breakdown">
@@ -314,7 +406,7 @@ permalink: /trip-calculator/
         <b>Base efficiency is straight from your data</b> — the median mi/kWh across your real charging sessions, at the temperature they typically happened.
         <b>The temperature adjustment</b> uses a published EV range-vs-temperature curve, anchored to that number — your logged range estimates are too noisy to fit the cold-weather slope directly, so the <i>magnitude</i> is yours and the <i>direction</i> is the curve's.
         <b>Road-type</b> is a physics estimate (aero drag rises with speed²) — your logs don't record driving style.
-        Routing &amp; geocoding via OpenStreetMap (Nominatim + OSRM); temperature via Open-Meteo. Estimates only — your mileage will vary.
+        Routing &amp; geocoding via OpenStreetMap (Nominatim + OSRM) — an optional openrouteservice key adds quickest / most efficient / scenic alternatives; temperature via Open-Meteo. Estimates only — your mileage will vary.
       </p>
     </div>
   </div>
@@ -469,6 +561,13 @@ const COST = (function buildCost(){
   const dd = document.getElementById('depDate');
   dd.value = new Date().toISOString().slice(0,10);
   dd.min = '2000-01-01';
+  // Default departure time to 08:00 (24h). Drives the arrival estimate.
+  document.getElementById('depTime').value = '08:00';
+  // Restore a previously-saved openrouteservice key (unlocks route alternatives).
+  document.getElementById('orsKeyInput').value = getORSKey();
+  // Default the destination-charge rate to your average public $/kWh (so a
+  // round-trip top-up is billed like a public charger, not free — editable).
+  document.getElementById('destRate').value = COST.publicAvg.toFixed(2);
   // Seed the route with a Start and a Destination row, enable drag reordering.
   addStop(); addStop();
   renderStopKinds();
@@ -479,8 +578,9 @@ const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
 
 // ── Reorderable route list (Google-Maps style) ──
 // One ordered column of rows: first = start, last = destination, middle = stops.
-// Any row can toggle "charge here" (a slider sets the target %).
-function makeStopRow(addr, charge){
+// Any row can toggle "charge here" (a slider sets the target %, plus an optional
+// $/kWh cost — default free — that feeds the trip-cost estimate).
+function makeStopRow(addr, charge, cost){
   const row = document.createElement('div');
   row.className = 'route-row';
   row.innerHTML =
@@ -490,10 +590,16 @@ function makeStopRow(addr, charge){
     + `<button type="button" class="rs-btn rs-home" title="Use home">🏠</button>`
     + `<button type="button" class="rs-btn rs-charge" title="Charge here">⚡</button>`
     + `<button type="button" class="rs-btn rs-del" title="Remove stop">×</button>`
-    + `<div class="rs-slider"><input type="range" min="50" max="100" step="5" value="${charge||80}"><span class="rs-pct"></span></div>`;
+    + `<div class="rs-slider"><input type="range" min="50" max="100" step="5" value="${charge||80}"><span class="rs-pct"></span>`
+    + `<label class="rs-cost" title="Cost to charge at this stop ($/kWh) — default free"><small>$</small><input class="rs-cost-input" type="number" min="0" step="0.01" value="${cost!=null?cost:0}"><small>/kWh</small></label></div>`;
   row.querySelector('.rs-addr').value = addr || '';
   const slider = row.querySelector('.rs-slider'), range = row.querySelector('input[type=range]'), pct = row.querySelector('.rs-pct');
-  const updatePct = () => pct.innerHTML = `${range.value}% <small>charge here</small>`;
+  const updatePct = () => {
+    pct.innerHTML = `${range.value}% <small>charge here</small>`;
+    // Keep the WebKit track fill aligned with the thumb (track-relative %).
+    const f = (range.value - range.min) / (range.max - range.min) * 100;
+    range.style.setProperty('--fill', f + '%');
+  };
   updatePct();
   if (charge != null){ row.classList.add('charging'); row.querySelector('.rs-charge').classList.add('on'); slider.classList.add('show'); }
   row.querySelector('.rs-charge').onclick = () => {
@@ -504,6 +610,8 @@ function makeStopRow(addr, charge){
   };
   range.oninput = updatePct;
   range.onchange = syncCharges;
+  // Optional per-stop charging cost ($/kWh) — re-cost the trip when it changes.
+  row.querySelector('.rs-cost-input').onchange = syncCharges;
   row.querySelector('.rs-home').onclick = () => { const i = row.querySelector('.rs-addr'); i.value = HOME.label; i.dataset.home = '1'; };
   row.querySelector('.rs-del').onclick = () => { row.remove(); renderStopKinds(); };
   row.querySelector('.rs-addr').addEventListener('input', e => delete e.target.dataset.home);
@@ -519,12 +627,13 @@ function syncCharges(){
   STATE.waypoints.forEach((wp, i) => {
     const row = middle[i];
     wp.chargeTo = row.classList.contains('charging') ? +row.querySelector('input[type=range]').value : NaN;
+    wp.chargeCost = parseFloat(row.querySelector('.rs-cost-input').value) || 0;
   });
   refresh();
 }
-function addStop(addr, charge){
+function addStop(addr, charge, cost){
   const list = document.getElementById('routeStops');
-  list.appendChild(makeStopRow(addr, charge));
+  list.appendChild(makeStopRow(addr, charge, cost));
   renderStopKinds();
 }
 // Recompute each row's role (dot, placeholder, charge availability, deletability)
@@ -549,7 +658,8 @@ function getRouteStops(){
     addr: row.querySelector('.rs-addr').value.trim(),
     isHome: row.querySelector('.rs-addr').dataset.home === '1',
     chargeHere: row.classList.contains('charging'),
-    chargeTo: +row.querySelector('input[type=range]').value
+    chargeTo: +row.querySelector('input[type=range]').value,
+    chargeCost: parseFloat(row.querySelector('.rs-cost-input').value) || 0
   }));
 }
 // Lazy-load SortableJS for drag reordering (works on touch too).
@@ -557,7 +667,14 @@ function enableStopDrag(){
   const init = () => { if (window.Sortable && !document.getElementById('routeStops')._sortable){
     document.getElementById('routeStops')._sortable = Sortable.create(document.getElementById('routeStops'), {
       handle: '.rs-handle', animation: 150, ghostClass: 'dragging',
-      onEnd: () => { renderStopKinds(); }
+      onEnd: () => {
+        renderStopKinds();
+        // Reordering changes the route itself, so the loaded plan and its
+        // waypoint anchors no longer line up with the row order. Invalidate it
+        // so live charge-slider syncing can't apply to stale coordinates; the
+        // user re-runs Estimate to replan.
+        if (STATE){ STATE = null; setStatus('Route order changed — tap “Estimate trip” to replan.'); }
+      }
     });
   }};
   if (window.Sortable) return init();
@@ -582,6 +699,53 @@ async function geocode(q, el){
   const j = await r.json();
   if (!j.length) throw new Error('Could not find "' + q + '"');
   return { lat: +j[0].lat, lon: +j[0].lon, name: j[0].display_name };
+}
+
+// openrouteservice route roles (needs a free key, stored in this browser only).
+// Each role is a separate request; we keep whichever succeed and drop near-dupes.
+// The public ORS server caps the native `alternative_routes` feature to short
+// trips, so we derive distinct routes from preference/avoid options instead.
+const ORS_ROLES = [
+  { role: 'quickest',  label: 'Quickest',       body: { preference: 'fastest' } },
+  { role: 'efficient', label: 'Most efficient', body: { preference: 'shortest' } },
+  { role: 'scenic',    label: 'Scenic',         body: { options: { avoid_features: ['highways'] } } },
+];
+const ROLE_ICON = { quickest: '⏱', efficient: '🍃', scenic: '🌄' };
+
+async function routeORS(points, key){
+  const coordinates = points.map(p => [p.lon, p.lat]);
+  const out = await Promise.all(ORS_ROLES.map(async r => {
+    try {
+      const resp = await fetch('https://api.openrouteservice.org/v2/directions/driving-car/geojson', {
+        method: 'POST',
+        headers: { 'Authorization': key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coordinates, instructions: false, ...r.body })
+      });
+      if (!resp.ok) return null;
+      const j = await resp.json();
+      const f = (j.features || [])[0];
+      if (!f || !f.geometry) return null;
+      const s = f.properties.summary || {};
+      const segs = f.properties.segments || [];
+      const legMiles = [0]; let acc = 0;
+      segs.forEach(l => { acc += (l.distance || 0) / 1609.34; legMiles.push(acc); });
+      // One segment per leg between input points; fall back to a single leg.
+      if (legMiles.length < points.length){ legMiles.length = 0; legMiles.push(0, (s.distance || 0) / 1609.34); }
+      return { miles: (s.distance || 0) / 1609.34, hours: (s.duration || 0) / 3600,
+               geometry: f.geometry, legMiles, role: r.role, roleLabel: r.label };
+    } catch(e){ return null; }
+  }));
+  // Keep successes in role-priority order, dropping near-identical duplicates
+  // (e.g. a short trip where shortest == fastest).
+  const uniq = [];
+  for (const rt of out){
+    if (!rt) continue;
+    const dup = uniq.find(u =>
+      Math.abs(u.miles - rt.miles) / Math.max(u.miles, 1) < 0.01 &&
+      Math.abs(u.hours - rt.hours) / Math.max(u.hours, 0.01) < 0.02);
+    if (!dup) uniq.push(rt);
+  }
+  return uniq;
 }
 
 // Route through an ordered list of points. With exactly 2 points we ask for
@@ -643,19 +807,33 @@ async function planTrip(){
     const geo = await Promise.all(stops.map(s =>
       s.isHome ? Promise.resolve({ lat: HOME.lat, lon: HOME.lon, name: HOME.label }) : geocode(s.addr)));
     const A = geo[0], B = geo[geo.length - 1];
-    // Intermediate stops become waypoints, carrying their "charge here" target.
+    // Intermediate stops become waypoints, carrying their "charge here" target
+    // and optional $/kWh cost (default free).
     const waypoints = [];
     for (let i = 1; i < stops.length - 1; i++){
       waypoints.push({ addr: stops[i].addr, lat: geo[i].lat, lon: geo[i].lon,
-        chargeTo: stops[i].chargeHere ? stops[i].chargeTo : NaN });
+        chargeTo: stops[i].chargeHere ? stops[i].chargeTo : NaN,
+        chargeCost: stops[i].chargeCost });
     }
 
     setStatus('Planning route…');
-    const routes = await route([A, ...waypoints, B]);
+    // With an openrouteservice key, fetch up to three role-based routes
+    // (quickest / most efficient / scenic). Otherwise fall back to OSRM.
+    const orsKey = getORSKey();
+    let routes = null;
+    if (orsKey){
+      setStatus('Finding route alternatives…');
+      try { routes = await routeORS([A, ...waypoints, B], orsKey); } catch(e){ routes = null; }
+    }
+    if (!routes || !routes.length) routes = await route([A, ...waypoints, B]);
 
     const mid = { lat: (A.lat + B.lat) / 2, lon: (A.lon + B.lon) / 2 };
     setStatus('Checking the weather…');
-    const temp = await tripTemp(mid.lat, mid.lon, document.getElementById('depDate').value);
+    // Guard a cleared date field — an empty/invalid date makes tripTemp fall
+    // through to MI_MONTHLY_F[NaN] (undefined) and show NaN°F.
+    const depEl = document.getElementById('depDate');
+    if (!depEl.value) depEl.value = new Date().toISOString().slice(0,10);
+    const temp = await tripTemp(mid.lat, mid.lon, depEl.value);
 
     setStatus('');
     STATE = { A, B, routes, temp, sel: 0, waypoints };
@@ -716,8 +894,10 @@ function renderRouteOptions(){
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'route-card' + (i === STATE.sel ? ' sel' : '');
-    card.innerHTML =
-      `<div class="rc-top">${e.miles.toFixed(0)} mi <span class="rc-dim">· ${fmtDur(e.hours)}</span></div>`
+    const roleHead = rt.roleLabel
+      ? `<div class="rc-role rc-role-${rt.role}">${ROLE_ICON[rt.role] || ''} ${rt.roleLabel}</div>` : '';
+    card.innerHTML = roleHead
+      + `<div class="rc-top">${e.miles.toFixed(0)} mi <span class="rc-dim">· ${fmtDur(e.hours)}</span></div>`
       + `<div class="rc-energy">${e.energy.toFixed(1)} kWh · ${e.pctBatt.toFixed(0)}%</div>`
       + (tags.length ? `<div class="rc-tags">${tags.join('')}</div>` : '');
     card.onclick = () => { STATE.sel = i; refresh(); };
@@ -805,6 +985,14 @@ function saveOCMKey(){
   try { localStorage.setItem('ocmKey', v); } catch(e){}
   // re-plan the current route now that we have a key
   if (STATE){ STATE.routes.forEach(r => delete r.chargers); refresh(); }
+}
+
+function getORSKey(){ try { return localStorage.getItem('orsKey') || ''; } catch(e){ return ''; } }
+function saveORSKey(){
+  const el = document.getElementById('orsKeyInput');
+  const v = el ? el.value.trim() : '';
+  try { localStorage.setItem('orsKey', v); } catch(e){}
+  setStatus(v ? 'Route-alternatives key saved (this browser only). Click Estimate to use it.' : 'Route-alternatives key cleared.');
 }
 
 function matchNetwork(operator){
@@ -908,6 +1096,10 @@ async function fetchChargers(geometry){
     if (pr.offMi > 8) return; // keep it reasonably close to the route
     out.push({ id: p.ID, name: p.AddressInfo.Title, net, maxKW,
       town: p.AddressInfo.Town || p.AddressInfo.StateOrProvince || '',
+      addr: p.AddressInfo.AddressLine1 || '',
+      city: p.AddressInfo.Town || '',
+      state: p.AddressInfo.StateOrProvince || '',
+      zip: p.AddressInfo.Postcode || '',
       lat: p.AddressInfo.Latitude, lon: p.AddressInfo.Longitude,
       alongMi: pr.alongMi, offMi: pr.offMi });
   });
@@ -1054,6 +1246,13 @@ function planSegment(fromMi, toMi, startSoc, reserve, chargers, nrg, maxTop){
     // DCFC cap (default 80%). If 80% can't reach the end, the loop adds a stop.
     let target = finishSoc <= maxTop ? Math.ceil(finishSoc) : maxTop;
     target = Math.min(maxTop, Math.max(target, arriveSoc + 1));
+    // Arrived already at/above the DCFC cap (e.g. only a nearby charger was
+    // reachable) → charging here can't add range at this cap. Bail so
+    // planSegmentCapped raises the cap (or reports a real gap) instead of
+    // recording a negative charge.
+    if (target <= arriveSoc){
+      return { feasible: false, stops, gapFrom: Math.round(pos), reachMi: Math.round(chargerReach) };
+    }
     stops.push({ ...c, arriveSoc, target, addedKWh: (target-arriveSoc)/100*batt,
       mins: chargeMinutes(arriveSoc, target, batt, c.maxKW) });
     pos = c.alongMi; soc = target;
@@ -1088,7 +1287,8 @@ function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers){
     r.stops.forEach(s => { all.push(s); if (s.overCap) overCap = true; });
     if (!r.feasible) return { needed: true, feasible: false, stops: all, gapFrom: r.gapFrom, reachMi: r.reachMi };
     all.push({ waypoint: true, name: wp.name, net: wp.acNet || 'AC', alongMi: wp.mile,
-      arriveSoc: r.arriveSoc, target: wp.chargeTo, lat: wp.lat, lon: wp.lon });
+      arriveSoc: r.arriveSoc, target: wp.chargeTo, lat: wp.lat, lon: wp.lon,
+      addedKWh: Math.max(0, wp.chargeTo - r.arriveSoc) / 100 * nrg.batt, rate: wp.rate || 0 });
     soc = wp.chargeTo;
     segStart = wp.mile;
   }
@@ -1138,18 +1338,27 @@ function applyElevationToHero(e, nrg, totalMi){
 }
 
 // Estimate trip cost from YOUR real $/kWh: the starting charge (home rate when
-// you leave from home) + each DCFC stop at that network's average rate.
+// you leave from home) + each DCFC stop at that network's average rate, plus any
+// waypoint (e.g. hotel) charges at their own $/kWh — default free.
 // Cost / gas report in the same stat-grid format as Road Trips on Analytics.
 function renderSummary(plan, energyTrip, fromHome, miles){
-  const dcfc = ((plan && plan.stops) || []).filter(s => !s.waypoint);
+  const stops = (plan && plan.stops) || [];
+  const dcfc = stops.filter(s => !s.waypoint);
   let dcfcKWh = 0, dcfcCost = 0, dcfcMin = 0;
   dcfc.forEach(s => {
     const r = (COST[s.net] != null) ? COST[s.net] : COST.publicAvg;
     dcfcKWh += s.addedKWh; dcfcCost += s.addedKWh * r; dcfcMin += s.mins || 0;
   });
-  const startKWh  = Math.max(0, energyTrip - dcfcKWh);
+  // Waypoint charges (hotels, etc.) bill at their own rate — default $0/kWh.
+  let wpKWh = 0, wpCost = 0;
+  stops.filter(s => s.waypoint).forEach(s => {
+    const kwh = s.addedKWh || 0;
+    wpKWh += kwh; wpCost += kwh * (s.rate || 0);
+  });
+  const startKWh  = Math.max(0, energyTrip - dcfcKWh - wpKWh);
   const startRate = fromHome ? COST.home : COST.publicAvg;
-  const total = startKWh * startRate + dcfcCost;
+  const startCost = startKWh * startRate;
+  const total = startCost + dcfcCost + wpCost;
   const gasCost = (GAS.mpg > 0 && miles > 0) ? miles / GAS.mpg * GAS.price : 0;
   const saved = gasCost - total;
   const gasStops = Math.max(0, Math.ceil(miles / (GAS.mpg * GAS_TANK_GAL)) - 1);
@@ -1168,6 +1377,275 @@ function renderSummary(plan, energyTrip, fromHome, miles){
   else if (timeDiff < 0) set('sgTimeVsGas', `${fmtMinsShort(-timeDiff)} faster`, 'sg-green');
   else                   set('sgTimeVsGas', 'Same as gas');
   set('sgStops', String(dcfc.length));
+  // Breakdown caption: which dollars came from where (only non-zero parts).
+  const parts = [];
+  if (startCost > 0.005) parts.push(`<b>$${startCost.toFixed(2)}</b> ${fromHome ? 'home' : 'start'} charge`);
+  if (dcfcCost  > 0.005) parts.push(`<b>$${dcfcCost.toFixed(2)}</b> DC fast`);
+  if (wpCost    > 0.005) parts.push(`<b>$${wpCost.toFixed(2)}</b> stop charging`);
+  document.getElementById('sgCostNote').innerHTML = parts.length > 1 ? parts.join(' + ') : '';
+}
+
+// Estimated arrival = departure date/time + driving time + the suggested DC
+// fast-charging time. Round trips show arrival AT THE DESTINATION (outbound leg
+// only) — the dwell at the destination and the drive home aren't part of an
+// "arrival" estimate. AC/hotel waypoint charges don't add en-route time.
+function renderETA(plan, rt, round, oneWay){
+  const banner = document.getElementById('etaBanner');
+  const dEl = document.getElementById('depDate'), tEl = document.getElementById('depTime');
+  const dep = dEl.value ? new Date(`${dEl.value}T${tEl.value || '08:00'}`) : null;
+  if (!dep || isNaN(dep.getTime())){ banner.style.display = 'none'; return; }
+  const chargeMins = ((plan && plan.stops) || [])
+    .filter(s => !s.waypoint && (!round || s.alongMi <= oneWay))
+    .reduce((sum, s) => sum + (s.mins || 0), 0);
+  const driveMin = rt.hours * 60;                 // one-way driving time
+  const totalMin = driveMin + chargeMins;
+  const arr = new Date(dep.getTime() + totalMin * 60000);
+  const clock = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  const dayTime = d => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + clock(d);
+  const arrLbl = (arr.toDateString() === dep.toDateString()) ? clock(arr) : dayTime(arr);
+  const breakdown = chargeMins > 0
+    ? `${fmtMinsShort(driveMin)} drive + ${fmtMinsShort(chargeMins)} charging`
+    : `${fmtMinsShort(driveMin)} drive`;
+  banner.innerHTML =
+    `<span class="eta-ico">🕜</span>`
+    + `<span class="eta-text">Depart <b>${dayTime(dep)}</b> → arrive${round ? ' at destination' : ''} <b>${arrLbl}</b>`
+    + `<span class="eta-sub">${fmtMinsShort(totalMin)} total · ${breakdown}</span></span>`;
+  banner.style.display = 'flex';
+}
+
+// ── Hand the planned route off to a phone maps app ──
+// Build the ordered list of stops for navigation: start → charging stops /
+// waypoints (in route order) → destination; a round trip puts the destination
+// mid-list as a turnaround with the return-leg stops after it, ending back home.
+// Mirrors rerouteThroughStops so the exported route matches the drawn one.
+function buildRoutePoints(plan, round, oneWay){
+  if (!STATE || !STATE.A || !STATE.B) return [];
+  const A = STATE.A, B = STATE.B;
+  const pts = [{ lat: A.lat, lon: A.lon }];
+  const withLatLon = ((plan && plan.stops) || []).filter(s => s.lat != null && s.lon != null);
+  if (round){
+    const out = withLatLon.filter(s => s.alongMi <= oneWay).sort((a,b)=>a.alongMi-b.alongMi);
+    const ret = withLatLon.filter(s => s.alongMi >  oneWay).sort((a,b)=>a.alongMi-b.alongMi);
+    out.forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
+    pts.push({ lat: B.lat, lon: B.lon });            // turnaround
+    ret.forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
+    pts.push({ lat: A.lat, lon: A.lon });            // back home
+  } else {
+    withLatLon.sort((a,b)=>a.alongMi-b.alongMi).forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
+    pts.push({ lat: B.lat, lon: B.lon });
+  }
+  return pts;
+}
+const ll = p => `${p.lat},${p.lon}`;
+
+// Google Maps Directions URL (api=1): origin + destination + pipe-separated
+// intermediate waypoints — imports the WHOLE multi-stop route in one tap.
+function gmapsUrl(pts){
+  if (pts.length < 2) return '';
+  const origin = pts[0], dest = pts[pts.length-1], mids = pts.slice(1, -1);
+  let u = `https://www.google.com/maps/dir/?api=1&origin=${ll(origin)}&destination=${ll(dest)}&travelmode=driving`;
+  if (mids.length) u += `&waypoints=${mids.map(ll).join('|')}`;
+  return u;
+}
+// Apple Maps URL scheme supports only a single origin → destination (saddr /
+// daddr); it has no multi-waypoint parameter, so the intermediate charging stops
+// can't be carried. The Apple link covers start → destination (the outbound leg
+// for a round trip) — Google Maps is the one that gets the full stop list.
+function applemapsUrl(pts){
+  if (pts.length < 2 || !STATE || !STATE.A || !STATE.B) return '';
+  return `https://maps.apple.com/?saddr=${STATE.A.lat},${STATE.A.lon}&daddr=${STATE.B.lat},${STATE.B.lon}&dirflg=d`;
+}
+
+function renderExport(plan, round, oneWay){
+  const card = document.getElementById('exportCard');
+  const logCard = document.getElementById('logCard');
+  if (!card) return;
+  const pts = buildRoutePoints(plan, round, oneWay);
+  if (pts.length < 2){ card.style.display = 'none'; if (logCard) logCard.style.display = 'none'; LAST_TRIP = null; return; }
+  const g = gmapsUrl(pts), a = applemapsUrl(pts);
+  const nMid = pts.length - 2;                       // intermediate stops
+  document.getElementById('exportBtns').innerHTML =
+      `<a class="export-btn gmaps" href="${g}" target="_blank" rel="noopener">▶ Open in Google Maps</a>`
+    + `<a class="export-btn amaps" href="${a}" target="_blank" rel="noopener">  Open in Apple Maps</a>`;
+  document.getElementById('exportNote').innerHTML = nMid > 0
+    ? `Google Maps imports the full route — ${nMid} stop${nMid>1?'s':''} plus start &amp; destination${round?' and back':''}. Apple Maps links can't carry intermediate stops, so its button opens start → destination only.`
+    : `Opens turn-by-turn directions from start to destination.`;
+  card.style.display = 'block';
+  // Capture context for the printable trip log, and reveal its button.
+  LAST_TRIP = { plan, round, oneWay };
+  if (logCard) logCard.style.display = 'block';
+}
+
+// ── Printable trip log ──
+// Opens a clean, self-contained sheet in a new tab: the planned trip up top, then
+// blank fill-in fields to record real numbers on the road (odometer + battery %
+// at each stop, leg efficiency, totals) and a notes area. The new tab gets its
+// own print stylesheet so "Save as PDF" / print is free of the site's chrome.
+let LAST_TRIP = null;
+function printTripLog(){
+  if (!STATE || !STATE.A || !STATE.B || !STATE.routes){ setStatus('Plan a trip first, then generate the log.', true); return; }
+  const E = esc;
+  const plan   = LAST_TRIP ? LAST_TRIP.plan : null;
+  const round  = LAST_TRIP ? LAST_TRIP.round : document.getElementById('roundTrip').checked;
+  const rt     = STATE.routes[STATE.sel];
+  const oneWay = rt.miles;
+
+  // Display figures straight from the result hero (exactly what's on screen).
+  const txt = id => { const el = document.getElementById(id); return el ? el.textContent.trim() : ''; };
+  const dist = txt('rDist'), energy = txt('rEnergy'), eff = txt('rEff'), temp = txt('rTemp');
+  const cost = txt('sgCost'), costNote = txt('sgCostNote');
+  const costStr = (cost && cost !== '–' && cost !== '-') ? cost : '—';
+  const veh = document.getElementById('vehSel').value;
+  const startSoc = document.getElementById('startSoc').value;
+  const reserve  = document.getElementById('reserve').value;
+  const dd = document.getElementById('depDate').value;
+  const tm = document.getElementById('depTime').value || '08:00';
+
+  // Departure / estimated arrival (mirrors renderETA: one-way drive + outbound charging).
+  let depStr = '—', arrStr = '—';
+  const dep = dd ? new Date(`${dd}T${tm}`) : null;
+  if (dep && !isNaN(dep.getTime())){
+    const chargeMins = ((plan && plan.stops) || [])
+      .filter(s => !s.waypoint && (!round || s.alongMi <= oneWay))
+      .reduce((sum, x) => sum + (x.mins || 0), 0);
+    const arr = new Date(dep.getTime() + (rt.hours * 60 + chargeMins) * 60000);
+    const fmt = d => d.toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+    depStr = fmt(dep); arrStr = fmt(arr);
+  }
+
+  // Charging-stop rows: planned info shown, blank cells for the driver to fill.
+  const stops = (plan && plan.stops) || [];
+  let rows = '', n = 0, dividerShown = false;
+  stops.forEach(s => {
+    if (round && oneWay && s.alongMi > oneWay && !dividerShown){
+      rows += `<tr class="divider"><td colspan="8">↩ Turnaround at destination — return leg</td></tr>`;
+      dividerShown = true;
+    }
+    n++;
+    const onReturn = round && oneWay && s.alongMi > oneWay;
+    const mile = onReturn ? `${Math.round(2*oneWay - s.alongMi)} mi from home` : `mile ${Math.round(s.alongMi)}`;
+    const planLine = s.waypoint
+      ? `${mile} · charge to ${Math.round(s.target)}%${s.addedKWh!=null?` · +${Math.round(s.addedKWh)} kWh`:''}`
+      : `${mile} · arrive ${Math.round(s.arriveSoc)}% → ${Math.round(s.target)}% · +${Math.round(s.addedKWh)} kWh · ~${Math.round(s.mins)} min · up to ${Math.round(s.maxKW)} kW`;
+    const lk = chargerLinks(s);
+    const addr = lk.addrStr ? `<div class="addr">${E(lk.addrStr)}</div>` : '';
+    rows += `<tr>
+      <td>${n}</td>
+      <td><div class="cname">${E(s.name)}${s.waypoint ? ' (charge here)' : ` — ${E(s.net)}`}</div><div class="plan">${E(planLine)}</div>${addr}</td>
+      <td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td>
+    </tr>`;
+  });
+  if (!rows) rows = `<tr><td colspan="8" style="text-align:center;color:#555">No charging stops planned — direct drive.</td></tr>`;
+
+  const kv = [
+    ['Distance', E(dist)],
+    ['Est. energy', E(energy)],
+    ['Est. efficiency', E(eff) + ' mi/kWh'],
+    ['Trip temp', E(temp) + (STATE.temp && STATE.temp.src ? ' (' + E(STATE.temp.src) + ')' : '')],
+    ['Departure', E(depStr)],
+    ['Est. arrival' + (round ? ' (at dest.)' : ''), E(arrStr)],
+    ['Planned start charge', startSoc !== '' ? Math.round(startSoc) + '%' : '—'],
+    ['Reserve buffer', (reserve !== '' ? Math.round(reserve) : 10) + '%'],
+  ];
+  const kvHtml = kv.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+  const endLabel = round ? 'Back home — arrival' : 'At destination — arrival';
+
+  const css = `
+    @page { size: letter; margin: 0.5in; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color:#111; font-size:12px; line-height:1.35; margin:0; }
+    h1 { font-size:19px; margin:0; }
+    h2 { font-size:13px; margin:16px 0 4px; border-bottom:2px solid #111; padding-bottom:2px; }
+    .sub { color:#444; margin-top:2px; }
+    .route { font-weight:600; margin-top:5px; font-size:13px; }
+    .kv { display:grid; grid-template-columns:1fr 1fr; gap:0 28px; margin-top:10px; }
+    .kv > div { display:flex; justify-content:space-between; border-bottom:1px dotted #bbb; padding:3px 0; }
+    .kv span { color:#555; }
+    .boxes { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
+    .box { border:1px solid #888; border-radius:6px; padding:8px 10px; }
+    .bx-t { font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+    .line { padding:5px 0; }
+    .blank { display:inline-block; border-bottom:1px solid #111; min-width:120px; }
+    .blank.short { min-width:60px; }
+    table { width:100%; border-collapse:collapse; margin-top:6px; }
+    th, td { border:1px solid #999; padding:5px 6px; text-align:left; vertical-align:top; }
+    th { background:#eee; font-size:9.5px; text-transform:uppercase; letter-spacing:.03em; }
+    td.fill { height:30px; }
+    .cname { font-weight:600; }
+    .plan, .addr { color:#555; font-size:10px; margin-top:1px; }
+    tr.divider td { background:#f3f3f3; font-style:italic; font-size:10px; }
+    .notes { border:1px solid #888; border-radius:6px; height:150px; margin-top:4px;
+             background-image: repeating-linear-gradient(#fff, #fff 27px, #ddd 28px); }
+    .foot { margin-top:14px; color:#777; font-size:9.5px; text-align:center; }
+    .toolbar { margin-bottom:12px; }
+    .toolbar button { font-size:13px; font-weight:700; padding:9px 16px; border-radius:8px; border:1px solid #1a73e8; background:#1a73e8; color:#fff; cursor:pointer; }
+    @media print { .toolbar { display:none; } }
+  `;
+
+  const doc = `<!doctype html><html><head><meta charset="utf-8"><title>EV Trip Log — ${E(String(STATE.B.name || '').split(',')[0])}</title>
+    <style>${css}</style></head><body>
+    <div class="toolbar"><button type="button" onclick="window.print()">🖨 Print / Save as PDF</button></div>
+    <h1>EV Trip Log</h1>
+    <div class="sub">${E(veh)}${dd ? ' · ' + E(dd) : ''}${round ? ' · round trip' : ''}</div>
+    <div class="route">${E(STATE.A.name)} &rarr; ${E(STATE.B.name)}</div>
+
+    <h2>Planned estimate</h2>
+    <div class="kv">${kvHtml}</div>
+
+    <div class="boxes">
+      <div class="box">
+        <div class="bx-t">Before departure</div>
+        <div class="line">Start odometer <span class="blank"></span> mi</div>
+        <div class="line">Start battery <span class="blank short"></span> %</div>
+        <div class="line">Actual departure <span class="blank"></span></div>
+        <div class="line">Weather / conditions <span class="blank"></span></div>
+      </div>
+      <div class="box">
+        <div class="bx-t">Reference</div>
+        <div class="line">Planned start charge: <b>${startSoc !== '' ? Math.round(startSoc) + '%' : '—'}</b></div>
+        <div class="line">Reserve buffer: <b>${(reserve !== '' ? Math.round(reserve) : 10)}%</b></div>
+        <div class="line">Est. efficiency: <b>${E(eff)} mi/kWh</b></div>
+        <div class="line">Est. arrival: <b>${E(arrStr)}</b></div>
+        <div class="line">Planned cost: <b>${E(costStr)}</b>${costNote ? ` <span style="color:#555;font-size:10px">(${E(costNote)})</span>` : ''}</div>
+      </div>
+    </div>
+
+    <h2>Charging stops — record actuals</h2>
+    <table>
+      <thead><tr>
+        <th>#</th><th>Charger (planned)</th><th>Odometer</th><th>Arrive %</th>
+        <th>Depart %</th><th>kWh added</th><th>mi since last</th><th>mi / kWh</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    <div class="boxes">
+      <div class="box">
+        <div class="bx-t">${endLabel}</div>
+        <div class="line">Final odometer <span class="blank"></span> mi</div>
+        <div class="line">Final battery <span class="blank short"></span> %</div>
+        <div class="line">Arrival time <span class="blank"></span></div>
+      </div>
+      <div class="box">
+        <div class="bx-t">Trip totals</div>
+        <div class="line">Total miles driven <span class="blank short"></span> mi</div>
+        <div class="line">Total energy used <span class="blank short"></span> kWh</div>
+        <div class="line">Overall efficiency <span class="blank short"></span> mi/kWh</div>
+        <div class="line">Total charging cost $ <span class="blank short"></span></div>
+      </div>
+    </div>
+
+    <h2>Notes</h2>
+    <div class="notes"></div>
+
+    <div class="foot">Planned with the EV Trip Calculator · estimates only — drive to real-world conditions.</div>
+    </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w){ setStatus('Allow pop-ups to open the printable trip log.', true); return; }
+  w.document.write(doc);
+  w.document.close();
+  w.focus();
 }
 
 let CHARGER_LAYER = [];
@@ -1176,6 +1654,8 @@ async function updateChargingPlan(rt, e, temp){
   const body = document.getElementById('stopsBody');
   const socEl = document.getElementById('startSoc');
   clearChargerMarkers();
+  document.getElementById('exportCard').style.display = 'none';
+  document.getElementById('logCard').style.display = 'none';
 
   if (socEl.value === '' || isNaN(+socEl.value)){
     card.style.display = 'block';
@@ -1215,6 +1695,8 @@ async function updateChargingPlan(rt, e, temp){
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — you'll make it on the starting charge.`);
       renderSummary(null, energyTrip, fromHome, planMi);
+      renderETA(null, rt, round, oneWay);
+      renderExport(null, round, oneWay);
       return;
     }
     if (round && canChargeDest && oneWay <= reachStart){
@@ -1222,6 +1704,8 @@ async function updateChargingPlan(rt, e, temp){
       body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — you'll charge at your destination before the return.</div>`;
       setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
       renderSummary(null, energyTrip, fromHome, planMi);
+      renderETA(null, rt, round, oneWay);
+      renderExport(null, round, oneWay);
       return;
     }
     if (round && !canChargeDest && planMi <= planNrg.reachMi(0, startSoc, reserve)){
@@ -1229,6 +1713,29 @@ async function updateChargingPlan(rt, e, temp){
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — the whole round trip fits on your starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — the whole round trip is within range.`);
       renderSummary(null, energyTrip, fromHome, planMi);
+      renderETA(null, rt, round, oneWay);
+      renderExport(null, round, oneWay);
+      return;
+    }
+  }
+
+  // AC "charge here" waypoints can make a trip feasible with no DC fast stop at
+  // all — and that needs no Open Charge Map key. Before asking for one, try a
+  // keyless plan that uses only the waypoint charges; if it works without any
+  // DC stop, render it and stop here.
+  if (chargingWps.length && !round){
+    const acAnchors = waypoints
+      .map((w, i) => ({ mile: (rt.legMiles && rt.legMiles[i+1]), chargeTo: w.chargeTo, name: w.addr, lat: w.lat, lon: w.lon, rate: w.chargeCost }))
+      .filter(a => a.mile != null && !isNaN(a.chargeTo) && a.chargeTo > 0);
+    const acOnly = planJourney(planMi, acAnchors, nrg, startSoc, reserve, []);
+    if (acOnly.feasible && !acOnly.stops.some(s => !s.waypoint)){
+      card.style.display = 'block';
+      renderStops(acOnly, e, reserve, false, startSoc, nrg, oneWay);
+      renderSummary(acOnly, energyTrip, fromHome, planMi);
+      renderETA(acOnly, rt, round, oneWay);
+      renderExport(acOnly, round, oneWay);
+      drawChargerMarkers(acOnly.stops, waypoints);
+      rerouteThroughStops(rt, acOnly, e, false, oneWay);
       return;
     }
   }
@@ -1265,18 +1772,21 @@ async function updateChargingPlan(rt, e, temp){
     planChargers = m.chargers;
     useNrg = buildEnergyModel(e.effEff, e.batt, m.elev);
     anchors = canChargeDest
-      ? [{ mile: oneWay, chargeTo: 90, name: 'Destination charge', lat: STATE.B.lat, lon: STATE.B.lon }]
+      ? [{ mile: oneWay, chargeTo: 90, name: 'Destination charge', lat: STATE.B.lat, lon: STATE.B.lon,
+           rate: parseFloat(document.getElementById('destRate').value) || 0 }]
       : [];
   } else {
     planChargers = chargers;
     useNrg = nrg;
     anchors = waypoints
-      .map((w,i) => ({ mile: (rt.legMiles && rt.legMiles[i+1]), chargeTo: w.chargeTo, name: w.addr, lat: w.lat, lon: w.lon }))
+      .map((w,i) => ({ mile: (rt.legMiles && rt.legMiles[i+1]), chargeTo: w.chargeTo, name: w.addr, lat: w.lat, lon: w.lon, rate: w.chargeCost }))
       .filter(a => a.mile != null && !isNaN(a.chargeTo) && a.chargeTo > 0);
   }
   const plan = planJourney(planMi, anchors, useNrg, startSoc, reserve, planChargers);
   renderStops(plan, e, reserve, round, startSoc, useNrg, oneWay);
   renderSummary(plan, energyTrip, fromHome, planMi);
+  renderETA(plan, rt, round, oneWay);
+  renderExport(plan, round, oneWay);
   drawChargerMarkers(plan.stops, round ? [] : waypoints);
   rerouteThroughStops(rt, plan, e, round, oneWay);
 }
@@ -1320,6 +1830,25 @@ function setVerdict(cls, icon, html){
   const vEl = document.getElementById('verdict');
   vEl.className = 'verdict ' + cls;
   vEl.innerHTML = `<span class="vicon">${icon}</span><span>${html}</span>`;
+}
+
+// Escape third-party text (OCM station names/addresses) before injecting into
+// innerHTML, so a malicious site title can't run script.
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+// Build a charger's full street address (when OCM provides it) plus deep-links to
+// Apple Maps (drops a labeled pin at the exact coordinate) and PlugShare (opens
+// its map centered on the location). Coordinates always exist for OCM POIs.
+function chargerLinks(s){
+  const cityZip = [s.city, [s.state, s.zip].filter(Boolean).join(' ').trim()].filter(Boolean).join(', ');
+  const addrStr = [s.addr, cityZip].map(x => (x || '').trim()).filter(Boolean).join(', ');
+  const hasGeo  = s.lat != null && s.lon != null;
+  const apple = hasGeo ? `https://maps.apple.com/?ll=${s.lat},${s.lon}&q=${encodeURIComponent(s.name || 'Charger')}` : '';
+  const plug  = hasGeo ? `https://www.plugshare.com/?latitude=${s.lat}&longitude=${s.lon}&spanLat=0.05&spanLng=0.05` : '';
+  return { addrStr, apple, plug };
 }
 
 function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
@@ -1377,17 +1906,19 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
         <div class="stop-main">
           <div class="stop-name">${s.name}<span class="net-badge net-wp">${s.net==='AC'?'charge here':s.net}</span></div>
           <div class="stop-sub">${mileLabel}</div>
-          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here</div>
+          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here${s.addedKWh!=null?` &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ${s.rate>0?`~$${(s.addedKWh*s.rate).toFixed(2)} <small style="color:#888">@ $${s.rate.toFixed(2)}/kWh</small>`:`<span style="color:#16a34a">free</span>`}`:''}</div>
         </div>
       </div>`;
     } else {
       n++;
+      const lk = chargerLinks(s);
       html += `<div class="stop">
         <div class="stop-num">${n}</div>
         <div class="stop-main">
-          <div class="stop-name">${s.name}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span>${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
-          <div class="stop-sub">${s.town ? s.town + ' · ' : ''}${mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
+          <div class="stop-name">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span>${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
+          <div class="stop-sub">${s.town ? esc(s.town) + ' · ' : ''}${mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
           <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min &nbsp;·&nbsp; ~$${(s.addedKWh * ((COST[s.net]!=null)?COST[s.net]:COST.publicAvg)).toFixed(2)}${s.overCap?` <span style="color:#eab308">⚠ above 80% — no closer charger</span>`:''}</div>
+          <div class="stop-links">${lk.addrStr ? `<span class="stop-addr">${esc(lk.addrStr)}</span>` : ''}${lk.apple ? `<a href="${lk.apple}" target="_blank" rel="noopener">📍 Apple Maps</a>` : ''}${lk.plug ? `<a href="${lk.plug}" target="_blank" rel="noopener">🔌 PlugShare</a>` : ''}</div>
         </div>
       </div>`;
     }
@@ -1502,14 +2033,17 @@ async function drawMap(A, B, geometry){
 
 // Tweaking vehicle / road / charge after a route is loaded → live re-estimate
 // (no re-routing or weather call needed — same route, new numbers)
-['vehSel','roadType','startSoc','reserve','roundTrip','effOverride','canChargeDest'].forEach(id => {
+['vehSel','roadType','startSoc','reserve','roundTrip','effOverride','canChargeDest','destRate','depTime'].forEach(id => {
   document.getElementById(id).addEventListener('change', refresh);
 });
 document.getElementById('effOverride').addEventListener('input', refresh);
 
-// Show the "can charge at destination" option only when round trip is on.
+// Show the "can charge at destination" option only when round trip is on, and the
+// destination $/kWh rate field only when that box is checked.
 function onRoundTripToggle(){
-  document.getElementById('destChargeWrap').style.display =
-    document.getElementById('roundTrip').checked ? 'flex' : 'none';
+  const round = document.getElementById('roundTrip').checked;
+  const canDest = document.getElementById('canChargeDest').checked;
+  document.getElementById('destChargeWrap').style.display = round ? 'flex' : 'none';
+  document.getElementById('destRateWrap').style.display = (round && canDest) ? 'flex' : 'none';
 }
 </script>
