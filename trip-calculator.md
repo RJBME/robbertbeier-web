@@ -117,6 +117,15 @@ permalink: /trip-calculator/
   .status-msg { font-size: 0.78rem; color: #888; margin-top: 10px; text-align: center; min-height: 1em; }
   .status-msg.err { color: #ef4444; }
 
+  /* Save / recall trips toolbar */
+  .saved-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--dash-border); }
+  .saved-bar select { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; min-width: 140px; max-width: 100%; }
+  .saved-bar button, .saved-import { font-size: 0.74rem; padding: 6px 12px; border-radius: 14px; cursor: pointer; border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; transition: all 0.15s; line-height: 1.2; }
+  .saved-bar button:hover, .saved-import:hover { border-color: var(--link); color: var(--link); }
+  .saved-import { display: inline-flex; align-items: center; }
+  .saved-spacer { flex: 1 1 auto; }
+  @media (max-width: 600px) { .saved-spacer { display: none; } .saved-bar select { flex: 1 1 100%; } }
+
   /* Results */
   #results { display: none; }
   .result-hero { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -391,6 +400,16 @@ permalink: /trip-calculator/
       </div>
     </div>
 
+    <div class="saved-bar">
+      <select id="savedTripSel" title="Your saved trips"><option value="">Saved trips…</option></select>
+      <button type="button" onclick="loadSelectedTrip()" title="Load the selected saved trip">Load</button>
+      <button type="button" onclick="deleteSelectedTrip()" title="Delete the selected saved trip">Delete</button>
+      <span class="saved-spacer"></span>
+      <button type="button" onclick="saveTripPrompt()" title="Save the current trip in this browser">💾 Save</button>
+      <button type="button" onclick="exportTripFile()" title="Save / share this trip as a .md file">⬇ Export .md</button>
+      <label class="saved-import" title="Load a trip from a .md file">⬆ Import<input type="file" accept=".md,.json,text/markdown,application/json" onchange="importTripFile(this)" hidden></label>
+    </div>
+
     <button class="go-btn" id="goBtn" onclick="planTrip()">Estimate trip ⚡</button>
     <div class="status-msg" id="status"></div>
   </div>
@@ -635,6 +654,7 @@ const COST = (function buildCost(){
   addStop(); addStop();
   renderStopKinds();
   enableStopDrag();
+  renderSavedTrips();
 })();
 
 const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
@@ -2148,5 +2168,198 @@ function onRoundTripToggle(){
   const canDest = document.getElementById('canChargeDest').checked;
   document.getElementById('destChargeWrap').style.display = round ? 'flex' : 'none';
   document.getElementById('destRateWrap').style.display = (round && canDest) ? 'flex' : 'none';
+}
+
+// ============================================================
+//  SAVE / RECALL TRIPS
+//  Two layers: (1) quick save/recall in THIS browser (localStorage), and
+//  (2) export/import a portable .md file — a readable summary plus the exact
+//  inputs in a hidden comment the importer reads back. Only the trip INPUTS are
+//  stored (results are recomputed on load), and API keys are NEVER written into
+//  an exported file.
+// ============================================================
+const TRIPS_KEY = 'evTrips';
+function getSavedTrips(){ try { return JSON.parse(localStorage.getItem(TRIPS_KEY) || '[]'); } catch(e){ return []; } }
+function setSavedTrips(arr){ try { localStorage.setItem(TRIPS_KEY, JSON.stringify(arr)); } catch(e){} }
+
+// Snapshot every trip INPUT (not results). getRouteStops() already returns each
+// row's address, home flag, and charge target/cost in route order.
+function collectTrip(){
+  const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  return {
+    v: 1,
+    stops: getRouteStops(),
+    veh: val('vehSel'), depDate: val('depDate'), depTime: val('depTime'),
+    roadType: val('roadType'), effOverride: val('effOverride'),
+    startSoc: val('startSoc'), reserve: val('reserve'), destRate: val('destRate'),
+    roundTrip: document.getElementById('roundTrip').checked,
+    canChargeDest: document.getElementById('canChargeDest').checked
+  };
+}
+
+// Rebuild the form from a saved snapshot. Returns false if the data is unusable.
+function applyTrip(d){
+  if (!d || !Array.isArray(d.stops) || !d.stops.length) return false;
+  const list = document.getElementById('routeStops');
+  list.innerHTML = '';
+  d.stops.forEach(s => {
+    const charge = (s.chargeHere && s.chargeTo > 0) ? s.chargeTo : null;
+    const row = makeStopRow(s.addr || '', charge, s.chargeCost != null ? s.chargeCost : 0);
+    if (s.isHome){ row.querySelector('.rs-addr').dataset.home = '1'; }
+    list.appendChild(row);
+  });
+  renderStopKinds();
+  const setV = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
+  const vs = document.getElementById('vehSel');
+  if (d.veh && [...vs.options].some(o => o.value === d.veh)) vs.value = d.veh;
+  setV('depDate', d.depDate); setV('depTime', d.depTime); setV('roadType', d.roadType);
+  setV('effOverride', d.effOverride); setV('startSoc', d.startSoc);
+  setV('reserve', d.reserve); setV('destRate', d.destRate);
+  document.getElementById('roundTrip').checked = !!d.roundTrip;
+  document.getElementById('canChargeDest').checked = !!d.canChargeDest;
+  onRoundTripToggle();
+  return true;
+}
+
+// Friendly default name + a filesystem-safe filename, both from route + date.
+function defaultTripName(d){
+  const named = (d.stops || []).filter(s => s.addr);
+  const head = a => (a || '').split(',')[0].trim().slice(0, 20);
+  if (!named.length) return 'My trip';
+  const a = head(named[0].addr), b = named.length > 1 ? head(named[named.length - 1].addr) : '';
+  const base = b ? `${a} → ${b}` : a;
+  return d.depDate ? `${base} (${d.depDate})` : base;
+}
+function tripFilename(d){
+  const named = (d.stops || []).filter(s => s.addr);
+  const slug = s => (s || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'stop';
+  const a = named.length ? slug(named[0].addr) : 'trip';
+  const b = named.length > 1 ? '-to-' + slug(named[named.length - 1].addr) : '';
+  const date = d.depDate || new Date().toISOString().slice(0, 10);
+  return `${a}${b}-${date}.md`;
+}
+
+// A readable Markdown summary with the canonical inputs in a hidden comment the
+// importer reads back. Renders cleanly if the file is ever viewed as Markdown.
+function tripToMarkdown(d, name){
+  const named = (d.stops || []).filter(s => s.addr);
+  const lines = [`# EV Trip — ${name}`, ''];
+  if (named.length){
+    lines.push('## Route');
+    named.forEach((s, i) => {
+      const role = i === 0 ? 'Start' : (i === named.length - 1 ? 'Destination' : 'Stop');
+      const charge = (s.chargeHere && s.chargeTo > 0)
+        ? ` — charge to ${s.chargeTo}%${s.chargeCost > 0 ? ` @ $${(+s.chargeCost).toFixed(2)}/kWh` : ''}` : '';
+      lines.push(`${i + 1}. **${role}:** ${s.addr}${charge}`);
+    });
+    lines.push('');
+  }
+  lines.push('## Settings');
+  const row = (k, v) => { if (v !== '' && v != null) lines.push(`- **${k}:** ${v}`); };
+  row('Vehicle', d.veh);
+  row('Departure', [d.depDate, d.depTime].filter(Boolean).join(' '));
+  row('Road type', d.roadType);
+  row('Efficiency override', d.effOverride ? d.effOverride + ' mi/kWh' : '');
+  row('Start charge', d.startSoc !== '' ? d.startSoc + '%' : '');
+  row('Reserve buffer', d.reserve !== '' ? d.reserve + '%' : '');
+  row('Round trip', d.roundTrip ? 'yes' : '');
+  row('Charge at destination', (d.roundTrip && d.canChargeDest) ? 'yes' : '');
+  lines.push('', '> Open the EV Trip Calculator and use **Import** to load this trip.', '',
+    `<!-- EVTRIP v1 ${JSON.stringify(d)} -->`, '');
+  return lines.join('\n');
+}
+
+// Pull the trip data back out of an imported file: the hidden comment if present,
+// otherwise a bare JSON file. Returns null if it isn't a valid trip.
+function parseTripFile(text){
+  const m = String(text || '').match(/<!--\s*EVTRIP v1\s*([\s\S]*?)-->/);
+  const raw = m ? m[1] : String(text || '');
+  try { const d = JSON.parse(raw.trim()); return (d && Array.isArray(d.stops)) ? d : null; }
+  catch(e){ return null; }
+}
+
+// Rebuild the saved-trips dropdown from localStorage (newest first).
+function renderSavedTrips(selName){
+  const sel = document.getElementById('savedTripSel');
+  if (!sel) return;
+  const trips = getSavedTrips();
+  sel.innerHTML = `<option value="">${trips.length ? 'Saved trips…' : 'No saved trips yet'}</option>`
+    + trips.map(t => `<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('');
+  if (selName) sel.value = selName;
+}
+
+function saveTripPrompt(){
+  const d = collectTrip();
+  if (!(d.stops || []).some(s => s.addr)){ setStatus('Add at least a start and destination before saving.', true); return; }
+  const name = (prompt('Name this trip:', defaultTripName(d)) || '').trim();
+  if (!name) return;
+  const trips = getSavedTrips().filter(t => t.name !== name);
+  trips.unshift({ name, savedAt: Date.now(), data: d });
+  setSavedTrips(trips);
+  renderSavedTrips(name);
+  setStatus(`Saved “${name}” in this browser.`);
+}
+function loadSelectedTrip(){
+  const name = document.getElementById('savedTripSel').value;
+  if (!name){ setStatus('Pick a saved trip to load.', true); return; }
+  const t = getSavedTrips().find(x => x.name === name);
+  if (!t){ setStatus('That saved trip is no longer available.', true); renderSavedTrips(); return; }
+  loadTripData(t.data, name);
+}
+function deleteSelectedTrip(){
+  const name = document.getElementById('savedTripSel').value;
+  if (!name){ setStatus('Pick a saved trip to delete.', true); return; }
+  if (!confirm(`Delete saved trip “${name}”?`)) return;
+  setSavedTrips(getSavedTrips().filter(t => t.name !== name));
+  renderSavedTrips();
+  setStatus(`Deleted “${name}”.`);
+}
+// Apply a snapshot, then auto-estimate once it has enough to route.
+function loadTripData(d, name){
+  if (!applyTrip(d)){ setStatus('That trip couldn’t be loaded.', true); return; }
+  const ready = (d.stops || []).filter(s => s.addr).length >= 2;
+  if (ready){ setStatus(`Loaded “${name}” — estimating…`); planTrip(); }
+  else setStatus(`Loaded “${name}”.`);
+}
+
+// Export the current trip as a .md file. On phones this routes through the system
+// Share sheet (AirDrop / Messages / Save to Files); on desktop it downloads.
+async function exportTripFile(){
+  const d = collectTrip();
+  if (!(d.stops || []).some(s => s.addr)){ setStatus('Add at least a start and destination before exporting.', true); return; }
+  const name = defaultTripName(d);
+  const md = tripToMarkdown(d, name);
+  const fname = tripFilename(d);
+  const mobile = /iphone|ipad|ipod|android/i.test(navigator.userAgent || '');
+  if (mobile && navigator.canShare && window.File){
+    try {
+      const file = new File([md], fname, { type: 'text/markdown' });
+      if (navigator.canShare({ files: [file] })){
+        await navigator.share({ files: [file], title: name });
+        return;
+      }
+    } catch(e){ return; }   // share sheet dismissed/canceled
+  }
+  const url = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setStatus(`Exported “${fname}”.`);
+}
+
+// Import a previously exported trip file (or a bare JSON trip).
+function importTripFile(input){
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const d = parseTripFile(reader.result);
+    if (!d) setStatus('That file isn’t a saved EV trip.', true);
+    else loadTripData(d, file.name.replace(/\.(md|json)$/i, ''));
+    input.value = '';   // let the same file be re-imported later
+  };
+  reader.onerror = () => setStatus('Couldn’t read that file.', true);
+  reader.readAsText(file);
 }
 </script>
