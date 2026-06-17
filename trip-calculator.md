@@ -354,7 +354,11 @@ permalink: /trip-calculator/
           <input id="depDate" type="date" style="flex:1 1 auto;min-width:0">
           <input id="depTime" type="time" step="300" title="24-hour clock" style="flex:0 0 7.25rem">
         </div>
-        <span class="hint">Date &amp; time (24h) — sets the arrival estimate</span>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:1px">
+          <label for="arriveByTime" style="font-size:0.62rem;color:#888;font-weight:600;text-transform:none;letter-spacing:0;white-space:nowrap">…or arrive by</label>
+          <input id="arriveByTime" type="time" step="300" title="Target arrival (24h) — shows your latest departure time" style="flex:0 0 7.25rem">
+        </div>
+        <span class="hint">Set a departure time for an arrival estimate, or an “arrive by” time for a leave-by time</span>
       </div>
       <div class="field">
         <label>Road type</label>
@@ -655,6 +659,10 @@ const COST = (function buildCost(){
   renderStopKinds();
   enableStopDrag();
   renderSavedTrips();
+  // Recompute the leave-by time instantly when the "arrive by" target changes
+  // (pure local math — no re-plan / network call needed).
+  const abEl = document.getElementById('arriveByTime');
+  if (abEl) abEl.addEventListener('input', () => { if (LAST_ETA) renderETA(LAST_ETA.plan, LAST_ETA.rt, LAST_ETA.round, LAST_ETA.oneWay); });
 })();
 
 const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
@@ -888,7 +896,7 @@ async function tripTemp(lat, lon, dateStr){
 // ============================================================
 //  Main flow
 // ============================================================
-let MAP, ROUTE_LAYER, STATE = null;
+let MAP, ROUTE_LAYER, STATE = null, LAST_ETA = null;
 async function planTrip(){
   const btn = document.getElementById('goBtn');
   const stops = getRouteStops().filter(s => s.addr);
@@ -1476,12 +1484,17 @@ function renderSummary(plan, energyTrip, fromHome, miles){
   document.getElementById('sgCostNote').innerHTML = parts.length > 1 ? parts.join(' + ') : '';
 }
 
-// Estimated arrival = departure date/time + driving time + the suggested DC
-// fast-charging time. Round trips show arrival AT THE DESTINATION (outbound leg
-// only) — the dwell at the destination and the drive home aren't part of an
-// "arrival" estimate. AC/hotel waypoint charges don't add en-route time.
+// Two views of the same trip-time math (one-way driving time + the suggested DC
+// fast-charging time; round trips count the OUTBOUND leg only, and AC/hotel
+// waypoint charges don't add en-route time):
+//   • Departure mode (default): departure date/time → estimated arrival.
+//   • "Arrive by" mode: enter a target arrival and it inverts the math to the
+//     latest you can leave. Driving time (OSRM) and charging time don't depend
+//     on the departure clock, so the leave-by time is exact. Durations are
+//     typical free-flow (no live/historical traffic without a keyed routing API).
 function renderETA(plan, rt, round, oneWay){
   const banner = document.getElementById('etaBanner');
+  LAST_ETA = { plan, rt, round, oneWay };          // cache so "arrive by" can recompute live
   const dEl = document.getElementById('depDate'), tEl = document.getElementById('depTime');
   const dep = dEl.value ? new Date(`${dEl.value}T${tEl.value || '08:00'}`) : null;
   if (!dep || isNaN(dep.getTime())){ banner.style.display = 'none'; return; }
@@ -1490,13 +1503,34 @@ function renderETA(plan, rt, round, oneWay){
     .reduce((sum, s) => sum + (s.mins || 0), 0);
   const driveMin = rt.hours * 60;                 // one-way driving time
   const totalMin = driveMin + chargeMins;
-  const arr = new Date(dep.getTime() + totalMin * 60000);
   const clock = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const dayTime = d => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + clock(d);
-  const arrLbl = (arr.toDateString() === dep.toDateString()) ? clock(arr) : dayTime(arr);
   const breakdown = chargeMins > 0
     ? `${fmtMinsShort(driveMin)} drive + ${fmtMinsShort(chargeMins)} charging`
     : `${fmtMinsShort(driveMin)} drive`;
+
+  // "Arrive by" optimizer: given a target arrival on the departure date, the
+  // latest you can leave is target − total trip time.
+  const abEl = document.getElementById('arriveByTime');
+  const arriveBy = abEl ? abEl.value : '';
+  if (arriveBy){
+    const target = new Date(`${dEl.value}T${arriveBy}`);
+    if (!isNaN(target.getTime())){
+      const leaveBy = new Date(target.getTime() - totalMin * 60000);
+      const targetLbl = (leaveBy.toDateString() === target.toDateString()) ? clock(target) : dayTime(target);
+      const passed = leaveBy.getTime() < Date.now();
+      banner.innerHTML =
+        `<span class="eta-ico">⏰</span>`
+        + `<span class="eta-text">Leave by <b>${dayTime(leaveBy)}</b> to arrive${round ? ' at destination' : ''} by <b>${targetLbl}</b>`
+        + `<span class="eta-sub">${fmtMinsShort(totalMin)} total · ${breakdown}${passed ? ' · ⚠ that departure time has already passed' : ''}</span></span>`;
+      banner.style.display = 'flex';
+      return;
+    }
+  }
+
+  // Departure mode: chosen departure → estimated arrival.
+  const arr = new Date(dep.getTime() + totalMin * 60000);
+  const arrLbl = (arr.toDateString() === dep.toDateString()) ? clock(arr) : dayTime(arr);
   banner.innerHTML =
     `<span class="eta-ico">🕜</span>`
     + `<span class="eta-text">Depart <b>${dayTime(dep)}</b> → arrive${round ? ' at destination' : ''} <b>${arrLbl}</b>`
@@ -2189,7 +2223,7 @@ function collectTrip(){
   return {
     v: 1,
     stops: getRouteStops(),
-    veh: val('vehSel'), depDate: val('depDate'), depTime: val('depTime'),
+    veh: val('vehSel'), depDate: val('depDate'), depTime: val('depTime'), arriveBy: val('arriveByTime'),
     roadType: val('roadType'), effOverride: val('effOverride'),
     startSoc: val('startSoc'), reserve: val('reserve'), destRate: val('destRate'),
     roundTrip: document.getElementById('roundTrip').checked,
@@ -2212,7 +2246,7 @@ function applyTrip(d){
   const setV = (id, v) => { const el = document.getElementById(id); if (el && v != null) el.value = v; };
   const vs = document.getElementById('vehSel');
   if (d.veh && [...vs.options].some(o => o.value === d.veh)) vs.value = d.veh;
-  setV('depDate', d.depDate); setV('depTime', d.depTime); setV('roadType', d.roadType);
+  setV('depDate', d.depDate); setV('depTime', d.depTime); setV('arriveByTime', d.arriveBy); setV('roadType', d.roadType);
   setV('effOverride', d.effOverride); setV('startSoc', d.startSoc);
   setV('reserve', d.reserve); setV('destRate', d.destRate);
   document.getElementById('roundTrip').checked = !!d.roundTrip;
@@ -2258,6 +2292,7 @@ function tripToMarkdown(d, name){
   const row = (k, v) => { if (v !== '' && v != null) lines.push(`- **${k}:** ${v}`); };
   row('Vehicle', d.veh);
   row('Departure', [d.depDate, d.depTime].filter(Boolean).join(' '));
+  row('Arrive by', d.arriveBy);
   row('Road type', d.roadType);
   row('Efficiency override', d.effOverride ? d.effOverride + ' mi/kWh' : '');
   row('Start charge', d.startSoc !== '' ? d.startSoc + '%' : '');
