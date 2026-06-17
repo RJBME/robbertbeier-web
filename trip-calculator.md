@@ -117,6 +117,11 @@ permalink: /trip-calculator/
 
   .fleet-note { font-size: 0.74rem; color: var(--text); background: #3b82f614; border: 1px solid #3b82f640; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; }
 
+  .gas-compare { font-size: 0.82rem; line-height: 1.45; color: var(--text); background: #22c55e14; border: 1px solid #22c55e44; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; }
+  .gas-compare b { color: #16a34a; }
+  .gas-compare.worse { background: #ef444414; border-color: #ef444444; }
+  .gas-compare.worse b { color: #ef4444; }
+
   /* Charging stops */
   .stop { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--dash-border); }
   .stop:last-child { border-bottom: none; }
@@ -261,6 +266,8 @@ permalink: /trip-calculator/
       <div class="hero-stat"><div class="big" id="rCost">–</div><div class="lbl">Est. cost</div><div class="sub" id="rCostSub"></div></div>
     </div>
 
+    <div class="gas-compare" id="gasCompare" style="display:none"></div>
+
     <div class="trip-card" id="socCard" style="display:none">
       <h4 style="margin:0 0 12px 0;font-size:0.9rem;">State of charge</h4>
       <div class="soc-bar-wrap">
@@ -314,6 +321,9 @@ const RAW_SESSIONS = [
 // self-calibrates as it logs sessions.
 const BATTERY = { '2025 Mach-E GT': 91.7, "LRB's 2025 Mach-E GT": 91.7 };
 const DEFAULT_BATTERY = 91.7;
+// Gas comparison: latest mpg + gas price from _data/rates.yml
+{% assign gs = site.data.rates.gas_savings | last %}
+const GAS = { mpg: {{ gs.mpg | default: 27 }}, price: {{ gs.gas_price | default: 4.0 }} };
 const MIN_OWN_SESSIONS = 5; // below this, a vehicle borrows the fleet average
 const FLEET_FALLBACK_EFF = 3.0; // mi/kWh if a vehicle has no usable data
 
@@ -1112,7 +1122,7 @@ function applyElevationToHero(e, nrg, totalMi){
 
 // Estimate trip cost from YOUR real $/kWh: the starting charge (home rate when
 // you leave from home) + each DCFC stop at that network's average rate.
-function renderCost(plan, energyTrip, fromHome){
+function renderCost(plan, energyTrip, fromHome, miles){
   let dcfcKWh = 0, dcfcCost = 0;
   (plan && plan.stops || []).forEach(s => {
     if (s.waypoint) return;
@@ -1127,6 +1137,23 @@ function renderCost(plan, energyTrip, fromHome){
   let sub = `$${startCost.toFixed(2)} ${fromHome ? 'home' : 'start'} charge`;
   if (dcfcCost > 0) sub += ` + $${dcfcCost.toFixed(2)} charging`;
   document.getElementById('rCostSub').textContent = sub;
+
+  // Gas comparison — 27 mpg car at the latest gas price from your data
+  const gc = document.getElementById('gasCompare');
+  if (miles > 0 && GAS.mpg > 0 && GAS.price > 0){
+    const gasCost = miles / GAS.mpg * GAS.price;
+    const diff = gasCost - total;
+    gc.style.display = 'block';
+    if (diff >= 0){
+      gc.className = 'gas-compare';
+      gc.innerHTML = `⛽ The same trip in a ${GAS.mpg} mpg gas car (@ $${GAS.price.toFixed(2)}/gal) would cost about <b>$${gasCost.toFixed(2)}</b> — you save <b>$${diff.toFixed(2)}</b> (${Math.round(diff/gasCost*100)}%).`;
+    } else {
+      gc.className = 'gas-compare worse';
+      gc.innerHTML = `⛽ The same trip in a ${GAS.mpg} mpg gas car (@ $${GAS.price.toFixed(2)}/gal) would cost about <b>$${gasCost.toFixed(2)}</b> — this EV trip costs <b>$${(-diff).toFixed(2)} more</b> (the DC fast charging outweighs gas here).`;
+    }
+  } else {
+    gc.style.display = 'none';
+  }
 }
 
 let CHARGER_LAYER = [];
@@ -1173,21 +1200,21 @@ async function updateChargingPlan(rt, e, temp){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — you'll make it on the starting charge.`);
-      renderCost(null, energyTrip, fromHome);
+      renderCost(null, energyTrip, fromHome, planMi);
       return;
     }
     if (round && canChargeDest && oneWay <= reachStart){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — you'll charge at your destination before the return.</div>`;
       setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
-      renderCost(null, energyTrip, fromHome);
+      renderCost(null, energyTrip, fromHome, planMi);
       return;
     }
     if (round && !canChargeDest && planMi <= planNrg.reachMi(0, startSoc, reserve)){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — the whole round trip fits on your starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — the whole round trip is within range.`);
-      renderCost(null, energyTrip, fromHome);
+      renderCost(null, energyTrip, fromHome, planMi);
       return;
     }
   }
@@ -1235,7 +1262,7 @@ async function updateChargingPlan(rt, e, temp){
   }
   const plan = planJourney(planMi, anchors, useNrg, startSoc, reserve, planChargers);
   renderStops(plan, e, reserve, round, startSoc, useNrg, oneWay);
-  renderCost(plan, energyTrip, fromHome);
+  renderCost(plan, energyTrip, fromHome, planMi);
   drawChargerMarkers(plan.stops, round ? [] : waypoints);
   rerouteThroughStops(rt, plan, e, round, oneWay);
 }
