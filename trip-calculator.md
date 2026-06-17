@@ -48,11 +48,30 @@ permalink: /trip-calculator/
   }
   .quick-row button:hover { border-color: var(--link); color: var(--link); }
 
-  .wp-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .wp-row input[type=text] { flex: 1; min-width: 0; padding: 8px 11px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.82rem; }
-  .wp-row .wp-charge { display: flex; align-items: center; gap: 4px; font-size: 0.68rem; color: #888; white-space: nowrap; }
-  .wp-row .wp-charge input { width: 52px; padding: 8px 6px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.82rem; text-align: center; }
-  .wp-row .wp-del { border: none; background: none; color: #ef4444; font-size: 1.1rem; cursor: pointer; padding: 0 4px; line-height: 1; }
+  /* Google-Maps-style reorderable route list */
+  #routeStops { display: flex; flex-direction: column; }
+  .route-row { display: grid; grid-template-columns: 18px 16px 1fr auto auto auto; align-items: center; gap: 7px; padding: 4px 0; position: relative; }
+  .route-row.dragging { opacity: 0.5; }
+  .rs-handle { cursor: grab; color: #aaa; font-size: 0.95rem; text-align: center; user-select: none; touch-action: none; }
+  .rs-handle:active { cursor: grabbing; }
+  .rs-dot { width: 12px; height: 12px; display: flex; align-items: center; justify-content: center; }
+  .rs-dot::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #888; box-sizing: border-box; }
+  .rs-dot.rs-dest::before { content: '📍'; border: none; font-size: 13px; width: auto; height: auto; }
+  /* dotted connector between rows */
+  .route-row:not(:last-child) .rs-dot::after { content: ''; position: absolute; left: 25px; top: 24px; height: calc(100% - 14px); border-left: 2px dotted var(--dash-border); }
+  .rs-addr { min-width: 0; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.84rem; }
+  .rs-btn { border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; border-radius: 8px; padding: 6px 8px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
+  .rs-btn:hover { border-color: var(--link); color: var(--link); }
+  .rs-charge.on { background: var(--link); border-color: var(--link); color: #fff; }
+  .rs-del { visibility: hidden; }
+  .route-row.removable .rs-del { visibility: visible; color: #ef4444; }
+  /* charge slider row (full width under the stop) */
+  .rs-slider { grid-column: 3 / -1; display: none; align-items: center; gap: 10px; padding: 4px 2px 8px; }
+  .rs-slider.show { display: flex; }
+  .rs-slider input[type=range] { flex: 1; accent-color: #16a34a; }
+  .rs-slider .rs-pct { font-size: 0.78rem; font-weight: 700; color: #16a34a; min-width: 56px; }
+  .rs-slider .rs-pct small { font-weight: 400; color: #888; }
+
   .stop.wp-stop .stop-num { background: #16a34a; }
   .net-wp { background: #16a34a20; color: #16a34a; }
 
@@ -178,23 +197,10 @@ permalink: /trip-calculator/
   </div>
 
   <div class="trip-card">
-    <div class="field-grid">
-      <div class="field full">
-        <label>Start</label>
-        <input id="startAddr" type="text" placeholder="Address, city, or place" autocomplete="off">
-        <div class="quick-row"><button type="button" onclick="useHome('startAddr')">🏠 Home</button></div>
-      </div>
-      <div class="field full">
-        <label>Destination</label>
-        <input id="endAddr" type="text" placeholder="Address, city, or place" autocomplete="off">
-        <div class="quick-row"><button type="button" onclick="useHome('endAddr')">🏠 Home</button></div>
-      </div>
-    </div>
-
-    <div class="field full" style="margin-top:12px">
-      <label>Waypoints <span style="font-weight:400;text-transform:none">(optional — e.g. an overnight hotel with charging)</span></label>
-      <div id="waypointList"></div>
-      <div class="quick-row"><button type="button" onclick="addWaypoint()">＋ Add waypoint</button></div>
+    <div class="field full">
+      <label>Route <span style="font-weight:400;text-transform:none">— drag ⠿ to reorder, ⚡ to charge at a stop</span></label>
+      <div id="routeStops"></div>
+      <div class="quick-row"><button type="button" onclick="addStop()">＋ Add stop</button></div>
     </div>
 
     <div class="opt-row">
@@ -415,7 +421,8 @@ const COST = (function buildCost(){
   return {
     home: rate('home') ?? 0.20,
     Tesla: rate('Tesla') ?? publicAvg,
-    'Electrify America': rate('Electrify America') ?? publicAvg,
+    // You've never logged an EA session; EA pay-as-you-go runs ~$0.60/kWh.
+    'Electrify America': rate('Electrify America') ?? 0.60,
     ChargePoint: rate('ChargePoint') ?? publicAvg,
     publicAvg
   };
@@ -435,29 +442,101 @@ const COST = (function buildCost(){
   const dd = document.getElementById('depDate');
   dd.value = new Date().toISOString().slice(0,10);
   dd.min = '2000-01-01';
+  // Seed the route with a Start and a Destination row, enable drag reordering.
+  addStop(); addStop();
+  renderStopKinds();
+  enableStopDrag();
 })();
 
 const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
-function useHome(id){ document.getElementById(id).value = HOME.label; document.getElementById(id).dataset.home = '1'; }
 
-// ── Waypoints (optional intermediate stops, e.g. an overnight hotel) ──
-function addWaypoint(addr, charge){
+// ── Reorderable route list (Google-Maps style) ──
+// One ordered column of rows: first = start, last = destination, middle = stops.
+// Any row can toggle "charge here" (a slider sets the target %).
+function makeStopRow(addr, charge){
   const row = document.createElement('div');
-  row.className = 'wp-row';
+  row.className = 'route-row';
   row.innerHTML =
-    `<input type="text" class="wp-addr" placeholder="Waypoint — address or place">`
-    + `<span class="wp-charge">charge to <input type="number" class="wp-pct" min="0" max="100" placeholder="—">%</span>`
-    + `<button type="button" class="wp-del" title="Remove">×</button>`;
-  row.querySelector('.wp-addr').value = addr || '';
-  if (charge != null) row.querySelector('.wp-pct').value = charge;
-  row.querySelector('.wp-del').onclick = () => row.remove();
-  document.getElementById('waypointList').appendChild(row);
+      `<span class="rs-handle" title="Drag to reorder">⠿</span>`
+    + `<span class="rs-dot"></span>`
+    + `<input class="rs-addr" type="text" placeholder="Address or place" autocomplete="off">`
+    + `<button type="button" class="rs-btn rs-home" title="Use home">🏠</button>`
+    + `<button type="button" class="rs-btn rs-charge" title="Charge here">⚡</button>`
+    + `<button type="button" class="rs-btn rs-del" title="Remove stop">×</button>`
+    + `<div class="rs-slider"><input type="range" min="50" max="100" step="5" value="${charge||80}"><span class="rs-pct"></span></div>`;
+  row.querySelector('.rs-addr').value = addr || '';
+  const slider = row.querySelector('.rs-slider'), range = row.querySelector('input[type=range]'), pct = row.querySelector('.rs-pct');
+  const updatePct = () => pct.innerHTML = `${range.value}% <small>charge here</small>`;
+  updatePct();
+  if (charge != null){ row.classList.add('charging'); row.querySelector('.rs-charge').classList.add('on'); slider.classList.add('show'); }
+  row.querySelector('.rs-charge').onclick = () => {
+    const on = row.classList.toggle('charging');
+    row.querySelector('.rs-charge').classList.toggle('on', on);
+    slider.classList.toggle('show', on);
+    syncCharges();   // charge changes apply live (no re-geocode needed)
+  };
+  range.oninput = updatePct;
+  range.onchange = syncCharges;
+  row.querySelector('.rs-home').onclick = () => { const i = row.querySelector('.rs-addr'); i.value = HOME.label; i.dataset.home = '1'; };
+  row.querySelector('.rs-del').onclick = () => { row.remove(); renderStopKinds(); };
+  row.querySelector('.rs-addr').addEventListener('input', e => delete e.target.dataset.home);
+  row.querySelector('.rs-addr').addEventListener('keydown', e => { if (e.key === 'Enter') planTrip(); });
+  return row;
 }
-function getWaypoints(){
-  return [...document.querySelectorAll('#waypointList .wp-row')].map(r => ({
-    addr: r.querySelector('.wp-addr').value.trim(),
-    chargeTo: parseFloat(r.querySelector('.wp-pct').value)
-  })).filter(w => w.addr);
+// Charge toggle/slider changed after a plan exists — update the waypoint anchors
+// (intermediate rows map to STATE.waypoints in order) and re-plan, no geocoding.
+function syncCharges(){
+  if (!STATE) return;
+  const middle = [...document.querySelectorAll('#routeStops .route-row')].slice(1, -1);
+  if (middle.length !== STATE.waypoints.length) return; // structure changed → click Estimate
+  STATE.waypoints.forEach((wp, i) => {
+    const row = middle[i];
+    wp.chargeTo = row.classList.contains('charging') ? +row.querySelector('input[type=range]').value : NaN;
+  });
+  refresh();
+}
+function addStop(addr, charge){
+  const list = document.getElementById('routeStops');
+  list.appendChild(makeStopRow(addr, charge));
+  renderStopKinds();
+}
+// Recompute each row's role (dot, placeholder, charge availability, deletability)
+// from its position after any add / remove / drag-reorder.
+function renderStopKinds(){
+  const rows = [...document.querySelectorAll('#routeStops .route-row')];
+  rows.forEach((row, i) => {
+    const isStart = i === 0, isDest = i === rows.length - 1;
+    const dot = row.querySelector('.rs-dot');
+    dot.className = 'rs-dot' + (isDest ? ' rs-dest' : '');
+    row.querySelector('.rs-addr').placeholder = isStart ? 'Start — address or place' : isDest ? 'Destination — address or place' : 'Stop — address or place';
+    // "charge here" only applies to intermediate stops (you set start charge
+    // separately, and charging at the final destination doesn't affect the plan).
+    const endpoint = isStart || isDest;
+    row.querySelector('.rs-charge').style.display = endpoint ? 'none' : '';
+    if (endpoint && row.classList.contains('charging')){ row.classList.remove('charging'); row.querySelector('.rs-slider').classList.remove('show'); row.querySelector('.rs-charge').classList.remove('on'); }
+    row.classList.toggle('removable', rows.length > 2);
+  });
+}
+function getRouteStops(){
+  return [...document.querySelectorAll('#routeStops .route-row')].map(row => ({
+    addr: row.querySelector('.rs-addr').value.trim(),
+    isHome: row.querySelector('.rs-addr').dataset.home === '1',
+    chargeHere: row.classList.contains('charging'),
+    chargeTo: +row.querySelector('input[type=range]').value
+  }));
+}
+// Lazy-load SortableJS for drag reordering (works on touch too).
+function enableStopDrag(){
+  const init = () => { if (window.Sortable && !document.getElementById('routeStops')._sortable){
+    document.getElementById('routeStops')._sortable = Sortable.create(document.getElementById('routeStops'), {
+      handle: '.rs-handle', animation: 150, ghostClass: 'dragging',
+      onEnd: () => { renderStopKinds(); }
+    });
+  }};
+  if (window.Sortable) return init();
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js';
+  s.onload = init; document.body.appendChild(s);
 }
 
 function setStatus(msg, isErr){
@@ -529,17 +608,20 @@ async function tripTemp(lat, lon, dateStr){
 let MAP, ROUTE_LAYER, STATE = null;
 async function planTrip(){
   const btn = document.getElementById('goBtn');
-  const startEl = document.getElementById('startAddr'), endEl = document.getElementById('endAddr');
-  if (!startEl.value.trim() || !endEl.value.trim()){ setStatus('Enter a start and destination.', true); return; }
+  const stops = getRouteStops().filter(s => s.addr);
+  if (stops.length < 2){ setStatus('Enter at least a start and a destination.', true); return; }
   btn.disabled = true;
   try {
     setStatus('Finding locations…');
-    const [A, B] = await Promise.all([ geocode(startEl.value.trim(), startEl), geocode(endEl.value.trim(), endEl) ]);
-
-    // Geocode any waypoints, keep their charge-to %
-    const wpInputs = getWaypoints();
-    const wpGeo = await Promise.all(wpInputs.map(w => geocode(w.addr)));
-    const waypoints = wpInputs.map((w, i) => ({ addr: w.addr, chargeTo: w.chargeTo, lat: wpGeo[i].lat, lon: wpGeo[i].lon }));
+    const geo = await Promise.all(stops.map(s =>
+      s.isHome ? Promise.resolve({ lat: HOME.lat, lon: HOME.lon, name: HOME.label }) : geocode(s.addr)));
+    const A = geo[0], B = geo[geo.length - 1];
+    // Intermediate stops become waypoints, carrying their "charge here" target.
+    const waypoints = [];
+    for (let i = 1; i < stops.length - 1; i++){
+      waypoints.push({ addr: stops[i].addr, lat: geo[i].lat, lon: geo[i].lon,
+        chargeTo: stops[i].chargeHere ? stops[i].chargeTo : NaN });
+    }
 
     setStatus('Planning route…');
     const routes = await route([A, ...waypoints, B]);
@@ -1375,11 +1457,7 @@ async function drawMap(A, B, geometry){
   setTimeout(() => MAP.invalidateSize(), 100);
 }
 
-// Enter key submits
-['startAddr','endAddr'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') planTrip(); });
-  document.getElementById(id).addEventListener('input', e => { delete e.target.dataset.home; });
-});
+// (route-row Enter-to-submit + home-flag clearing are wired in makeStopRow)
 
 // Tweaking vehicle / road / charge after a route is loaded → live re-estimate
 // (no re-routing or weather call needed — same route, new numbers)
