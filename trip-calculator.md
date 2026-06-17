@@ -117,10 +117,14 @@ permalink: /trip-calculator/
 
   .fleet-note { font-size: 0.74rem; color: var(--text); background: #3b82f614; border: 1px solid #3b82f640; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; }
 
-  .gas-compare { font-size: 0.82rem; line-height: 1.45; color: var(--text); background: #22c55e14; border: 1px solid #22c55e44; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; }
-  .gas-compare b { color: #16a34a; }
-  .gas-compare.worse { background: #ef444414; border-color: #ef444444; }
-  .gas-compare.worse b { color: #ef4444; }
+  /* Road-Trips-style stat grid (matches charging-analytics.md) */
+  .summary-card { padding: 16px 18px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
+  .summary-grid > div { text-align: center; }
+  .sg-lbl { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 3px; }
+  .sg-val { font-weight: 800; font-size: 1rem; }
+  .sg-green { color: #2ecc71; }
+  .sg-amber { color: #f39c12; }
 
   /* Charging stops */
   .stop { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--dash-border); }
@@ -263,10 +267,20 @@ permalink: /trip-calculator/
       <div class="hero-stat"><div class="big" id="rEnergy">–</div><div class="lbl">Energy needed</div><div class="sub" id="rEnergySub"></div></div>
       <div class="hero-stat"><div class="big" id="rEff">–</div><div class="lbl">Est. efficiency</div><div class="sub" id="rEffSub"></div></div>
       <div class="hero-stat"><div class="big" id="rTemp">–</div><div class="lbl">Trip temp</div><div class="sub" id="rTempSub"></div></div>
-      <div class="hero-stat"><div class="big" id="rCost">–</div><div class="lbl">Est. cost</div><div class="sub" id="rCostSub"></div></div>
     </div>
 
-    <div class="gas-compare" id="gasCompare" style="display:none"></div>
+    <!-- Cost / gas report — same stat-grid format as Road Trips on Analytics -->
+    <div class="trip-card summary-card" id="tripSummary" style="display:none">
+      <div class="summary-grid">
+        <div><div class="sg-lbl">Charged</div><div class="sg-val" id="sgCharged">–</div></div>
+        <div><div class="sg-lbl">Est. cost</div><div class="sg-val" id="sgCost">–</div></div>
+        <div><div class="sg-lbl">Saved vs Gas</div><div class="sg-val" id="sgSaved">–</div></div>
+        <div><div class="sg-lbl">DCFC Time</div><div class="sg-val" id="sgDcfc">–</div></div>
+        <div><div class="sg-lbl" id="sgGasStopsLbl">Gas Stops</div><div class="sg-val" id="sgGasStops">–</div></div>
+        <div><div class="sg-lbl">Time vs Gas</div><div class="sg-val" id="sgTimeVsGas">–</div></div>
+        <div><div class="sg-lbl">Stops</div><div class="sg-val" id="sgStops">–</div></div>
+      </div>
+    </div>
 
     <div class="trip-card" id="socCard" style="display:none">
       <h4 style="margin:0 0 12px 0;font-size:0.9rem;">State of charge</h4>
@@ -324,6 +338,9 @@ const DEFAULT_BATTERY = 91.7;
 // Gas comparison: latest mpg + gas price from _data/rates.yml
 {% assign gs = site.data.rates.gas_savings | last %}
 const GAS = { mpg: {{ gs.mpg | default: 27 }}, price: {{ gs.gas_price | default: 4.0 }} };
+const GAS_STOP_MIN = 6;     // minutes per gas fill-up (matches analytics Road Trips)
+const GAS_TANK_GAL = 15.7;  // tank size of the comparison gas car (range = mpg × this)
+function fmtMinsShort(m){ m = Math.round(m); return m >= 60 ? `${Math.floor(m/60)}h ${m%60}m` : `${m} min`; }
 const MIN_OWN_SESSIONS = 5; // below this, a vehicle borrows the fleet average
 const FLEET_FALLBACK_EFF = 3.0; // mi/kWh if a vehicle has no usable data
 
@@ -1122,38 +1139,35 @@ function applyElevationToHero(e, nrg, totalMi){
 
 // Estimate trip cost from YOUR real $/kWh: the starting charge (home rate when
 // you leave from home) + each DCFC stop at that network's average rate.
-function renderCost(plan, energyTrip, fromHome, miles){
-  let dcfcKWh = 0, dcfcCost = 0;
-  (plan && plan.stops || []).forEach(s => {
-    if (s.waypoint) return;
+// Cost / gas report in the same stat-grid format as Road Trips on Analytics.
+function renderSummary(plan, energyTrip, fromHome, miles){
+  const dcfc = ((plan && plan.stops) || []).filter(s => !s.waypoint);
+  let dcfcKWh = 0, dcfcCost = 0, dcfcMin = 0;
+  dcfc.forEach(s => {
     const r = (COST[s.net] != null) ? COST[s.net] : COST.publicAvg;
-    dcfcKWh += s.addedKWh; dcfcCost += s.addedKWh * r;
+    dcfcKWh += s.addedKWh; dcfcCost += s.addedKWh * r; dcfcMin += s.mins || 0;
   });
-  const startKWh  = Math.max(0, energyTrip - dcfcKWh);     // energy from the starting charge
+  const startKWh  = Math.max(0, energyTrip - dcfcKWh);
   const startRate = fromHome ? COST.home : COST.publicAvg;
-  const startCost = startKWh * startRate;
-  const total = startCost + dcfcCost;
-  document.getElementById('rCost').textContent = '$' + total.toFixed(2);
-  let sub = `$${startCost.toFixed(2)} ${fromHome ? 'home' : 'start'} charge`;
-  if (dcfcCost > 0) sub += ` + $${dcfcCost.toFixed(2)} charging`;
-  document.getElementById('rCostSub').textContent = sub;
+  const total = startKWh * startRate + dcfcCost;
+  const gasCost = (GAS.mpg > 0 && miles > 0) ? miles / GAS.mpg * GAS.price : 0;
+  const saved = gasCost - total;
+  const gasStops = Math.max(0, Math.ceil(miles / (GAS.mpg * GAS_TANK_GAL)) - 1);
+  const gasMins  = gasStops * GAS_STOP_MIN;
+  const timeDiff = Math.round(dcfcMin) - gasMins;   // EV fast-charging time vs gas refuel time
 
-  // Gas comparison — 27 mpg car at the latest gas price from your data
-  const gc = document.getElementById('gasCompare');
-  if (miles > 0 && GAS.mpg > 0 && GAS.price > 0){
-    const gasCost = miles / GAS.mpg * GAS.price;
-    const diff = gasCost - total;
-    gc.style.display = 'block';
-    if (diff >= 0){
-      gc.className = 'gas-compare';
-      gc.innerHTML = `⛽ The same trip in a ${GAS.mpg} mpg gas car (@ $${GAS.price.toFixed(2)}/gal) would cost about <b>$${gasCost.toFixed(2)}</b> — you save <b>$${diff.toFixed(2)}</b> (${Math.round(diff/gasCost*100)}%).`;
-    } else {
-      gc.className = 'gas-compare worse';
-      gc.innerHTML = `⛽ The same trip in a ${GAS.mpg} mpg gas car (@ $${GAS.price.toFixed(2)}/gal) would cost about <b>$${gasCost.toFixed(2)}</b> — this EV trip costs <b>$${(-diff).toFixed(2)} more</b> (the DC fast charging outweighs gas here).`;
-    }
-  } else {
-    gc.style.display = 'none';
-  }
+  document.getElementById('tripSummary').style.display = 'block';
+  const set = (id, txt, cls) => { const el = document.getElementById(id); el.textContent = txt; el.className = 'sg-val' + (cls ? ' ' + cls : ''); };
+  set('sgCharged', dcfcKWh > 0 ? dcfcKWh.toFixed(1) + ' kWh' : '0 kWh');
+  set('sgCost', '$' + total.toFixed(2));
+  set('sgSaved', (saved >= 0 ? '$' + saved.toFixed(2) : '−$' + (-saved).toFixed(2)), saved >= 0 ? 'sg-green' : 'sg-amber');
+  set('sgDcfc', dcfcMin > 0 ? fmtMinsShort(dcfcMin) : '—');
+  document.getElementById('sgGasStopsLbl').textContent = `Gas Stops (${GAS.mpg}mpg)`;
+  set('sgGasStops', `${gasStops} × ${GAS_STOP_MIN}min = ${gasMins}min`);
+  if (timeDiff > 0)      set('sgTimeVsGas', `+${fmtMinsShort(timeDiff)} vs gas`, 'sg-amber');
+  else if (timeDiff < 0) set('sgTimeVsGas', `${fmtMinsShort(-timeDiff)} faster`, 'sg-green');
+  else                   set('sgTimeVsGas', 'Same as gas');
+  set('sgStops', String(dcfc.length));
 }
 
 let CHARGER_LAYER = [];
@@ -1200,21 +1214,21 @@ async function updateChargingPlan(rt, e, temp){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — you'll make it on the starting charge.`);
-      renderCost(null, energyTrip, fromHome, planMi);
+      renderSummary(null, energyTrip, fromHome, planMi);
       return;
     }
     if (round && canChargeDest && oneWay <= reachStart){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — you'll charge at your destination before the return.</div>`;
       setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
-      renderCost(null, energyTrip, fromHome, planMi);
+      renderSummary(null, energyTrip, fromHome, planMi);
       return;
     }
     if (round && !canChargeDest && planMi <= planNrg.reachMi(0, startSoc, reserve)){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — the whole round trip fits on your starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — the whole round trip is within range.`);
-      renderCost(null, energyTrip, fromHome, planMi);
+      renderSummary(null, energyTrip, fromHome, planMi);
       return;
     }
   }
@@ -1262,7 +1276,7 @@ async function updateChargingPlan(rt, e, temp){
   }
   const plan = planJourney(planMi, anchors, useNrg, startSoc, reserve, planChargers);
   renderStops(plan, e, reserve, round, startSoc, useNrg, oneWay);
-  renderCost(plan, energyTrip, fromHome, planMi);
+  renderSummary(plan, energyTrip, fromHome, planMi);
   drawChargerMarkers(plan.stops, round ? [] : waypoints);
   rerouteThroughStops(rt, plan, e, round, oneWay);
 }
