@@ -20,7 +20,7 @@ permalink: /trip-calculator/
 {% endcomment %}
 
 <style>
-  .trip-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); }
+  .trip-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); overflow-x: clip; }
 
   .charge-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--dash-border); align-items: center; }
   .charge-nav a { font-size: 0.78rem; font-weight: 600; text-decoration: none; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; transition: all 0.15s; }
@@ -33,7 +33,7 @@ permalink: /trip-calculator/
   .trip-card { background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
 
   .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
   .field.full { grid-column: 1 / -1; }
   .field label { font-size: 0.65rem; text-transform: uppercase; font-weight: 700; color: #888; letter-spacing: 0.06em; }
   .field input, .field select {
@@ -235,9 +235,72 @@ permalink: /trip-calculator/
   .dev-banner { font-size: 0.76rem; background: #eab30818; border: 1px solid #eab30855; color: var(--text); border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; line-height: 1.45; }
   .dev-banner b { color: #b45309; }
 
+  /* Long third-party strings (place names, addresses) must wrap, never widen the page */
+  .stop-name, .stop-sub, .stop-addr, .eta-text, .verdict, .status-msg,
+  .export-note, .sg-costnote, .breakdown td:first-child { overflow-wrap: anywhere; }
+
+  /* ── In-app printable trip log ──
+     Full-screen in-app sheet (replaces window.open) so it works inside an installed
+     Home-Screen app, where a new tab drops you into Safari with no way back to the
+     planner. Print / Save-as-PDF still works via the @media print block below. */
+  .tlog-overlay { position: fixed; inset: 0; z-index: 4000; background: #fff; color: #111;
+    display: flex; flex-direction: column; overscroll-behavior: contain; }
+  .tlog-overlay[hidden] { display: none; }
+  body.tlog-open { overflow: hidden; }
+  .tlog-bar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px;
+    background: #f5f5f7; border-bottom: 1px solid #d0d0d5; }
+  .tlog-bar button { font-family: inherit; font-size: 0.95rem; font-weight: 700; padding: 9px 14px;
+    border-radius: 9px; cursor: pointer; border: 1px solid transparent; }
+  .tlog-back { background: #fff; border-color: #c4c4cc; color: #1a1a1a; }
+  .tlog-print { background: #1a73e8; color: #fff; }
+  .tlog-sheet { flex: 1 1 auto; overflow: auto; -webkit-overflow-scrolling: touch; width: 100%;
+    max-width: 820px; margin: 0 auto;
+    padding: 16px calc(env(safe-area-inset-right, 0px) + 16px)
+             calc(env(safe-area-inset-bottom, 0px) + 28px)
+             calc(env(safe-area-inset-left, 0px) + 16px); }
+  .tlog-sheet, .tlog-sheet * { box-sizing: border-box; }
+  .tlog-sheet h1 { font-size: 20px; margin: 0; }
+  .tlog-sheet h2 { font-size: 13px; margin: 18px 0 4px; border-bottom: 2px solid #111; padding-bottom: 2px; }
+  .tlog-sheet .sub { color: #444; margin-top: 2px; font-size: 12px; }
+  .tlog-sheet .route { font-weight: 600; margin-top: 5px; font-size: 13px; }
+  .tlog-sheet .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; margin-top: 10px; font-size: 12px; }
+  .tlog-sheet .kv > div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted #bbb; padding: 3px 0; }
+  .tlog-sheet .kv span { color: #555; }
+  .tlog-sheet .boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+  .tlog-sheet .box { border: 1px solid #888; border-radius: 6px; padding: 8px 10px; font-size: 12px; }
+  .tlog-sheet .bx-t { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+  .tlog-sheet .line { padding: 5px 0; }
+  .tlog-sheet .blank { display: inline-block; border-bottom: 1px solid #111; min-width: 120px; }
+  .tlog-sheet .blank.short { min-width: 60px; }
+  .tlog-tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 6px; }
+  .tlog-sheet table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tlog-sheet th, .tlog-sheet td { border: 1px solid #999; padding: 5px 6px; text-align: left; vertical-align: top; }
+  .tlog-sheet th { background: #eee; font-size: 9.5px; text-transform: uppercase; letter-spacing: .03em; }
+  .tlog-sheet td.fill { height: 30px; min-width: 54px; }
+  .tlog-sheet .cname { font-weight: 600; }
+  .tlog-sheet .plan, .tlog-sheet .addr { color: #555; font-size: 10px; margin-top: 1px; }
+  .tlog-sheet tr.divider td { background: #f3f3f3; font-style: italic; font-size: 10px; }
+  .tlog-sheet .notes { border: 1px solid #888; border-radius: 6px; height: 150px; margin-top: 4px;
+    background-image: repeating-linear-gradient(#fff, #fff 27px, #ddd 28px); }
+  .tlog-sheet .foot { margin-top: 14px; color: #777; font-size: 9.5px; text-align: center; }
+
   @media (max-width: 600px) {
     .field-grid { grid-template-columns: 1fr; }
     .hero-stat .big { font-size: 1.4rem; }
+    /* keep the option rows from ever exceeding the screen width on phones */
+    .opt-row { gap: 12px; }
+    .opt-row > .field, .opt-row > div { flex: 1 1 100%; min-width: 0; }
+    .tlog-sheet .kv, .tlog-sheet .boxes { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    @page { size: letter; margin: 0.5in; }
+    body.tlog-open > *:not(.tlog-overlay) { display: none !important; }
+    body.tlog-open .tlog-overlay { position: static; }
+    body.tlog-open .tlog-bar { display: none !important; }
+    body.tlog-open .tlog-sheet { overflow: visible; max-width: none; padding: 0; margin: 0; }
+    body.tlog-open .tlog-tablewrap { overflow: visible; }
   }
 </style>
 
@@ -580,13 +643,20 @@ const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
 // One ordered column of rows: first = start, last = destination, middle = stops.
 // Any row can toggle "charge here" (a slider sets the target %, plus an optional
 // $/kWh cost — default free — that feeds the trip-cost estimate).
+let STOP_UID = 0;
 function makeStopRow(addr, charge, cost){
   const row = document.createElement('div');
   row.className = 'route-row';
+  // Give every address field its OWN autofill section so Safari/Chrome offer
+  // independent home/work contact autofill on each stop — start AND destination.
+  // Without a unique section-* token they're treated as parts of one combined
+  // address, so a contact only fills the first (start) field. street-address is
+  // the token that triggers the "use a contact's address" suggestion.
+  const ac = `section-stop${++STOP_UID} street-address`;
   row.innerHTML =
       `<span class="rs-handle" title="Drag to reorder">⠿</span>`
     + `<span class="rs-dot"></span>`
-    + `<input class="rs-addr" type="text" placeholder="Address or place" autocomplete="off">`
+    + `<input class="rs-addr" type="text" placeholder="Address or place" autocomplete="${ac}">`
     + `<button type="button" class="rs-btn rs-home" title="Use home">🏠</button>`
     + `<button type="button" class="rs-btn rs-charge" title="Charge here">⚡</button>`
     + `<button type="button" class="rs-btn rs-del" title="Remove stop">×</button>`
@@ -667,9 +737,12 @@ function enableStopDrag(){
   const init = () => { if (window.Sortable && !document.getElementById('routeStops')._sortable){
     document.getElementById('routeStops')._sortable = Sortable.create(document.getElementById('routeStops'), {
       handle: '.rs-handle', animation: 150, ghostClass: 'dragging',
-      onEnd: () => {
+      onEnd: (evt) => {
         renderStopKinds();
-        // Reordering changes the route itself, so the loaded plan and its
+        // SortableJS fires onEnd even when a row is dropped back in its original
+        // slot — don't discard a still-valid plan for a no-op drag.
+        if (evt && evt.oldIndex === evt.newIndex) return;
+        // A real reorder changes the route itself, so the loaded plan and its
         // waypoint anchors no longer line up with the row order. Invalidate it
         // so live charge-slider syncing can't apply to stale coordinates; the
         // user re-runs Estimate to replan.
@@ -692,8 +765,7 @@ function setStatus(msg, isErr){
 // ============================================================
 //  External APIs (all free, no key)
 // ============================================================
-async function geocode(q, el){
-  if (el && el.dataset.home === '1') return { lat: HOME.lat, lon: HOME.lon, name: HOME.label };
+async function geocode(q){
   const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q);
   const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
   const j = await r.json();
@@ -968,7 +1040,6 @@ function compute(A, B, rt, temp){
 //  Data: Open Charge Map (your free key, kept in localStorage).
 //  Only DCFC >= 50 kW on your preferred networks are considered.
 // ============================================================
-const PREFERRED_NETS = ['Tesla', 'Electrify America', 'ChargePoint'];
 const NET_DEFAULT_KW = { 'Tesla': 250, 'Electrify America': 150, 'ChargePoint': 62.5 };
 const NET_CLASS = { 'Tesla': 'net-tesla', 'Electrify America': 'net-ea', 'ChargePoint': 'net-cp' };
 const NET_PREF = { 'Tesla': 3, 'Electrify America': 2, 'ChargePoint': 1 }; // tie-break order
@@ -1431,7 +1502,17 @@ function buildRoutePoints(plan, round, oneWay){
     ret.forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
     pts.push({ lat: A.lat, lon: A.lon });            // back home
   } else {
-    withLatLon.sort((a,b)=>a.alongMi-b.alongMi).forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
+    // Merge the charging stops with the user's NON-charging routing waypoints
+    // (charging waypoints are already represented in plan.stops as anchors), all
+    // ordered by distance along the route, so the drawn line and the maps export
+    // pass through EVERY stop the user added — not just the charging ones.
+    const seq = withLatLon.map(s => ({ lat: s.lat, lon: s.lon, alongMi: s.alongMi }));
+    (STATE.waypoints || []).forEach(w => {
+      const charging = !isNaN(w.chargeTo) && w.chargeTo > 0;
+      if (!charging && w.lat != null && w.lon != null)
+        seq.push({ lat: w.lat, lon: w.lon, alongMi: w.alongMi != null ? w.alongMi : Infinity });
+    });
+    seq.sort((a, b) => a.alongMi - b.alongMi).forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
     pts.push({ lat: B.lat, lon: B.lon });
   }
   return pts;
@@ -1550,41 +1631,7 @@ function printTripLog(){
   const kvHtml = kv.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
   const endLabel = round ? 'Back home — arrival' : 'At destination — arrival';
 
-  const css = `
-    @page { size: letter; margin: 0.5in; }
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; color:#111; font-size:12px; line-height:1.35; margin:0; }
-    h1 { font-size:19px; margin:0; }
-    h2 { font-size:13px; margin:16px 0 4px; border-bottom:2px solid #111; padding-bottom:2px; }
-    .sub { color:#444; margin-top:2px; }
-    .route { font-weight:600; margin-top:5px; font-size:13px; }
-    .kv { display:grid; grid-template-columns:1fr 1fr; gap:0 28px; margin-top:10px; }
-    .kv > div { display:flex; justify-content:space-between; border-bottom:1px dotted #bbb; padding:3px 0; }
-    .kv span { color:#555; }
-    .boxes { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px; }
-    .box { border:1px solid #888; border-radius:6px; padding:8px 10px; }
-    .bx-t { font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
-    .line { padding:5px 0; }
-    .blank { display:inline-block; border-bottom:1px solid #111; min-width:120px; }
-    .blank.short { min-width:60px; }
-    table { width:100%; border-collapse:collapse; margin-top:6px; }
-    th, td { border:1px solid #999; padding:5px 6px; text-align:left; vertical-align:top; }
-    th { background:#eee; font-size:9.5px; text-transform:uppercase; letter-spacing:.03em; }
-    td.fill { height:30px; }
-    .cname { font-weight:600; }
-    .plan, .addr { color:#555; font-size:10px; margin-top:1px; }
-    tr.divider td { background:#f3f3f3; font-style:italic; font-size:10px; }
-    .notes { border:1px solid #888; border-radius:6px; height:150px; margin-top:4px;
-             background-image: repeating-linear-gradient(#fff, #fff 27px, #ddd 28px); }
-    .foot { margin-top:14px; color:#777; font-size:9.5px; text-align:center; }
-    .toolbar { margin-bottom:12px; }
-    .toolbar button { font-size:13px; font-weight:700; padding:9px 16px; border-radius:8px; border:1px solid #1a73e8; background:#1a73e8; color:#fff; cursor:pointer; }
-    @media print { .toolbar { display:none; } }
-  `;
-
-  const doc = `<!doctype html><html><head><meta charset="utf-8"><title>EV Trip Log — ${E(String(STATE.B.name || '').split(',')[0])}</title>
-    <style>${css}</style></head><body>
-    <div class="toolbar"><button type="button" onclick="window.print()">🖨 Print / Save as PDF</button></div>
+  const doc = `
     <h1>EV Trip Log</h1>
     <div class="sub">${E(veh)}${dd ? ' · ' + E(dd) : ''}${round ? ' · round trip' : ''}</div>
     <div class="route">${E(STATE.A.name)} &rarr; ${E(STATE.B.name)}</div>
@@ -1611,13 +1658,13 @@ function printTripLog(){
     </div>
 
     <h2>Charging stops — record actuals</h2>
-    <table>
+    <div class="tlog-tablewrap"><table>
       <thead><tr>
         <th>#</th><th>Charger (planned)</th><th>Odometer</th><th>Arrive %</th>
         <th>Depart %</th><th>kWh added</th><th>mi since last</th><th>mi / kWh</th>
       </tr></thead>
       <tbody>${rows}</tbody>
-    </table>
+    </table></div>
 
     <div class="boxes">
       <div class="box">
@@ -1638,15 +1685,50 @@ function printTripLog(){
     <h2>Notes</h2>
     <div class="notes"></div>
 
-    <div class="foot">Planned with the EV Trip Calculator · estimates only — drive to real-world conditions.</div>
-    </body></html>`;
+    <div class="foot">Planned with the EV Trip Calculator · estimates only — drive to real-world conditions.</div>`;
 
-  const w = window.open('', '_blank');
-  if (!w){ setStatus('Allow pop-ups to open the printable trip log.', true); return; }
-  w.document.write(doc);
-  w.document.close();
-  w.focus();
+  openTripLog(doc);
 }
+
+// In-app trip-log sheet — opens as a full-screen overlay inside the app (works in an
+// installed Home-Screen PWA, where window.open would drop you into Safari with no way
+// back). "Print / Save as PDF" prints only the sheet via the @media print rules.
+function ensureTripLogOverlay(){
+  let ov = document.getElementById('tripLogOverlay');
+  if (ov) return ov;
+  ov = document.createElement('div');
+  ov.id = 'tripLogOverlay';
+  ov.className = 'tlog-overlay';
+  ov.hidden = true;
+  ov.setAttribute('role', 'dialog');
+  ov.setAttribute('aria-modal', 'true');
+  ov.setAttribute('aria-label', 'Printable trip log');
+  ov.innerHTML =
+      '<div class="tlog-bar">'
+    +   '<button type="button" class="tlog-back" onclick="closeTripLog()">‹ Back to planner</button>'
+    +   '<button type="button" class="tlog-print" onclick="printTripLogNow()">🖨 Print / Save as PDF</button>'
+    + '</div>'
+    + '<div class="tlog-sheet" id="tripLogSheet"></div>';
+  document.body.appendChild(ov);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden) closeTripLog(); });
+  return ov;
+}
+function openTripLog(html){
+  const ov = ensureTripLogOverlay();
+  ov.querySelector('#tripLogSheet').innerHTML = html;
+  ov.hidden = false;
+  document.body.classList.add('tlog-open');
+  const sheet = ov.querySelector('.tlog-sheet');
+  if (sheet) sheet.scrollTop = 0;
+  const back = ov.querySelector('.tlog-back');
+  if (back) back.focus();
+}
+function closeTripLog(){
+  const ov = document.getElementById('tripLogOverlay');
+  if (ov) ov.hidden = true;
+  document.body.classList.remove('tlog-open');
+}
+function printTripLogNow(){ window.print(); }
 
 let CHARGER_LAYER = [];
 async function updateChargingPlan(rt, e, temp){
@@ -1667,8 +1749,12 @@ async function updateChargingPlan(rt, e, temp){
   const reserve = Math.max(0, Math.min(50, +document.getElementById('reserve').value || 0));
   const waypoints = (STATE && STATE.waypoints) || [];
   const chargingWps = waypoints.filter(w => !isNaN(w.chargeTo) && w.chargeTo > 0);
-
-  // Elevation-aware energy model (keyless). Cache the profile on the route.
+  // Position every waypoint along the route (cumulative miles) so NON-charging
+  // routing waypoints can be re-inserted into the drawn line + maps export too —
+  // buildRoutePoints used to keep only charging stops, dropping plain waypoints
+  // from the route so the map detoured around them. legMiles[i+1] = miles at
+  // waypoint i (the route input was [A, ...waypoints, B]).
+  waypoints.forEach((w, i) => { w.alongMi = (rt.legMiles && rt.legMiles[i + 1] != null) ? rt.legMiles[i + 1] : null; });
   if (rt.elev === undefined){
     try { rt.elev = await fetchElevation(rt.geometry); } catch(err){ rt.elev = null; }
   }
@@ -1699,7 +1785,11 @@ async function updateChargingPlan(rt, e, temp){
       renderExport(null, round, oneWay);
       return;
     }
-    if (round && canChargeDest && oneWay <= reachStart){
+    // Outbound must fit from the start charge, AND the return leg must fit from
+    // the destination top-up (the planner charges the dest anchor to 90%) —
+    // checked on the mirrored energy model. Otherwise fall through to the full
+    // planner, which adds a return-leg stop if 90% can't get you home.
+    if (round && canChargeDest && oneWay <= reachStart && planMi <= planNrg.reachMi(oneWay, 90, reserve)){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — you'll charge at your destination before the return.</div>`;
       setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
@@ -1764,26 +1854,24 @@ async function updateChargingPlan(rt, e, temp){
     setVerdict('no', '🛑', `No compatible fast chargers found along this route.`);
     return;
   }
-  // Build plan inputs. Round trips mirror chargers + elevation onto the return
-  // leg; a destination charge becomes a SoC-reset anchor only if allowed.
-  let planChargers, useNrg, anchors;
+  // Build plan inputs. Round trips mirror chargers onto the return leg; a
+  // destination charge becomes a SoC-reset anchor only if allowed. The mirrored
+  // energy model is already planNrg (the elevation mirror is charger-independent).
+  let planChargers, anchors;
   if (round){
-    const m = mirrorForRoundTrip(chargers, rt.elev, oneWay);
-    planChargers = m.chargers;
-    useNrg = buildEnergyModel(e.effEff, e.batt, m.elev);
+    planChargers = mirrorForRoundTrip(chargers, rt.elev, oneWay).chargers;
     anchors = canChargeDest
       ? [{ mile: oneWay, chargeTo: 90, name: 'Destination charge', lat: STATE.B.lat, lon: STATE.B.lon,
            rate: parseFloat(document.getElementById('destRate').value) || 0 }]
       : [];
   } else {
     planChargers = chargers;
-    useNrg = nrg;
     anchors = waypoints
       .map((w,i) => ({ mile: (rt.legMiles && rt.legMiles[i+1]), chargeTo: w.chargeTo, name: w.addr, lat: w.lat, lon: w.lon, rate: w.chargeCost }))
       .filter(a => a.mile != null && !isNaN(a.chargeTo) && a.chargeTo > 0);
   }
-  const plan = planJourney(planMi, anchors, useNrg, startSoc, reserve, planChargers);
-  renderStops(plan, e, reserve, round, startSoc, useNrg, oneWay);
+  const plan = planJourney(planMi, anchors, planNrg, startSoc, reserve, planChargers);
+  renderStops(plan, e, reserve, round, startSoc, planNrg, oneWay);
   renderSummary(plan, energyTrip, fromHome, planMi);
   renderETA(plan, rt, round, oneWay);
   renderExport(plan, round, oneWay);
@@ -1796,26 +1884,26 @@ async function updateChargingPlan(rt, e, temp){
 // and report the true driven round-trip mileage.
 async function rerouteThroughStops(rt, plan, e, round, oneWay){
   if (!STATE || !plan || !plan.feasible) return;
-  const pts = [{ lat: STATE.A.lat, lon: STATE.A.lon }];
-  const withLatLon = plan.stops.filter(s => s.lat && s.lon);
-  if (round){
-    const out = withLatLon.filter(s => s.alongMi <= oneWay).sort((a,b)=>a.alongMi-b.alongMi);
-    const ret = withLatLon.filter(s => s.alongMi >  oneWay).sort((a,b)=>a.alongMi-b.alongMi);
-    out.forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
-    pts.push({ lat: STATE.B.lat, lon: STATE.B.lon });            // turnaround
-    ret.forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
-    pts.push({ lat: STATE.A.lat, lon: STATE.A.lon });            // back home
-  } else {
-    withLatLon.sort((a,b)=>a.alongMi-b.alongMi).forEach(s => pts.push({ lat: s.lat, lon: s.lon }));
-    pts.push({ lat: STATE.B.lat, lon: STATE.B.lon });
-  }
+  // Same ordered stop list the maps-export uses: start → stops → dest → return.
+  const pts = buildRoutePoints(plan, round, oneWay);
   if (pts.length > 14) return; // OSRM waypoint limit
+  // Cache the OSRM reroute on the route, keyed by the exact driven path. Tweaks
+  // that don't change the stop set (reserve %, start charge, vehicle, temp…)
+  // produce the same signature, so we reuse the geometry instead of re-fetching.
+  const sig = pts.map(p => p.lat.toFixed(5) + ',' + p.lon.toFixed(5)).join(';');
   try {
-    const rr = (await route(pts))[0];
+    let rr = (rt._reroute && rt._reroute.sig === sig) ? rt._reroute.rr : null;
+    if (!rr){
+      rr = (await route(pts))[0];
+      rt._reroute = { sig, rr };
+    }
     await loadLeaflet();
     if (MAP && ROUTE_LAYER && ROUTE_LAYER[0]){
-      MAP.removeLayer(ROUTE_LAYER[0]);
+      // Add the new line BEFORE removing the old one so the route never blinks
+      // out between the direct draw and the through-stops redraw.
+      const old = ROUTE_LAYER[0];
       const line = L.geoJSON(rr.geometry, { style: { color: '#5d3fd3', weight: 5, opacity: 0.85 } }).addTo(MAP);
+      MAP.removeLayer(old);
       ROUTE_LAYER[0] = line;
       MAP.fitBounds(line.getBounds(), { padding: [30, 30] });
     }
@@ -1999,9 +2087,14 @@ function fmtDur(h){
 // ============================================================
 //  Map (Leaflet, lazy-loaded on first use)
 // ============================================================
+let _leafletPromise = null;
 function loadLeaflet(){
-  return new Promise(res => {
-    if (window.L) return res();
+  if (window.L) return Promise.resolve();
+  // Cache the in-flight promise so the concurrent callers on one refresh (drawMap,
+  // drawChargerMarkers, rerouteThroughStops) share a SINGLE script/CSS injection
+  // instead of each appending another copy of Leaflet while the first is loading.
+  if (_leafletPromise) return _leafletPromise;
+  _leafletPromise = new Promise(res => {
     const css = document.createElement('link');
     css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
     document.head.appendChild(css);
@@ -2009,16 +2102,22 @@ function loadLeaflet(){
     js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     js.onload = res; document.body.appendChild(js);
   });
+  return _leafletPromise;
 }
 async function drawMap(A, B, geometry){
   await loadLeaflet();
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
   if (!MAP){
-    MAP = L.map('map', { scrollWheelZoom: false });
+    // preferCanvas: draw the route line + charger circle-markers on ONE <canvas>
+    // instead of a separate SVG/DOM node each — fewer elements and less memory to
+    // retain while the page sits open.
+    MAP = L.map('map', { scrollWheelZoom: false, preferCanvas: true });
     L.tileLayer(dark
       ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
       : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      { attribution: '© OpenStreetMap, © CARTO', maxZoom: 19 }).addTo(MAP);
+      // updateWhenIdle: only fetch tiles once a pan settles (not continuously mid-drag);
+      // keepBuffer: 1 keeps fewer off-screen tiles in memory (Leaflet default is 2).
+      { attribution: '© OpenStreetMap, © CARTO', maxZoom: 19, updateWhenIdle: true, keepBuffer: 1 }).addTo(MAP);
   }
   if (ROUTE_LAYER) ROUTE_LAYER.forEach(l => MAP.removeLayer(l));
   const line = L.geoJSON(geometry, { style: { color: '#5d3fd3', weight: 5, opacity: 0.85 } }).addTo(MAP);
@@ -2036,7 +2135,11 @@ async function drawMap(A, B, geometry){
 ['vehSel','roadType','startSoc','reserve','roundTrip','effOverride','canChargeDest','destRate','depTime'].forEach(id => {
   document.getElementById(id).addEventListener('change', refresh);
 });
-document.getElementById('effOverride').addEventListener('input', refresh);
+// Live-update while typing the efficiency override, but DEBOUNCED — otherwise every
+// keystroke re-runs the whole estimate + charging-plan pipeline. 'change' (blur /
+// Enter / spinner) above still updates immediately.
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+document.getElementById('effOverride').addEventListener('input', debounce(refresh, 250));
 
 // Show the "can charge at destination" option only when round trip is on, and the
 // destination $/kWh rate field only when that box is checked.
