@@ -635,8 +635,13 @@ const COST = (function buildCost(){
 
 // ============================================================
 //  UI setup
+//  Defined as a hoisted function and invoked at the END of this script (the
+//  initUI() call at the very bottom). Running it last guarantees every
+//  top-level `let`/`const` it touches (STOP_UID, TRIPS_KEY, HOME, …) is already
+//  initialized — otherwise seeding the first rows hits a temporal-dead-zone
+//  ReferenceError that aborts the whole setup (blank form, dead buttons).
 // ============================================================
-(function initUI(){
+function initUI(){
   document.getElementById('modelSessionCount').textContent = MODEL.usableCount + ' of your';
   const sel = document.getElementById('vehSel');
   const names = Object.keys(MODEL.veh);
@@ -663,7 +668,7 @@ const COST = (function buildCost(){
   // (pure local math — no re-plan / network call needed).
   const abEl = document.getElementById('arriveByTime');
   if (abEl) abEl.addEventListener('input', () => { if (LAST_ETA) renderETA(LAST_ETA.plan, LAST_ETA.rt, LAST_ETA.round, LAST_ETA.oneWay); });
-})();
+}
 
 const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
 
@@ -2397,4 +2402,8 @@ function importTripFile(input){
   reader.onerror = () => setStatus('Couldn’t read that file.', true);
   reader.readAsText(file);
 }
+
+// Everything above is now declared & initialized — build the UI last so the
+// row-seeding in initUI() can't reference an uninitialized top-level binding.
+initUI();
 </script>
