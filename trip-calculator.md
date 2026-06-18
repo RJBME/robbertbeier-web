@@ -515,6 +515,7 @@ permalink: /trip-calculator/
         <tr><td>Base efficiency <span class="factor-src src-data">✓ from your sessions</span></td><td id="bBase"></td></tr>
         <tr><td>Temperature adjustment <span class="factor-src src-model">≈ EV temp curve, anchored to your data</span></td><td id="bTemp"></td></tr>
         <tr><td>Road-type adjustment <span class="factor-src src-model">≈ physics estimate</span></td><td id="bRoad"></td></tr>
+        <tr id="bWxRow" style="display:none"><td>Wind &amp; weather <span class="factor-src src-model">≈ forecast-based penalty</span></td><td id="bWx"></td></tr>
         <tr id="bCalRow" style="display:none"><td>Self-tuning <span class="factor-src src-data">✓ from your logged trips</span></td><td id="bCal"></td></tr>
         <tr id="bElevRow" style="display:none"><td>Elevation <span class="factor-src src-model">≈ physics (m·g·h, partial regen)</span></td><td id="bElev"></td></tr>
         <tr><td>Effective efficiency</td><td id="bEff"></td></tr>
@@ -524,7 +525,8 @@ permalink: /trip-calculator/
         <b>Base efficiency is straight from your data</b> — the median mi/kWh across your real charging sessions, at the temperature they typically happened.
         <b>The temperature adjustment</b> uses a published EV range-vs-temperature curve, anchored to that number — your logged range estimates are too noisy to fit the cold-weather slope directly, so the <i>magnitude</i> is yours and the <i>direction</i> is the curve's.
         <b>Road-type</b> is a physics estimate (aero drag rises with speed²) — your logs don't record driving style.
-        Routing &amp; geocoding via OpenStreetMap (Nominatim + OSRM) — an optional openrouteservice key adds quickest / most efficient / scenic alternatives; temperature via Open-Meteo. Estimates only — your mileage will vary.
+        <b>Wind &amp; weather</b> adds a forecast-based penalty on days with notable wind (extra aero drag) or rain/snow (wet-road rolling resistance, wipers and lights).
+        Routing &amp; geocoding via OpenStreetMap (Nominatim + OSRM) — an optional openrouteservice key adds quickest / most efficient / scenic alternatives; temperature, wind &amp; precipitation via Open-Meteo. Estimates only — your mileage will vary.
       </p>
     </div>
   </div>
@@ -564,6 +566,19 @@ const MI_MONTHLY_F = [26,29,38,49,60,70,75,73,65,53,41,31];
 const TEMP_CURVE = [[0,0.62],[20,0.72],[32,0.78],[50,0.90],[65,0.99],[72,1.00],[86,0.95],[100,0.88]];
 // Road-type / speed multiplier relative to ~40 mph mixed driving (=1.00).
 const SPEED_CURVE = [[20,1.10],[30,1.06],[40,1.00],[50,0.95],[60,0.89],[70,0.83],[80,0.78]];
+
+// Wind & precipitation penalties (heuristic, applied ON TOP of the temp curve).
+// Wind: aero drag rises with air speed²; with the trip direction unknown the
+// EXPECTED extra drag over a leg ≈ ½·(wind/cruise)² of aero's share of energy —
+// so a stiff wind costs a few %, a gale more (capped). Precip: wet/snow roads
+// raise rolling resistance and you run wipers, lights and defrost.
+const WIND_AERO_SHARE = 0.55;  // aero's share of highway energy at the ref speed
+const WIND_REF_MPH    = 65;    // reference cruising speed that share is gauged at
+const WIND_CAP        = 0.12;  // cap the wind penalty at 12%
+const RAIN_MM_MIN     = 2;     // ≥ this much daily precip → treat as a wet drive
+const SNOW_CM_MIN     = 1;     // ≥ this much daily snowfall → snow/slush penalty
+const RAIN_PENALTY    = 0.05;  // wet roads + wipers / lights
+const SNOW_PENALTY    = 0.10;  // snow/slush rolling resistance (beyond ambient cold)
 
 function lerp(curve, x){
   if (x <= curve[0][0]) return curve[0][1];
@@ -1048,28 +1063,37 @@ async function tripTemp(lat, lon, dateStr){
   const today = new Date(); today.setHours(0,0,0,0);
   const d = new Date(dateStr + 'T00:00:00');
   const diffDays = Math.round((d - today) / 86400000);
+  const num = v => (v != null && isFinite(v)) ? +v : null;
   try {
-    // Within forecast/recent window → exact daily forecast
+    // Within forecast/recent window → exact daily forecast (temp + wind + precip)
     if (diffDays >= -60 && diffDays <= 15){
-      const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`;
+      const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,windspeed_10m_max,precipitation_sum,snowfall_sum&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto&start_date=${dateStr}&end_date=${dateStr}`;
       const j = await (await fetch(u)).json();
-      const mx = j.daily?.temperature_2m_max?.[0], mn = j.daily?.temperature_2m_min?.[0];
-      if (mx != null && mn != null) return { f: (mx + mn) / 2, src: 'forecast' };
+      const mx = num(j.daily?.temperature_2m_max?.[0]), mn = num(j.daily?.temperature_2m_min?.[0]);
+      if (mx != null && mn != null) return { f: (mx + mn) / 2, src: 'forecast',
+        windMph: num(j.daily?.windspeed_10m_max?.[0]),
+        precipMm: num(j.daily?.precipitation_sum?.[0]) || 0,
+        snowCm:  num(j.daily?.snowfall_sum?.[0]) || 0 };
     }
-    // Otherwise → climatology from the same calendar date, prior years (archive)
+    // Otherwise → climatology from the same calendar date, prior years (archive),
+    // averaging temp, wind and precipitation across the years we get back.
     const yr = d.getFullYear();
     const md = dateStr.slice(5);
-    const temps = [];
+    const temps = [], winds = [], precips = [], snows = [];
     for (let y = yr - 1; y >= yr - 3; y--){
       const ds = y + '-' + md;
-      const u = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${ds}&end_date=${ds}&daily=temperature_2m_mean&temperature_unit=fahrenheit&timezone=auto`;
+      const u = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${ds}&end_date=${ds}&daily=temperature_2m_mean,windspeed_10m_max,precipitation_sum,snowfall_sum&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=auto`;
       const j = await (await fetch(u)).json();
-      const t = j.daily?.temperature_2m_mean?.[0];
-      if (t != null) temps.push(t);
+      const t = num(j.daily?.temperature_2m_mean?.[0]); if (t != null) temps.push(t);
+      const w = num(j.daily?.windspeed_10m_max?.[0]);   if (w != null) winds.push(w);
+      const p = num(j.daily?.precipitation_sum?.[0]);   if (p != null) precips.push(p);
+      const s = num(j.daily?.snowfall_sum?.[0]);        if (s != null) snows.push(s);
     }
-    if (temps.length) return { f: temps.reduce((s,x)=>s+x,0)/temps.length, src: 'historical avg' };
+    const avg = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : null;
+    if (temps.length) return { f: avg(temps), src: 'historical avg',
+      windMph: avg(winds), precipMm: avg(precips) || 0, snowCm: avg(snows) || 0 };
   } catch(e){ /* fall through */ }
-  return { f: MI_MONTHLY_F[d.getMonth()], src: 'seasonal est' };
+  return { f: MI_MONTHLY_F[d.getMonth()], src: 'seasonal est', windMph: null, precipMm: 0, snowCm: 0 };
 }
 
 // ============================================================
@@ -1140,7 +1164,8 @@ function estimate(rt, temp){
   const m        = vehModel(vehName);
   const tempEff  = predictEff(vehName, temp.f);
   const road     = roadFactor(rt);
-  const rawModelEff = tempEff * road.f;            // model prediction BEFORE self-tuning
+  const wx       = weatherPenalty(temp);           // wind + precipitation multiplier (≤ 1)
+  const rawModelEff = tempEff * road.f * wx.mult;  // model prediction BEFORE self-tuning
   const cal      = vehicleCalibration(vehName);    // {mult,n} learned from your logged actuals
   const modelEff = rawModelEff * cal.mult;         // self-tuned to your real-world results
   const ovr      = parseFloat(document.getElementById('effOverride').value);
@@ -1148,7 +1173,7 @@ function estimate(rt, temp){
   const effEff   = hasOvr ? ovr : modelEff;
   const energy   = miles / effEff;
   return { round, miles, hours: rt.hours * (round ? 2 : 1), vehName, m, batt: m.battery,
-           baseEff: m.baseEff, tempEff, tempMult: tempEff / m.baseEff, road,
+           baseEff: m.baseEff, tempEff, tempMult: tempEff / m.baseEff, road, wx,
            rawModelEff, modelEff, calMult: cal.mult, calN: cal.n,
            hasOvr, effEff, energy, pctBatt: energy / m.battery * 100 };
 }
@@ -1203,6 +1228,25 @@ function roadFactor(rt){
   return { f: lerp(SPEED_CURVE, cruise), label: `Auto · ${Math.round(avg)} mph avg` };
 }
 
+// Combine wind + precipitation into one efficiency multiplier (≤ 1) plus a short
+// label. Wind drag scales with air speed²; with trip direction unknown the
+// expected extra drag over a leg ≈ ½·(wind/ref)² of aero's energy share. Precip
+// adds a flat wet- or snow-road penalty. Returns mult 1 / '' when nothing notable.
+function weatherPenalty(temp){
+  let windPen = 0;
+  if (temp && temp.windMph != null && temp.windMph > 0){
+    windPen = Math.min(WIND_CAP, WIND_AERO_SHARE * 0.5 * Math.pow(temp.windMph / WIND_REF_MPH, 2));
+  }
+  let precipPen = 0, precipKind = '';
+  if (temp && temp.snowCm >= SNOW_CM_MIN){ precipPen = SNOW_PENALTY; precipKind = 'snow'; }
+  else if (temp && temp.precipMm >= RAIN_MM_MIN){ precipPen = RAIN_PENALTY; precipKind = 'rain'; }
+  const mult = (1 - windPen) * (1 - precipPen);
+  const parts = [];
+  if (windPen > 0.005) parts.push(`${Math.round(temp.windMph)} mph wind`);
+  if (precipKind) parts.push(precipKind);
+  return { mult, windPen, precipPen, label: parts.join(' · ') };
+}
+
 function compute(A, B, rt, temp){
   const e = estimate(rt, temp);
   // Remember this estimate's context so a later "actual result" is compared to
@@ -1240,6 +1284,15 @@ function compute(A, B, rt, temp){
     document.getElementById('bTemp').textContent = (e.tempMult>=1?'+':'') + ((e.tempMult-1)*100).toFixed(0) + '%  (' + Math.round(temp.f) + '°F)';
     document.getElementById('bRoad').textContent = (e.road.f>=1?'+':'') + ((e.road.f-1)*100).toFixed(0) + '%  · ' + e.road.label;
     document.getElementById('bEff').textContent  = e.effEff.toFixed(2) + ' mi/kWh';
+  }
+  // Wind & precipitation row — shown only when the day's weather actually moves
+  // the number (model in use, ≥ ~0.5% penalty).
+  const wxRow = document.getElementById('bWxRow');
+  if (!e.hasOvr && e.wx && (1 - e.wx.mult) >= 0.005){
+    wxRow.style.display = '';
+    document.getElementById('bWx').textContent = ((e.wx.mult - 1) * 100).toFixed(0) + '%  · ' + e.wx.label;
+  } else {
+    wxRow.style.display = 'none';
   }
   // Self-tuning row — shown only when it's actually moving the number (model in
   // use, enough samples, non-trivial nudge).
@@ -2022,6 +2075,23 @@ async function updateChargingPlan(rt, e, temp){
   const planMi = round ? oneWay * 2 : oneWay;
   const planNrg = round ? buildEnergyModel(e.effEff, e.batt, mirrorForRoundTrip([], rt.elev, oneWay).elev) : nrg;
   applyElevationToHero(e, planNrg, planMi);
+  // AC "charge here" anchors from the user's waypoints, positioned along the route.
+  // For round trips each is mirrored onto the return leg (an outbound charge at
+  // mile X is used again at 2·oneWay − X), so a mid-route hotel / Level-2 charge
+  // counts on BOTH legs — that's what makes many round trips feasible keyless.
+  const acAnchorList = () => {
+    const out = [];
+    waypoints.forEach((w, i) => {
+      const mile = (rt.legMiles && rt.legMiles[i + 1]);
+      if (mile == null || isNaN(w.chargeTo) || !(w.chargeTo > 0)) return;
+      const base = { chargeTo: w.chargeTo, name: w.addr, lat: w.lat, lon: w.lon, rate: w.chargeCost };
+      out.push({ ...base, mile });
+      if (round && mile < oneWay - 0.5) out.push({ ...base, mile: 2 * oneWay - mile, returnLeg: true });
+    });
+    return out;
+  };
+  const destAnchor = () => ({ mile: oneWay, chargeTo: 90, name: 'Destination charge',
+    lat: STATE.B.lat, lon: STATE.B.lon, rate: parseFloat(document.getElementById('destRate').value) || 0 });
   const energyTrip = planNrg.energyKWh(0, planMi);
   const fromHome = STATE && STATE.A && haversine(STATE.A.lat, STATE.A.lon, HOME.lat, HOME.lon) < 3;
 
@@ -2065,19 +2135,22 @@ async function updateChargingPlan(rt, e, temp){
   // all — and that needs no Open Charge Map key. Before asking for one, try a
   // keyless plan that uses only the waypoint charges; if it works without any
   // DC stop, render it and stop here.
-  if (chargingWps.length && !round){
-    const acAnchors = waypoints
-      .map((w, i) => ({ mile: (rt.legMiles && rt.legMiles[i+1]), chargeTo: w.chargeTo, name: w.addr, lat: w.lat, lon: w.lon, rate: w.chargeCost }))
-      .filter(a => a.mile != null && !isNaN(a.chargeTo) && a.chargeTo > 0);
-    const acOnly = planJourney(planMi, acAnchors, nrg, startSoc, reserve, []);
+  if (chargingWps.length){
+    // Keyless attempt: can the AC "charge here" stops alone (plus a destination
+    // top-up on round trips) carry the trip with NO DC fast stop? Round trips now
+    // mirror each AC charge onto the return leg, so they get the same treatment
+    // one-way trips always had — no Open Charge Map key needed.
+    const acAnchors = acAnchorList();
+    if (round && canChargeDest) acAnchors.push(destAnchor());
+    const acOnly = planJourney(planMi, acAnchors, planNrg, startSoc, reserve, []);
     if (acOnly.feasible && !acOnly.stops.some(s => !s.waypoint)){
       card.style.display = 'block';
-      renderStops(acOnly, e, reserve, false, startSoc, nrg, oneWay);
+      renderStops(acOnly, e, reserve, round, startSoc, planNrg, oneWay);
       renderSummary(acOnly, energyTrip, fromHome, planMi);
       renderETA(acOnly, rt, round, oneWay);
       renderExport(acOnly, round, oneWay);
-      drawChargerMarkers(acOnly.stops, waypoints);
-      rerouteThroughStops(rt, acOnly, e, false, oneWay);
+      drawChargerMarkers(acOnly.stops, round ? [] : waypoints);
+      rerouteThroughStops(rt, acOnly, e, round, oneWay);
       return;
     }
   }
@@ -2106,22 +2179,12 @@ async function updateChargingPlan(rt, e, temp){
     setVerdict('no', '🛑', `No compatible fast chargers found along this route.`);
     return;
   }
-  // Build plan inputs. Round trips mirror chargers onto the return leg; a
-  // destination charge becomes a SoC-reset anchor only if allowed. The mirrored
-  // energy model is already planNrg (the elevation mirror is charger-independent).
-  let planChargers, anchors;
-  if (round){
-    planChargers = mirrorForRoundTrip(chargers, rt.elev, oneWay).chargers;
-    anchors = canChargeDest
-      ? [{ mile: oneWay, chargeTo: 90, name: 'Destination charge', lat: STATE.B.lat, lon: STATE.B.lon,
-           rate: parseFloat(document.getElementById('destRate').value) || 0 }]
-      : [];
-  } else {
-    planChargers = chargers;
-    anchors = waypoints
-      .map((w,i) => ({ mile: (rt.legMiles && rt.legMiles[i+1]), chargeTo: w.chargeTo, name: w.addr, lat: w.lat, lon: w.lon, rate: w.chargeCost }))
-      .filter(a => a.mile != null && !isNaN(a.chargeTo) && a.chargeTo > 0);
-  }
+  // Build plan inputs. Round trips mirror the DC chargers onto the return leg;
+  // the AC "charge here" anchors (also mirrored) and an optional destination
+  // top-up are SoC-reset points. The mirrored energy model is already planNrg.
+  const planChargers = round ? mirrorForRoundTrip(chargers, rt.elev, oneWay).chargers : chargers;
+  const anchors = acAnchorList();
+  if (round && canChargeDest) anchors.push(destAnchor());
   const plan = planJourney(planMi, anchors, planNrg, startSoc, reserve, planChargers);
   renderStops(plan, e, reserve, round, startSoc, planNrg, oneWay);
   renderSummary(plan, energyTrip, fromHome, planMi);
