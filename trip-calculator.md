@@ -50,7 +50,7 @@ permalink: /trip-calculator/
 
   /* Google-Maps-style reorderable route list */
   #routeStops { display: flex; flex-direction: column; }
-  .route-row { display: grid; grid-template-columns: 18px 16px 1fr auto auto auto; align-items: center; gap: 7px; padding: 4px 0; position: relative; }
+  .route-row { display: grid; grid-template-columns: 18px 16px 1fr auto auto auto auto; align-items: center; gap: 7px; padding: 4px 0; position: relative; }
   .route-row.dragging { opacity: 0.5; }
   .rs-handle { cursor: grab; color: #aaa; font-size: 0.95rem; text-align: center; user-select: none; touch-action: none; }
   .rs-handle:active { cursor: grabbing; }
@@ -63,6 +63,7 @@ permalink: /trip-calculator/
   .rs-btn { border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; border-radius: 8px; padding: 6px 8px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
   .rs-btn:hover { border-color: var(--link); color: var(--link); }
   .rs-charge.on { background: var(--link); border-color: var(--link); color: #fff; }
+  .rs-loc.locating { opacity: 0.55; pointer-events: none; }
   .rs-del { visibility: hidden; }
   .route-row.removable .rs-del { visibility: visible; color: #ef4444; }
   /* charge slider row (full width under the stop) */
@@ -125,6 +126,24 @@ permalink: /trip-calculator/
   .saved-import { display: inline-flex; align-items: center; }
   .saved-spacer { flex: 1 1 auto; }
   @media (max-width: 600px) { .saved-spacer { display: none; } .saved-bar select { flex: 1 1 100%; } }
+
+  /* Self-tuning (log actual result) */
+  .tune-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .tune-row .field { flex: 1 1 120px; min-width: 0; gap: 5px; }
+  .tune-row .field input { padding: 9px 11px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.85rem; width: 100%; }
+  .tune-save { background: var(--link); border-color: var(--link); color: #fff; cursor: pointer; font-family: inherit; flex: 0 0 auto; }
+  .tune-save:hover { background: #4d33b8; }
+  .tune-status { font-size: 0.74rem; color: #888; margin-top: 12px; line-height: 1.5; }
+  .tune-list { margin-top: 12px; display: flex; flex-direction: column; }
+  .tune-list-head { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; font-weight: 700; margin-bottom: 4px; }
+  .tune-rec { display: flex; gap: 10px; align-items: center; font-size: 0.74rem; color: var(--text); padding: 5px 0; border-top: 1px solid var(--dash-border); }
+  .tune-rec > span:first-child { flex: 0 0 5.5rem; color: #888; }
+  .tune-rec > span:nth-child(2) { color: #888; }
+  .tune-ratio { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tune-ratio.pos { color: #16a34a; }
+  .tune-ratio.neg { color: #d97706; }
+  .tune-del { border: none; background: none; color: #888; cursor: pointer; font-size: 1.05rem; line-height: 1; padding: 0 2px; }
+  .tune-del:hover { color: #ef4444; }
 
   /* Results */
   #results { display: none; }
@@ -476,6 +495,18 @@ permalink: /trip-calculator/
       <div class="export-note">Opens a printable sheet with your plan plus blank fields to record actuals on the road — odometer &amp; battery % at each stop, leg efficiency, trip totals, and a notes area.</div>
     </div>
 
+    <div class="trip-card" id="tuneCard" style="display:none">
+      <h4 style="margin:0 0 6px 0;font-size:0.9rem;">🎯 Self-tuning — log your actual result</h4>
+      <div class="export-note" style="margin-top:0;margin-bottom:14px">After you drive it, enter the <b>actual miles</b> and <b>kWh used</b>. The model compares that to what it predicted for <b id="tuneVeh">this car</b> and nudges future estimates toward your real-world driving. Stored only in this browser.</div>
+      <div class="tune-row">
+        <div class="field"><label>Actual miles</label><input id="tuneMiles" type="number" min="0" step="1" inputmode="decimal" placeholder="actual"></div>
+        <div class="field"><label>Actual kWh used</label><input id="tuneKwh" type="number" min="0" step="0.1" inputmode="decimal" placeholder="actual"></div>
+        <button type="button" class="export-btn tune-save" onclick="logActualResult()">Save result</button>
+      </div>
+      <div class="tune-status" id="tuneStatus"></div>
+      <div class="tune-list" id="tuneList"></div>
+    </div>
+
     <div id="map"></div>
 
     <div class="trip-card breakdown">
@@ -484,6 +515,7 @@ permalink: /trip-calculator/
         <tr><td>Base efficiency <span class="factor-src src-data">✓ from your sessions</span></td><td id="bBase"></td></tr>
         <tr><td>Temperature adjustment <span class="factor-src src-model">≈ EV temp curve, anchored to your data</span></td><td id="bTemp"></td></tr>
         <tr><td>Road-type adjustment <span class="factor-src src-model">≈ physics estimate</span></td><td id="bRoad"></td></tr>
+        <tr id="bCalRow" style="display:none"><td>Self-tuning <span class="factor-src src-data">✓ from your logged trips</span></td><td id="bCal"></td></tr>
         <tr id="bElevRow" style="display:none"><td>Elevation <span class="factor-src src-model">≈ physics (m·g·h, partial regen)</span></td><td id="bElev"></td></tr>
         <tr><td>Effective efficiency</td><td id="bEff"></td></tr>
         <tr><td>Usable battery</td><td id="bBatt"></td></tr>
@@ -521,6 +553,8 @@ const GAS_TANK_GAL = 15.7;  // tank size of the comparison gas car (range = mpg 
 function fmtMinsShort(m){ m = Math.round(m); return m >= 60 ? `${Math.floor(m/60)}h ${m%60}m` : `${m} min`; }
 const MIN_OWN_SESSIONS = 5; // below this, a vehicle borrows the fleet average
 const FLEET_FALLBACK_EFF = 3.0; // mi/kWh if a vehicle has no usable data
+const MIN_CAL_SAMPLES = 2;  // logged real trips needed before self-tuning kicks in
+const CAL_CLAMP = 0.25;     // cap the self-tuning nudge at ±25% (guards fat-finger entries)
 
 // SE-Michigan monthly avg temp (°F) — last-resort fallback for temperature
 const MI_MONTHLY_F = [26,29,38,49,60,70,75,73,65,53,41,31];
@@ -634,6 +668,100 @@ const COST = (function buildCost(){
 })();
 
 // ============================================================
+//  SELF-TUNING — close the loop with your real results
+//  After a trip you log the ACTUAL miles + kWh used. We compare that to what the
+//  RAW (un-tuned) model predicted for that car and store the ratio. The median
+//  ratio per vehicle becomes a calibration multiplier on future model estimates,
+//  so the tool learns your real-world driving over time. Comparing against the
+//  RAW model (not the already-tuned number) keeps it idempotent and stable.
+//  Stored only in this browser (localStorage 'evTuning'); never leaves the device.
+// ============================================================
+const TUNE_KEY = 'evTuning';
+function getTuningLog(){ try { return JSON.parse(localStorage.getItem(TUNE_KEY) || '[]'); } catch(e){ return []; } }
+function setTuningLog(arr){ try { localStorage.setItem(TUNE_KEY, JSON.stringify(arr)); } catch(e){} }
+
+// Per-vehicle calibration multiplier from your logged actual-vs-model ratios.
+// Returns { mult, n }; mult === 1 (no change) until you've logged MIN_CAL_SAMPLES.
+function vehicleCalibration(veh){
+  const recs = getTuningLog().filter(r => r.veh === veh && r.ratio > 0);
+  if (recs.length < MIN_CAL_SAMPLES) return { mult: 1, n: recs.length };
+  let m = median(recs.map(r => r.ratio)) || 1;
+  m = Math.max(1 - CAL_CLAMP, Math.min(1 + CAL_CLAMP, m));   // clamp to ±CAL_CLAMP
+  return { mult: m, n: recs.length };
+}
+
+// Record one completed trip's actuals and re-tune. Pulls the model context from
+// the last estimate shown (LAST_EST) so the ratio is against the raw prediction.
+function logActualResult(){
+  if (!LAST_EST){ setStatus('Estimate a trip first, then log what actually happened.', true); return; }
+  const milesEl = document.getElementById('tuneMiles'), kwhEl = document.getElementById('tuneKwh');
+  const miles = parseFloat(milesEl.value) || LAST_EST.miles;   // blank miles → the estimated distance
+  const kwh = parseFloat(kwhEl.value);
+  if (!(kwh > 0)){ setStatus('Enter the actual kWh you used for this trip.', true); return; }
+  if (!(miles > 0)){ setStatus('Enter the actual miles you drove.', true); return; }
+  const actualEff = miles / kwh;
+  if (actualEff < 0.5 || actualEff > 8){
+    setStatus(`That works out to ${actualEff.toFixed(1)} mi/kWh — double-check the miles and kWh.`, true); return;
+  }
+  const rec = {
+    veh: LAST_EST.veh, date: new Date().toISOString().slice(0, 10),
+    miles: +miles.toFixed(1), kwh: +kwh.toFixed(2), actualEff: +actualEff.toFixed(3),
+    modelEff: +LAST_EST.rawModelEff.toFixed(3), ratio: +(actualEff / LAST_EST.rawModelEff).toFixed(4),
+    tempF: Math.round(LAST_EST.tempF)
+  };
+  const log = getTuningLog(); log.unshift(rec); setTuningLog(log);
+  milesEl.value = ''; kwhEl.value = '';
+  const veh = LAST_EST.veh;
+  if (STATE) refresh();   // re-estimate with the new calibration + re-render the card
+  const cal = vehicleCalibration(veh);
+  const tail = cal.n >= MIN_CAL_SAMPLES
+    ? ` ${veh} now self-tuned ${(cal.mult-1)*100>=0?'+':''}${((cal.mult-1)*100).toFixed(0)}% from ${cal.n} trips.`
+    : ` ${MIN_CAL_SAMPLES - cal.n} more trip${MIN_CAL_SAMPLES-cal.n===1?'':'s'} to start self-tuning.`;
+  const sEl = document.getElementById('tuneStatus');
+  if (sEl) sEl.textContent = `Logged ${actualEff.toFixed(2)} mi/kWh actual.` + tail;
+}
+
+function deleteTuningRecord(i){
+  const log = getTuningLog();
+  if (i < 0 || i >= log.length) return;
+  log.splice(i, 1); setTuningLog(log);
+  if (STATE) refresh();   // recompute calibration + re-render
+}
+
+// Show + populate the self-tuning card for the current estimate `e`.
+function renderTuning(e){
+  const card = document.getElementById('tuneCard');
+  if (!card) return;
+  card.style.display = 'block';
+  const veh = e.vehName;
+  document.getElementById('tuneVeh').textContent = veh;
+  document.getElementById('tuneMiles').placeholder = 'actual — est ' + e.miles.toFixed(0);
+  document.getElementById('tuneKwh').placeholder = 'actual — est ' + e.energy.toFixed(1);
+  const statusEl = document.getElementById('tuneStatus');
+  if (e.calN === 0){
+    statusEl.textContent = `No actual results logged for ${veh} yet — after you drive a trip, enter the real miles and kWh to start self-tuning.`;
+  } else if (e.calN < MIN_CAL_SAMPLES){
+    statusEl.textContent = `${e.calN} result logged for ${veh} — ${MIN_CAL_SAMPLES - e.calN} more and the model begins self-tuning.`;
+  } else {
+    const pct = (e.calMult - 1) * 100;
+    statusEl.textContent = `Self-tuned from ${e.calN} logged trips: ${veh} estimates ${pct>=0?'raised':'lowered'} ${Math.abs(pct).toFixed(0)}% to match your real driving.`;
+  }
+  const recs = getTuningLog();
+  const mine = recs.map((r, i) => ({ r, i })).filter(o => o.r.veh === veh);
+  const list = document.getElementById('tuneList');
+  list.innerHTML = mine.length
+    ? `<div class="tune-list-head">Logged results for ${esc(veh)}</div>` + mine.slice(0, 8).map(o => {
+        const pct = (o.r.ratio - 1) * 100;
+        return `<div class="tune-rec"><span>${o.r.date}</span>`
+          + `<span>${o.r.miles} mi · ${o.r.kwh} kWh</span>`
+          + `<span><b>${o.r.actualEff.toFixed(2)}</b> mi/kWh</span>`
+          + `<span class="tune-ratio ${pct>=0?'pos':'neg'}" title="vs the raw model that day">${pct>=0?'+':''}${pct.toFixed(0)}%</span>`
+          + `<button type="button" class="tune-del" title="Remove this result" onclick="deleteTuningRecord(${o.i})">×</button></div>`;
+      }).join('')
+    : '';
+}
+
+// ============================================================
 //  UI setup
 //  Defined as a hoisted function and invoked at the END of this script (the
 //  initUI() call at the very bottom). Running it last guarantees every
@@ -690,6 +818,7 @@ function makeStopRow(addr, charge, cost){
       `<span class="rs-handle" title="Drag to reorder">⠿</span>`
     + `<span class="rs-dot"></span>`
     + `<input class="rs-addr" type="text" placeholder="Address or place" autocomplete="${ac}">`
+    + `<button type="button" class="rs-btn rs-loc" title="Use my current location">📍</button>`
     + `<button type="button" class="rs-btn rs-home" title="Use home">🏠</button>`
     + `<button type="button" class="rs-btn rs-charge" title="Charge here">⚡</button>`
     + `<button type="button" class="rs-btn rs-del" title="Remove stop">×</button>`
@@ -715,9 +844,11 @@ function makeStopRow(addr, charge, cost){
   range.onchange = syncCharges;
   // Optional per-stop charging cost ($/kWh) — re-cost the trip when it changes.
   row.querySelector('.rs-cost-input').onchange = syncCharges;
-  row.querySelector('.rs-home').onclick = () => { const i = row.querySelector('.rs-addr'); i.value = HOME.label; i.dataset.home = '1'; };
+  row.querySelector('.rs-home').onclick = () => { const i = row.querySelector('.rs-addr'); i.value = HOME.label; i.dataset.home = '1'; delete i.dataset.lat; delete i.dataset.lon; };
+  row.querySelector('.rs-loc').onclick = () => useCurrentLocation(row);
   row.querySelector('.rs-del').onclick = () => { row.remove(); renderStopKinds(); };
-  row.querySelector('.rs-addr').addEventListener('input', e => delete e.target.dataset.home);
+  // Typing a real address invalidates a "home" or GPS pin so the text re-geocodes.
+  row.querySelector('.rs-addr').addEventListener('input', e => { delete e.target.dataset.home; delete e.target.dataset.lat; delete e.target.dataset.lon; });
   row.querySelector('.rs-addr').addEventListener('keydown', e => { if (e.key === 'Enter') planTrip(); });
   return row;
 }
@@ -757,13 +888,21 @@ function renderStopKinds(){
   });
 }
 function getRouteStops(){
-  return [...document.querySelectorAll('#routeStops .route-row')].map(row => ({
-    addr: row.querySelector('.rs-addr').value.trim(),
-    isHome: row.querySelector('.rs-addr').dataset.home === '1',
-    chargeHere: row.classList.contains('charging'),
-    chargeTo: +row.querySelector('input[type=range]').value,
-    chargeCost: parseFloat(row.querySelector('.rs-cost-input').value) || 0
-  }));
+  return [...document.querySelectorAll('#routeStops .route-row')].map(row => {
+    const addrEl = row.querySelector('.rs-addr');
+    // A GPS pin (from "use my current location") stores exact coords on the input
+    // so planning skips geocoding the text; null when the field is a plain address.
+    const lat = parseFloat(addrEl.dataset.lat), lon = parseFloat(addrEl.dataset.lon);
+    return {
+      addr: addrEl.value.trim(),
+      isHome: addrEl.dataset.home === '1',
+      lat: isFinite(lat) ? lat : null,
+      lon: isFinite(lon) ? lon : null,
+      chargeHere: row.classList.contains('charging'),
+      chargeTo: +row.querySelector('input[type=range]').value,
+      chargeCost: parseFloat(row.querySelector('.rs-cost-input').value) || 0
+    };
+  });
 }
 // Lazy-load SortableJS for drag reordering (works on touch too).
 function enableStopDrag(){
@@ -804,6 +943,41 @@ async function geocode(q){
   const j = await r.json();
   if (!j.length) throw new Error('Could not find "' + q + '"');
   return { lat: +j[0].lat, lon: +j[0].lon, name: j[0].display_name };
+}
+
+// Reverse-geocode a coordinate to a human-readable address (same free Nominatim
+// service as the forward geocoder). Returns null if nothing sensible comes back.
+async function reverseGeocode(lat, lon){
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&lat=${lat}&lon=${lon}`;
+  const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  const j = await r.json();
+  return (j && j.display_name) ? j.display_name : null;
+}
+
+// Fill a stop row from the device's location via the browser Geolocation API.
+// The exact coordinates are pinned on the input's dataset so planning uses them
+// directly (no geocoding round-trip); we then try to show a friendly address.
+function useCurrentLocation(row){
+  const input = row.querySelector('.rs-addr');
+  const btn   = row.querySelector('.rs-loc');
+  if (!navigator.geolocation){ setStatus('This browser can’t share your location.', true); return; }
+  btn.classList.add('locating');
+  setStatus('Getting your current location…');
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude, lon = pos.coords.longitude;
+    input.dataset.lat = lat; input.dataset.lon = lon;
+    delete input.dataset.home;
+    input.value = `Current location (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+    try { const name = await reverseGeocode(lat, lon); if (name) input.value = name; }
+    catch(e){ /* keep the coordinate label — planning still uses the exact pin */ }
+    btn.classList.remove('locating');
+    setStatus('');
+  }, err => {
+    btn.classList.remove('locating');
+    setStatus(err && err.code === err.PERMISSION_DENIED
+      ? 'Location permission denied — allow it in your browser settings, or type the address.'
+      : 'Couldn’t get your location. Type the address instead.', true);
+  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
 }
 
 // openrouteservice route roles (needs a free key, stored in this browser only).
@@ -901,7 +1075,7 @@ async function tripTemp(lat, lon, dateStr){
 // ============================================================
 //  Main flow
 // ============================================================
-let MAP, ROUTE_LAYER, STATE = null, LAST_ETA = null;
+let MAP, ROUTE_LAYER, STATE = null, LAST_ETA = null, LAST_EST = null;
 async function planTrip(){
   const btn = document.getElementById('goBtn');
   const stops = getRouteStops().filter(s => s.addr);
@@ -910,7 +1084,9 @@ async function planTrip(){
   try {
     setStatus('Finding locations…');
     const geo = await Promise.all(stops.map(s =>
-      s.isHome ? Promise.resolve({ lat: HOME.lat, lon: HOME.lon, name: HOME.label }) : geocode(s.addr)));
+      (s.lat != null && s.lon != null) ? Promise.resolve({ lat: s.lat, lon: s.lon, name: s.addr || 'Current location' })
+      : s.isHome ? Promise.resolve({ lat: HOME.lat, lon: HOME.lon, name: HOME.label })
+      : geocode(s.addr)));
     const A = geo[0], B = geo[geo.length - 1];
     // Intermediate stops become waypoints, carrying their "charge here" target
     // and optional $/kWh cost (default free).
@@ -964,13 +1140,16 @@ function estimate(rt, temp){
   const m        = vehModel(vehName);
   const tempEff  = predictEff(vehName, temp.f);
   const road     = roadFactor(rt);
-  const modelEff = tempEff * road.f;
+  const rawModelEff = tempEff * road.f;            // model prediction BEFORE self-tuning
+  const cal      = vehicleCalibration(vehName);    // {mult,n} learned from your logged actuals
+  const modelEff = rawModelEff * cal.mult;         // self-tuned to your real-world results
   const ovr      = parseFloat(document.getElementById('effOverride').value);
   const hasOvr   = !isNaN(ovr) && ovr > 0;
   const effEff   = hasOvr ? ovr : modelEff;
   const energy   = miles / effEff;
   return { round, miles, hours: rt.hours * (round ? 2 : 1), vehName, m, batt: m.battery,
-           baseEff: m.baseEff, tempEff, tempMult: tempEff / m.baseEff, road, modelEff,
+           baseEff: m.baseEff, tempEff, tempMult: tempEff / m.baseEff, road,
+           rawModelEff, modelEff, calMult: cal.mult, calN: cal.n,
            hasOvr, effEff, energy, pctBatt: energy / m.battery * 100 };
 }
 
@@ -1026,6 +1205,9 @@ function roadFactor(rt){
 
 function compute(A, B, rt, temp){
   const e = estimate(rt, temp);
+  // Remember this estimate's context so a later "actual result" is compared to
+  // what the RAW (un-tuned) model predicted — keeps self-tuning idempotent.
+  LAST_EST = { veh: e.vehName, rawModelEff: e.rawModelEff, miles: e.miles, energy: e.energy, tempF: temp.f };
 
   // Hero stats
   document.getElementById('rDist').textContent = e.miles.toFixed(0) + ' mi';
@@ -1059,10 +1241,21 @@ function compute(A, B, rt, temp){
     document.getElementById('bRoad').textContent = (e.road.f>=1?'+':'') + ((e.road.f-1)*100).toFixed(0) + '%  · ' + e.road.label;
     document.getElementById('bEff').textContent  = e.effEff.toFixed(2) + ' mi/kWh';
   }
+  // Self-tuning row — shown only when it's actually moving the number (model in
+  // use, enough samples, non-trivial nudge).
+  const calRow = document.getElementById('bCalRow');
+  if (!e.hasOvr && e.calN >= MIN_CAL_SAMPLES && Math.abs(e.calMult - 1) >= 0.005){
+    calRow.style.display = '';
+    const pct = (e.calMult - 1) * 100;
+    document.getElementById('bCal').textContent = (pct>=0?'+':'') + pct.toFixed(0) + '%  (from ' + e.calN + ' logged trips)';
+  } else {
+    calRow.style.display = 'none';
+  }
   document.getElementById('bBatt').textContent = e.batt.toFixed(1) + ' kWh  (' + e.m.battSrc + ')';
 
   // SoC + verdict
   buildVerdict(e.energy, e.batt, e.effEff);
+  renderTuning(e);
 
   drawMap(A, B, rt.geometry);
   updateChargingPlan(rt, e, temp);
@@ -2051,7 +2244,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
       html += `<div class="stop wp-stop">
         <div class="stop-num">★</div>
         <div class="stop-main">
-          <div class="stop-name">${s.name}<span class="net-badge net-wp">${s.net==='AC'?'charge here':s.net}</span></div>
+          <div class="stop-name">${esc(s.name)}<span class="net-badge net-wp">${s.net==='AC'?'charge here':s.net}</span></div>
           <div class="stop-sub">${mileLabel}</div>
           <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here${s.addedKWh!=null?` &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ${s.rate>0?`~$${(s.addedKWh*s.rate).toFixed(2)} <small style="color:#888">@ $${s.rate.toFixed(2)}/kWh</small>`:`<span style="color:#16a34a">free</span>`}`:''}</div>
         </div>
@@ -2082,12 +2275,12 @@ async function drawChargerMarkers(stops, waypoints){
   (stops || []).forEach(s => {
     if (s.waypoint){
       const m = L.circleMarker([s.lat, s.lon], { radius: 9, color: '#fff', weight: 2, fillColor: '#16a34a', fillOpacity: 1 })
-        .addTo(MAP).bindPopup(`<b>★ ${s.name}</b><br>Waypoint · AC charge to ${Math.round(s.target)}%`);
+        .addTo(MAP).bindPopup(`<b>★ ${esc(s.name)}</b><br>Waypoint · AC charge to ${Math.round(s.target)}%`);
       CHARGER_LAYER.push(m);
     } else {
       n++;
       const m = L.circleMarker([s.lat, s.lon], { radius: 9, color: '#fff', weight: 2, fillColor: colors[s.net]||'#5d3fd3', fillOpacity: 1 })
-        .addTo(MAP).bindPopup(`<b>Stop ${n}: ${s.name}</b><br>${s.net} · up to ${Math.round(s.maxKW)} kW<br>Charge to ${Math.round(s.target)}% (~${Math.round(s.mins)} min)`);
+        .addTo(MAP).bindPopup(`<b>Stop ${n}: ${esc(s.name)}</b><br>${s.net} · up to ${Math.round(s.maxKW)} kW<br>Charge to ${Math.round(s.target)}% (~${Math.round(s.mins)} min)`);
       CHARGER_LAYER.push(m);
     }
   });
@@ -2244,7 +2437,9 @@ function applyTrip(d){
   d.stops.forEach(s => {
     const charge = (s.chargeHere && s.chargeTo > 0) ? s.chargeTo : null;
     const row = makeStopRow(s.addr || '', charge, s.chargeCost != null ? s.chargeCost : 0);
-    if (s.isHome){ row.querySelector('.rs-addr').dataset.home = '1'; }
+    const addrEl = row.querySelector('.rs-addr');
+    if (s.isHome){ addrEl.dataset.home = '1'; }
+    if (s.lat != null && s.lon != null && isFinite(s.lat) && isFinite(s.lon)){ addrEl.dataset.lat = s.lat; addrEl.dataset.lon = s.lon; }
     list.appendChild(row);
   });
   renderStopKinds();
