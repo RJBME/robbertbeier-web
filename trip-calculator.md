@@ -1819,13 +1819,18 @@ function haversine(la1, lo1, la2, lo2){
 }
 // Sample points along the polyline roughly every stepMi miles (for corridor queries)
 function sampleAlong(coords, stepMi){
-  const pts = [{ lat: coords[0][1], lon: coords[0][0] }];
-  let acc = 0;
+  // Each sample carries its cumulative route mile so a FAILED corridor lookup can
+  // be mapped back to a stretch of road (used to tell a throttled OCM query apart
+  // from a genuine charger desert downstream).
+  const pts = [{ lat: coords[0][1], lon: coords[0][0], mi: 0 }];
+  let acc = 0, tot = 0;
   for (let i=1;i<coords.length;i++){
-    acc += haversine(coords[i-1][1],coords[i-1][0],coords[i][1],coords[i][0]);
-    if (acc >= stepMi){ pts.push({ lat: coords[i][1], lon: coords[i][0] }); acc = 0; }
+    const d = haversine(coords[i-1][1],coords[i-1][0],coords[i][1],coords[i][0]);
+    acc += d; tot += d;
+    if (acc >= stepMi){ pts.push({ lat: coords[i][1], lon: coords[i][0], mi: tot }); acc = 0; }
   }
-  pts.push({ lat: coords[coords.length-1][1], lon: coords[coords.length-1][0] });
+  const last = coords[coords.length-1];
+  pts.push({ lat: last[1], lon: last[0], mi: tot });
   return pts;
 }
 // Cumulative miles at each route vertex
@@ -1844,13 +1849,25 @@ function projectCharger(coords, cum, lat, lon){
   return { alongMi: cum[bi], offMi: best };
 }
 
-// Fetch JSON with one retry — OCM drops bursts, so a brief backoff recovers them
+// Fetch JSON with retries + exponential backoff. OCM throttles request bursts
+// (HTTP 429) on long routes, so on a rate-limit / transient server error we back
+// off and retry. CRITICAL: a successful response returns its array (possibly
+// empty = "no charger here"), while a genuine failure returns null — the caller
+// MUST tell those apart so a throttled lookup isn't mistaken for a charger desert.
+// A real client error (e.g. a bad key, a 4xx other than 429/408) won't recover,
+// so we stop retrying it immediately.
 async function fetchJSON(url){
-  for (let attempt = 0; attempt < 2; attempt++){
-    try { const r = await fetch(url); if (r.ok) return await r.json(); } catch(e){ /* retry */ }
-    await new Promise(res => setTimeout(res, 450));
+  let delay = 600;
+  for (let attempt = 0; attempt < 4; attempt++){
+    try {
+      const r = await fetch(url);
+      if (r.ok) return await r.json();
+      if (!(r.status === 429 || r.status === 408 || r.status >= 500)) return null;
+    } catch(e){ /* network blip → back off and retry */ }
+    await new Promise(res => setTimeout(res, delay));
+    delay = Math.min(delay * 2, 4000);
   }
-  return [];
+  return null;
 }
 // Run async tasks with limited concurrency + a small stagger, so we don't burst
 // past OCM's rate limit (which silently kills later requests → missing chargers)
@@ -1896,12 +1913,27 @@ async function fetchChargers(geometry){
   const stepMi = Math.max(22, Math.min(100, totalMi / 24));
   const radius = Math.ceil(stepMi / 2) + 8;
   const samples = sampleAlong(coords, stepMi);
-  const results = await fetchPool(samples, p => {
-    const u = `https://api.openchargemap.io/v3/poi/?key=${encodeURIComponent(key)}&output=json&countrycode=US&latitude=${p.lat}&longitude=${p.lon}&distance=${radius}&distanceunit=Miles&levelid=3&maxresults=80&compact=false&verbose=false`;
-    return fetchJSON(u);
-  }, 3);
+  const queryOCM = p => fetchJSON(`https://api.openchargemap.io/v3/poi/?key=${encodeURIComponent(key)}&output=json&countrycode=US&latitude=${p.lat}&longitude=${p.lon}&distance=${radius}&distanceunit=Miles&levelid=3&maxresults=80&compact=false&verbose=false`);
+  const results = await fetchPool(samples, queryOCM, 3);
+  // A null result = the lookup FAILED (OCM throttled / offline), NOT "no charger
+  // here." Retry just those corridor points once more, gently, so a transient rate
+  // limit on a long route doesn't masquerade as a charger desert in the planner.
+  const failedIdx = results.map((r, i) => (r == null ? i : -1)).filter(i => i >= 0);
+  if (failedIdx.length){
+    const retry = await fetchPool(failedIdx.map(i => samples[i]), queryOCM, 2);
+    failedIdx.forEach((i, k) => { if (retry[k] != null) results[i] = retry[k]; });
+  }
+  // Corridor points that STILL failed → mile ranges with unknown coverage. A "gap"
+  // the planner finds inside one of these is suspect (missing data, not the road),
+  // so we report them up for an honest "couldn't load — retry" message.
+  const failedRanges = [];
+  results.forEach((r, i) => {
+    if (r != null) return;
+    const mi = samples[i].mi;
+    failedRanges.push({ from: Math.max(0, mi - radius), to: Math.min(totalMi, mi + radius) });
+  });
   const seen = new Set(), out = [];
-  results.flat().forEach(p => {
+  results.filter(Array.isArray).flat().forEach(p => {
     if (!p || !p.AddressInfo || seen.has(p.ID)) return;
     seen.add(p.ID);
     const opTitle = (p.OperatorInfo && p.OperatorInfo.Title) || '';
@@ -1934,7 +1966,7 @@ async function fetchChargers(geometry){
       alongMi: pr.alongMi, offMi: pr.offMi });
   });
   out.sort((a,b) => a.alongMi - b.alongMi);
-  return out;
+  return { chargers: out, failedRanges };
 }
 
 function carCurveKW(soc){
@@ -3034,14 +3066,28 @@ async function updateChargingPlan(rt, e, temp){
   body.innerHTML = `<div class="stops-summary">Finding DC fast chargers along the route…</div>`;
 
   if (!rt.chargers){
-    try { rt.chargers = await fetchChargers(rt.geometry); }
-    catch(err){ rt.chargers = []; }
+    try {
+      const cf = await fetchChargers(rt.geometry);
+      rt.chargerGaps = cf ? cf.failedRanges : [];
+      // Don't cache a result that came back empty because the OCM lookups FAILED —
+      // leave it unset so the next Estimate retries instead of locking in a false
+      // "no chargers". A real empty result (no failures) is cached normally.
+      rt.chargers = (cf && (cf.chargers.length || !cf.failedRanges.length)) ? cf.chargers : null;
+    }
+    catch(err){ rt.chargers = null; rt.chargerGaps = []; }
   }
   // Guard against stale renders if the user changed routes meanwhile
   if (STATE && STATE.routes[STATE.sel] !== rt) return;
 
   const chargers = rt.chargers || [];
   if (!chargers.length){
+    // If charger lookups failed (OCM throttled/offline), an empty list is almost
+    // certainly missing data, not a real desert — tell the user to retry.
+    if ((rt.chargerGaps || []).length){
+      body.innerHTML = `<div class="stops-note">📡 Couldn't load charger data for this route — the Open Charge Map lookup was rate-limited or offline. This is usually temporary: wait a few seconds and tap <b>Estimate trip</b> again. (If it keeps happening, check your Open Charge Map API key.)</div>`;
+      setVerdict('tight', '📡', `Charger data didn't load (Open Charge Map rate-limited or offline) — tap Estimate again in a moment.`);
+      return;
+    }
     body.innerHTML = `<div class="stops-note">No compatible DC fast chargers (CCS, ≥50 kW) found near this route in Open Charge Map.</div>`;
     setVerdict('no', '🛑', `No compatible fast chargers found along this route.`);
     return;
@@ -3070,6 +3116,16 @@ async function updateChargingPlan(rt, e, temp){
     if (alt.feasible){ alt.usedNonPreferred = true; plan = alt; }
   }
   plan.destRelaxed = destFloor < reserve;   // arrival may dip below the reserve thanks to a destination charger
+  // If the planner's gap lands where a charger lookup FAILED (OCM throttled/offline),
+  // it's missing data, not a real desert — flag it so the message says "retry" rather
+  // than "add a waypoint". Failed miles are on the OUTBOUND leg; on a round trip they
+  // also block the mirrored return position (2*oneWay − mile).
+  if (!plan.feasible && plan.gapFrom != null && (rt.chargerGaps || []).length){
+    const lo = plan.gapFrom, hi = (plan.reachMi != null ? plan.reachMi : plan.gapFrom);
+    const hit = (a, b) => a <= hi && b >= lo;   // do mile ranges [a,b] and [lo,hi] overlap?
+    plan.coverageGap = rt.chargerGaps.some(g =>
+      hit(g.from, g.to) || (round && hit(2*oneWay - g.to, 2*oneWay - g.from)));
+  }
   renderStops(plan, e, reserve, round, startSoc, planNrg, oneWay);
   renderSummary(plan, energyTrip, fromHome, planMi);
   renderETA(plan, rt, round, oneWay, socAtDest(plan));
@@ -3290,6 +3346,15 @@ function buildItineraryHtml(plan, tl, round, oneWay, startSoc, nrg){
 function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   const body = document.getElementById('stopsBody');
   if (plan.needed && !plan.feasible){
+    // The reported gap sits where a charger lookup FAILED (OCM throttled/offline),
+    // so it's almost certainly missing data, not a real charger desert — tell the
+    // user to retry rather than sending them to insert a needless waypoint.
+    if (plan.coverageGap){
+      body.innerHTML = `<div class="stops-note">📡 Couldn't load chargers for part of this route — the Open Charge Map lookup near mile ${plan.gapFrom} was rate-limited or offline, so the stretch toward mile ~${plan.reachMi} couldn't be checked. This is usually temporary: wait a few seconds and tap <b>Estimate trip</b> again. (If it keeps happening, check your Open Charge Map API key.)</div>`
+        + (plan.stops.length ? `<div class="stops-summary">Found ${plan.stops.length} stop(s) before the lookup failed.</div>` : '');
+      setVerdict('tight', '📡', `Charger data didn't fully load (Open Charge Map rate-limited near mile ${plan.gapFrom}) — tap Estimate again in a moment.`);
+      return;
+    }
     const oneWayMi = e.round ? e.miles / 2 : e.miles;
     const chargerFloor = Math.min(reserve, CHARGER_FLOOR);  // matches the planner
     const usableMi  = Math.max(0, nrg.reachMi(0, startSoc, chargerFloor));
