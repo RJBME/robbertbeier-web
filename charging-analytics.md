@@ -1839,6 +1839,7 @@ let allCharts = [];
 let _hmRender = null;        // current heatmap render fn — updated on each rebuild
 let _heatmapWired = false;  // event listeners on heatmapContainer wired only once
 let _whenChargeWired = false; // when-do-I-charge grid tooltip listeners wired only once
+let _whenChargeSl = null;     // last data for the when-do-I-charge grid (re-render on theme)
 let _gasSensWired = false;    // gas-sensitivity slider + theme listeners wired only once
 let _gasSensUpdate = null;    // latest rebuild's updateSensitivity fn (so the once-wired slider drives fresh data)
 
@@ -5286,6 +5287,7 @@ mkChart('chartHistogram', {
 function buildWhenDoICharge(sl) {
   const grid = document.getElementById('chargingWhenGrid');
   if (!grid) return;
+  _whenChargeSl = sl;   // remember so we can re-render on theme toggle
 
   const timed = sl.filter(s => s.startTime && s.startTime.match(/^\d{1,2}:\d{2}/));
   if (!timed.length) {
@@ -5297,78 +5299,47 @@ function buildWhenDoICharge(sl) {
   const HOURS = Array.from({length: 24}, (_,i) => i);
   const dark  = document.documentElement.getAttribute('data-theme') === 'dark';
 
-  // Count sessions per (hour, dow) cell
-  const counts = {};
+  // Count sessions per (hour, dow) + the dominant charging type (for the tooltip).
+  const counts = {}, byType = {};
   let maxCount = 0;
   timed.forEach(s => {
     const hour = parseInt(s.startTime.split(':')[0], 10);
     const key  = `${hour}_${s.dow}`;
     counts[key] = (counts[key] || 0) + 1;
+    (byType[key] ??= {})[s.bucket] = (byType[key][s.bucket] || 0) + 1;
     if (counts[key] > maxCount) maxCount = counts[key];
   });
+  const domType = k => byType[k] ? Object.entries(byType[k]).sort((a,b)=>b[1]-a[1])[0][0] : '';
 
-  function cellColor(hour, dow) {
-    const key   = `${hour}_${dow}`;
-    const count = counts[key] || 0;
-    if (!count) return dark ? '#2a2a2a' : '#eee';
-    const intensity = count / maxCount;
-    const cellSl  = timed.filter(s => parseInt(s.startTime.split(':')[0],10) === hour && s.dow === dow);
-    const bkt     = {};
-    cellSl.forEach(s => { bkt[s.bucket] = (bkt[s.bucket]||0)+1; });
-    const dominant  = Object.entries(bkt).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'Other';
-    const base      = BUCKET_COLORS[dominant] || '#888';
-    const hex = base.replace('#','');
-    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-    const bg = dark ? [42,42,42] : [238,238,238];
-    return `rgb(${Math.round(bg[0]+(r-bg[0])*intensity)},${Math.round(bg[1]+(g-bg[1])*intensity)},${Math.round(bg[2]+(b-bg[2])*intensity)})`;
-  }
+  // Single-hue intensity (frequency is the whole point — "darker = more"). Empty
+  // cells are transparent so they blend into the card: dark in dark mode, light in
+  // light mode — no more glaring white grid.
+  const ACCENT = '124,92,246'; // on-brand violet
+  const cellColor = count => count ? `rgba(${ACCENT},${(0.16 + 0.84 * count / maxCount).toFixed(3)})` : 'transparent';
 
-  function hourLabel(h) {
-    if (h === 0)  return '12a';
-    if (h === 12) return '12p';
-    return h < 12 ? h+'a' : (h-12)+'p';
-  }
+  const hourLabel = h => h === 0 ? '12a' : h === 12 ? '12p' : (h < 12 ? h+'a' : (h-12)+'p');
+  const txtColor  = dark ? '#6f6f6f' : '#999';
+  const hdrColor  = dark ? '#9a9a9a' : '#666';
+  const cellBorder = dark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #ececec';
 
-  // Use CSS grid — cells grow to fill available width responsively
-  const labelCol  = '36px';
-  const gridCols  = `${labelCol} repeat(7, 1fr)`;
-  const cellStyle = `border-radius:3px;`;
-  const txtColor  = dark ? '#888' : '#999';
-  const hdrColor  = dark ? '#aaa' : '#555';
-
-  let html = `<div style="display:grid;grid-template-columns:${gridCols};grid-auto-rows:18px;gap:3px;width:100%">`;
-
-  // Header row — blank label cell + 7 day names
+  let html = `<div style="display:grid;grid-template-columns:32px repeat(7,1fr);grid-auto-rows:13px;gap:2px;width:100%">`;
   html += `<div></div>`;
-  DAYS.forEach(d => {
-    html += `<div style="text-align:center;font-size:10px;font-weight:600;color:${hdrColor};padding-bottom:2px">${d}</div>`;
-  });
-
-  // 24 hour rows
+  DAYS.forEach(d => { html += `<div style="text-align:center;font-size:9.5px;font-weight:600;color:${hdrColor};padding-bottom:2px">${d}</div>`; });
   HOURS.forEach(h => {
-    // Hour label
-    html += `<div style="font-size:10px;color:${txtColor};text-align:right;padding-right:5px;display:flex;align-items:center;justify-content:flex-end">${h % 3 === 0 ? hourLabel(h) : ''}</div>`;
-    // 7 day cells
+    html += `<div style="font-size:9px;color:${txtColor};text-align:right;padding-right:5px;display:flex;align-items:center;justify-content:flex-end">${h % 3 === 0 ? hourLabel(h) : ''}</div>`;
     DAYS.forEach((_, dow) => {
-      const key   = `${h}_${dow}`;
-      const count = counts[key] || 0;
-      const bg    = cellColor(h, dow);
-      const tip   = count > 0 ? `${hourLabel(h)} on ${DAYS[dow]}: ${count} session${count!==1?'s':''}` : '';
-      const border = !count ? `border:1px solid ${dark?'#363636':'#ddd'};` : '';
-      html += `<div data-tip="${tip}" style="${cellStyle}background:${bg};${border}"></div>`;
+      const key = `${h}_${dow}`, count = counts[key] || 0;
+      const tip = count > 0 ? `${hourLabel(h)} ${DAYS[dow]} — ${count} session${count!==1?'s':''}${domType(key)?` · mostly ${domType(key)}`:''}` : '';
+      html += `<div data-tip="${tip}" style="border-radius:2px;background:${cellColor(count)};border:${cellBorder}"></div>`;
     });
   });
-
   html += '</div>';
 
-  // Legend
-  html += `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center">`;
-  Object.entries(BUCKET_COLORS).forEach(([b, c]) => {
-    html += `<div style="display:flex;align-items:center;gap:4px">
-      <div style="width:11px;height:11px;background:${c};border-radius:2px;flex-shrink:0"></div>
-      <span style="font-size:10px;color:${hdrColor}">${b}</span></div>`;
-  });
-  html += `<span style="font-size:10px;color:#888;margin-left:4px">color = charging type · intensity = frequency</span></div>`;
+  // Compact intensity legend (fewer → more), type detail moves to hover.
+  const swatch = t => `<div style="width:13px;height:13px;border-radius:2px;background:${t ? `rgba(${ACCENT},${(0.16+0.84*t).toFixed(2)})` : 'transparent'};border:${cellBorder}"></div>`;
+  html += `<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:10px;color:${hdrColor}">
+    <span>Fewer</span>${swatch(0)}${swatch(0.34)}${swatch(0.67)}${swatch(1)}<span>More</span>
+    <span style="margin-left:auto;color:#888">hover a cell for the charging type</span></div>`;
 
   grid.innerHTML = html;
 
@@ -5377,6 +5348,8 @@ function buildWhenDoICharge(sl) {
   // set on every vehicle-filter toggle. dataset.tip is read live from the current DOM.
   if (!_whenChargeWired) {
     _whenChargeWired = true;
+    // Re-render on theme toggle so the grid colors follow light/dark.
+    window.addEventListener('themeChanged', () => { if (_whenChargeSl) buildWhenDoICharge(_whenChargeSl); });
     const hmTip = document.getElementById('hm-tip');
     let _hmRafId = null;
     grid.addEventListener('mouseover', e => {
