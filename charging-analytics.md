@@ -950,6 +950,20 @@ permalink: /charging-analytics/
     </div>
   </div>
 
+  <!-- Charging cadence -->
+  <div class="chart-grid-2" style="margin-top:18px">
+    <div class="chart-card">
+      <p class="chart-title">Charging Cadence — Days Between Plug-ins<span class="new-badge">✨ new</span></p>
+      <span class="chart-sub" id="cadenceAvgNote">How frequently a charging day follows another</span>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartCadenceHist"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Charging Cadence Over Time</p>
+      <span class="chart-sub">Avg gap between charging days, by month — lower = charging more often</span>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartCadenceTrend"></canvas></div>
+    </div>
+  </div>
+
   <!-- ═══════════════════════════════════════════════════ -->
   <!--  SECTION 5: SESSION DEEP DIVE                      -->
   <!-- ═══════════════════════════════════════════════════ -->
@@ -1368,6 +1382,12 @@ permalink: /charging-analytics/
       <div class="chart-wrap" style="height:260px"><canvas id="chartEffTrend"></canvas></div>
     </div>
 
+    <div class="chart-full chart-card" style="margin-bottom:18px">
+      <p class="chart-title">Energy In vs. Range Added — efficiency cloud<span class="new-badge">✨ new</span></p>
+      <span class="chart-sub">Each dot is one session. Diagonal guides mark 2 / 3 / 4 mi/kWh — dots above a line beat that efficiency.</span>
+      <div class="chart-wrap" style="height:300px"><canvas id="chartEnergyVsRange"></canvas></div>
+    </div>
+
     <div class="chart-grid-2" style="margin-bottom:18px">
       <div class="chart-card">
         <p class="chart-title">Efficiency Distribution</p>
@@ -1706,6 +1726,20 @@ const C_GREEN  = '#2ecc71';
 const C_AMBER  = '#f39c12';
 const C_RED    = '#e74c3c';
 const C_VIOLET = '#5D3FD3';
+
+/* ── Per-vehicle colors — ONE source of truth so a given car is the SAME bold
+   palette color in every chart across the page. Unknown vehicles fall back to
+   the palette by index. Keyed by the exact vehicle names used in the data. ── */
+const VEHICLE_COLORS = {
+  '2025 Mach-E GT':        C_BLUE,
+  '2026 Mach-E SR':        C_GREEN,
+  "LRB's 2025 Mach-E GT":  C_PURPLE,
+  "LRB's 2026 Mach-E SR":  C_AMBER
+};
+const VEH_FALLBACK = [C_VIOLET, C_RED, C_BLUE, C_GREEN, C_AMBER, C_PURPLE];
+function vehColor(v, i) {
+  return VEHICLE_COLORS[v] || VEH_FALLBACK[((i || 0) % VEH_FALLBACK.length)];
+}
 
 /* ════════════════════════════════════════════════════════
    ENRICH SESSIONS
@@ -2331,8 +2365,7 @@ mkChart('chartMonthlySourceSplit', {
   // Per-vehicle color map
   const vehColors = {};
   const vehList = [...new Set(mileageHistory.map(e => e.vehicle))].sort();
-  const palette = ['#7b1fa2', '#f39c12', '#0288d1', '#2ecc71', '#e74c3c'];
-  vehList.forEach((v, i) => { vehColors[v] = palette[i % palette.length]; });
+  vehList.forEach((v, i) => { vehColors[v] = vehColor(v, i); });
 
   // Sort all readings by date asc
   const sorted = [...mileageHistory].sort((a,b) => a.date.localeCompare(b.date));
@@ -2415,7 +2448,7 @@ mkChart('chartMonthlySourceSplit', {
       return {
         label: v,
         data,
-        backgroundColor: vehColors[v] + 'aa',
+        backgroundColor: vehColors[v],
         borderColor: vehColors[v],
         borderWidth: 1, borderRadius: 4
       };
@@ -2478,7 +2511,7 @@ mkChart('chartMonthlySourceSplit', {
     const vehiclesInData = [...new Set(sl.map(s => s.vehicle))].sort();
     const allMonths = [...new Set(sl.map(s => s.month))].sort();
     const vehColorMap = {};
-    vehiclesInData.forEach((v, i) => { vehColorMap[v] = palette[i % palette.length]; });
+    vehiclesInData.forEach((v, i) => { vehColorMap[v] = vehColor(v, i); });
 
     const datasets = vehiclesInData.map(v => {
       const data = allMonths.map(m => {
@@ -2938,6 +2971,82 @@ mkChart('chartDayOfWeek', {
     }
   }
 });
+
+/* ════════════════════════════════════════════════════════
+   CHART 15b — Charging cadence (gaps between distinct charging days)
+   ════════════════════════════════════════════════════════ */
+  const chargeDays = [...new Set(sl.map(s => s.date))].sort();
+  const gapBuckets = [
+    { label: 'Every day', test: g => g === 1 },
+    { label: '2 days',    test: g => g === 2 },
+    { label: '3 days',    test: g => g === 3 },
+    { label: '4–7 days',  test: g => g >= 4 && g <= 7 },
+    { label: '8+ days',   test: g => g >= 8 }
+  ];
+  const gapCounts  = gapBuckets.map(() => 0);
+  const gapByMonth = {}; // month of the later day -> { sum, n }
+  let gapSum = 0, gapN = 0;
+  for (let i = 1; i < chargeDays.length; i++) {
+    const g = Math.round((new Date(chargeDays[i]+'T12:00:00') - new Date(chargeDays[i-1]+'T12:00:00')) / 86400000);
+    if (g < 1) continue;
+    const bi = gapBuckets.findIndex(b => b.test(g));
+    if (bi >= 0) gapCounts[bi]++;
+    gapSum += g; gapN++;
+    const mo = chargeDays[i].slice(0, 7);
+    (gapByMonth[mo] = gapByMonth[mo] || { sum: 0, n: 0 });
+    gapByMonth[mo].sum += g; gapByMonth[mo].n++;
+  }
+  const avgCadence = gapN ? gapSum / gapN : 0;
+  const cadNote = document.getElementById('cadenceAvgNote');
+  if (cadNote) cadNote.textContent = gapN
+    ? `Avg ${avgCadence.toFixed(1)} days between charging days · ${chargeDays.length} charging days total`
+    : 'How frequently a charging day follows another';
+
+  mkChart('chartCadenceHist', {
+    type: 'bar',
+    data: {
+      labels: gapBuckets.map(b => b.label),
+      datasets: [{
+        data: gapCounts,
+        backgroundColor: [C_GREEN, '#7bc96f', C_AMBER, '#FF7A14', C_RED],
+        borderRadius: 5
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false },
+        datalabels:{ anchor:'end', align:'end', offset:4, color:tc(), font:{ size:11, weight:'bold' }, formatter:v=>v>0?v:'' },
+        tooltip:{ callbacks:{ label:ctx=>` ${ctx.parsed.y} times` } }
+      },
+      scales:{
+        x:{ grid:{ display:false }, ticks:{ color:tc() } },
+        y:{ grid:{ color:gc() }, ticks:{ color:tc(), precision:0 }, beginAtZero:true,
+            title:{ display:true, text:'Occurrences', color:'#888' } }
+      }
+    }
+  });
+
+  const cadMonths = allMonths.filter(m => gapByMonth[m]);
+  mkChart('chartCadenceTrend', {
+    type: 'line',
+    data: {
+      labels: cadMonths.map(monthLabel),
+      datasets: [{
+        label: 'Avg days between charges',
+        data: cadMonths.map(m => +(gapByMonth[m].sum / gapByMonth[m].n).toFixed(2)),
+        borderColor: C_VIOLET, backgroundColor: 'rgba(93,63,211,0.10)',
+        fill:true, tension:0.3, pointRadius:3, borderWidth:2
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, datalabels:{ display:false },
+        tooltip:{ callbacks:{ label:ctx=>` ${ctx.parsed.y.toFixed(1)} days between charges` } } },
+      scales:{
+        x:{ grid:{ display:false }, ticks:{ color:tc(), maxRotation:45, font:{ size:9 } } },
+        y:{ grid:{ color:gc() }, ticks:{ color:tc(), callback:v=>v+'d' }, beginAtZero:true,
+            title:{ display:true, text:'Avg gap (days)', color:'#888' } }
+      }
+    }
+  });
 
 /* ════════════════════════════════════════════════════════
    CHART 16 — Session scatter (kWh over time, by source)
@@ -3914,10 +4023,9 @@ mkChart('chartHistogram', {
     if (section) section.style.display = '';
     if (navLink) navLink.style.display = '';
 
-    // Per-vehicle colors
-    const VEH_COLORS = ['#3498db','#e74c3c','#2ecc71','#f39c12','#9b59b6','#1abc9c'];
+    // Per-vehicle colors (shared map → same color for a car everywhere)
     const vehColorMap = {};
-    vehiclesInData.forEach((v, i) => { vehColorMap[v] = VEH_COLORS[i % VEH_COLORS.length]; });
+    vehiclesInData.forEach((v, i) => { vehColorMap[v] = vehColor(v, i); });
 
     // Per-vehicle aggregates
     const vehStats = {};
@@ -4038,7 +4146,7 @@ mkChart('chartHistogram', {
         datasets: vehiclesInData.map(v => ({
           label: v,
           data: BINS.map(([a,b]) => sl.filter(s => s.vehicle === v && s.kwh >= a && s.kwh < b).length),
-          backgroundColor: vehColorMap[v] + 'bb', borderRadius: 4
+          backgroundColor: vehColorMap[v], borderRadius: 4
         }))
       },
       options: {
@@ -4334,12 +4442,7 @@ mkChart('chartHistogram', {
       // Require ≥15% SOC added — tiny charges (e.g. 5% SOC + 6 kWh) produce wildly inflated estimates
       const ubeSessions = socSessions.filter(s => s.socAdded >= 15);
       if (ubeSessions.length) {
-        const vehColors = {
-          '2025 Mach-E GT':       C_BLUE,
-          '2026 Mach-E SR':       C_GREEN,
-          "LRB's 2025 Mach-E GT": C_PURPLE,
-          "LRB's 2026 Mach-E SR": C_AMBER
-        };
+        const vehColors = VEHICLE_COLORS;
 
         // Build per-vehicle arrays of valid UBE estimates, sorted by date
         const ubeByVeh = {};
@@ -4692,6 +4795,45 @@ mkChart('chartHistogram', {
           x:{grid:{display:false},ticks:{color:tc(),maxTicksLimit:10,maxRotation:45}},
           y:{grid:{color:gc()},ticks:{color:tc(),callback:v=>parseFloat(v).toFixed(2)+' mi/kWh'},
              title:{display:true,text:'mi/kWh',color:'#888'},beginAtZero:false}
+        }
+      }
+    });
+
+    // ── 1b. Energy In vs Range Added — efficiency cloud with 2/3/4 mi/kWh iso-lines ──
+    const effVehList = [...new Set(effSl.map(s => s.vehicle))];
+    const maxKwhEff  = Math.ceil(Math.max(...effSl.map(s => s.kwh)) / 5) * 5 || 60;
+    const isoLine = (mikwh, color) => ({
+      type: 'line', label: mikwh.toFixed(0) + ' mi/kWh',
+      data: [{ x:0, y:0 }, { x:maxKwhEff, y:mikwh*maxKwhEff }],
+      borderColor: color, borderWidth: 1.25, borderDash: [6,4],
+      pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0, order: 1
+    });
+    const cloudDatasets = effVehList.map((v, i) => ({
+      label: v,
+      data: effSl.filter(s => s.vehicle === v).map(s => ({ x: s.kwh, y: s.milesAdded, e: s.realMiPerKwh, d: s.date })),
+      backgroundColor: vehColor(v, i) + 'bb',
+      borderColor: vehColor(v, i),
+      pointRadius: 4, pointHoverRadius: 7, order: 0
+    }));
+    mkChart('chartEnergyVsRange', {
+      type: 'scatter',
+      data: { datasets: [...cloudDatasets, isoLine(2, C_RED), isoLine(3, C_GREEN), isoLine(4, C_BLUE)] },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ position:'top', labels:{ color:tc(), boxWidth:10, padding:12, font:{ size:10 } } },
+          datalabels:{ display:false },
+          tooltip:{ callbacks:{ label:ctx=>{
+            const r = ctx.raw;
+            return (r && r.e != null)
+              ? ` ${r.d}: ${r.y} mi from ${r.x} kWh (${r.e.toFixed(2)} mi/kWh)`
+              : ` ${ctx.dataset.label}`;
+          } } }
+        },
+        scales:{
+          x:{ grid:{ color:gc() }, ticks:{ color:tc(), callback:v=>v+' kWh' }, beginAtZero:true,
+              title:{ display:true, text:'Energy added (kWh)', color:'#888' } },
+          y:{ grid:{ color:gc() }, ticks:{ color:tc(), callback:v=>v+' mi' }, beginAtZero:true,
+              title:{ display:true, text:'Range added (mi)', color:'#888' } }
         }
       }
     });
@@ -5101,9 +5243,9 @@ mkChart('chartHistogram', {
         data: {
           labels: tMonths.map(monthLabel),
           datasets: [
-            { label: 'Min °F', data: tMin, backgroundColor: 'rgba(2,136,209,0.5)', borderColor: '#0288d1', borderWidth: 1, borderRadius: 3 },
-            { label: 'Avg °F', data: tAvg, backgroundColor: 'rgba(93,63,211,0.6)', borderColor: '#5D3FD3', borderWidth: 1, borderRadius: 3 },
-            { label: 'Max °F', data: tMax, backgroundColor: 'rgba(243,156,18,0.5)', borderColor: '#f39c12', borderWidth: 1, borderRadius: 3 },
+            { label: 'Min °F', data: tMin, backgroundColor: C_BLUE,   borderRadius: 3 },
+            { label: 'Avg °F', data: tAvg, backgroundColor: C_VIOLET, borderRadius: 3 },
+            { label: 'Max °F', data: tMax, backgroundColor: C_AMBER,  borderRadius: 3 },
           ]
         },
         options: {
