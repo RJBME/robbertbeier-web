@@ -181,6 +181,14 @@ permalink: /trip-calculator/
   .saved-spacer { flex: 1 1 auto; }
   @media (max-width: 600px) { .saved-spacer { display: none; } .saved-bar select { flex: 1 1 100%; } }
 
+  /* Saved places (named GPS / hard-to-geocode locations) manager under the route */
+  .places-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .places-bar select { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; min-width: 150px; max-width: 100%; }
+  .places-bar button { font-size: 0.74rem; padding: 6px 12px; border-radius: 14px; cursor: pointer; border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--tc-muted); transition: all 0.15s; line-height: 1.2; }
+  .places-bar button:hover { border-color: var(--link); color: var(--link); }
+  .places-hint { flex: 1 1 100%; font-size: 0.68rem; color: var(--tc-muted); line-height: 1.4; margin: 0; }
+  @media (max-width: 600px) { .places-bar select { flex: 1 1 100%; } }
+
   /* Self-tuning (log actual result) */
   .tune-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
   .tune-row .field { flex: 1 1 120px; min-width: 0; gap: 5px; }
@@ -296,6 +304,43 @@ permalink: /trip-calculator/
   .stops-key input { flex: 1; min-width: 160px; padding: 8px 11px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
   .stops-key button { padding: 8px 14px; border-radius: 8px; border: none; background: var(--link); color: #fff; font-weight: 600; font-size: 0.8rem; cursor: pointer; }
   .stops-key a { color: var(--link); }
+
+  /* ── Multi-day trip itinerary (road-trip view of the stops card) ──
+     A day-grouped vertical timeline with arrival/departure clock times, charging
+     woven in, and overnight stays called out. Single-day trips keep the compact
+     charging-stops list above. */
+  .itin-summary { font-size: 0.78rem; color: var(--tc-muted); margin: 6px 0 14px; }
+  .itin-summary b { color: var(--text); font-weight: 600; }
+  .itin-day { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }
+  .itin-day:first-of-type { margin-top: 4px; }
+  .itin-day-n { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #fff; background: var(--link); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .itin-day-date { font-size: 0.82rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+  .itin-day-line { flex: 1; height: 1px; background: var(--dash-border); }
+  .itin-row { display: grid; grid-template-columns: 48px 24px 1fr; gap: 8px; align-items: start; position: relative; }
+  /* dotted connector down the timeline, behind the icons */
+  .itin-row:not(:last-child)::before { content: ''; position: absolute; left: 67px; top: 23px; bottom: -3px; border-left: 2px dotted var(--dash-border); z-index: 0; }
+  .itin-time { font-size: 0.72rem; font-variant-numeric: tabular-nums; color: var(--tc-muted); text-align: right; padding-top: 3px; white-space: nowrap; }
+  .itin-mark { display: flex; justify-content: center; }
+  .itin-ico { width: 24px; height: 24px; border-radius: 50%; background: var(--dash-card); border: 1px solid var(--dash-border); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; position: relative; z-index: 1; }
+  .itin-body { min-width: 0; padding-bottom: 16px; }
+  .itin-title { font-weight: 600; font-size: 0.86rem; }
+  .itin-detail { font-size: 0.73rem; color: var(--tc-muted); margin-top: 2px; }
+  .itin-detail b { color: var(--text); }
+  .itin-charge { font-size: 0.79rem; margin-top: 4px; }
+  .itin-charge b { color: var(--link); }
+  .itin-links { margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.72rem; }
+  .itin-links .itin-addr { color: var(--tc-muted); }
+  .itin-links a { color: var(--link); text-decoration: none; font-weight: 600; border: 1px solid var(--dash-border); border-radius: 999px; padding: 2px 9px; transition: all 0.15s; }
+  .itin-links a:hover { border-color: var(--link); background: rgba(93,63,211,0.08); }
+  /* depart / arrive anchors use the accent fill; overnight gets an indigo tint */
+  .itin-row.depart .itin-ico, .itin-row.arrive .itin-ico { background: var(--link); border-color: var(--link); }
+  .itin-row.turn .itin-ico { background: #6b728022; border-color: #6b728066; }
+  .itin-row.overnight .itin-ico { background: #6366f126; border-color: #6366f166; }
+  .itin-night { margin-top: 6px; font-size: 0.74rem; color: var(--text); background: #6366f114; border: 1px solid #6366f133; border-radius: 8px; padding: 7px 11px; line-height: 1.5; }
+  .itin-night b { color: var(--text); font-weight: 700; }
+  .itin-stay { margin-top: 6px; font-size: 0.74rem; color: var(--text); background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 8px; padding: 7px 11px; line-height: 1.5; }
+  .itin-stay b { color: var(--text); font-weight: 700; }
+  .itin-title, .itin-detail, .itin-night, .itin-stay { overflow-wrap: anywhere; }
 
   .verdict { border-radius: 12px; padding: 16px 20px; margin-bottom: 18px; font-size: 0.92rem; font-weight: 600; display: flex; align-items: center; gap: 12px; }
   .verdict .vicon { font-size: 1.6rem; }
@@ -455,6 +500,14 @@ permalink: /trip-calculator/
       <label>Route <span style="font-weight:400;text-transform:none">— drag ⠿ to reorder, ⚡ to charge at a stop</span></label>
       <div id="routeStops"></div>
       <div class="quick-row"><button type="button" onclick="addStop()">＋ Add stop</button></div>
+      <!-- Shared autocomplete of saved places for every address field -->
+      <datalist id="savedPlacesList"></datalist>
+      <div class="places-bar">
+        <select id="savedPlaceSel" title="Your saved places"><option value="">Saved places…</option></select>
+        <button type="button" onclick="renameSavedPlace()" title="Rename the selected saved place">✏️ Rename</button>
+        <button type="button" onclick="deleteSavedPlace()" title="Delete the selected saved place">Delete</button>
+        <p class="places-hint">Tap ⭐ on any stop to save a hard-to-find spot (or GPS coordinates like <code>42.37, -83.47</code>) under a friendly name — then just type that name into any stop to reuse it.</p>
+      </div>
     </div>
 
     <!-- Vehicle & charge levels -->
@@ -580,7 +633,7 @@ permalink: /trip-calculator/
     </div>
 
     <div class="trip-card" id="stopsCard" style="display:none">
-      <h4 style="margin:0 0 4px 0;font-size:0.9rem;">⚡ Charging stops</h4>
+      <h4 id="stopsTitle" style="margin:0 0 4px 0;font-size:0.9rem;">⚡ Charging stops</h4>
       <div id="stopsBody"></div>
     </div>
 
@@ -929,6 +982,7 @@ function initUI(){
   renderStopKinds();
   enableStopDrag();
   renderSavedTrips();
+  renderSavedPlaces();
   // Recompute the leave-by time instantly when the "arrive by" target changes
   // (pure local math — no re-plan / network call needed).
   const abEl = document.getElementById('arriveByTime');
@@ -956,12 +1010,13 @@ function makeStopRow(addr, charge, cost, opts){
   row.innerHTML =
       `<span class="rs-handle" title="Drag to reorder">⠿</span>`
     + `<span class="rs-dot"></span>`
-    + `<input class="rs-addr" type="text" placeholder="Address or place" autocomplete="${ac}">`
+    + `<input class="rs-addr" type="text" placeholder="Address or place" autocomplete="${ac}" list="savedPlacesList">`
     + `<div class="rs-actions">`
     +   `<button type="button" class="rs-btn rs-loc" title="Use my current location">📍</button>`
     +   `<button type="button" class="rs-btn rs-home" title="Use home">🏠</button>`
     +   `<button type="button" class="rs-btn rs-clock" title="Set a leave date/time (delays arrival)">🕒</button>`
     +   `<button type="button" class="rs-btn rs-charge" title="Charge here">⚡</button>`
+    +   `<button type="button" class="rs-btn rs-save" title="Save this location under a name">⭐</button>`
     +   `<button type="button" class="rs-btn rs-del" title="Remove stop">×</button>`
     + `</div>`
     + `<div class="rs-slider">`
@@ -1012,11 +1067,17 @@ function makeStopRow(addr, charge, cost, opts){
   row.querySelector('.rs-dep-time').onchange = () => { updateStopUI(row); syncCharges(); };
   row.querySelector('.rs-power').oninput = () => updateStopUI(row);
   row.querySelector('.rs-power').onchange = () => { updateStopUI(row); syncCharges(); };
-  row.querySelector('.rs-home').onclick = () => { const i = row.querySelector('.rs-addr'); i.value = HOME.label; i.dataset.home = '1'; delete i.dataset.lat; delete i.dataset.lon; };
+  row.querySelector('.rs-home').onclick = () => { const i = row.querySelector('.rs-addr'); i.value = HOME.label; i.dataset.home = '1'; delete i.dataset.lat; delete i.dataset.lon; delete i.dataset.place; };
   row.querySelector('.rs-loc').onclick = () => useCurrentLocation(row);
+  row.querySelector('.rs-save').onclick = () => saveRowPlace(row);
   row.querySelector('.rs-del').onclick = () => { row.remove(); renderStopKinds(); };
-  // Typing a real address invalidates a "home" or GPS pin so the text re-geocodes.
-  row.querySelector('.rs-addr').addEventListener('input', e => { delete e.target.dataset.home; delete e.target.dataset.lat; delete e.target.dataset.lon; });
+  // Typing a real address invalidates a "home"/GPS pin so the text re-geocodes —
+  // unless it exactly matches a saved place, in which case re-pin its exact coords.
+  row.querySelector('.rs-addr').addEventListener('input', e => {
+    delete e.target.dataset.home; delete e.target.dataset.lat; delete e.target.dataset.lon; delete e.target.dataset.place;
+    const p = findSavedPlace(e.target.value);
+    if (p){ e.target.dataset.lat = p.lat; e.target.dataset.lon = p.lon; e.target.dataset.place = p.name; }
+  });
   row.querySelector('.rs-addr').addEventListener('keydown', e => { if (e.key === 'Enter') planTrip(); });
   updateStopUI(row);
   return row;
@@ -1191,6 +1252,133 @@ async function reverseGeocode(lat, lon){
   return (j && j.display_name) ? j.display_name : null;
 }
 
+// ── Saved places (named GPS / hard-to-geocode locations) ──
+// Some spots never resolve through the address geocoder, so you can pin them with
+// raw GPS coordinates and save them under a friendly name. Stored only in this
+// browser (localStorage 'evPlaces'); never leaves the device.
+//
+// Parse a typed coordinate pair into {lat, lon}. Accepts "42.37, -83.47",
+// "42.37 -83.47", "(42.37,-83.47)", "42.37° N, 83.47° W", "N42.37 W83.47" and
+// "geo:42.37,-83.47". Returns null for anything that isn't clearly a coordinate —
+// we require a decimal point or a hemisphere letter so a plain address with
+// numbers ("5 Main St, Unit 10") never matches by accident.
+function parseLatLon(str){
+  if (str == null) return null;
+  const s = String(str).trim().replace(/^geo:/i, '').replace(/[()\u00b0]/g, ' ');
+  const m = s.match(/^\s*([NS])?\s*(-?\d{1,3}(?:\.\d+)?)\s*([NS])?\s*[,;\s]+\s*([EW])?\s*(-?\d{1,3}(?:\.\d+)?)\s*([EW])?\s*$/i);
+  if (!m) return null;
+  const latH = (m[1] || m[3] || '').toUpperCase();
+  const lonH = (m[4] || m[6] || '').toUpperCase();
+  // Bare integer pairs with no decimal and no hemisphere are too ambiguous.
+  if (!/\./.test(m[2]) && !/\./.test(m[5]) && !latH && !lonH) return null;
+  let lat = parseFloat(m[2]), lon = parseFloat(m[5]);
+  if (latH === 'S') lat = -Math.abs(lat);
+  if (latH === 'N') lat = Math.abs(lat);
+  if (lonH === 'W') lon = -Math.abs(lon);
+  if (lonH === 'E') lon = Math.abs(lon);
+  if (!(isFinite(lat) && isFinite(lon))) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return { lat, lon };
+}
+
+const PLACES_KEY = 'evPlaces';
+function getSavedPlaces(){ try { return JSON.parse(localStorage.getItem(PLACES_KEY) || '[]'); } catch(e){ return []; } }
+function setSavedPlaces(arr){ try { localStorage.setItem(PLACES_KEY, JSON.stringify(arr)); } catch(e){} }
+function findSavedPlace(name){
+  const n = String(name == null ? '' : name).trim().toLowerCase();
+  if (!n) return null;
+  return getSavedPlaces().find(p => (p.name || '').toLowerCase() === n) || null;
+}
+// Add (or overwrite by name) a saved place, kept alphabetical for the picker.
+function upsertSavedPlace(name, lat, lon){
+  const places = getSavedPlaces().filter(p => (p.name || '').toLowerCase() !== name.toLowerCase());
+  places.push({ name, lat: +lat, lon: +lon });
+  places.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  setSavedPlaces(places);
+}
+// Refresh the shared <datalist> (autocomplete on every address field) and the
+// manage-places <select>, preserving the current selection where possible.
+function renderSavedPlaces(){
+  const places = getSavedPlaces();
+  const dl = document.getElementById('savedPlacesList');
+  if (dl) dl.innerHTML = places.map(p => `<option value="${esc(p.name)}"></option>`).join('');
+  const sel = document.getElementById('savedPlaceSel');
+  if (sel){
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">${places.length ? 'Saved places…' : 'No saved places yet'}</option>`
+      + places.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+    if (cur && places.some(p => p.name === cur)) sel.value = cur;
+  }
+}
+// Save a stop's location under a friendly name. Resolution order: a pinned
+// GPS/current-location/saved-place coordinate, then a typed coordinate pair,
+// then a one-off geocode of the typed text.
+async function saveRowPlace(row){
+  const input = row.querySelector('.rs-addr');
+  const raw = (input.value || '').trim();
+  let lat = parseFloat(input.dataset.lat), lon = parseFloat(input.dataset.lon);
+  let suggested = input.dataset.place || '';
+  if (!(isFinite(lat) && isFinite(lon))){
+    const c = parseLatLon(raw);
+    if (c){ lat = c.lat; lon = c.lon; }
+  }
+  if (!(isFinite(lat) && isFinite(lon))){
+    if (!raw){ setStatus('Type an address or GPS coordinates in this stop first, then tap ⭐.', true); return; }
+    setStatus('Finding that location to save…');
+    try { const g = await geocode(raw); lat = g.lat; lon = g.lon; if (!suggested) suggested = (g.name || '').split(',').slice(0, 2).join(',').trim(); }
+    catch(e){ setStatus('Couldn’t find that — enter GPS coordinates (lat, lon) to pin it, then tap ⭐.', true); return; }
+  }
+  // A raw-coordinate entry gets a friendlier default name from a reverse lookup.
+  if (!suggested && parseLatLon(raw)){
+    try { const nm = await reverseGeocode(lat, lon); if (nm) suggested = nm.split(',').slice(0, 2).join(',').trim(); } catch(e){}
+  }
+  if (!suggested) suggested = raw;
+  const name = (prompt('Save this location as:', suggested) || '').trim();
+  if (!name) return;
+  upsertSavedPlace(name, lat, lon);
+  // Show the friendly name and pin the exact coordinates so routing uses them
+  // directly (no geocoding the name).
+  input.value = name;
+  input.dataset.lat = lat; input.dataset.lon = lon; input.dataset.place = name;
+  delete input.dataset.home;
+  renderSavedPlaces();
+  setStatus(`Saved “${name}” — type it into any stop to reuse it.`);
+}
+function renameSavedPlace(){
+  const sel = document.getElementById('savedPlaceSel');
+  const name = sel ? sel.value : '';
+  if (!name){ setStatus('Pick a saved place to rename.', true); return; }
+  const place = findSavedPlace(name);
+  if (!place){ renderSavedPlaces(); return; }
+  const next = (prompt('Rename saved place:', place.name) || '').trim();
+  if (!next || next === place.name) return;
+  const places = getSavedPlaces().filter(p => {
+    const pn = (p.name || '').toLowerCase();
+    return pn !== place.name.toLowerCase() && pn !== next.toLowerCase();
+  });
+  places.push({ name: next, lat: place.lat, lon: place.lon });
+  places.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  setSavedPlaces(places);
+  // Keep any route fields that referenced the old name in sync.
+  document.querySelectorAll('#routeStops .rs-addr').forEach(i => {
+    const usesOld = (i.dataset.place && i.dataset.place.toLowerCase() === place.name.toLowerCase())
+      || (i.value || '').trim().toLowerCase() === place.name.toLowerCase();
+    if (usesOld){ i.value = next; i.dataset.place = next; i.dataset.lat = place.lat; i.dataset.lon = place.lon; }
+  });
+  renderSavedPlaces();
+  if (sel) sel.value = next;
+  setStatus(`Renamed to “${next}”.`);
+}
+function deleteSavedPlace(){
+  const sel = document.getElementById('savedPlaceSel');
+  const name = sel ? sel.value : '';
+  if (!name){ setStatus('Pick a saved place to delete.', true); return; }
+  if (!confirm(`Delete saved place “${name}”?`)) return;
+  setSavedPlaces(getSavedPlaces().filter(p => (p.name || '').toLowerCase() !== name.toLowerCase()));
+  renderSavedPlaces();
+  setStatus(`Deleted “${name}”.`);
+}
+
 // Fill a stop row from the device's location via the browser Geolocation API.
 // The exact coordinates are pinned on the input's dataset so planning uses them
 // directly (no geocoding round-trip); we then try to show a friendly address.
@@ -1329,10 +1517,17 @@ async function planTrip(){
   btn.disabled = true;
   try {
     setStatus('Finding locations…');
-    const geo = await Promise.all(stops.map(s =>
-      (s.lat != null && s.lon != null) ? Promise.resolve({ lat: s.lat, lon: s.lon, name: s.addr || 'Current location' })
-      : s.isHome ? Promise.resolve({ lat: HOME.lat, lon: HOME.lon, name: HOME.label })
-      : geocode(s.addr)));
+    const geo = await Promise.all(stops.map(s => {
+      if (s.lat != null && s.lon != null) return Promise.resolve({ lat: s.lat, lon: s.lon, name: s.addr || 'Current location' });
+      if (s.isHome) return Promise.resolve({ lat: HOME.lat, lon: HOME.lon, name: HOME.label });
+      // A saved place name resolves to its exact pinned coordinates…
+      const saved = findSavedPlace(s.addr);
+      if (saved) return Promise.resolve({ lat: saved.lat, lon: saved.lon, name: saved.name });
+      // …and a typed GPS coordinate pair is used directly (no geocoder).
+      const coord = parseLatLon(s.addr);
+      if (coord) return Promise.resolve({ lat: coord.lat, lon: coord.lon, name: s.addr });
+      return geocode(s.addr);
+    }));
     const A = geo[0], B = geo[geo.length - 1];
     // Intermediate stops become waypoints, carrying their "charge here" target
     // and optional $/kWh cost (default free), plus any scheduled leave date/time
@@ -2652,6 +2847,10 @@ async function updateChargingPlan(rt, e, temp){
   const card = document.getElementById('stopsCard');
   const body = document.getElementById('stopsBody');
   const socEl = document.getElementById('startSoc');
+  // Default the card title; renderStops promotes it to "Trip itinerary" for
+  // multi-day road trips. Reset here so single-day / no-charge paths stay correct.
+  const titleEl = document.getElementById('stopsTitle');
+  if (titleEl) titleEl.innerHTML = '⚡ Charging stops';
   clearChargerMarkers();
   document.getElementById('exportCard').style.display = 'none';
   document.getElementById('logCard').style.display = 'none';
@@ -2939,6 +3138,155 @@ function chargerLinks(s){
   return { addrStr, apple, plug };
 }
 
+// ── Multi-day trip itinerary ──
+// A trip whose timeline crosses a calendar-day boundary (a long overnight drive
+// or, far more often, one or more scheduled overnight stops) reads better as a
+// day-by-day itinerary than as a flat charging-stops list. Single-day trips keep
+// the compact list. Detection is purely about the schedule, so it only kicks in
+// once a departure date is set (walkTimeline returns non-null).
+function isMultiDayTimeline(tl){
+  if (!tl) return false;
+  return new Date(tl.startMs).toDateString() !== new Date(tl.endArriveMs).toDateString();
+}
+
+// Build the day-grouped itinerary HTML for a multi-day trip. Reuses the per-stop
+// arrival/leave/dwell annotations walkTimeline already wrote onto plan.stops
+// (_arriveMs / _depMs / _dwellH), so this is pure presentation of existing data.
+function buildItineraryHtml(plan, tl, round, oneWay, startSoc, nrg){
+  const clock   = ms => ms != null ? new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+  const wkday   = ms => new Date(ms).toLocaleDateString([], { weekday: 'short' });
+  const dayKey  = ms => new Date(ms).toDateString();
+  const dayName = ms => new Date(ms).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+  const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+  const midnight = ms => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const nightsBetween = (a, b) => Math.max(1, Math.round((midnight(b) - midnight(a)) / 86400000));
+  // Trip-day number by CALENDAR offset from departure (not a running count), so a
+  // multi-night stay correctly jumps Day 1 → Day 3 rather than mislabeling Day 2.
+  const tripDay = ms => Math.floor((midnight(ms) - midnight(tl.startMs)) / 86400000) + 1;
+  // Battery % when reaching a mile, from the last charge before it (used for the
+  // round-trip turnaround at the destination — one-way uses plan.arriveSoc).
+  const socAtMile = (mi) => {
+    const before = plan.stops.filter(s => s.alongMi != null && s.alongMi <= mi - 0.5).sort((a, b) => a.alongMi - b.alongMi);
+    const last = before[before.length - 1];
+    return Math.max(0, (last ? last.target : startSoc) - (nrg ? nrg.socDrop(last ? last.alongMi : 0, mi) : 0));
+  };
+  const startName = (STATE && STATE.A) ? STATE.A.name : 'Start';
+  const destName  = (STATE && STATE.B) ? STATE.B.name : 'Destination';
+
+  // ── Ordered itinerary items, each anchored to a timestamp for day grouping ──
+  const items = [];
+  items.push({ kind: 'depart', ms: tl.startMs, place: startName, soc: startSoc });
+  let prevMi = 0, turned = false, nights = 0;
+  const stops = plan.stops.slice().sort((a, b) => a.alongMi - b.alongMi);
+  stops.forEach(s => {
+    // Round-trip turnaround: insert the destination arrival when stops cross over.
+    if (round && oneWay && s.alongMi > oneWay && !turned){
+      items.push({ kind: 'turn', ms: tl.destArriveMs, place: destName, soc: socAtMile(oneWay) });
+      turned = true; prevMi = oneWay;
+    }
+    const onReturn = round && oneWay && s.alongMi > oneWay;
+    const legMi  = Math.max(0, s.alongMi - prevMi);
+    const legKWh = nrg ? nrg.energyKWh(prevMi, s.alongMi) : 0;
+    const legEff = legKWh > 0 ? legMi / legKWh : 0;
+    const mileLabel = onReturn ? `${Math.round(2 * oneWay - s.alongMi)} mi from home` : `mile ${Math.round(s.alongMi)}`;
+    const arriveMs = s._arriveMs != null ? s._arriveMs : null;
+    const depMs    = s._depMs != null ? s._depMs : null;
+    const dwellH   = s._dwellH || 0;
+    const overnight = dwellH > 0 && arriveMs != null && depMs != null && !sameDay(arriveMs, depMs);
+    const nightsCount = overnight ? nightsBetween(arriveMs, depMs) : 0;
+    if (overnight) nights += nightsCount;
+    const kind = s.waypoint ? (overnight ? 'overnight' : (dwellH > 0 ? 'stopover' : 'wpcharge')) : 'charge';
+    items.push({ kind, ms: arriveMs != null ? arriveMs : tl.startMs, stop: s, onReturn,
+      legMi, legEff, mileLabel, arriveMs, depMs, dwellH, overnight, nightsCount });
+    prevMi = s.alongMi;
+  });
+  if (round){
+    if (!turned) items.push({ kind: 'turn', ms: tl.destArriveMs, place: destName, soc: socAtMile(oneWay) });
+    items.push({ kind: 'arrive', ms: tl.endArriveMs, place: startName, soc: plan.arriveSoc, home: true });
+  } else {
+    items.push({ kind: 'arrive', ms: tl.destArriveMs, place: destName, soc: plan.arriveSoc });
+  }
+
+  // ── Headline summary: days / nights / fast charges / when you arrive ──
+  const finalMs = round ? tl.endArriveMs : tl.destArriveMs;
+  const spanDays = tripDay(finalMs);
+  const fastN = plan.stops.filter(s => !s.waypoint).length;
+  const sumParts = [`<b>${spanDays}-day trip</b>`];
+  if (nights) sumParts.push(`${nights} night${nights > 1 ? 's' : ''} en route`);
+  if (fastN)  sumParts.push(`${fastN} fast charge${fastN > 1 ? 's' : ''}`);
+  sumParts.push(`arrive ${round ? 'home ' : ''}${wkday(finalMs)} ~<b>${Math.round(plan.arriveSoc)}%</b>`);
+  let html = `<div class="itin-summary">${sumParts.join(' &nbsp;·&nbsp; ')}</div><div class="itin">`;
+
+  // ── Render rows grouped by calendar day ──
+  const legLine = it => it.legMi > 0
+    ? `<div class="itin-detail">🚗 ${Math.round(it.legMi)} mi drive${it.legEff > 0 ? ` &nbsp;·&nbsp; ~${it.legEff.toFixed(1)} mi/kWh` : ''}</div>`
+    : '';
+  const dcCost = s => (s.addedKWh * ((COST[s.net] != null) ? COST[s.net] : COST.publicAvg));
+  const wpCharge = s => {
+    if (!(s.target != null && s.addedKWh != null)) return '';
+    const via = (s.mode === 'power' && s.powerKW > 0) ? ` <small style="color:var(--tc-muted)">via ~${Math.round(s.powerKW)} kW</small>` : '';
+    const cost = s.rate > 0 ? `~$${(s.addedKWh * s.rate).toFixed(2)} <small style="color:var(--tc-muted)">@ $${s.rate.toFixed(2)}/kWh</small>` : `<span style="color:#16a34a">free</span>`;
+    return `<div class="itin-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b>${via} &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ${cost}</div>`;
+  };
+  let curDay = null;
+  items.forEach(it => {
+    const k = dayKey(it.ms);
+    if (k !== curDay){ curDay = k;
+      html += `<div class="itin-day"><span class="itin-day-n">Day ${tripDay(it.ms)}</span><span class="itin-day-date">${dayName(it.ms)}</span><span class="itin-day-line"></span></div>`; }
+    const s = it.stop;
+    if (it.kind === 'depart'){
+      html += `<div class="itin-row depart"><div class="itin-time">${clock(it.ms)}</div><div class="itin-mark"><span class="itin-ico">🚩</span></div>`
+        + `<div class="itin-body"><div class="itin-title">Depart ${esc(it.place)}</div><div class="itin-detail">Leave with <b>${Math.round(it.soc)}%</b></div></div></div>`;
+    } else if (it.kind === 'charge'){
+      const lk = chargerLinks(s);
+      const links = (lk.addrStr || lk.apple || lk.plug)
+        ? `<div class="itin-links">${lk.addrStr ? `<span class="itin-addr">${esc(lk.addrStr)}</span>` : ''}${lk.apple ? `<a href="${lk.apple}" target="_blank" rel="noopener">📍 Apple Maps</a>` : ''}${lk.plug ? `<a href="${lk.plug}" target="_blank" rel="noopener">🔌 PlugShare</a>` : ''}</div>`
+        : '';
+      html += `<div class="itin-row charge"><div class="itin-time">${clock(it.arriveMs)}</div><div class="itin-mark"><span class="itin-ico">⚡</span></div>`
+        + `<div class="itin-body">`
+        + `<div class="itin-title">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net] || 'net-other'}">${esc(s.net === 'Other' ? 'other network' : s.net)}</span>${it.onReturn ? '<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>' : ''}</div>`
+        + `<div class="itin-detail">${s.town ? esc(s.town) + ' · ' : ''}${it.mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi > 1 ? ` · ${s.offMi.toFixed(1)} mi off route` : ''}</div>`
+        + legLine(it)
+        + `<div class="itin-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min${s._depMs != null ? `, leave ${clock(s._depMs)}` : ''} &nbsp;·&nbsp; ~$${dcCost(s).toFixed(2)}${s.overCap ? ` <span style="color:#eab308">⚠ above 80% — no closer charger</span>` : ''}</div>`
+        + links + `</div></div>`;
+    } else if (it.kind === 'overnight'){
+      html += `<div class="itin-row overnight"><div class="itin-time">${clock(it.arriveMs)}</div><div class="itin-mark"><span class="itin-ico">🌙</span></div>`
+        + `<div class="itin-body">`
+        + `<div class="itin-title">Overnight · ${esc(s.name)}<span class="net-badge net-wp">${s.net === 'AC' ? 'charge here' : esc(s.net)}</span></div>`
+        + `<div class="itin-detail">${it.mileLabel}</div>`
+        + legLine(it)
+        + wpCharge(s)
+        + `<div class="itin-night">🌙 <b>${it.nightsCount}-night stay</b><br>Arrive <b>${wkday(it.arriveMs)} ${clock(it.arriveMs)}</b> &nbsp;·&nbsp; depart <b>${wkday(it.depMs)} ${clock(it.depMs)}</b></div>`
+        + `</div></div>`;
+    } else if (it.kind === 'stopover'){
+      html += `<div class="itin-row stopover"><div class="itin-time">${clock(it.arriveMs)}</div><div class="itin-mark"><span class="itin-ico">⏸️</span></div>`
+        + `<div class="itin-body">`
+        + `<div class="itin-title">${esc(s.name)}<span class="net-badge net-wp">${s.net === 'AC' ? 'charge here' : esc(s.net)}</span></div>`
+        + `<div class="itin-detail">${it.mileLabel}</div>`
+        + legLine(it)
+        + wpCharge(s)
+        + `<div class="itin-stay">⏸️ Stop <b>${clock(it.arriveMs)}</b> → <b>${clock(it.depMs)}</b> &nbsp;·&nbsp; ~${fmtMinsShort(it.dwellH * 60)} here</div>`
+        + `</div></div>`;
+    } else if (it.kind === 'wpcharge'){
+      html += `<div class="itin-row wpcharge"><div class="itin-time">${clock(it.arriveMs)}</div><div class="itin-mark"><span class="itin-ico">★</span></div>`
+        + `<div class="itin-body">`
+        + `<div class="itin-title">${esc(s.name)}<span class="net-badge net-wp">${s.net === 'AC' ? 'charge here' : esc(s.net)}</span></div>`
+        + `<div class="itin-detail">${it.mileLabel}</div>`
+        + legLine(it)
+        + wpCharge(s)
+        + `</div></div>`;
+    } else if (it.kind === 'turn'){
+      html += `<div class="itin-row turn"><div class="itin-time">${clock(it.ms)}</div><div class="itin-mark"><span class="itin-ico">📍</span></div>`
+        + `<div class="itin-body"><div class="itin-title">Reach ${esc(it.place)}</div><div class="itin-detail">~<b>${Math.round(it.soc)}%</b> on arrival · turn around for the return leg</div></div></div>`;
+    } else if (it.kind === 'arrive'){
+      html += `<div class="itin-row arrive"><div class="itin-time">${clock(it.ms)}</div><div class="itin-mark"><span class="itin-ico">🏁</span></div>`
+        + `<div class="itin-body"><div class="itin-title">Arrive ${esc(it.place)}${it.home ? ' (home)' : ''}</div><div class="itin-detail">~<b>${Math.round(it.soc)}%</b> on arrival</div></div></div>`;
+    }
+  });
+  html += `</div>`;
+  return html;
+}
+
 function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   const body = document.getElementById('stopsBody');
   if (plan.needed && !plan.feasible){
@@ -2979,12 +3327,21 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   const dcfc = plan.stops.filter(s => !s.waypoint);
   // Annotate each stop with arrival / leave times + dwell so a scheduled (e.g.
   // overnight) charge can show when you'll get there and when you'll leave.
-  if (STATE && STATE.routes && STATE.routes[STATE.sel]) walkTimeline(plan, STATE.routes[STATE.sel], roundTrip, oneWay);
+  const _rt = (STATE && STATE.routes && STATE.routes[STATE.sel]) ? STATE.routes[STATE.sel] : null;
+  const tl = _rt ? walkTimeline(plan, _rt, roundTrip, oneWay) : null;
   const totalMin = dcfc.reduce((s,x)=>s+x.mins,0);
   const nWp = plan.stops.length - dcfc.length;
   const wpNote = nWp ? ` + ${nWp} waypoint charge${nWp>1?'s':''}` : '';
   const nNonPref = dcfc.filter(s => s.preferred === false).length;
   setVerdict('ok', '✅', `Doable with <b>${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}</b>${wpNote} (~${Math.round(totalMin)} min fast-charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
+  const titleEl = document.getElementById('stopsTitle');
+  // Multi-day road trip → a day-grouped itinerary. Single-day → the compact list.
+  if (tl && isMultiDayTimeline(tl)){
+    if (titleEl) titleEl.innerHTML = '🗺️ Trip itinerary';
+    body.innerHTML = buildItineraryHtml(plan, tl, roundTrip, oneWay, startSoc, nrg);
+    return;
+  }
+  if (titleEl) titleEl.innerHTML = '⚡ Charging stops';
   let html = `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive ${roundTrip?'home':''} around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
   if (nNonPref) html += `<div class="stops-note">ℹ️ To bridge a gap, ${nNonPref>1?`${nNonPref} stops use chargers`:'one stop uses a charger'} outside your preferred networks (Tesla / EA / ChargePoint), marked <b>other network</b> below. ${nNonPref>1?'They’re':'It’s'} a standard CCS station${nNonPref>1?'s':''} — start ${nNonPref>1?'them':'it'} with that network’s own app or a tap-to-pay card.</div>`;
   if (plan.destRelaxed && plan.arriveSoc < reserve - 0.5) html += `<div class="stops-note">ℹ️ Planned to arrive ${roundTrip ? 'home' : 'at your destination'} around <b>${Math.round(plan.arriveSoc)}%</b> — a little under your ${Math.round(reserve)}% reserve, but there's a compatible fast charger ${roundTrip ? 'near home' : 'at the destination'}, so this skips a short extra top-up on the way. Add a stop if you'd rather keep the full buffer.</div>`;
