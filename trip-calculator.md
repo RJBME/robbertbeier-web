@@ -221,6 +221,8 @@ permalink: /trip-calculator/
   .export-btn.amaps:hover { border-color: var(--link); background: rgba(93,63,211,0.06); }
   .export-btn.tlog { background: var(--link); border-color: var(--link); color: #fff; cursor: pointer; font-family: inherit; }
   .export-btn.tlog:hover { background: #4d33b8; }
+  .export-btn.cheat { background: #0f766e; border-color: #0f766e; color: #fff; cursor: pointer; font-family: inherit; }
+  .export-btn.cheat:hover { background: #0c5e57; }
   .export-note { font-size: 0.7rem; color: #888; margin-top: 10px; line-height: 1.5; }
   .net-badge { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
   .net-tesla { background: #e8222220; color: #e82222; }
@@ -313,13 +315,35 @@ permalink: /trip-calculator/
     background-image: repeating-linear-gradient(#fff, #fff 27px, #ddd 28px); }
   .tlog-sheet .foot { margin-top: 14px; color: #777; font-size: 9.5px; text-align: center; }
 
+  /* ── Co-driver "cheat sheet" — plain-language guidance, shares the .tlog-sheet shell ── */
+  .tlog-sheet .cheat-bottom { border: 2px solid #111; border-radius: 8px; padding: 12px 14px; margin-top: 12px;
+    font-size: 14px; line-height: 1.5; background: #f7f7f9; }
+  .tlog-sheet .cheat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 22px; margin-top: 6px; font-size: 13px; }
+  .tlog-sheet .cheat-grid > div { border-bottom: 1px dotted #bbb; padding: 4px 0; }
+  .tlog-sheet .cheat-stop { border: 1px solid #999; border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .tlog-sheet .cs-head { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tlog-sheet .cheat-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .tlog-sheet .cheat-badge.fast { background: #fde2e2; color: #b42318; }
+  .tlog-sheet .cheat-badge.slow { background: #def7ec; color: #03543f; }
+  .tlog-sheet .cs-where { color: #444; font-size: 12px; margin-top: 3px; }
+  .tlog-sheet .cs-do { margin-top: 7px; font-size: 13px; line-height: 1.45; }
+  .tlog-sheet .cs-how { margin-top: 7px; font-size: 12px; line-height: 1.45; background: #f1f5f9; border-radius: 6px; padding: 7px 9px; }
+  .tlog-sheet .cs-links { margin-top: 7px; font-size: 12px; }
+  .tlog-sheet .cs-links a { color: #1a4fd6; text-decoration: none; margin-right: 16px; white-space: nowrap; }
+  .tlog-sheet .cheat-basics { border: 1px solid #888; border-radius: 8px; padding: 6px 12px 4px; margin-top: 6px; font-size: 12px; }
+  .tlog-sheet .cheat-basics ul { margin: 6px 0 4px; padding-left: 18px; }
+  .tlog-sheet .cheat-basics li { margin: 0 0 6px 0; line-height: 1.45; }
+  .tlog-sheet .cheat-call { margin-top: 12px; font-size: 13px; border: 1px dashed #888; border-radius: 8px; padding: 11px 13px; }
+  .tlog-sheet .cheat-call .blank { display: inline-block; border-bottom: 1px solid #111; min-width: 190px; }
+
   @media (max-width: 600px) {
     .field-grid { grid-template-columns: 1fr; }
     .hero-stat .big { font-size: 1.4rem; }
     /* keep the option rows from ever exceeding the screen width on phones */
     .opt-row { gap: 12px; }
     .opt-row > .field, .opt-row > div { flex: 1 1 100%; min-width: 0; }
-    .tlog-sheet .kv, .tlog-sheet .boxes { grid-template-columns: 1fr; }
+    .tlog-sheet .kv, .tlog-sheet .boxes, .tlog-sheet .cheat-grid { grid-template-columns: 1fr; }
   }
 
   @media print {
@@ -329,6 +353,16 @@ permalink: /trip-calculator/
     body.tlog-open .tlog-bar { display: none !important; }
     body.tlog-open .tlog-sheet { overflow: visible; max-width: none; padding: 0; margin: 0; }
     body.tlog-open .tlog-tablewrap { overflow: visible; }
+    /* Keep logical blocks from being split across a page boundary. */
+    body.tlog-open .tlog-sheet h1, body.tlog-open .tlog-sheet h2,
+    body.tlog-open .tlog-sheet .cs-head { break-after: avoid; page-break-after: avoid; }
+    body.tlog-open .tlog-sheet .box, body.tlog-open .tlog-sheet .boxes,
+    body.tlog-open .tlog-sheet .kv, body.tlog-open .tlog-sheet .notes,
+    body.tlog-open .tlog-sheet tr, body.tlog-open .tlog-sheet .cheat-bottom,
+    body.tlog-open .tlog-sheet .cheat-grid, body.tlog-open .tlog-sheet .cheat-stop,
+    body.tlog-open .tlog-sheet .cheat-basics, body.tlog-open .tlog-sheet .cheat-call {
+      break-inside: avoid; page-break-inside: avoid; }
+    body.tlog-open .tlog-sheet thead { display: table-header-group; }
   }
 </style>
 
@@ -488,11 +522,12 @@ permalink: /trip-calculator/
     </div>
 
     <div class="trip-card" id="logCard" style="display:none">
-      <h4 style="margin:0 0 10px 0;font-size:0.9rem;">📝 Printable trip log</h4>
+      <h4 style="margin:0 0 10px 0;font-size:0.9rem;">📝 Printable sheets</h4>
       <div class="export-btns">
-        <button type="button" class="export-btn tlog" onclick="printTripLog()">🖨 Generate trip log (print / PDF)</button>
+        <button type="button" class="export-btn tlog" onclick="printTripLog()">🖨 Trip log (record actuals)</button>
+        <button type="button" class="export-btn cheat" onclick="printGuidanceSheet()">🧭 Co-driver cheat sheet</button>
       </div>
-      <div class="export-note">Opens a printable sheet with your plan plus blank fields to record actuals on the road — odometer &amp; battery % at each stop, leg efficiency, trip totals, and a notes area.</div>
+      <div class="export-note"><b>Trip log</b> — your plan plus blank fields to record real numbers on the road (odometer &amp; battery % at each stop, leg efficiency, trip totals, notes).<br><b>Co-driver cheat sheet</b> — a simple, plain-language guide for anyone who doesn't usually fast-charge: where to stop, when, and exactly how to charge at each one. Print it or open it on a phone.</div>
     </div>
 
     <div class="trip-card" id="tuneCard" style="display:none">
@@ -1323,6 +1358,17 @@ const NET_DEFAULT_KW = { 'Tesla': 250, 'Electrify America': 150, 'ChargePoint': 
 const NET_CLASS = { 'Tesla': 'net-tesla', 'Electrify America': 'net-ea', 'ChargePoint': 'net-cp' };
 const NET_PREF = { 'Tesla': 3, 'Electrify America': 2, 'ChargePoint': 1 }; // tie-break order
 const MIN_DCFC_KW = 50;
+
+// Friendly, plain-language "how to fast-charge here" notes for the co-driver cheat
+// sheet — written for someone who rarely DC fast-charges. Keyed by network; falls
+// back to NET_GUIDE_GENERIC. NET_GUIDE_AC covers the slow "charge here" waypoints.
+const NET_GUIDE = {
+  'Tesla': 'Superchargers need your NACS adapter. Park so the charge port (back driver-side) is near the post, plug the adapter onto the Tesla cable and into the car, then open the Tesla app, pick this location and your stall number, and tap to start. It begins on its own — the car screen shows the percentage.',
+  'Electrify America': 'Open the charge door and plug the big CCS connector into the car (push until it clicks). Start it with the Electrify America app — pick your plug number — or tap a credit card on the screen. The screen shows the progress.',
+  'ChargePoint': 'Tap your ChargePoint card or the app on the reader, then plug the big CCS connector into the car (push until it clicks). The screen shows the progress.',
+};
+const NET_GUIDE_GENERIC = 'Open the car\u2019s charge door and plug in the big CCS connector (push until it clicks). Start the session by tapping the network\u2019s app or a credit card on the screen. If it hasn\u2019t started in a minute, there\u2019s a help phone number printed on the charger.';
+const NET_GUIDE_AC = 'This is normal, slow charging \u2014 use the cable that came with the car (or one provided). Plug it into the car and the outlet/station, and leave it plugged in the whole time you\u2019re parked. No app or rush needed.';
 const TESLA_MIN_KW = 200; // V3+ Superchargers (250 kW) work with the Ford NACS adapter; V2 (150) don't
 
 // Mach-E (extended range / GT) DC charging curve: power (kW) vs SoC (%).
@@ -1995,6 +2041,142 @@ function printTripLog(){
   openTripLog(doc);
 }
 
+// ── Co-driver "cheat sheet" ──
+// A low-stress, plain-language guide for someone who rarely DC fast-charges: the
+// bottom line, where/when to stop, exactly HOW to charge at each network, and a
+// short fast-charging primer. Shares the in-app overlay + print stylesheet with
+// the trip log, so "Print / Save as PDF" works the same — or open it on a phone
+// and the map links are tappable.
+function printGuidanceSheet(){
+  if (!STATE || !STATE.A || !STATE.B || !STATE.routes){ setStatus('Plan a trip first, then make a guide.', true); return; }
+  const E = esc;
+  const plan   = LAST_TRIP ? LAST_TRIP.plan : null;
+  const round  = LAST_TRIP ? LAST_TRIP.round : document.getElementById('roundTrip').checked;
+  const rt     = STATE.routes[STATE.sel];
+  const oneWay = rt.miles;
+  const txt = id => { const el = document.getElementById(id); return el ? el.textContent.trim() : ''; };
+  const dist = txt('rDist'), eff = txt('rEff'), temp = txt('rTemp');
+  const veh = document.getElementById('vehSel').value;
+  const startRaw = document.getElementById('startSoc').value;
+  const startSoc = startRaw !== '' && !isNaN(+startRaw) ? Math.round(+startRaw) : null;
+  const dd = document.getElementById('depDate').value;
+  const tm = document.getElementById('depTime').value || '08:00';
+
+  const stops = (plan && plan.stops) || [];
+  const dcfc  = stops.filter(s => !s.waypoint);
+  const acWp  = stops.filter(s => s.waypoint);
+  // Total fast-charging across the whole trip (for the bottom line) vs. just the
+  // outbound legs (for the destination arrival time, like the trip log).
+  const totalChargeMins = dcfc.reduce((sum, x) => sum + (x.mins || 0), 0);
+  const outChargeMins = dcfc.filter(s => !round || s.alongMi <= oneWay).reduce((sum, x) => sum + (x.mins || 0), 0);
+
+  // Departure / arrival (one-way drive + outbound charging, same as the trip log).
+  let depStr = '', arrStr = '';
+  const dep = dd ? new Date(`${dd}T${tm}`) : null;
+  if (dep && !isNaN(dep.getTime())){
+    const arr = new Date(dep.getTime() + (rt.hours * 60 + outChargeMins) * 60000);
+    const fmt = d => d.toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+    depStr = fmt(dep); arrStr = fmt(arr);
+  }
+
+  // One tap = the whole route (start → stops → destination, and back if round trip).
+  let gUrl = '';
+  try { gUrl = gmapsUrl(buildRoutePoints(plan, round, oneWay)); } catch(_){ gUrl = ''; }
+
+  // Plain-English bottom line.
+  let bottom;
+  if (startSoc == null){
+    bottom = `Add your <b>start charge %</b> in the planner to get exact charging guidance. For now, here's your route.`;
+  } else if (!dcfc.length && !acWp.length){
+    bottom = `Good news — <b>no charging stops</b> on the way. Top up before you leave and you'll arrive with room to spare.`;
+  } else if (!dcfc.length){
+    bottom = `<b>No fast-charging needed.</b> You'll just plug in ${acWp.length > 1 ? `${acWp.length} times` : 'once'} at a normal/Level-2 outlet while you're parked — slow and easy, no app or rush.`;
+  } else {
+    bottom = `You'll <b>fast-charge ${dcfc.length} time${dcfc.length > 1 ? 's' : ''}</b>${acWp.length ? ` (plus ${acWp.length} slow plug-in${acWp.length > 1 ? 's' : ''})` : ''}. That's about <b>${Math.round(totalChargeMins)} min</b> of charging total — enough for a coffee or a stretch each time.`;
+  }
+
+  // "Before you leave" quick facts.
+  const facts = [];
+  if (startSoc != null) facts.push(['Charge to before leaving', `<b>${startSoc}%</b>`]);
+  if (depStr) facts.push(['Plan to leave', `<b>${E(depStr)}</b>`]);
+  if (arrStr) facts.push([round ? 'Reach the destination' : "You'll arrive", `about <b>${E(arrStr)}</b>`]);
+  if (dist) facts.push(['Distance', `${E(dist)}${round ? ' (round trip)' : ''}`]);
+  if (temp) facts.push(['Weather that day', E(temp)]);
+  const factsHtml = facts.map(([k, v]) => `<div><span style="color:#555">${k}:</span> ${v}</div>`).join('');
+
+  // Stop cards, in route order, with a friendly round-trip turnaround divider.
+  let cards = '', i = 0, dividerShown = false;
+  stops.forEach(s => {
+    if (round && oneWay && s.alongMi > oneWay && !dividerShown){
+      cards += `<div class="cheat-stop" style="border-style:dashed;text-align:center;font-style:italic;color:#555">↩ You've reached ${E(STATE.B.name)} — turn around here. The stops below are on the way home.</div>`;
+      dividerShown = true;
+    }
+    i++;
+    const onReturn = round && oneWay && s.alongMi > oneWay;
+    const whereMi = onReturn ? `about ${Math.round(2 * oneWay - s.alongMi)} mi from home` : `about ${Math.round(s.alongMi)} mi in`;
+    const lk = chargerLinks(s);
+    const where = [s.town ? E(s.town) : '', lk.addrStr ? E(lk.addrStr) : ''].filter(Boolean).join(' · ');
+    const links = (lk.apple || lk.plug)
+      ? `<div class="cs-links">${lk.apple ? `<a href="${lk.apple}" target="_blank" rel="noopener">📍 Open in Maps</a>` : ''}${lk.plug ? `<a href="${lk.plug}" target="_blank" rel="noopener">🔌 Check it on PlugShare</a>` : ''}</div>`
+      : '';
+    if (s.waypoint){
+      cards += `<div class="cheat-stop">
+        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge slow">slow plug-in</span></div>
+        <div class="cs-where">${whereMi}${where ? ` · ${where}` : ''}</div>
+        <div class="cs-do">Plug in here and <b>charge to ${Math.round(s.target)}%</b>${s.addedKWh != null ? ` (adds about ${Math.round(s.addedKWh)} kWh)` : ''}. Leave it plugged in while you're parked — no need to watch it.</div>
+        <div class="cs-how"><b>How:</b> ${NET_GUIDE_AC}</div>
+        ${links}
+      </div>`;
+    } else {
+      const how = NET_GUIDE[s.net] || NET_GUIDE_GENERIC;
+      const tip = s.mins >= 25 ? 'Plenty of time for a meal or a walk.' : s.mins >= 12 ? 'Good time for a coffee or a restroom break.' : 'Quick top-up — just a few minutes.';
+      cards += `<div class="cheat-stop">
+        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge fast">fast charge${s.net ? ` · ${E(s.net)}` : ''}</span></div>
+        <div class="cs-where">${whereMi}${where ? ` · ${where}` : ''}${s.maxKW ? ` · up to ${Math.round(s.maxKW)} kW` : ''}</div>
+        <div class="cs-do">Pull in with around <b>${Math.round(s.arriveSoc)}%</b> and <b>charge to ${Math.round(s.target)}%</b> — about <b>${Math.round(s.mins)} min</b>. ${tip}</div>
+        <div class="cs-how"><b>How to charge here:</b> ${how}</div>
+        ${links}
+      </div>`;
+    }
+  });
+  if (!stops.length){
+    cards = `<div class="cheat-stop" style="text-align:center">No stops to worry about — it's a straight shot.${startSoc != null ? ` Just leave with at least <b>${startSoc}%</b>.` : ''}</div>`;
+  }
+
+  const routeLink = gUrl
+    ? `<div class="cs-links" style="margin-top:10px;font-size:13px"><a href="${gUrl}" target="_blank" rel="noopener" style="font-weight:700">▶ Tap to open the whole route in Google Maps</a></div>`
+    : '';
+
+  const doc = `
+    <h1>🧭 Your trip guide</h1>
+    <div class="sub">${E(veh)}${dd ? ' · ' + E(dd) : ''}${round ? ' · round trip' : ''}</div>
+    <div class="route">${E(STATE.A.name)} &rarr; ${E(STATE.B.name)}${round ? ' &rarr; home' : ''}</div>
+
+    <div class="cheat-bottom">${bottom}</div>
+    ${routeLink}
+
+    <h2>Before you leave</h2>
+    <div class="cheat-grid">${factsHtml}</div>
+
+    <h2>${stops.length ? 'Your stops, in order' : 'On the road'}</h2>
+    ${cards}
+
+    <h2>Fast-charging, the easy way</h2>
+    <div class="cheat-basics"><ul>
+      <li><b>Set up the app first.</b> Before you go, install and sign into each charger's app with a card on file — it's the simplest way to start a charge.</li>
+      <li><b>Use the big plug.</b> Fast chargers use the large CCS connector. Open the car's charge door, line it up, and push until it clicks.</li>
+      <li><b>It slows down near full.</b> Charging is fastest when the battery is low and slows as it fills — that's why the plan stops around 80%, not 100%. Don't wait for full.</li>
+      <li><b>If it won't start</b> or a stall looks broken, try a different stall or call the help number on the charger. PlugShare (links above) shows which nearby chargers are working.</li>
+      <li><b>No need to babysit it.</b> Once it's charging you can step away — the app shows progress and pings you when it's done.</li>
+    </ul></div>
+
+    <div class="cheat-call">If anything feels off or you get stuck, call: <span class="blank"></span></div>
+
+    <div class="foot">Made with the EV Trip Calculator · estimates only — trust the car's range readout and real conditions first.</div>`;
+
+  openTripLog(doc);
+}
+
 // In-app trip-log sheet — opens as a full-screen overlay inside the app (works in an
 // installed Home-Screen PWA, where window.open would drop you into Safari with no way
 // back). "Print / Save as PDF" prints only the sheet via the @media print rules.
@@ -2007,7 +2189,7 @@ function ensureTripLogOverlay(){
   ov.hidden = true;
   ov.setAttribute('role', 'dialog');
   ov.setAttribute('aria-modal', 'true');
-  ov.setAttribute('aria-label', 'Printable trip log');
+  ov.setAttribute('aria-label', 'Printable sheet');
   ov.innerHTML =
       '<div class="tlog-bar">'
     +   '<button type="button" class="tlog-back" onclick="closeTripLog()">‹ Back to planner</button>'
