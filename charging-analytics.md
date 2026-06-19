@@ -156,6 +156,41 @@ permalink: /charging-analytics/
   }
   .insight-chip strong { color: var(--link); }
 
+  /* ── Chart subtitle (was used in markup but never defined) ── */
+  .chart-sub {
+    display: block;
+    font-size: 0.68rem;
+    color: #888;
+    margin: 2px 0 0;
+    line-height: 1.4;
+  }
+
+  /* ── Scroll progress bar ── */
+  #scrollProgress {
+    position: fixed; top: 0; left: 0; height: 3px; width: 0;
+    background: linear-gradient(90deg, var(--link), #a389f4);
+    z-index: 700; pointer-events: none; transition: width 0.08s linear;
+  }
+
+  /* ── Raw session data table ── */
+  .data-table-wrap {
+    overflow: auto; max-height: 540px;
+    border: 1px solid var(--dash-border); border-radius: 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 760px; }
+  .data-table thead th {
+    position: sticky; top: 0; z-index: 1; background: var(--dash-card);
+    border-bottom: 2px solid var(--dash-border); padding: 9px 12px; text-align: left;
+    font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: #888; cursor: pointer; white-space: nowrap; user-select: none;
+  }
+  .data-table thead th[data-active="true"] { color: var(--link); }
+  .data-table tbody td { padding: 7px 12px; border-bottom: 1px solid var(--dash-border); white-space: nowrap; }
+  .data-table tbody tr:hover { background: rgba(93,63,211,0.06); }
+  .data-table .dt-num { text-align: right; font-variant-numeric: tabular-nums; }
+  #dataTableMeta { font-size: 0.72rem; color: #888; margin: 0 0 10px; }
+
   /* ── Vehicle filter pills ── */
   #vehicleFilterBtns {
     display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
@@ -478,6 +513,7 @@ permalink: /charging-analytics/
 
     /* Hide all UI chrome */
     nav, #chargingPageNav, #vehicleFilterSticky, #vehicleFilterBtns,
+    #scrollProgress,
     .section-nav, .back-top-pill, .back-link,
     #printFab, #printPanel, #hm-tip, #locViewBtns, .loc-view-btn,
     .analytics-header > p { display: none !important; }
@@ -1238,6 +1274,20 @@ permalink: /charging-analytics/
       </div>
     </div>
 
+    <!-- Charging speed spectrum -->
+    <div class="chart-grid-2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <p class="chart-title">Charging Speed Mix — Energy by Tier<span class="new-badge">✨ new</span></p>
+        <span class="chart-sub">kWh delivered in each speed band — Level 2 vs DC fast (avg kW incl. idle)</span>
+        <div class="chart-wrap" style="height:240px"><canvas id="chartSpeedMixEnergy"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <p class="chart-title">Sessions by Charging Speed</p>
+        <span class="chart-sub">how many plug-ins land in each speed band</span>
+        <div class="chart-wrap" style="height:240px"><canvas id="chartSpeedTierCount"></canvas></div>
+      </div>
+    </div>
+
     <!-- Time of day -->
     <div class="chart-grid-2" style="margin-bottom:18px">
       <div class="chart-card">
@@ -1754,6 +1804,9 @@ let activeVehicles = new Set(['all']); // 'all' means no individual filter
 let allCharts = [];
 let _hmRender = null;        // current heatmap render fn — updated on each rebuild
 let _heatmapWired = false;  // event listeners on heatmapContainer wired only once
+let _whenChargeWired = false; // when-do-I-charge grid tooltip listeners wired only once
+let _gasSensWired = false;    // gas-sensitivity slider + theme listeners wired only once
+let _gasSensUpdate = null;    // latest rebuild's updateSensitivity fn (so the once-wired slider drives fresh data)
 
 function mkChart(id, config) {
   const canvas = document.getElementById(id);
@@ -1989,11 +2042,12 @@ function rebuild(sl) {
     else                           m.pubKwh  += s.kwh;
   });
 
-  /* KPI STRIP */
-  const totalKwh     = sl.reduce((a,s) => a + s.kwh,     0);
-  const totalCost    = sl.reduce((a,s) => a + s.cost,    0);
-  const totalSavings = sl.reduce((a,s) => a + s.saving,  0);
-  const freeKwh      = sl.filter(s => s.isFree).reduce((a,s) => a + s.kwh, 0);
+  /* KPI STRIP — single pass over sl (was 4 separate reduces/filter) */
+  let totalKwh = 0, totalCost = 0, totalSavings = 0, freeKwh = 0;
+  sl.forEach(s => {
+    totalKwh += s.kwh; totalCost += s.cost; totalSavings += s.saving;
+    if (s.isFree) freeKwh += s.kwh;
+  });
 
   countUp(document.getElementById('kpi-kwh'),         totalKwh / 1000,                                function(v){ return v.toFixed(2) + ' MWh'; });
   countUp(document.getElementById('kpi-cost'),        totalCost,                                      function(v){ return fmtUSD(v); });
@@ -2175,7 +2229,7 @@ mkChart('chartLocationDonut', {
             const ds  = chart.data.datasets[0];
             const tot = ds.data.reduce((a, v) => a + v, 0);
             return chart.data.labels.map((label, i) => ({
-              text: `${label}  ${(ds.data[i] / tot * 100).toFixed(1)}%  (${ds.data[i].toFixed(0)} kWh)`,
+              text: `${label}  ${tot > 0 ? (ds.data[i] / tot * 100).toFixed(1) : '0.0'}%  (${ds.data[i].toFixed(0)} kWh)`,
               fillStyle: ds.backgroundColor[i],
               strokeStyle: ds.backgroundColor[i],
               lineWidth: 0,
@@ -2864,7 +2918,7 @@ mkChart('chartDayOfWeek', {
             const ds = chart.data.datasets[0];
             const tot = ds.data.reduce((a,v) => a+v, 0);
             return chart.data.labels.map((lbl, i) => ({
-              text: `${lbl}  ${(ds.data[i]/tot*100).toFixed(0)}%`,
+              text: `${lbl}  ${tot > 0 ? (ds.data[i]/tot*100).toFixed(0) : '0'}%`,
               fillStyle: ds.backgroundColor[i],
               strokeStyle: ds.borderColor,
               lineWidth: 0
@@ -4488,6 +4542,80 @@ mkChart('chartHistogram', {
           }
         }
       });
+
+      // ── 7. Charging speed spectrum — classify each timed session into a power tier ──
+      // avg kW = kWh / duration (includes idle, so AC overnights correctly land low and
+      // short DC fast-charges land high → a clean Level 2 vs DC-fast split).
+      const SPEED_TIERS = [
+        { label: 'Level 1 (<1.9 kW)', max: 1.9,      color: '#90a4ae' },
+        { label: 'Level 2 (2–19 kW)', max: 19,       color: '#0288d1' },
+        { label: 'DC 20–49 kW',       max: 49,       color: '#f39c12' },
+        { label: 'DC 50–149 kW',      max: 149,      color: '#FF7A14' },
+        { label: 'DC 150+ kW',        max: Infinity, color: '#e74c3c' }
+      ];
+      const tierEnergy = SPEED_TIERS.map(() => 0);
+      const tierCount  = SPEED_TIERS.map(() => 0);
+      timeSessions.forEach(s => {
+        const h = durationHours(s);
+        if (!h || h <= 0) return;
+        const kw  = s.kwh / h;
+        let idx = SPEED_TIERS.findIndex(t => kw < t.max);
+        if (idx === -1) idx = SPEED_TIERS.length - 1;
+        tierEnergy[idx] += s.kwh;
+        tierCount[idx]  += 1;
+      });
+      // Drop empty tiers so the legend/axis only shows bands you've actually used
+      const tierIdx = SPEED_TIERS.map((_, i) => i).filter(i => tierCount[i] > 0);
+      const tLabels = tierIdx.map(i => SPEED_TIERS[i].label);
+      const tColors = tierIdx.map(i => SPEED_TIERS[i].color);
+
+      mkChart('chartSpeedMixEnergy', {
+        type: 'doughnut',
+        data: {
+          labels: tLabels,
+          datasets: [{
+            data: tierIdx.map(i => +tierEnergy[i].toFixed(1)),
+            backgroundColor: tColors,
+            borderWidth: 0
+          }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'58%',
+          plugins:{
+            legend:{ position:'right', labels:{ color: tc(), boxWidth: 12, padding: 8, font:{ size: 10 },
+              generateLabels: chart => {
+                const ds  = chart.data.datasets[0];
+                const tot = ds.data.reduce((a,v) => a+v, 0);
+                return chart.data.labels.map((label, i) => ({
+                  text: `${label}  ${tot > 0 ? (ds.data[i]/tot*100).toFixed(0) : '0'}%`,
+                  fillStyle: ds.backgroundColor[i], strokeStyle: ds.backgroundColor[i], lineWidth: 0
+                }));
+              }
+            }},
+            datalabels:{ display:false },
+            tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${(+ctx.raw).toFixed(0)} kWh` } }
+          }
+        }
+      });
+
+      mkChart('chartSpeedTierCount', {
+        type: 'bar',
+        data: {
+          labels: tLabels,
+          datasets: [{ data: tierIdx.map(i => tierCount[i]), backgroundColor: tColors, borderRadius: 5 }]
+        },
+        options: { responsive:true, maintainAspectRatio:false, indexAxis:'y',
+          plugins:{ legend:{ display:false },
+            datalabels:{ anchor:'end', align:'end', offset:4, color: tc(), font:{ size:11, weight:'bold' },
+              formatter: v => v > 0 ? v : '' },
+            tooltip:{ callbacks:{ label: ctx => ` ${ctx.parsed.x} sessions` } }
+          },
+          scales:{
+            x:{ grid:{ color: gc() }, ticks:{ color: tc(), precision:0 }, beginAtZero:true,
+                title:{ display:true, text:'Sessions', color:'#888' } },
+            y:{ grid:{ display:false }, ticks:{ color: tc(), font:{ size:10 } } }
+          }
+        }
+      });
     }
 
   })(sl);
@@ -5098,23 +5226,28 @@ function buildWhenDoICharge(sl) {
 
   grid.innerHTML = html;
 
-  // Tooltip wiring
-  const hmTip = document.getElementById('hm-tip');
-  let _hmRafId = null;
-  grid.addEventListener('mouseover', e => {
-    const t = e.target.dataset.tip;
-    if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
-  });
-  grid.addEventListener('mousemove', e => {
-    if (_hmRafId) return;
-    _hmRafId = requestAnimationFrame(() => {
-      _hmRafId = null;
-      hmTip.style.transform = `translate3d(${e.clientX+14}px,${e.clientY-34}px,0)`;
+  // Tooltip wiring — the #chargingWhenGrid element persists across rebuilds (only its
+  // innerHTML is replaced), so wire the hover listeners ONCE to avoid accumulating a new
+  // set on every vehicle-filter toggle. dataset.tip is read live from the current DOM.
+  if (!_whenChargeWired) {
+    _whenChargeWired = true;
+    const hmTip = document.getElementById('hm-tip');
+    let _hmRafId = null;
+    grid.addEventListener('mouseover', e => {
+      const t = e.target.dataset.tip;
+      if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
     });
-  });
-  grid.addEventListener('mouseout', e => {
-    if (e.target.dataset.tip) hmTip.style.display = 'none';
-  });
+    grid.addEventListener('mousemove', e => {
+      if (_hmRafId) return;
+      _hmRafId = requestAnimationFrame(() => {
+        _hmRafId = null;
+        hmTip.style.transform = `translate3d(${e.clientX+14}px,${e.clientY-34}px,0)`;
+      });
+    });
+    grid.addEventListener('mouseout', e => {
+      if (e.target.dataset.tip) hmTip.style.display = 'none';
+    });
+  }
 }
 
 /* ════════════════════════════════════════════════════════
@@ -5236,32 +5369,38 @@ function buildGasSensitivity(sl) {
     }
   }
 
+  // Expose the current updater so the once-wired slider listener always drives the
+  // LATEST rebuild's data/chart instead of a stale first-rebuild closure.
+  _gasSensUpdate = updateSensitivity;
+
   // Init KPIs
   updateSensitivity(parseFloat(slider.value));
 
-  // Listen for slider — throttle via rAF
-  let _sensRaf = null;
-  slider.addEventListener('input', () => {
-    if (_sensRaf) return;
-    _sensRaf = requestAnimationFrame(() => {
-      _sensRaf = null;
-      updateSensitivity(parseFloat(slider.value));
+  // Wire listeners ONCE — the slider element + chart canvas persist across rebuilds, so
+  // re-adding handlers on every vehicle-filter toggle would leak them (and fire N times).
+  if (!_gasSensWired) {
+    _gasSensWired = true;
+    let _sensRaf = null;
+    slider.addEventListener('input', () => {
+      if (_sensRaf) return;
+      _sensRaf = requestAnimationFrame(() => {
+        _sensRaf = null;
+        if (_gasSensUpdate) _gasSensUpdate(parseFloat(slider.value));
+      });
     });
-  });
-
-  // Re-init on theme change
-  window.addEventListener('themeChanged', () => {
-    const canvas2 = document.getElementById('chartGasSensitivity');
-    const liveChart2 = canvas2 ? Chart.getChart(canvas2) : null;
-    if (liveChart2) {
-      liveChart2.data.datasets[0].borderColor = '#f39c12';
-      liveChart2.data.datasets[1].borderColor = '#2ecc71';
-      liveChart2.options.scales.x.ticks.color = tc();
-      liveChart2.options.scales.y.ticks.color = tc();
-      liveChart2.options.scales.y.grid.color  = gc();
-      liveChart2.update('none');
-    }
-  });
+    window.addEventListener('themeChanged', () => {
+      const canvas2 = document.getElementById('chartGasSensitivity');
+      const liveChart2 = canvas2 ? Chart.getChart(canvas2) : null;
+      if (liveChart2) {
+        liveChart2.data.datasets[0].borderColor = '#f39c12';
+        liveChart2.data.datasets[1].borderColor = '#2ecc71';
+        liveChart2.options.scales.x.ticks.color = tc();
+        liveChart2.options.scales.y.ticks.color = tc();
+        liveChart2.options.scales.y.grid.color  = gc();
+        liveChart2.update('none');
+      }
+    });
+  }
 }
 
 /* ════════════════════════════════════════════════════════
