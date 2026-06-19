@@ -418,6 +418,7 @@ permalink: /trip-calculator/
   .tlog-sheet .cname { font-weight: 600; }
   .tlog-sheet .plan, .tlog-sheet .addr { color: #555; font-size: 10px; margin-top: 1px; }
   .tlog-sheet tr.divider td { background: #f3f3f3; font-style: italic; font-size: 10px; }
+  .tlog-sheet tr.day-divider td { background: #efeafc; font-weight: 700; font-size: 11px; color: #3f2f86; letter-spacing: .02em; }
   .tlog-sheet .notes { border: 1px solid #888; border-radius: 6px; height: 150px; margin-top: 4px;
     background-image: repeating-linear-gradient(#fff, #fff 27px, #ddd 28px); }
   .tlog-sheet .foot { margin-top: 14px; color: #777; font-size: 9.5px; text-align: center; }
@@ -433,6 +434,10 @@ permalink: /trip-calculator/
     border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
   .tlog-sheet .cheat-badge.fast { background: #fde2e2; color: #b42318; }
   .tlog-sheet .cheat-badge.slow { background: #def7ec; color: #03543f; }
+  .tlog-sheet .cheat-badge.overnight { background: #e6e2fb; color: #3f2f86; }
+  .tlog-sheet .cheat-day { font-weight: 800; font-size: 13px; color: #3f2f86; margin: 16px 0 2px; padding-bottom: 3px;
+    border-bottom: 2px solid #cdbef5; text-transform: uppercase; letter-spacing: .03em; }
+  .tlog-sheet .cheat-stop.overnight { border-color: #b9a8ee; background: #faf8ff; }
   .tlog-sheet .cs-where { color: #444; font-size: 12px; margin-top: 3px; }
   .tlog-sheet .cs-do { margin-top: 7px; font-size: 13px; line-height: 1.45; }
   .tlog-sheet .cs-how { margin-top: 7px; font-size: 12px; line-height: 1.45; background: #f1f5f9; border-radius: 6px; padding: 7px 9px; }
@@ -461,7 +466,7 @@ permalink: /trip-calculator/
     body.tlog-open .tlog-tablewrap { overflow: visible; }
     /* Keep logical blocks from being split across a page boundary. */
     body.tlog-open .tlog-sheet h1, body.tlog-open .tlog-sheet h2,
-    body.tlog-open .tlog-sheet .cs-head { break-after: avoid; page-break-after: avoid; }
+    body.tlog-open .tlog-sheet .cs-head, body.tlog-open .tlog-sheet .cheat-day { break-after: avoid; page-break-after: avoid; }
     body.tlog-open .tlog-sheet .box, body.tlog-open .tlog-sheet .boxes,
     body.tlog-open .tlog-sheet .kv, body.tlog-open .tlog-sheet .notes,
     body.tlog-open .tlog-sheet tr, body.tlog-open .tlog-sheet .cheat-bottom,
@@ -2597,9 +2602,19 @@ function printTripLog(){
   }
 
   // Charging-stop rows: planned info shown, blank cells for the driver to fill.
+  // On a multi-day trip the rows are grouped under "Day N" separators (and an
+  // overnight stay is flagged), so you can tell which day's numbers you're recording.
   const stops = (plan && plan.stops) || [];
-  let rows = '', n = 0, dividerShown = false;
+  const multiDay = isMultiDayTimeline(tl);
+  let rows = '', n = 0, dividerShown = false, lastDay = null;
   stops.forEach(s => {
+    if (multiDay && s._arriveMs != null){
+      const d = tripDayNum(s._arriveMs, tl.startMs);
+      if (d !== lastDay){
+        rows += `<tr class="day-divider"><td colspan="8">📅 Day ${d} · ${E(dayHeading(s._arriveMs))}</td></tr>`;
+        lastDay = d;
+      }
+    }
     if (round && oneWay && s.alongMi > oneWay && !dividerShown){
       rows += `<tr class="divider"><td colspan="8">↩ Turnaround at destination — return leg</td></tr>`;
       dividerShown = true;
@@ -2607,8 +2622,11 @@ function printTripLog(){
     n++;
     const onReturn = round && oneWay && s.alongMi > oneWay;
     const mile = onReturn ? `${Math.round(2*oneWay - s.alongMi)} mi from home` : `mile ${Math.round(s.alongMi)}`;
+    const leaveStr = s._depMs != null ? new Date(s._depMs).toLocaleString([], { weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false }) : '';
     const stayLog = (s.waypoint && s._dwellH > 0)
-      ? ` · stay ~${fmtMinsShort(s._dwellH*60)}${s._depMs!=null?`, leave ${new Date(s._depMs).toLocaleString([], { weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false })}`:''}`
+      ? (isOvernightStay(s)
+          ? ` · 🌙 overnight${leaveStr ? `, leave ${leaveStr}` : ''}`
+          : ` · stay ~${fmtMinsShort(s._dwellH*60)}${leaveStr ? `, leave ${leaveStr}` : ''}`)
       : '';
     const planLine = s.waypoint
       ? `${mile} · charge to ${Math.round(s.target)}%${s.addedKWh!=null?` · +${Math.round(s.addedKWh)} kWh`:''}${stayLog}`
@@ -2730,6 +2748,9 @@ function printGuidanceSheet(){
     const fmt = d => d.toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
     depStr = fmt(new Date(tl.startMs)); arrStr = fmt(new Date(tl.destArriveMs));
   }
+  // Multi-day trips group the stop cards by day and call out the overnight stop.
+  const multiDay = isMultiDayTimeline(tl);
+  const spanDays = multiDay ? tripDayNum(tl.endArriveMs, tl.startMs) : 1;
 
   // One tap = the whole route (start → stops → destination, and back if round trip).
   let gUrl = '';
@@ -2746,6 +2767,7 @@ function printGuidanceSheet(){
   } else {
     bottom = `You'll <b>fast-charge ${dcfc.length} time${dcfc.length > 1 ? 's' : ''}</b>${acWp.length ? ` (plus ${acWp.length} slow plug-in${acWp.length > 1 ? 's' : ''})` : ''}. That's about <b>${Math.round(totalChargeMins)} min</b> of charging total — enough for a coffee or a stretch each time.`;
   }
+  if (multiDay) bottom += ` This trip runs <b>over ${spanDays} days</b> — your stops below are grouped by day.`;
 
   // "Before you leave" quick facts.
   const facts = [];
@@ -2756,9 +2778,18 @@ function printGuidanceSheet(){
   if (temp) facts.push(['Weather that day', E(temp)]);
   const factsHtml = facts.map(([k, v]) => `<div><span style="color:#555">${k}:</span> ${v}</div>`).join('');
 
-  // Stop cards, in route order, with a friendly round-trip turnaround divider.
-  let cards = '', i = 0, dividerShown = false;
+  // Stop cards, in route order. On a multi-day trip they're grouped under "Day N"
+  // headers and the overnight stop is called out; a round-trip turnaround divider
+  // still marks where you turn around.
+  let cards = '', i = 0, dividerShown = false, lastDay = null;
   stops.forEach(s => {
+    if (multiDay && s._arriveMs != null){
+      const d = tripDayNum(s._arriveMs, tl.startMs);
+      if (d !== lastDay){
+        cards += `<div class="cheat-day">Day ${d} · ${E(dayHeading(s._arriveMs))}</div>`;
+        lastDay = d;
+      }
+    }
     if (round && oneWay && s.alongMi > oneWay && !dividerShown){
       cards += `<div class="cheat-stop" style="border-style:dashed;text-align:center;font-style:italic;color:#555">↩ You've reached ${E(STATE.B.name)} — turn around here. The stops below are on the way home.</div>`;
       dividerShown = true;
@@ -2773,14 +2804,21 @@ function printGuidanceSheet(){
       : '';
     if (s.waypoint){
       const fmtT = ms => new Date(ms).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' });
+      const overnight = isOvernightStay(s);
+      const badge = overnight ? `<span class="cheat-badge overnight">🌙 overnight</span>` : `<span class="cheat-badge slow">slow plug-in</span>`;
       const sched = (s._dwellH > 0 && s._arriveMs != null)
-        ? `<div class="cs-where">Get in about <b>${fmtT(s._arriveMs)}</b>, leave <b>${s._depMs!=null?fmtT(s._depMs):'—'}</b> — about ${fmtMinsShort(s._dwellH*60)} parked${(s.mode==='power'&&s.powerKW>0)?`, charging at ~${Math.round(s.powerKW)} kW`:''}.</div>`
+        ? (overnight
+            ? `<div class="cs-where">Get in about <b>${fmtT(s._arriveMs)}</b> and stay the night — leave around <b>${s._depMs!=null?fmtT(s._depMs):'—'}</b>.${(s.mode==='power'&&s.powerKW>0)?` The car charges overnight at ~${Math.round(s.powerKW)} kW.`:''}</div>`
+            : `<div class="cs-where">Get in about <b>${fmtT(s._arriveMs)}</b>, leave <b>${s._depMs!=null?fmtT(s._depMs):'—'}</b> — about ${fmtMinsShort(s._dwellH*60)} parked${(s.mode==='power'&&s.powerKW>0)?`, charging at ~${Math.round(s.powerKW)} kW`:''}.</div>`)
         : '';
-      cards += `<div class="cheat-stop">
-        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge slow">slow plug-in</span></div>
+      const doLine = overnight
+        ? `Plug in for the night and <b>charge to ${Math.round(s.target)}%</b>${s.addedKWh != null ? ` (adds about ${Math.round(s.addedKWh)} kWh)` : ''}. Leave it plugged in until morning — no need to watch it.`
+        : `Plug in here and <b>charge to ${Math.round(s.target)}%</b>${s.addedKWh != null ? ` (adds about ${Math.round(s.addedKWh)} kWh)` : ''}. Leave it plugged in while you're parked — no need to watch it.`;
+      cards += `<div class="cheat-stop${overnight ? ' overnight' : ''}">
+        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} ${badge}</div>
         <div class="cs-where">${whereMi}${where ? ` · ${where}` : ''}</div>
         ${sched}
-        <div class="cs-do">Plug in here and <b>charge to ${Math.round(s.target)}%</b>${s.addedKWh != null ? ` (adds about ${Math.round(s.addedKWh)} kWh)` : ''}. Leave it plugged in while you're parked — no need to watch it.</div>
+        <div class="cs-do">${doLine}</div>
         <div class="cs-how"><b>How:</b> ${NET_GUIDE_AC}</div>
         ${links}
       </div>`;
@@ -3193,6 +3231,16 @@ function chargerLinks(s){
   const plug  = hasGeo ? `https://www.plugshare.com/?latitude=${s.lat}&longitude=${s.lon}&spanLat=0.05&spanLng=0.05` : '';
   return { addrStr, apple, plug };
 }
+
+// Day-numbering helpers shared by the multi-day itinerary, the printable trip log,
+// and the co-driver cheat sheet. Day 1 = the departure day; numbering is by
+// CALENDAR offset (not a running count), so a multi-night stay correctly jumps
+// Day 1 → Day 3 rather than mislabeling the idle days between.
+function dayStartMs(ms){ const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); }
+function tripDayNum(ms, startMs){ return Math.floor((dayStartMs(ms) - dayStartMs(startMs)) / 86400000) + 1; }
+function dayHeading(ms){ return new Date(ms).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }); }
+// A scheduled stay that spans a calendar boundary — i.e. you sleep there.
+function isOvernightStay(s){ return !!(s && s.waypoint && s._arriveMs != null && s._depMs != null && new Date(s._arriveMs).toDateString() !== new Date(s._depMs).toDateString()); }
 
 // ── Multi-day trip itinerary ──
 // A trip whose timeline crosses a calendar-day boundary (a long overnight drive
