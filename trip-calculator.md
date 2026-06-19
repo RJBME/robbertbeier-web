@@ -809,6 +809,8 @@ const COST = (function buildCost(){
 //  Stored only in this browser (localStorage 'evTuning'); never leaves the device.
 // ============================================================
 const TUNE_KEY = 'evTuning';
+const TUNE_MAX = 300;   // cap the self-tuning history so this array (read + filtered on EVERY
+                        // estimate) can't grow without bound and slowly bloat localStorage / each refresh
 function getTuningLog(){ try { return JSON.parse(localStorage.getItem(TUNE_KEY) || '[]'); } catch(e){ return []; } }
 function setTuningLog(arr){ try { localStorage.setItem(TUNE_KEY, JSON.stringify(arr)); } catch(e){} }
 
@@ -841,7 +843,9 @@ function logActualResult(){
     modelEff: +LAST_EST.rawModelEff.toFixed(3), ratio: +(actualEff / LAST_EST.rawModelEff).toFixed(4),
     tempF: Math.round(LAST_EST.tempF)
   };
-  const log = getTuningLog(); log.unshift(rec); setTuningLog(log);
+  const log = getTuningLog(); log.unshift(rec);
+  if (log.length > TUNE_MAX) log.length = TUNE_MAX;   // keep the newest TUNE_MAX records (plenty for a stable median)
+  setTuningLog(log);
   milesEl.value = ''; kwhEl.value = '';
   const veh = LAST_EST.veh;
   if (STATE) refresh();   // re-estimate with the new calibration + re-render the card
@@ -1907,6 +1911,114 @@ function planSegmentCapped(fromMi, toMi, soc, reserve, chargers, nrg){
   return planSegment(fromMi, toMi, soc, reserve, chargers, nrg, 100); // infeasible → gap info
 }
 
+// ── Charge-level balancing (leverage the charging curve) ───────────────────
+// The greedy planner fills each intermediate stop to the 80% cap and drives as
+// far as possible, which dumps energy into the SLOW, tapered top of the curve
+// ── Charge-level balancing (leverage the charging curve) ───────────────────
+// The greedy planner fills each intermediate stop to the 80% cap and drives as
+// far as possible, which dumps energy into the SLOW, tapered top of the curve
+// (55→80% runs at roughly half the kW of 10→40%). For a FIXED set of stops the
+// total charging time can usually be cut by shifting charge toward whichever
+// stop delivers it fastest. The fastest stop for a given kWh is the one with the
+// highest EFFECTIVE power = min(car curve at that SoC, the charger's max kW), so
+// it's a balance of two things: charge low on the curve (fast) BUT not on a weak
+// charger (a 50 kW post is slow no matter how empty you are). This re-solves only
+// the target SoCs of the stops the greedy already chose — it never changes which
+// chargers are used (so it can never add a stop). It runs a short coordinate
+// descent starting FROM the greedy targets (a known-feasible point), so total
+// time can only drop, and it verifies the result (SoC never negative, arrival ≥
+// floor, not slower) — restoring the greedy plan on any doubt. Returns the new
+// final-arrival SoC, or null when it kept the greedy plan.
+function rebalanceCharges(stops, startSoc, reserve, destFloor, nrg, totalMi){
+  if (!stops.length) return null;
+  const batt = nrg.batt;
+  const chargerFloor = Math.min(reserve, CHARGER_FLOOR);
+  const snap = stops.map(s => ({ target: s.target, arriveSoc: s.arriveSoc, addedKWh: s.addedKWh, mins: s.mins }));
+  const minsOf = arr => arr.reduce((m, s) => m + (s.waypoint ? 0 : (s.mins || 0)), 0);
+  const greedyMins = minsOf(stops);
+  // charge-time of [a→b] at a charger capped to kw (curve-aware, order-safe)
+  const cm = (a, b, kw) => chargeMinutes(Math.max(0, a), Math.max(a, b), batt, kw);
+
+  // Optimise ONE run of back-to-back DCFC stops between anchors. Coordinate
+  // descent on each stop's leave-SoC, starting from the greedy targets, so time
+  // only falls. Each stop is power-aware (its charger's max kW), so charge is
+  // never pushed onto a slower post than it came from when that would cost time.
+  function optimizeRun(idxs, entrySoc, entryMi, exitMi, exitFloor){
+    const n = idxs.length;
+    const mi  = idxs.map(k => stops[k].alongMi);
+    const kw  = idxs.map(k => stops[k].maxKW);
+    const cap = idxs.map(k => Math.max(DCFC_TOP, snap[k].target));    // honour greedy's proven cap / 80% policy
+    const d   = [];                                                   // drive (SoC%) leaving each stop
+    for (let i = 0; i < n; i++) d.push(nrg.socDrop(mi[i], i < n - 1 ? mi[i + 1] : exitMi));
+    const need = [];                                                  // min leave to reach next at its floor
+    for (let i = 0; i < n; i++) need.push((i < n - 1 ? chargerFloor : exitFloor) + d[i]);
+    const dIn = nrg.socDrop(entryMi, mi[0]);
+    const leave = idxs.map(k => snap[k].target);                      // start from greedy
+    const arr = i => (i === 0 ? entrySoc - dIn : leave[i - 1] - d[i - 1]);
+    for (let sweep = 0; sweep < 12; sweep++){
+      for (let i = 0; i < n; i++){
+        const ai = arr(i);
+        const lo = Math.max(ai, need[i]);
+        if (i === n - 1){ leave[i] = Math.min(Math.max(lo, ai), cap[i]); continue; }
+        const hi = Math.min(cap[i], leave[i + 1] + d[i]);            // keep arrive(i+1) ≤ leave(i+1)
+        if (hi <= lo){ leave[i] = lo; continue; }
+        // minimise cm(ai, x, kw_i) + cm(x − d_i, leave_{i+1}, kw_{i+1}) over x∈[lo,hi]
+        let L = lo, H = hi;
+        for (let it = 0; it < 26; it++){
+          const m1 = L + (H - L) / 3, m2 = H - (H - L) / 3;
+          const f1 = cm(ai, m1, kw[i]) + cm(m1 - d[i], leave[i + 1], kw[i + 1]);
+          const f2 = cm(ai, m2, kw[i]) + cm(m2 - d[i], leave[i + 1], kw[i + 1]);
+          if (f1 < f2) H = m2; else L = m1;
+        }
+        leave[i] = (L + H) / 2;
+      }
+    }
+    const out = [];
+    for (let i = 0; i < n; i++){ const a = arr(i); out.push({ arrive: a, target: Math.max(a, leave[i]) }); }
+    return out;
+  }
+
+  // Walk the plan, optimising each run of DCFC stops; waypoints reset SoC and split runs.
+  let soc = startSoc, pos = 0, i = 0;
+  while (i < stops.length){
+    if (stops[i].waypoint){
+      const s = stops[i];
+      s.arriveSoc = soc - nrg.socDrop(pos, s.alongMi);
+      s.addedKWh = Math.max(0, s.target - s.arriveSoc) / 100 * batt;
+      soc = s.target; pos = s.alongMi; i++; continue;
+    }
+    let j = i; const idxs = [];
+    while (j < stops.length && !stops[j].waypoint){ idxs.push(j); j++; }
+    const endedByWp = j < stops.length;
+    const res = optimizeRun(idxs, soc, pos, endedByWp ? stops[j].alongMi : totalMi, endedByWp ? reserve : destFloor);
+    for (let k = 0; k < idxs.length; k++){
+      const s = stops[idxs[k]];
+      s.arriveSoc = res[k].arrive; s.target = res[k].target;
+      s.addedKWh = Math.max(0, s.target - s.arriveSoc) / 100 * batt;
+      s.mins = chargeMinutes(s.arriveSoc, s.target, batt, s.maxKW);
+    }
+    const last = idxs[idxs.length - 1];
+    soc = stops[last].target; pos = stops[last].alongMi;
+    i = j;
+  }
+  const finalArrive = soc - nrg.socDrop(pos, totalMi);
+  // Safety net: accept only if it's not slower, arrives at/above the floor, and
+  // never dipped below 0 anywhere. Otherwise roll back to the greedy plan.
+  let bad = finalArrive < destFloor - 0.5 || minsOf(stops) > greedyMins + 0.05;
+  if (!bad){
+    let sc = startSoc, ps = 0;
+    for (const s of stops){
+      if (sc - nrg.socDrop(ps, s.alongMi) < -0.5){ bad = true; break; }
+      sc = s.target; ps = s.alongMi;
+    }
+  }
+  if (bad){
+    stops.forEach((s, k) => { s.target = snap[k].target; s.arriveSoc = snap[k].arriveSoc; s.addedKWh = snap[k].addedKWh; s.mins = snap[k].mins; });
+    return null;
+  }
+  return finalArrive;
+}
+
 // Full journey over [0, totalMi]. `anchors` are SoC-reset points (a charging
 // waypoint, or a round-trip destination where you can charge): each splits the
 // trip into a segment and resets SoC to its chargeTo for the next leg. DCFC
@@ -1934,7 +2046,12 @@ function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers, destFlo
   const rf = planSegmentCapped(segStart, totalMi, soc, destFloor, chargers, nrg);
   rf.stops.forEach(s => { all.push(s); if (s.overCap) overCap = true; });
   if (!rf.feasible) return { needed: true, feasible: false, stops: all, gapFrom: rf.gapFrom, reachMi: rf.reachMi };
-  return { needed: all.length > 0, feasible: true, stops: all, arriveSoc: rf.arriveSoc, overCap };
+  // Re-solve the charge levels to leverage the curve (defer charging, arrive low).
+  // Keeps the same stops; only lowers intermediate targets, so it can't add a stop.
+  const balancedArrive = rebalanceCharges(all, startSoc, reserve, destFloor, nrg, totalMi);
+  overCap = all.some(s => !s.waypoint && s.target > DCFC_TOP + 0.001);  // refresh after rebalance
+  return { needed: all.length > 0, feasible: true, stops: all,
+    arriveSoc: balancedArrive != null ? balancedArrive : rf.arriveSoc, overCap };
 }
 
 // Mirror chargers + elevation onto the return leg of a round trip: a charger at
