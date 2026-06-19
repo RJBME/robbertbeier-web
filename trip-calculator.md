@@ -61,7 +61,7 @@ permalink: /trip-calculator/
 
   /* Google-Maps-style reorderable route list */
   #routeStops { display: flex; flex-direction: column; }
-  .route-row { display: grid; grid-template-columns: 18px 16px 1fr auto auto auto auto; align-items: center; gap: 7px; padding: 4px 0; position: relative; }
+  .route-row { display: grid; grid-template-columns: 18px 16px 1fr auto auto auto auto auto; align-items: center; gap: 7px; padding: 4px 0; position: relative; }
   .route-row.dragging { opacity: 0.5; }
   .rs-handle { cursor: grab; color: #aaa; font-size: 0.95rem; text-align: center; user-select: none; touch-action: none; }
   .rs-handle:active { cursor: grabbing; }
@@ -74,6 +74,7 @@ permalink: /trip-calculator/
   .rs-btn { border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--tc-muted); border-radius: 8px; padding: 6px 8px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
   .rs-btn:hover { border-color: var(--link); color: var(--link); }
   .rs-charge.on { background: var(--link); border-color: var(--link); color: #fff; }
+  .rs-clock.on { background: var(--link); border-color: var(--link); color: #fff; }
   .rs-loc.locating { opacity: 0.55; pointer-events: none; }
   .rs-del { visibility: hidden; }
   .route-row.removable .rs-del { visibility: visible; color: #ef4444; }
@@ -111,6 +112,30 @@ permalink: /trip-calculator/
     width: 56px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--dash-border);
     background: var(--bg); color: var(--text); font-size: 0.74rem; text-align: right;
   }
+  /* Scheduled-departure + charge sub-rows inside the stop panel. The schedule
+     row (a leave date/time) shows whenever the 🕒 button is on; the charge row
+     (mode toggle + slider/power + cost) shows whenever ⚡ is on. */
+  .rs-sched, .rs-chg { flex: 1 1 100%; display: none; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .route-row.scheduled .rs-sched { display: flex; }
+  .route-row.charging .rs-chg { display: flex; }
+  .rs-sched .rs-sched-lbl, .rs-chg .rs-mode-lbl { font-size: 0.72rem; color: var(--tc-muted); font-weight: 600; }
+  .rs-dep-date, .rs-dep-time, .rs-power {
+    padding: 4px 6px; border-radius: 6px; border: 1px solid var(--dash-border);
+    background: var(--bg); color: var(--text); font-size: 0.74rem;
+  }
+  .rs-dep-date { flex: 0 0 8.75rem; }
+  .rs-dep-time { flex: 0 0 6.5rem; }
+  .rs-power { width: 64px; text-align: right; }
+  .rs-dwell, .rs-pow-out { font-size: 0.7rem; color: var(--tc-muted); white-space: nowrap; }
+  /* Per-stop charge-mode toggle: "Charge to %" (slider) vs "From time here" (kW). */
+  .rs-mode { display: inline-flex; border: 1px solid var(--dash-border); border-radius: 7px; overflow: hidden; }
+  .rs-mode-btn { border: none; background: var(--dash-card); color: var(--tc-muted); font-size: 0.68rem; padding: 5px 8px; cursor: pointer; line-height: 1; }
+  .rs-mode-btn + .rs-mode-btn { border-left: 1px solid var(--dash-border); }
+  .rs-mode-btn.on { background: var(--link); color: #fff; }
+  .rs-pctwrap { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; min-width: 55%; }
+  .rs-powwrap { display: none; align-items: center; gap: 6px; }
+  .route-row.powmode .rs-pctwrap { display: none; }
+  .route-row.powmode .rs-powwrap { display: flex; }
   .stop.wp-stop .stop-num { background: #16a34a; }
   .net-wp { background: #16a34a20; color: #16a34a; }
 
@@ -254,6 +279,7 @@ permalink: /trip-calculator/
   .net-tesla { background: #e8222220; color: #e82222; }
   .net-ea    { background: #00b04f20; color: #00963f; }
   .net-cp    { background: #f9731620; color: #f97316; }
+  .net-other { background: #6b728020; color: #6b7280; }
   .stops-summary { font-size: 0.78rem; color: var(--tc-muted); margin: 6px 0 14px; }
   .stops-note { font-size: 0.78rem; color: var(--text); padding: 4px 0; }
   .stops-key { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
@@ -884,7 +910,8 @@ const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
 // Any row can toggle "charge here" (a slider sets the target %, plus an optional
 // $/kWh cost — default free — that feeds the trip-cost estimate).
 let STOP_UID = 0;
-function makeStopRow(addr, charge, cost){
+function makeStopRow(addr, charge, cost, opts){
+  opts = opts || {};
   const row = document.createElement('div');
   row.className = 'route-row';
   // Give every address field its OWN autofill section so Safari/Chrome offer
@@ -893,18 +920,33 @@ function makeStopRow(addr, charge, cost){
   // address, so a contact only fills the first (start) field. street-address is
   // the token that triggers the "use a contact's address" suggestion.
   const ac = `section-stop${++STOP_UID} street-address`;
+  const powVal = (opts.powerKW != null && opts.powerKW !== '' && +opts.powerKW > 0) ? +opts.powerKW : '';
   row.innerHTML =
       `<span class="rs-handle" title="Drag to reorder">⠿</span>`
     + `<span class="rs-dot"></span>`
     + `<input class="rs-addr" type="text" placeholder="Address or place" autocomplete="${ac}">`
     + `<button type="button" class="rs-btn rs-loc" title="Use my current location">📍</button>`
     + `<button type="button" class="rs-btn rs-home" title="Use home">🏠</button>`
+    + `<button type="button" class="rs-btn rs-clock" title="Set a leave date/time (delays arrival)">🕒</button>`
     + `<button type="button" class="rs-btn rs-charge" title="Charge here">⚡</button>`
     + `<button type="button" class="rs-btn rs-del" title="Remove stop">×</button>`
-    + `<div class="rs-slider"><input type="range" min="50" max="100" step="5" value="${charge||80}"><span class="rs-pct"></span>`
-    + `<label class="rs-cost" title="Cost to charge at this stop ($/kWh) — default free"><small>$</small><input class="rs-cost-input" type="number" min="0" step="0.01" value="${cost!=null?cost:0}"><small>/kWh</small></label></div>`;
+    + `<div class="rs-slider">`
+    +   `<div class="rs-sched">`
+    +     `<span class="rs-sched-lbl">Leave this stop</span>`
+    +     `<input class="rs-dep-date" type="date">`
+    +     `<input class="rs-dep-time" type="time">`
+    +     `<span class="rs-dwell"></span>`
+    +   `</div>`
+    +   `<div class="rs-chg">`
+    +     `<div class="rs-mode"><button type="button" class="rs-mode-btn rs-mode-pct" title="Set the target charge level">Charge to %</button>`
+    +       `<button type="button" class="rs-mode-btn rs-mode-pow" title="Compute the charge from power × time parked here">From time here</button></div>`
+    +     `<div class="rs-pctwrap"><input type="range" min="50" max="100" step="5" value="${charge||80}"><span class="rs-pct"></span></div>`
+    +     `<div class="rs-powwrap"><input class="rs-power" type="number" min="0" step="1" placeholder="kW" value="${powVal}"><small style="color:var(--tc-muted)">kW</small><span class="rs-pow-out"></span></div>`
+    +     `<label class="rs-cost" title="Cost to charge at this stop ($/kWh) — default free"><small>$</small><input class="rs-cost-input" type="number" min="0" step="0.01" value="${cost!=null?cost:0}"><small>/kWh</small></label>`
+    +   `</div>`
+    + `</div>`;
   row.querySelector('.rs-addr').value = addr || '';
-  const slider = row.querySelector('.rs-slider'), range = row.querySelector('input[type=range]'), pct = row.querySelector('.rs-pct');
+  const range = row.querySelector('input[type=range]'), pct = row.querySelector('.rs-pct');
   const updatePct = () => {
     pct.innerHTML = `${range.value}% <small>charge here</small>`;
     // Keep the WebKit track fill aligned with the thumb (track-relative %).
@@ -912,24 +954,85 @@ function makeStopRow(addr, charge, cost){
     range.style.setProperty('--fill', f + '%');
   };
   updatePct();
-  if (charge != null){ row.classList.add('charging'); row.querySelector('.rs-charge').classList.add('on'); slider.classList.add('show'); }
-  row.querySelector('.rs-charge').onclick = () => {
-    const on = row.classList.toggle('charging');
-    row.querySelector('.rs-charge').classList.toggle('on', on);
-    slider.classList.toggle('show', on);
-    syncCharges();   // charge changes apply live (no re-geocode needed)
-  };
+  // Restore saved state: charge target, leave date/time, charging power, and an
+  // explicit charge-mode override (otherwise the mode is auto-chosen — see below).
+  if (charge != null) row.classList.add('charging');
+  if (opts.depDate) row.querySelector('.rs-dep-date').value = opts.depDate;
+  if (opts.depTime) row.querySelector('.rs-dep-time').value = opts.depTime;
+  if (opts.depDate || opts.depTime || opts.scheduled) row.classList.add('scheduled');
+  if (opts.chargeMode === 'pct' || opts.chargeMode === 'power') row.dataset.modeSet = opts.chargeMode;
+  // ⚡ toggles charging; 🕒 toggles a scheduled leave time (which on its own just
+  // delays arrival — a waypoint with a dwell but no charge).
+  row.querySelector('.rs-charge').onclick = () => { row.classList.toggle('charging'); updateStopUI(row); syncCharges(); };
+  row.querySelector('.rs-clock').onclick  = () => { row.classList.toggle('scheduled'); updateStopUI(row); syncCharges(); };
+  // Charge-mode toggle. "From time here" also reveals the leave-time row, since
+  // power-based charging needs an arrival (calculated) and a departure (entered).
+  row.querySelector('.rs-mode-pct').onclick = () => { row.dataset.modeSet = 'pct'; updateStopUI(row); syncCharges(); };
+  row.querySelector('.rs-mode-pow').onclick = () => { row.dataset.modeSet = 'power'; row.classList.add('scheduled'); updateStopUI(row); syncCharges(); };
   range.oninput = updatePct;
   range.onchange = syncCharges;
   // Optional per-stop charging cost ($/kWh) — re-cost the trip when it changes.
   row.querySelector('.rs-cost-input').onchange = syncCharges;
+  // Leave date/time + charging power feed the timeline; live-update on change.
+  row.querySelector('.rs-dep-date').onchange = () => { updateStopUI(row); syncCharges(); };
+  row.querySelector('.rs-dep-time').onchange = () => { updateStopUI(row); syncCharges(); };
+  row.querySelector('.rs-power').oninput = () => updateStopUI(row);
+  row.querySelector('.rs-power').onchange = () => { updateStopUI(row); syncCharges(); };
   row.querySelector('.rs-home').onclick = () => { const i = row.querySelector('.rs-addr'); i.value = HOME.label; i.dataset.home = '1'; delete i.dataset.lat; delete i.dataset.lon; };
   row.querySelector('.rs-loc').onclick = () => useCurrentLocation(row);
   row.querySelector('.rs-del').onclick = () => { row.remove(); renderStopKinds(); };
   // Typing a real address invalidates a "home" or GPS pin so the text re-geocodes.
   row.querySelector('.rs-addr').addEventListener('input', e => { delete e.target.dataset.home; delete e.target.dataset.lat; delete e.target.dataset.lon; });
   row.querySelector('.rs-addr').addEventListener('keydown', e => { if (e.key === 'Enter') planTrip(); });
+  updateStopUI(row);
   return row;
+}
+// The effective charge mode for a stop: 'pct' (slider target) or 'power' (kW ×
+// dwell). An explicit per-stop toggle wins; otherwise auto-use power once BOTH a
+// charging power and a leave time are set (so the calculated charge is possible).
+function stopEffectiveMode(row){
+  const powEl = row.querySelector('.rs-power');
+  const powerKW = parseFloat(powEl ? powEl.value : '') || 0;
+  const dd = row.querySelector('.rs-dep-date'), dt = row.querySelector('.rs-dep-time');
+  const hasTime = !!(dd && dd.value && dt && dt.value);
+  const override = row.dataset.modeSet;
+  if (override === 'power') return powerKW > 0 ? 'power' : 'pct';
+  if (override === 'pct') return 'pct';
+  return (powerKW > 0 && hasTime) ? 'power' : 'pct';
+}
+// Sync a stop row's panel to its current toggles: show the panel when charging OR
+// scheduled, switch the charge sub-row between slider and power inputs, light the
+// active mode button, and refresh the leave-time / power hints.
+function updateStopUI(row){
+  const charging = row.classList.contains('charging');
+  const scheduled = row.classList.contains('scheduled');
+  row.querySelector('.rs-charge').classList.toggle('on', charging);
+  row.querySelector('.rs-clock').classList.toggle('on', scheduled);
+  const slider = row.querySelector('.rs-slider');
+  if (slider) slider.classList.toggle('show', charging || scheduled);
+  const mode = stopEffectiveMode(row);
+  row.classList.toggle('powmode', charging && mode === 'power');
+  const bPct = row.querySelector('.rs-mode-pct'), bPow = row.querySelector('.rs-mode-pow');
+  if (bPct) bPct.classList.toggle('on', mode === 'pct');
+  if (bPow) bPow.classList.toggle('on', mode === 'power');
+  const dd = row.querySelector('.rs-dep-date'), dt = row.querySelector('.rs-dep-time');
+  const dwellEl = row.querySelector('.rs-dwell');
+  if (dwellEl){
+    if (dd && dd.value && dt && dt.value){
+      const d = new Date(`${dd.value}T${dt.value}`);
+      dwellEl.textContent = isNaN(d.getTime()) ? '' : '→ leave ' + d.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }) + ' ' + dt.value;
+    } else if (dt && dt.value){
+      dwellEl.textContent = '→ leave ' + dt.value;
+    } else {
+      dwellEl.textContent = 'optional — delays arrival';
+    }
+  }
+  const powEl = row.querySelector('.rs-power'), powOut = row.querySelector('.rs-pow-out');
+  if (powOut){
+    const kw = parseFloat(powEl ? powEl.value : '') || 0;
+    const hasTime = !!(dd && dd.value && dt && dt.value);
+    powOut.textContent = kw > 0 ? (hasTime ? '· fills from arrival to leave time' : '· add a leave time to compute charge') : '';
+  }
 }
 // Charge toggle/slider changed after a plan exists — update the waypoint anchors
 // (intermediate rows map to STATE.waypoints in order) and re-plan, no geocoding.
@@ -941,6 +1044,11 @@ function syncCharges(){
     const row = middle[i];
     wp.chargeTo = row.classList.contains('charging') ? +row.querySelector('input[type=range]').value : NaN;
     wp.chargeCost = parseFloat(row.querySelector('.rs-cost-input').value) || 0;
+    const dd = row.querySelector('.rs-dep-date'), dt = row.querySelector('.rs-dep-time'), pw = row.querySelector('.rs-power');
+    wp.depDate = dd ? dd.value : '';
+    wp.depTime = dt ? dt.value : '';
+    wp.powerKW = parseFloat(pw ? pw.value : '') || 0;
+    wp.chargeMode = stopEffectiveMode(row);
   });
   refresh();
 }
@@ -962,7 +1070,13 @@ function renderStopKinds(){
     // separately, and charging at the final destination doesn't affect the plan).
     const endpoint = isStart || isDest;
     row.querySelector('.rs-charge').style.display = endpoint ? 'none' : '';
-    if (endpoint && row.classList.contains('charging')){ row.classList.remove('charging'); row.querySelector('.rs-slider').classList.remove('show'); row.querySelector('.rs-charge').classList.remove('on'); }
+    row.querySelector('.rs-clock').style.display = endpoint ? 'none' : '';
+    // Endpoints can't charge or hold a leave-time dwell (the start uses the start
+    // %, and a final-destination charge/dwell doesn't affect the plan).
+    if (endpoint && (row.classList.contains('charging') || row.classList.contains('scheduled'))){
+      row.classList.remove('charging', 'scheduled');
+      updateStopUI(row);
+    }
     row.classList.toggle('removable', rows.length > 2);
   });
 }
@@ -972,6 +1086,7 @@ function getRouteStops(){
     // A GPS pin (from "use my current location") stores exact coords on the input
     // so planning skips geocoding the text; null when the field is a plain address.
     const lat = parseFloat(addrEl.dataset.lat), lon = parseFloat(addrEl.dataset.lon);
+    const depDateEl = row.querySelector('.rs-dep-date'), depTimeEl = row.querySelector('.rs-dep-time'), powEl = row.querySelector('.rs-power');
     return {
       addr: addrEl.value.trim(),
       isHome: addrEl.dataset.home === '1',
@@ -979,7 +1094,12 @@ function getRouteStops(){
       lon: isFinite(lon) ? lon : null,
       chargeHere: row.classList.contains('charging'),
       chargeTo: +row.querySelector('input[type=range]').value,
-      chargeCost: parseFloat(row.querySelector('.rs-cost-input').value) || 0
+      chargeCost: parseFloat(row.querySelector('.rs-cost-input').value) || 0,
+      scheduled: row.classList.contains('scheduled'),
+      depDate: depDateEl ? depDateEl.value : '',
+      depTime: depTimeEl ? depTimeEl.value : '',
+      powerKW: parseFloat(powEl ? powEl.value : '') || 0,
+      chargeMode: stopEffectiveMode(row)
     };
   });
 }
@@ -1177,12 +1297,15 @@ async function planTrip(){
       : geocode(s.addr)));
     const A = geo[0], B = geo[geo.length - 1];
     // Intermediate stops become waypoints, carrying their "charge here" target
-    // and optional $/kWh cost (default free).
+    // and optional $/kWh cost (default free), plus any scheduled leave date/time
+    // and charging power used to time the trip / compute an overnight charge.
     const waypoints = [];
     for (let i = 1; i < stops.length - 1; i++){
       waypoints.push({ addr: stops[i].addr, lat: geo[i].lat, lon: geo[i].lon,
         chargeTo: stops[i].chargeHere ? stops[i].chargeTo : NaN,
-        chargeCost: stops[i].chargeCost });
+        chargeCost: stops[i].chargeCost,
+        depDate: stops[i].depDate || '', depTime: stops[i].depTime || '',
+        powerKW: stops[i].powerKW || 0, chargeMode: stops[i].chargeMode || 'pct' });
     }
 
     setStatus('Planning route…');
@@ -1383,9 +1506,9 @@ function compute(A, B, rt, temp){
 //  Data: Open Charge Map (your free key, kept in localStorage).
 //  Only DCFC >= 50 kW on your preferred networks are considered.
 // ============================================================
-const NET_DEFAULT_KW = { 'Tesla': 250, 'Electrify America': 150, 'ChargePoint': 62.5 };
-const NET_CLASS = { 'Tesla': 'net-tesla', 'Electrify America': 'net-ea', 'ChargePoint': 'net-cp' };
-const NET_PREF = { 'Tesla': 3, 'Electrify America': 2, 'ChargePoint': 1 }; // tie-break order
+const NET_DEFAULT_KW = { 'Tesla': 250, 'Electrify America': 150, 'ChargePoint': 62.5, 'Other': 50 };
+const NET_CLASS = { 'Tesla': 'net-tesla', 'Electrify America': 'net-ea', 'ChargePoint': 'net-cp', 'Other': 'net-other' };
+const NET_PREF = { 'Tesla': 3, 'Electrify America': 2, 'ChargePoint': 1, 'Other': 0 }; // tie-break order
 const MIN_DCFC_KW = 50;
 
 // Friendly, plain-language "how to fast-charge here" notes for the co-driver cheat
@@ -1512,6 +1635,22 @@ async function fetchPool(items, fn, concurrency){
   return results;
 }
 
+// Does this DC connector set include a CCS (SAE Combo) plug the Mach-E can use?
+// OCM ConnectionTypeID 32 = CCS1, 33 = CCS2; Title is the reliable fallback. US
+// DC fast is overwhelmingly CCS, so a site whose connectors carry NO recognizable
+// type info gets the benefit of the doubt; only an all-CHAdeMO / all-Tesla-
+// proprietary site (typed, no CCS) is rejected as incompatible.
+function dcHasCCS(conns){
+  let sawType = false;
+  for (const c of conns){
+    const id = c.ConnectionTypeID;
+    const t = ((c.ConnectionType && c.ConnectionType.Title) || '').toLowerCase();
+    if (id === 32 || id === 33 || t.includes('ccs') || t.includes('combo')) return true;
+    if (id != null || t) sawType = true;
+  }
+  return !sawType;
+}
+
 async function fetchChargers(geometry){
   const key = getOCMKey();
   if (!key) return null;
@@ -1533,8 +1672,9 @@ async function fetchChargers(geometry){
     if (!p || !p.AddressInfo || seen.has(p.ID)) return;
     seen.add(p.ID);
     const opTitle = (p.OperatorInfo && p.OperatorInfo.Title) || '';
-    const net = matchNetwork(opTitle) || matchNetwork(p.AddressInfo.Title || '');  // fall back to the site name
-    if (!net) return;
+    const matched = matchNetwork(opTitle) || matchNetwork(p.AddressInfo.Title || '');  // fall back to the site name
+    const preferred = matched != null;          // Tesla / EA / ChargePoint — have how-tos + rates
+    const net = matched || 'Other';
     const dc = (p.Connections || []).filter(c => (c.PowerKW >= MIN_DCFC_KW) || (c.Level && c.Level.IsFastChargeCapable && c.PowerKW == null));
     if (!dc.length) return;
     let maxKW = Math.max(0, ...dc.map(c => c.PowerKW || 0));
@@ -1545,9 +1685,13 @@ async function fetchChargers(geometry){
     // unreliable (Stevensville & Cadillac are both "Tesla-only", but only the
     // 250 kW V3 Stevensville works), so we gate Tesla on power instead.
     if (net === 'Tesla' && maxKW < TESLA_MIN_KW) return;
+    // The Mach-E charges on CCS. EA/ChargePoint (and Tesla via the adapter) are
+    // known-compatible; for any OTHER operator only trust it when it actually has
+    // a CCS plug, so we never route to a CHAdeMO- or Tesla-proprietary-only site.
+    if (!preferred && !dcHasCCS(dc)) return;
     const pr = projectCharger(coords, cum, p.AddressInfo.Latitude, p.AddressInfo.Longitude);
     if (pr.offMi > 8) return; // keep it reasonably close to the route
-    out.push({ id: p.ID, name: p.AddressInfo.Title, net, maxKW,
+    out.push({ id: p.ID, name: p.AddressInfo.Title, net, preferred, maxKW,
       town: p.AddressInfo.Town || p.AddressInfo.StateOrProvince || '',
       addr: p.AddressInfo.AddressLine1 || '',
       city: p.AddressInfo.Town || '',
@@ -1741,7 +1885,8 @@ function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers){
     if (!r.feasible) return { needed: true, feasible: false, stops: all, gapFrom: r.gapFrom, reachMi: r.reachMi };
     all.push({ waypoint: true, name: wp.name, net: wp.acNet || 'AC', alongMi: wp.mile,
       arriveSoc: r.arriveSoc, target: wp.chargeTo, lat: wp.lat, lon: wp.lon,
-      addedKWh: Math.max(0, wp.chargeTo - r.arriveSoc) / 100 * nrg.batt, rate: wp.rate || 0 });
+      addedKWh: Math.max(0, wp.chargeTo - r.arriveSoc) / 100 * nrg.batt, rate: wp.rate || 0,
+      depMs: wp.depMs != null ? wp.depMs : null, mode: wp.mode || null, powerKW: wp.powerKW || 0 });
     soc = wp.chargeTo;
     segStart = wp.mile;
   }
@@ -1846,28 +1991,92 @@ function renderSummary(plan, energyTrip, fromHome, miles){
 //     latest you can leave. Driving time (OSRM) and charging time don't depend
 //     on the departure clock, so the leave-by time is exact. Durations are
 //     typical free-flow (no live/historical traffic without a keyed routing API).
+// Walk the trip clock to get real arrival times, accounting for driving, DC fast
+// charging, AND any explicit "leave this stop" departures (an overnight hotel
+// charge, a meal stop, etc.). Driving time is spread evenly along the route
+// (hours per mile) so a stop's arrival is when you'd reach its mileage. A stop
+// with an explicit leave time held later than its arrival adds a dwell (which
+// can push the final arrival to the next day). Returns null when no departure
+// date is set. Also annotates each plan stop with _arriveMs/_depMs/_dwellH and
+// returns a per-mile map so the renderers can show arrive/leave times.
+function walkTimeline(plan, rt, round, oneWay){
+  const dEl = document.getElementById('depDate'), tEl = document.getElementById('depTime');
+  if (!dEl || !dEl.value) return null;
+  const startMs = new Date(`${dEl.value}T${tEl && tEl.value ? tEl.value : '08:00'}`).getTime();
+  if (isNaN(startMs)) return null;
+  const hpm = oneWay > 0 ? rt.hours / oneWay : 0;            // hours per mile (avg)
+  const driveMs = mi => hpm * Math.max(0, mi) * 3600000;
+  const totalMi = round ? oneWay * 2 : oneWay;
+
+  // Ordered events along the route: DCFC + charging waypoints from the plan, plus
+  // any non-charging but TIME-scheduled waypoints (outbound) carried on STATE.
+  const events = [];
+  ((plan && plan.stops) || []).forEach(s => {
+    if (s.alongMi == null) return;
+    events.push({ mile: s.alongMi, mins: s.waypoint ? 0 : (s.mins || 0),
+      depMs: (s.waypoint && s.depMs != null) ? s.depMs : null, ref: s });
+  });
+  const seen = new Set(events.map(e => Math.round(e.mile)));
+  ((STATE && STATE.waypoints) || []).forEach(w => {
+    if (w.alongMi == null || seen.has(Math.round(w.alongMi))) return;
+    const dm = (w.depDate && w.depTime) ? new Date(`${w.depDate}T${w.depTime}`).getTime() : null;
+    if (dm == null || isNaN(dm)) return;
+    events.push({ mile: w.alongMi, mins: 0, depMs: dm, ref: { timeOnly: true, name: w.addr, alongMi: w.alongMi } });
+  });
+  events.sort((a, b) => a.mile - b.mile);
+
+  let clock = startMs, pos = 0;
+  let driveMin = 0, outChargeMin = 0, outDwellMin = 0, totalChargeMin = 0, totalDwellMin = 0, destMs = null;
+  const stopTimes = new Map();
+  for (const e of events){
+    // Capture destination arrival the moment we'd reach mile oneWay (before any
+    // return-leg events), so round trips report when you GET there.
+    if (destMs == null && e.mile >= oneWay - 0.01) destMs = clock + driveMs(oneWay - pos);
+    const dmin = hpm * Math.max(0, e.mile - pos) * 60;
+    clock += dmin * 60000; driveMin += dmin;
+    const arriveMs = clock;
+    let dwellH = 0;
+    if (e.depMs != null && e.depMs > arriveMs){ clock = e.depMs; dwellH = (e.depMs - arriveMs) / 3600000; }
+    if (e.mins) clock += e.mins * 60000;
+    const outbound = e.mile <= oneWay + 0.01;
+    if (dwellH > 0){ totalDwellMin += dwellH * 60; if (outbound) outDwellMin += dwellH * 60; }
+    if (e.mins){ totalChargeMin += e.mins; if (outbound) outChargeMin += e.mins; }
+    stopTimes.set(e.mile, { arriveMs, depMs: clock, dwellH });
+    if (e.ref){ e.ref._arriveMs = arriveMs; e.ref._depMs = clock; e.ref._dwellH = dwellH; }
+    pos = e.mile;
+  }
+  if (destMs == null) destMs = clock + driveMs(oneWay - pos);
+  const endMs = clock + driveMs(totalMi - pos);
+  driveMin += hpm * Math.max(0, totalMi - pos) * 60;
+  return { startMs, destArriveMs: destMs, endArriveMs: endMs, driveMin,
+    outChargeMin, outDwellMin, totalChargeMin, totalDwellMin, stopTimes };
+}
+
 function renderETA(plan, rt, round, oneWay){
   const banner = document.getElementById('etaBanner');
   LAST_ETA = { plan, rt, round, oneWay };          // cache so "arrive by" can recompute live
-  const dEl = document.getElementById('depDate'), tEl = document.getElementById('depTime');
-  const dep = dEl.value ? new Date(`${dEl.value}T${tEl.value || '08:00'}`) : null;
-  if (!dep || isNaN(dep.getTime())){ banner.style.display = 'none'; return; }
-  const chargeMins = ((plan && plan.stops) || [])
-    .filter(s => !s.waypoint && (!round || s.alongMi <= oneWay))
-    .reduce((sum, s) => sum + (s.mins || 0), 0);
+  const tl = walkTimeline(plan, rt, round, oneWay);
+  if (!tl){ banner.style.display = 'none'; return; }
+  const dep = new Date(tl.startMs);
   const driveMin = rt.hours * 60;                 // one-way driving time
-  const totalMin = driveMin + chargeMins;
+  const chargeMins = tl.outChargeMin;             // outbound DC fast-charging
+  const dwellMins  = tl.outDwellMin;              // outbound scheduled stopovers (e.g. overnight)
+  const totalMin = (tl.destArriveMs - tl.startMs) / 60000;
   const clock = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const dayTime = d => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + clock(d);
-  const breakdown = chargeMins > 0
-    ? `${fmtMinsShort(driveMin)} drive + ${fmtMinsShort(chargeMins)} charging`
-    : `${fmtMinsShort(driveMin)} drive`;
+  const partsArr = [`${fmtMinsShort(driveMin)} drive`];
+  if (chargeMins > 0.5) partsArr.push(`${fmtMinsShort(chargeMins)} charging`);
+  if (dwellMins  > 0.5) partsArr.push(`${fmtMinsShort(dwellMins)} stopover`);
+  const breakdown = partsArr.join(' + ');
 
-  // "Arrive by" optimizer: given a target arrival on the departure date, the
-  // latest you can leave is target − total trip time.
+  // "Arrive by" optimizer: the latest you can leave is target − total trip time.
+  // It assumes the trip duration is independent of the departure clock, so it's
+  // only offered when there's NO explicit scheduled stopover — an overnight charge
+  // pins the schedule to an absolute time and breaks that assumption.
   const abEl = document.getElementById('arriveByTime');
   const arriveBy = abEl ? abEl.value : '';
-  if (arriveBy){
+  if (arriveBy && dwellMins <= 0.5){
+    const dEl = document.getElementById('depDate');
     const target = new Date(`${dEl.value}T${arriveBy}`);
     if (!isNaN(target.getTime())){
       const leaveBy = new Date(target.getTime() - totalMin * 60000);
@@ -1882,8 +2091,9 @@ function renderETA(plan, rt, round, oneWay){
     }
   }
 
-  // Departure mode: chosen departure → estimated arrival.
-  const arr = new Date(dep.getTime() + totalMin * 60000);
+  // Departure mode: chosen departure → estimated arrival (next-day if an overnight
+  // stop pushes it past midnight).
+  const arr = new Date(tl.destArriveMs);
   const arrLbl = (arr.toDateString() === dep.toDateString()) ? clock(arr) : dayTime(arr);
   banner.innerHTML =
     `<span class="eta-ico">🕜</span>`
@@ -1988,18 +2198,15 @@ function printTripLog(){
   const startSoc = document.getElementById('startSoc').value;
   const reserve  = document.getElementById('reserve').value;
   const dd = document.getElementById('depDate').value;
-  const tm = document.getElementById('depTime').value || '08:00';
 
-  // Departure / estimated arrival (mirrors renderETA: one-way drive + outbound charging).
+  // Departure / estimated arrival via the trip timeline (drive + DC charging +
+  // any scheduled stopovers, so an overnight charge pushes arrival to next day).
+  // walkTimeline also annotates each plan stop with _arriveMs/_depMs/_dwellH.
   let depStr = '—', arrStr = '—';
-  const dep = dd ? new Date(`${dd}T${tm}`) : null;
-  if (dep && !isNaN(dep.getTime())){
-    const chargeMins = ((plan && plan.stops) || [])
-      .filter(s => !s.waypoint && (!round || s.alongMi <= oneWay))
-      .reduce((sum, x) => sum + (x.mins || 0), 0);
-    const arr = new Date(dep.getTime() + (rt.hours * 60 + chargeMins) * 60000);
+  const tl = walkTimeline(plan, rt, round, oneWay);
+  if (tl){
     const fmt = d => d.toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
-    depStr = fmt(dep); arrStr = fmt(arr);
+    depStr = fmt(new Date(tl.startMs)); arrStr = fmt(new Date(tl.destArriveMs));
   }
 
   // Charging-stop rows: planned info shown, blank cells for the driver to fill.
@@ -2013,8 +2220,11 @@ function printTripLog(){
     n++;
     const onReturn = round && oneWay && s.alongMi > oneWay;
     const mile = onReturn ? `${Math.round(2*oneWay - s.alongMi)} mi from home` : `mile ${Math.round(s.alongMi)}`;
+    const stayLog = (s.waypoint && s._dwellH > 0)
+      ? ` · stay ~${fmtMinsShort(s._dwellH*60)}${s._depMs!=null?`, leave ${new Date(s._depMs).toLocaleString([], { weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false })}`:''}`
+      : '';
     const planLine = s.waypoint
-      ? `${mile} · charge to ${Math.round(s.target)}%${s.addedKWh!=null?` · +${Math.round(s.addedKWh)} kWh`:''}`
+      ? `${mile} · charge to ${Math.round(s.target)}%${s.addedKWh!=null?` · +${Math.round(s.addedKWh)} kWh`:''}${stayLog}`
       : `${mile} · arrive ${Math.round(s.arriveSoc)}% → ${Math.round(s.target)}% · +${Math.round(s.addedKWh)} kWh · ~${Math.round(s.mins)} min · up to ${Math.round(s.maxKW)} kW`;
     const lk = chargerLinks(s);
     const addr = lk.addrStr ? `<div class="addr">${E(lk.addrStr)}</div>` : '';
@@ -2117,23 +2327,21 @@ function printGuidanceSheet(){
   const startRaw = document.getElementById('startSoc').value;
   const startSoc = startRaw !== '' && !isNaN(+startRaw) ? Math.round(+startRaw) : null;
   const dd = document.getElementById('depDate').value;
-  const tm = document.getElementById('depTime').value || '08:00';
 
   const stops = (plan && plan.stops) || [];
   const dcfc  = stops.filter(s => !s.waypoint);
   const acWp  = stops.filter(s => s.waypoint);
-  // Total fast-charging across the whole trip (for the bottom line) vs. just the
-  // outbound legs (for the destination arrival time, like the trip log).
+  // Total fast-charging across the whole trip (for the bottom line).
   const totalChargeMins = dcfc.reduce((sum, x) => sum + (x.mins || 0), 0);
-  const outChargeMins = dcfc.filter(s => !round || s.alongMi <= oneWay).reduce((sum, x) => sum + (x.mins || 0), 0);
 
-  // Departure / arrival (one-way drive + outbound charging, same as the trip log).
+  // Departure / arrival via the trip timeline (drive + DC charging + any
+  // scheduled stopovers — an overnight charge pushes arrival to the next day).
+  // Also annotates each plan stop with _arriveMs/_depMs/_dwellH for the cards.
   let depStr = '', arrStr = '';
-  const dep = dd ? new Date(`${dd}T${tm}`) : null;
-  if (dep && !isNaN(dep.getTime())){
-    const arr = new Date(dep.getTime() + (rt.hours * 60 + outChargeMins) * 60000);
+  const tl = walkTimeline(plan, rt, round, oneWay);
+  if (tl){
     const fmt = d => d.toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
-    depStr = fmt(dep); arrStr = fmt(arr);
+    depStr = fmt(new Date(tl.startMs)); arrStr = fmt(new Date(tl.destArriveMs));
   }
 
   // One tap = the whole route (start → stops → destination, and back if round trip).
@@ -2177,9 +2385,14 @@ function printGuidanceSheet(){
       ? `<div class="cs-links">${lk.apple ? `<a href="${lk.apple}" target="_blank" rel="noopener">📍 Open in Maps</a>` : ''}${lk.plug ? `<a href="${lk.plug}" target="_blank" rel="noopener">🔌 Check it on PlugShare</a>` : ''}</div>`
       : '';
     if (s.waypoint){
+      const fmtT = ms => new Date(ms).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' });
+      const sched = (s._dwellH > 0 && s._arriveMs != null)
+        ? `<div class="cs-where">Get in about <b>${fmtT(s._arriveMs)}</b>, leave <b>${s._depMs!=null?fmtT(s._depMs):'—'}</b> — about ${fmtMinsShort(s._dwellH*60)} parked${(s.mode==='power'&&s.powerKW>0)?`, charging at ~${Math.round(s.powerKW)} kW`:''}.</div>`
+        : '';
       cards += `<div class="cheat-stop">
         <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge slow">slow plug-in</span></div>
         <div class="cs-where">${whereMi}${where ? ` · ${where}` : ''}</div>
+        ${sched}
         <div class="cs-do">Plug in here and <b>charge to ${Math.round(s.target)}%</b>${s.addedKWh != null ? ` (adds about ${Math.round(s.addedKWh)} kWh)` : ''}. Leave it plugged in while you're parked — no need to watch it.</div>
         <div class="cs-how"><b>How:</b> ${NET_GUIDE_AC}</div>
         ${links}
@@ -2188,7 +2401,7 @@ function printGuidanceSheet(){
       const how = NET_GUIDE[s.net] || NET_GUIDE_GENERIC;
       const tip = s.mins >= 25 ? 'Plenty of time for a meal or a walk.' : s.mins >= 12 ? 'Good time for a coffee or a restroom break.' : 'Quick top-up — just a few minutes.';
       cards += `<div class="cheat-stop">
-        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge fast">fast charge${s.net ? ` · ${E(s.net)}` : ''}</span></div>
+        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge fast">fast charge${s.net ? ` · ${E(s.net==='Other'?'another network':s.net)}` : ''}</span></div>
         <div class="cs-where">${whereMi}${where ? ` · ${where}` : ''}${s.maxKW ? ` · up to ${Math.round(s.maxKW)} kW` : ''}</div>
         <div class="cs-do">Pull in with around <b>${Math.round(s.arriveSoc)}%</b> and <b>charge to ${Math.round(s.target)}%</b> — about <b>${Math.round(s.mins)} min</b>. ${tip}</div>
         <div class="cs-how"><b>How to charge here:</b> ${how}</div>
@@ -2292,13 +2505,29 @@ async function updateChargingPlan(rt, e, temp){
   const startSoc = Math.max(0, Math.min(100, +socEl.value));
   const reserve = Math.max(0, Math.min(50, +document.getElementById('reserve').value || 0));
   const waypoints = (STATE && STATE.waypoints) || [];
-  const chargingWps = waypoints.filter(w => !isNaN(w.chargeTo) && w.chargeTo > 0);
+  // A waypoint charges either to an explicit slider % OR via "from time here"
+  // (a charging power that fills the battery during the parked dwell).
+  const isChargingWp = w => (!isNaN(w.chargeTo) && w.chargeTo > 0) || (w.chargeMode === 'power' && w.powerKW > 0);
+  const chargingWps = waypoints.filter(isChargingWp);
   // Position every waypoint along the route (cumulative miles) so NON-charging
   // routing waypoints can be re-inserted into the drawn line + maps export too —
   // buildRoutePoints used to keep only charging stops, dropping plain waypoints
   // from the route so the map detoured around them. legMiles[i+1] = miles at
   // waypoint i (the route input was [A, ...waypoints, B]).
-  waypoints.forEach((w, i) => { w.alongMi = (rt.legMiles && rt.legMiles[i + 1] != null) ? rt.legMiles[i + 1] : null; });
+  // Prefer PROJECTING each waypoint's own coordinates onto the route geometry
+  // (the same nearest-vertex projection used for DC chargers). It's robust to
+  // routing-provider segment quirks where legMiles can collapse to [0,total] and
+  // silently push a charge anchor to the trip end, dropping it from the plan.
+  const _wpCoords = rt.geometry && rt.geometry.coordinates;
+  const _wpCum = _wpCoords ? routeCum(_wpCoords) : null;
+  waypoints.forEach((w, i) => {
+    let mile = (rt.legMiles && rt.legMiles[i + 1] != null) ? rt.legMiles[i + 1] : null;
+    if (_wpCoords && w.lat != null && w.lon != null){
+      const pr = projectCharger(_wpCoords, _wpCum, w.lat, w.lon);
+      if (pr && isFinite(pr.alongMi)) mile = pr.alongMi;
+    }
+    w.alongMi = mile;
+  });
   if (rt.elev === undefined){
     try { rt.elev = await fetchElevation(rt.geometry); } catch(err){ rt.elev = null; }
   }
@@ -2321,16 +2550,42 @@ async function updateChargingPlan(rt, e, temp){
   const acAnchorList = () => {
     const out = [];
     waypoints.forEach((w, i) => {
-      const mile = (rt.legMiles && rt.legMiles[i + 1]);
-      if (mile == null || isNaN(w.chargeTo) || !(w.chargeTo > 0)) return;
-      const base = { chargeTo: w.chargeTo, name: w.addr, lat: w.lat, lon: w.lon, rate: w.chargeCost };
-      out.push({ ...base, mile });
-      if (round && mile < oneWay - 0.5) out.push({ ...base, mile: 2 * oneWay - mile, returnLeg: true });
+      const mile = w.alongMi;
+      if (mile == null || !isChargingWp(w)) return;
+      const dm = (w.depDate && w.depTime) ? new Date(`${w.depDate}T${w.depTime}`).getTime() : null;
+      const provTo = (w.chargeTo > 0) ? w.chargeTo : 80;   // power mode resolves this below
+      const base = { chargeTo: provTo, name: w.addr, lat: w.lat, lon: w.lon, rate: w.chargeCost,
+        mode: w.chargeMode, powerKW: w.powerKW || 0, wpIndex: i };
+      out.push({ ...base, mile, depMs: (dm != null && !isNaN(dm)) ? dm : null });
+      // The return-leg twin reuses the same charge but NOT the (outbound-only)
+      // scheduled departure — you don't overnight at the hotel on the way home.
+      if (round && mile < oneWay - 0.5) out.push({ ...base, mile: 2 * oneWay - mile, returnLeg: true, depMs: null });
     });
     return out;
   };
   const destAnchor = () => ({ mile: oneWay, chargeTo: 90, name: 'Destination charge',
     lat: STATE.B.lat, lon: STATE.B.lon, rate: parseFloat(document.getElementById('destRate').value) || 0 });
+  // Resolve "from time here" (power-mode) charges. The target % isn't known until
+  // we know how long you're parked, which needs the ARRIVAL time, which needs a
+  // plan. So run a provisional plan, walk its timeline for each power stop's
+  // arrival + dwell, then set its target from power × dwell (no efficiency loss,
+  // matching the simple onboard-energy model). Mutates anchors in place; the real
+  // plan is built afterward with the resolved targets.
+  const resolvePowerAnchors = (anchors, chargersForTiming) => {
+    if (!anchors.some(a => a.mode === 'power' && a.powerKW > 0)) return;
+    const prov = planJourney(planMi, anchors, planNrg, startSoc, reserve, chargersForTiming);
+    const tl = walkTimeline(prov, rt, round, oneWay);
+    if (!tl) return;   // no departure date set → can't time it; keep the fallback %
+    anchors.forEach(a => {
+      if (!(a.mode === 'power' && a.powerKW > 0) || a.depMs == null) return;
+      const info = tl.stopTimes.get(a.mile);
+      const provStop = (prov.stops || []).find(s => s.waypoint && s.alongMi === a.mile);
+      if (!info || !provStop || !(info.dwellH > 0)) return;
+      const added = a.powerKW * info.dwellH;                // kWh onboarded (100%)
+      const target = Math.min(100, provStop.arriveSoc + added / planNrg.batt * 100);
+      anchors.forEach(b => { if (b.wpIndex === a.wpIndex) b.chargeTo = target; });
+    });
+  };
   const energyTrip = planNrg.energyKWh(0, planMi);
   const fromHome = STATE && STATE.A && haversine(STATE.A.lat, STATE.A.lon, HOME.lat, HOME.lon) < 3;
 
@@ -2381,6 +2636,7 @@ async function updateChargingPlan(rt, e, temp){
     // one-way trips always had — no Open Charge Map key needed.
     const acAnchors = acAnchorList();
     if (round && canChargeDest) acAnchors.push(destAnchor());
+    resolvePowerAnchors(acAnchors, []);   // set "from time here" targets from dwell
     const acOnly = planJourney(planMi, acAnchors, planNrg, startSoc, reserve, []);
     if (acOnly.feasible && !acOnly.stops.some(s => !s.waypoint)){
       card.style.display = 'block';
@@ -2414,17 +2670,27 @@ async function updateChargingPlan(rt, e, temp){
 
   const chargers = rt.chargers || [];
   if (!chargers.length){
-    body.innerHTML = `<div class="stops-note">No compatible DCFC (Tesla V3 / EA / ChargePoint, ≥50 kW) found near this route in Open Charge Map.</div>`;
+    body.innerHTML = `<div class="stops-note">No compatible DC fast chargers (CCS, ≥50 kW) found near this route in Open Charge Map.</div>`;
     setVerdict('no', '🛑', `No compatible fast chargers found along this route.`);
     return;
   }
   // Build plan inputs. Round trips mirror the DC chargers onto the return leg;
   // the AC "charge here" anchors (also mirrored) and an optional destination
   // top-up are SoC-reset points. The mirrored energy model is already planNrg.
-  const planChargers = round ? mirrorForRoundTrip(chargers, rt.elev, oneWay).chargers : chargers;
+  const allChargers = round ? mirrorForRoundTrip(chargers, rt.elev, oneWay).chargers : chargers;
+  const prefChargers = allChargers.filter(c => c.preferred);
   const anchors = acAnchorList();
   if (round && canChargeDest) anchors.push(destAnchor());
-  const plan = planJourney(planMi, anchors, planNrg, startSoc, reserve, planChargers);
+  resolvePowerAnchors(anchors, prefChargers);   // set "from time here" targets from dwell
+  // Plan with your preferred networks (Tesla / EA / ChargePoint) first. If that
+  // leaves a gap no single charge can bridge, replan allowing any compatible CCS
+  // charger so a normal interstate route doesn't dead-end — and flag that some
+  // stops fall outside the preferred networks.
+  let plan = planJourney(planMi, anchors, planNrg, startSoc, reserve, prefChargers);
+  if (!plan.feasible){
+    const alt = planJourney(planMi, anchors, planNrg, startSoc, reserve, allChargers);
+    if (alt.feasible){ alt.usedNonPreferred = true; plan = alt; }
+  }
   renderStops(plan, e, reserve, round, startSoc, planNrg, oneWay);
   renderSummary(plan, energyTrip, fromHome, planMi);
   renderETA(plan, rt, round, oneWay);
@@ -2515,12 +2781,13 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
       body.innerHTML = `<div class="stops-note">⚠️ ${note}</div>`;
       return;
     }
-    // A genuine mid-route gap between chargers.
-    let msg = `<div class="stops-note">⚠️ Couldn't build a complete plan with your preferred networks`;
-    if (plan.gapFrom != null) msg += ` — no compatible DCFC (Tesla open-to-NACS / EA / ChargePoint, ≥50 kW) between mile ${plan.gapFrom} and ~mile ${plan.reachMi}`;
-    msg += `. The gap may be too long for one charge — add a waypoint there, or use a non-preferred charger.</div>`;
+    // A genuine mid-route gap between chargers — reached only after also trying
+    // chargers outside the preferred networks, so the gap is real.
+    let msg = `<div class="stops-note">⚠️ Couldn't build a complete charging plan`;
+    if (plan.gapFrom != null) msg += ` — no compatible DC fast charger (CCS, ≥50 kW) between mile ${plan.gapFrom} and ~mile ${plan.reachMi}`;
+    msg += `. That gap is longer than one charge can cover — add a stop/waypoint there to route past a charger.</div>`;
     body.innerHTML = msg + (plan.stops.length ? `<div class="stops-summary">Partial plan: ${plan.stops.length} stop(s) before the gap.</div>` : '');
-    setVerdict('no', '🛑', `Couldn't complete a charging plan — gap near mile ${plan.gapFrom}. Add a waypoint there or use a non-preferred charger.`);
+    setVerdict('no', '🛑', `Couldn't complete a charging plan — gap near mile ${plan.gapFrom}. Add a waypoint there to route past a charger.`);
     return;
   }
   if (!plan.stops.length){
@@ -2528,11 +2795,16 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
     return;
   }
   const dcfc = plan.stops.filter(s => !s.waypoint);
+  // Annotate each stop with arrival / leave times + dwell so a scheduled (e.g.
+  // overnight) charge can show when you'll get there and when you'll leave.
+  if (STATE && STATE.routes && STATE.routes[STATE.sel]) walkTimeline(plan, STATE.routes[STATE.sel], roundTrip, oneWay);
   const totalMin = dcfc.reduce((s,x)=>s+x.mins,0);
   const nWp = plan.stops.length - dcfc.length;
   const wpNote = nWp ? ` + ${nWp} waypoint charge${nWp>1?'s':''}` : '';
+  const nNonPref = dcfc.filter(s => s.preferred === false).length;
   setVerdict('ok', '✅', `Doable with <b>${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}</b>${wpNote} (~${Math.round(totalMin)} min fast-charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
   let html = `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive ${roundTrip?'home':''} around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
+  if (nNonPref) html += `<div class="stops-note">ℹ️ To bridge a gap, ${nNonPref>1?`${nNonPref} stops use chargers`:'one stop uses a charger'} outside your preferred networks (Tesla / EA / ChargePoint), marked <b>other network</b> below. ${nNonPref>1?'They’re':'It’s'} a standard CCS station${nNonPref>1?'s':''} — start ${nNonPref>1?'them':'it'} with that network’s own app or a tap-to-pay card.</div>`;
   let dividerShown = false, n = 0;
   plan.stops.forEach((s) => {
     // For round trips, drop a "turnaround" divider when stops cross into the return leg.
@@ -2543,12 +2815,16 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
     const onReturn = roundTrip && oneWay && s.alongMi > oneWay;
     const mileLabel = onReturn ? `${Math.round(2*oneWay - s.alongMi)} mi from home` : `mile ${Math.round(s.alongMi)}`;
     if (s.waypoint){
+      const stay = (s._dwellH > 0)
+        ? ` &nbsp;·&nbsp; <small style="color:var(--tc-muted)">stay ~${fmtMinsShort(s._dwellH*60)}${s._depMs!=null?`, leave ${new Date(s._depMs).toLocaleString([], { weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false })}`:''}</small>`
+        : '';
+      const via = (s.mode === 'power' && s.powerKW > 0) ? ` <small style="color:var(--tc-muted)">via ~${Math.round(s.powerKW)} kW</small>` : '';
       html += `<div class="stop wp-stop">
         <div class="stop-num">★</div>
         <div class="stop-main">
           <div class="stop-name">${esc(s.name)}<span class="net-badge net-wp">${s.net==='AC'?'charge here':s.net}</span></div>
-          <div class="stop-sub">${mileLabel}</div>
-          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here${s.addedKWh!=null?` &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ${s.rate>0?`~$${(s.addedKWh*s.rate).toFixed(2)} <small style="color:var(--tc-muted)">@ $${s.rate.toFixed(2)}/kWh</small>`:`<span style="color:#16a34a">free</span>`}`:''}</div>
+          <div class="stop-sub">${mileLabel}${stay}</div>
+          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here${via}${s.addedKWh!=null?` &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ${s.rate>0?`~$${(s.addedKWh*s.rate).toFixed(2)} <small style="color:var(--tc-muted)">@ $${s.rate.toFixed(2)}/kWh</small>`:`<span style="color:#16a34a">free</span>`}`:''}</div>
         </div>
       </div>`;
     } else {
@@ -2557,7 +2833,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
       html += `<div class="stop">
         <div class="stop-num">${n}</div>
         <div class="stop-main">
-          <div class="stop-name">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net]}">${s.net}</span>${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
+          <div class="stop-name">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net]||'net-other'}">${esc(s.net==='Other'?'other network':s.net)}</span>${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
           <div class="stop-sub">${s.town ? esc(s.town) + ' · ' : ''}${mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
           <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min &nbsp;·&nbsp; ~$${(s.addedKWh * ((COST[s.net]!=null)?COST[s.net]:COST.publicAvg)).toFixed(2)}${s.overCap?` <span style="color:#eab308">⚠ above 80% — no closer charger</span>`:''}</div>
           <div class="stop-links">${lk.addrStr ? `<span class="stop-addr">${esc(lk.addrStr)}</span>` : ''}${lk.apple ? `<a href="${lk.apple}" target="_blank" rel="noopener">📍 Apple Maps</a>` : ''}${lk.plug ? `<a href="${lk.plug}" target="_blank" rel="noopener">🔌 PlugShare</a>` : ''}</div>
@@ -2738,7 +3014,8 @@ function applyTrip(d){
   list.innerHTML = '';
   d.stops.forEach(s => {
     const charge = (s.chargeHere && s.chargeTo > 0) ? s.chargeTo : null;
-    const row = makeStopRow(s.addr || '', charge, s.chargeCost != null ? s.chargeCost : 0);
+    const row = makeStopRow(s.addr || '', charge, s.chargeCost != null ? s.chargeCost : 0,
+      { depDate: s.depDate, depTime: s.depTime, powerKW: s.powerKW, chargeMode: s.chargeMode, scheduled: s.scheduled });
     const addrEl = row.querySelector('.rs-addr');
     if (s.isHome){ addrEl.dataset.home = '1'; }
     if (s.lat != null && s.lon != null && isFinite(s.lat) && isFinite(s.lon)){ addrEl.dataset.lat = s.lat; addrEl.dataset.lon = s.lon; }
@@ -2784,9 +3061,13 @@ function tripToMarkdown(d, name){
     lines.push('## Route');
     named.forEach((s, i) => {
       const role = i === 0 ? 'Start' : (i === named.length - 1 ? 'Destination' : 'Stop');
-      const charge = (s.chargeHere && s.chargeTo > 0)
-        ? ` — charge to ${s.chargeTo}%${s.chargeCost > 0 ? ` @ $${(+s.chargeCost).toFixed(2)}/kWh` : ''}` : '';
-      lines.push(`${i + 1}. **${role}:** ${s.addr}${charge}`);
+      const chargeBit = (s.chargeHere && s.chargeTo > 0)
+        ? (s.chargeMode === 'power' && s.powerKW > 0
+            ? ` — charge from time here at ${s.powerKW} kW${s.chargeCost > 0 ? ` @ $${(+s.chargeCost).toFixed(2)}/kWh` : ''}`
+            : ` — charge to ${s.chargeTo}%${s.chargeCost > 0 ? ` @ $${(+s.chargeCost).toFixed(2)}/kWh` : ''}`)
+        : '';
+      const sched = (s.depDate || s.depTime) ? ` — leave ${[s.depDate, s.depTime].filter(Boolean).join(' ')}` : '';
+      lines.push(`${i + 1}. **${role}:** ${s.addr}${chargeBit}${sched}`);
     });
     lines.push('');
   }
