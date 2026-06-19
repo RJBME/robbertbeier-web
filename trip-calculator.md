@@ -256,6 +256,7 @@ permalink: /trip-calculator/
   .stop-name { font-weight: 600; font-size: 0.9rem; }
   .stop-sub { font-size: 0.72rem; color: var(--tc-muted); margin-top: 1px; }
   .stop-charge { font-size: 0.8rem; margin-top: 5px; }
+  .stop-leg { font-size: 0.72rem; color: var(--tc-muted); margin-top: 3px; }
   .stop-charge b { color: var(--link); }
   /* Address + map deep-links under each suggested DC fast stop */
   .stop-links { margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.72rem; }
@@ -996,7 +997,11 @@ function stopEffectiveMode(row){
   const dd = row.querySelector('.rs-dep-date'), dt = row.querySelector('.rs-dep-time');
   const hasTime = !!(dd && dd.value && dt && dt.value);
   const override = row.dataset.modeSet;
-  if (override === 'power') return powerKW > 0 ? 'power' : 'pct';
+  // Respect an explicit "From time here" pick even before a kW is typed, so the
+  // power input actually appears — otherwise it's a catch-22 (no kW → stay on the
+  // slider → no way to enter a kW). With no power entered the planner simply falls
+  // back to the slider target, and the hint nudges for a kW + leave time.
+  if (override === 'power') return 'power';
   if (override === 'pct') return 'pct';
   return (powerKW > 0 && hasTime) ? 'power' : 'pct';
 }
@@ -2805,7 +2810,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   setVerdict('ok', '✅', `Doable with <b>${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}</b>${wpNote} (~${Math.round(totalMin)} min fast-charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
   let html = `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive ${roundTrip?'home':''} around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
   if (nNonPref) html += `<div class="stops-note">ℹ️ To bridge a gap, ${nNonPref>1?`${nNonPref} stops use chargers`:'one stop uses a charger'} outside your preferred networks (Tesla / EA / ChargePoint), marked <b>other network</b> below. ${nNonPref>1?'They’re':'It’s'} a standard CCS station${nNonPref>1?'s':''} — start ${nNonPref>1?'them':'it'} with that network’s own app or a tap-to-pay card.</div>`;
-  let dividerShown = false, n = 0;
+  let dividerShown = false, n = 0, prevMi = 0;
   plan.stops.forEach((s) => {
     // For round trips, drop a "turnaround" divider when stops cross into the return leg.
     if (roundTrip && oneWay && s.alongMi > oneWay && !dividerShown){
@@ -2814,6 +2819,14 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
     }
     const onReturn = roundTrip && oneWay && s.alongMi > oneWay;
     const mileLabel = onReturn ? `${Math.round(2*oneWay - s.alongMi)} mi from home` : `mile ${Math.round(s.alongMi)}`;
+    // The drive leg that got you here: miles since the last charge (or the start)
+    // and the terrain-aware efficiency over that stretch (mi ÷ kWh from the model).
+    const legMi = Math.max(0, s.alongMi - prevMi);
+    const legKWh = nrg ? nrg.energyKWh(prevMi, s.alongMi) : 0;
+    const legEff = legKWh > 0 ? legMi / legKWh : 0;
+    const legInfo = legMi > 0
+      ? `<div class="stop-leg">${Math.round(legMi)} mi ${prevMi > 0 ? 'since last charge' : 'since start'}${legEff > 0 ? ` &nbsp;·&nbsp; ~${legEff.toFixed(1)} mi/kWh this leg` : ''}</div>`
+      : '';
     if (s.waypoint){
       const stay = (s._dwellH > 0)
         ? ` &nbsp;·&nbsp; <small style="color:var(--tc-muted)">stay ~${fmtMinsShort(s._dwellH*60)}${s._depMs!=null?`, leave ${new Date(s._depMs).toLocaleString([], { weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false })}`:''}</small>`
@@ -2825,6 +2838,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
           <div class="stop-name">${esc(s.name)}<span class="net-badge net-wp">${s.net==='AC'?'charge here':s.net}</span></div>
           <div class="stop-sub">${mileLabel}${stay}</div>
           <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here${via}${s.addedKWh!=null?` &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ${s.rate>0?`~$${(s.addedKWh*s.rate).toFixed(2)} <small style="color:var(--tc-muted)">@ $${s.rate.toFixed(2)}/kWh</small>`:`<span style="color:#16a34a">free</span>`}`:''}</div>
+          ${legInfo}
         </div>
       </div>`;
     } else {
@@ -2836,10 +2850,12 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
           <div class="stop-name">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net]||'net-other'}">${esc(s.net==='Other'?'other network':s.net)}</span>${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
           <div class="stop-sub">${s.town ? esc(s.town) + ' · ' : ''}${mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
           <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min &nbsp;·&nbsp; ~$${(s.addedKWh * ((COST[s.net]!=null)?COST[s.net]:COST.publicAvg)).toFixed(2)}${s.overCap?` <span style="color:#eab308">⚠ above 80% — no closer charger</span>`:''}</div>
+          ${legInfo}
           <div class="stop-links">${lk.addrStr ? `<span class="stop-addr">${esc(lk.addrStr)}</span>` : ''}${lk.apple ? `<a href="${lk.apple}" target="_blank" rel="noopener">📍 Apple Maps</a>` : ''}${lk.plug ? `<a href="${lk.plug}" target="_blank" rel="noopener">🔌 PlugShare</a>` : ''}</div>
         </div>
       </div>`;
     }
+    prevMi = s.alongMi;
   });
   body.innerHTML = html;
 }
