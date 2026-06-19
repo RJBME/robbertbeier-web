@@ -928,7 +928,7 @@ function initUI(){
   // Recompute the leave-by time instantly when the "arrive by" target changes
   // (pure local math — no re-plan / network call needed).
   const abEl = document.getElementById('arriveByTime');
-  if (abEl) abEl.addEventListener('input', () => { if (LAST_ETA) renderETA(LAST_ETA.plan, LAST_ETA.rt, LAST_ETA.round, LAST_ETA.oneWay); });
+  if (abEl) abEl.addEventListener('input', () => { if (LAST_ETA) renderETA(LAST_ETA.plan, LAST_ETA.rt, LAST_ETA.round, LAST_ETA.oneWay, LAST_ETA.destSoc); });
 }
 
 const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
@@ -1835,6 +1835,8 @@ function buildEnergyModel(effEff, batt, elev){
 const DCFC_TOP = 80;       // never charge past this on DC fast (charge curve too slow above)
 const TESLA_REACH_TOL = 40; // mi — prefer Tesla unless a non-Tesla gets you this much farther
 const CHARGER_FLOOR = 6;    // % — willing to run this low to REACH a charger (reserve is for the destination)
+const DEST_NEAR_MI = 12;    // mi — a compatible fast charger within this far of the destination means you can top up on arrival
+const DEST_CHARGER_FLOOR = 5; // % — OK to arrive this low at the destination WHEN there's a charger there (skips a marginal final top-up)
 function planSegment(fromMi, toMi, startSoc, reserve, chargers, nrg, maxTop){
   maxTop = maxTop || DCFC_TOP;
   const batt = nrg.batt;
@@ -1909,7 +1911,12 @@ function planSegmentCapped(fromMi, toMi, soc, reserve, chargers, nrg){
 // waypoint, or a round-trip destination where you can charge): each splits the
 // trip into a segment and resets SoC to its chargeTo for the next leg. DCFC
 // stops and anchor charges are returned in route order.
-function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers){
+function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers, destFloor){
+  // The FINAL leg may keep a lower arrival floor than the reserve when there's a
+  // charger waiting at the destination (you top up on arrival), so the planner
+  // doesn't insert a marginal stop just to protect the full reserve. Intermediate
+  // legs always keep the real reserve. Defaults to the reserve (no relaxation).
+  if (destFloor == null) destFloor = reserve;
   anchors = (anchors || []).filter(a => a.mile > 0 && a.mile < totalMi).sort((a,b) => a.mile - b.mile);
   const all = [];
   let segStart = 0, soc = startSoc, overCap = false;
@@ -1924,7 +1931,7 @@ function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers){
     soc = wp.chargeTo;
     segStart = wp.mile;
   }
-  const rf = planSegmentCapped(segStart, totalMi, soc, reserve, chargers, nrg);
+  const rf = planSegmentCapped(segStart, totalMi, soc, destFloor, chargers, nrg);
   rf.stops.forEach(s => { all.push(s); if (s.overCap) overCap = true; });
   if (!rf.feasible) return { needed: true, feasible: false, stops: all, gapFrom: rf.gapFrom, reachMi: rf.reachMi };
   return { needed: all.length > 0, feasible: true, stops: all, arriveSoc: rf.arriveSoc, overCap };
@@ -2086,9 +2093,9 @@ function walkTimeline(plan, rt, round, oneWay){
     outChargeMin, outDwellMin, totalChargeMin, totalDwellMin, stopTimes };
 }
 
-function renderETA(plan, rt, round, oneWay){
+function renderETA(plan, rt, round, oneWay, destSoc){
   const banner = document.getElementById('etaBanner');
-  LAST_ETA = { plan, rt, round, oneWay };          // cache so "arrive by" can recompute live
+  LAST_ETA = { plan, rt, round, oneWay, destSoc };  // cache so "arrive by" can recompute live
   const tl = walkTimeline(plan, rt, round, oneWay);
   if (!tl){ banner.style.display = 'none'; return; }
   const dep = new Date(tl.startMs);
@@ -2102,6 +2109,8 @@ function renderETA(plan, rt, round, oneWay){
   if (chargeMins > 0.5) partsArr.push(`${fmtMinsShort(chargeMins)} charging`);
   if (dwellMins  > 0.5) partsArr.push(`${fmtMinsShort(dwellMins)} stopover`);
   const breakdown = partsArr.join(' + ');
+  // Estimated battery % on arrival at the destination (from the charging planner).
+  const socTxt = (destSoc != null && isFinite(destSoc)) ? ` &nbsp;·&nbsp; <b>~${Math.round(destSoc)}%</b> on arrival` : '';
 
   // "Arrive by" optimizer: the latest you can leave is target − total trip time.
   // It assumes the trip duration is independent of the departure clock, so it's
@@ -2118,7 +2127,7 @@ function renderETA(plan, rt, round, oneWay){
       const passed = leaveBy.getTime() < Date.now();
       banner.innerHTML =
         `<span class="eta-ico">⏰</span>`
-        + `<span class="eta-text">Leave by <b>${dayTime(leaveBy)}</b> to arrive${round ? ' at destination' : ''} by <b>${targetLbl}</b>`
+        + `<span class="eta-text">Leave by <b>${dayTime(leaveBy)}</b> to arrive${round ? ' at destination' : ''} by <b>${targetLbl}</b>${socTxt}`
         + `<span class="eta-sub">${fmtMinsShort(totalMin)} total · ${breakdown}${passed ? ' · ⚠ that departure time has already passed' : ''}</span></span>`;
       banner.style.display = 'flex';
       return;
@@ -2131,7 +2140,7 @@ function renderETA(plan, rt, round, oneWay){
   const arrLbl = (arr.toDateString() === dep.toDateString()) ? clock(arr) : dayTime(arr);
   banner.innerHTML =
     `<span class="eta-ico">🕜</span>`
-    + `<span class="eta-text">Depart <b>${dayTime(dep)}</b> → arrive${round ? ' at destination' : ''} <b>${arrLbl}</b>`
+    + `<span class="eta-text">Depart <b>${dayTime(dep)}</b> → arrive${round ? ' at destination' : ''} <b>${arrLbl}</b>${socTxt}`
     + `<span class="eta-sub">${fmtMinsShort(totalMin)} total · ${breakdown}</span></span>`;
   banner.style.display = 'flex';
 }
@@ -2577,6 +2586,19 @@ async function updateChargingPlan(rt, e, temp){
   const planMi = round ? oneWay * 2 : oneWay;
   const planNrg = round ? buildEnergyModel(e.effEff, e.batt, mirrorForRoundTrip([], rt.elev, oneWay).elev) : nrg;
   applyElevationToHero(e, planNrg, planMi);
+  // Estimated battery % when you REACH the destination (mile oneWay). A stop sitting
+  // exactly at the destination (a round-trip "charge at destination") reports its
+  // pre-charge arrival SoC; otherwise it's the last stop's target minus the drive
+  // since (or just the start charge minus the whole drive when nothing's en route).
+  // Feeds the ETA banner's "~X% on arrival".
+  const socAtDest = (pl) => {
+    const ss = ((pl && pl.stops) || []).filter(s => s.alongMi != null).sort((a,b) => a.alongMi - b.alongMi);
+    const atDest = ss.find(s => Math.abs(s.alongMi - oneWay) < 0.5);
+    if (atDest && atDest.arriveSoc != null) return Math.max(0, atDest.arriveSoc);
+    const before = ss.filter(s => s.alongMi <= oneWay - 0.5);
+    const last = before[before.length - 1];
+    return Math.max(0, (last ? last.target : startSoc) - planNrg.socDrop(last ? last.alongMi : 0, oneWay));
+  };
   // AC "charge here" anchors from the user's waypoints, positioned along the route.
   // For round trips each is mirrored onto the return leg (an outbound charge at
   // mile X is used again at 2·oneWay − X), so a mid-route hotel / Level-2 charge
@@ -2631,7 +2653,7 @@ async function updateChargingPlan(rt, e, temp){
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — you'll make it on the starting charge.`);
       renderSummary(null, energyTrip, fromHome, planMi);
-      renderETA(null, rt, round, oneWay);
+      renderETA(null, rt, round, oneWay, socAtDest(null));
       renderExport(null, round, oneWay);
       return;
     }
@@ -2644,7 +2666,7 @@ async function updateChargingPlan(rt, e, temp){
       body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — you'll charge at your destination before the return.</div>`;
       setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
       renderSummary(null, energyTrip, fromHome, planMi);
-      renderETA(null, rt, round, oneWay);
+      renderETA(null, rt, round, oneWay, socAtDest(null));
       renderExport(null, round, oneWay);
       return;
     }
@@ -2653,7 +2675,7 @@ async function updateChargingPlan(rt, e, temp){
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — the whole round trip fits on your starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — the whole round trip is within range.`);
       renderSummary(null, energyTrip, fromHome, planMi);
-      renderETA(null, rt, round, oneWay);
+      renderETA(null, rt, round, oneWay, socAtDest(null));
       renderExport(null, round, oneWay);
       return;
     }
@@ -2676,7 +2698,7 @@ async function updateChargingPlan(rt, e, temp){
       card.style.display = 'block';
       renderStops(acOnly, e, reserve, round, startSoc, planNrg, oneWay);
       renderSummary(acOnly, energyTrip, fromHome, planMi);
-      renderETA(acOnly, rt, round, oneWay);
+      renderETA(acOnly, rt, round, oneWay, socAtDest(acOnly));
       renderExport(acOnly, round, oneWay);
       drawChargerMarkers(acOnly.stops, round ? [] : waypoints);
       rerouteThroughStops(rt, acOnly, e, round, oneWay);
@@ -2716,18 +2738,25 @@ async function updateChargingPlan(rt, e, temp){
   const anchors = acAnchorList();
   if (round && canChargeDest) anchors.push(destAnchor());
   resolvePowerAnchors(anchors, prefChargers);   // set "from time here" targets from dwell
+  // If a compatible fast charger sits at / near the final destination, plan the
+  // last leg to a lower arrival floor than the full reserve — you can top up the
+  // moment you arrive — instead of inserting a marginal extra stop to protect it.
+  // (This is what kills the "stop 2 min to add 5%" stops near a charged destination.)
+  const destHasCharger = allChargers.some(c => c.alongMi >= planMi - DEST_NEAR_MI);
+  const destFloor = destHasCharger ? Math.min(reserve, DEST_CHARGER_FLOOR) : reserve;
   // Plan with your preferred networks (Tesla / EA / ChargePoint) first. If that
   // leaves a gap no single charge can bridge, replan allowing any compatible CCS
   // charger so a normal interstate route doesn't dead-end — and flag that some
   // stops fall outside the preferred networks.
-  let plan = planJourney(planMi, anchors, planNrg, startSoc, reserve, prefChargers);
+  let plan = planJourney(planMi, anchors, planNrg, startSoc, reserve, prefChargers, destFloor);
   if (!plan.feasible){
-    const alt = planJourney(planMi, anchors, planNrg, startSoc, reserve, allChargers);
+    const alt = planJourney(planMi, anchors, planNrg, startSoc, reserve, allChargers, destFloor);
     if (alt.feasible){ alt.usedNonPreferred = true; plan = alt; }
   }
+  plan.destRelaxed = destFloor < reserve;   // arrival may dip below the reserve thanks to a destination charger
   renderStops(plan, e, reserve, round, startSoc, planNrg, oneWay);
   renderSummary(plan, energyTrip, fromHome, planMi);
-  renderETA(plan, rt, round, oneWay);
+  renderETA(plan, rt, round, oneWay, socAtDest(plan));
   renderExport(plan, round, oneWay);
   drawChargerMarkers(plan.stops, round ? [] : waypoints);
   rerouteThroughStops(rt, plan, e, round, oneWay);
@@ -2825,7 +2854,9 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
     return;
   }
   if (!plan.stops.length){
-    body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you'll arrive around ${Math.round(plan.arriveSoc)}%.</div>`;
+    const lowNote = (plan.destRelaxed && plan.arriveSoc < reserve - 0.5)
+      ? ` There's a compatible fast charger ${roundTrip ? 'near home' : 'at your destination'} if you want to top up.` : '';
+    body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you'll arrive around ${Math.round(plan.arriveSoc)}%.${lowNote}</div>`;
     return;
   }
   const dcfc = plan.stops.filter(s => !s.waypoint);
@@ -2839,6 +2870,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   setVerdict('ok', '✅', `Doable with <b>${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}</b>${wpNote} (~${Math.round(totalMin)} min fast-charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
   let html = `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive ${roundTrip?'home':''} around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
   if (nNonPref) html += `<div class="stops-note">ℹ️ To bridge a gap, ${nNonPref>1?`${nNonPref} stops use chargers`:'one stop uses a charger'} outside your preferred networks (Tesla / EA / ChargePoint), marked <b>other network</b> below. ${nNonPref>1?'They’re':'It’s'} a standard CCS station${nNonPref>1?'s':''} — start ${nNonPref>1?'them':'it'} with that network’s own app or a tap-to-pay card.</div>`;
+  if (plan.destRelaxed && plan.arriveSoc < reserve - 0.5) html += `<div class="stops-note">ℹ️ Planned to arrive ${roundTrip ? 'home' : 'at your destination'} around <b>${Math.round(plan.arriveSoc)}%</b> — a little under your ${Math.round(reserve)}% reserve, but there's a compatible fast charger ${roundTrip ? 'near home' : 'at the destination'}, so this skips a short extra top-up on the way. Add a stop if you'd rather keep the full buffer.</div>`;
   let dividerShown = false, n = 0, prevMi = 0;
   plan.stops.forEach((s) => {
     // For round trips, drop a "turnaround" divider when stops cross into the return leg.
