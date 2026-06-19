@@ -1848,7 +1848,11 @@ function mkChart(id, config) {
   // Destroy any existing Chart instance on this canvas — prevents
   // "Canvas is already in use" error if rebuild() is called before destroy completes
   const existing = Chart.getChart(canvas);
-  if (existing) { existing.destroy(); }
+  if (existing) {
+    const idx = allCharts.indexOf(existing);
+    if (idx >= 0) allCharts.splice(idx, 1);   // drop the stale ref so allCharts stays live-only
+    existing.destroy();
+  }
   const c = new Chart(canvas, config);
   allCharts.push(c);
   return c;
@@ -6359,6 +6363,8 @@ window.addEventListener('themeChanged', () => {
   // Swap map tiles light ↔ dark
   _applyTiles();
   allCharts.forEach(chart => {
+   try {
+    if (!chart || !chart.data) return;   // skip any stale/destroyed instance
     // Update plugin colors
     if (chart.options.plugins?.legend?.labels) {
       chart.options.plugins.legend.labels.color = tc();
@@ -6386,6 +6392,7 @@ window.addEventListener('themeChanged', () => {
       }
     });
     chart.update('none');
+   } catch(e){ /* one bad chart must never block the rest */ }
   });
 });
 
