@@ -20,31 +20,42 @@ permalink: /trip-calculator/
 {% endcomment %}
 
 <style>
-  .trip-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); overflow-x: clip; }
+  .trip-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); overflow-x: clip;
+    /* Match native form-control chrome (date/time picker icons, number spinners,
+       select carets) to the page theme. Without this the calendar/clock glyphs
+       render as a fixed dark icon that's nearly invisible on the dark input bg. */
+    color-scheme: light;
+    /* Theme-aware muted text — derived from --text so it stays legible in BOTH
+       light and dark mode (the old fixed #888 was too dim on dark). Static
+       fallback first for browsers without color-mix. */
+    --tc-muted: #6b7280;
+    --tc-muted: color-mix(in srgb, var(--text) 70%, transparent); }
+  [data-theme="dark"] .trip-container { color-scheme: dark; }
 
   .charge-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--dash-border); align-items: center; }
-  .charge-nav a { font-size: 0.78rem; font-weight: 600; text-decoration: none; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; transition: all 0.15s; }
+  .charge-nav a { font-size: 0.78rem; font-weight: 600; text-decoration: none; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--tc-muted); transition: all 0.15s; }
   .charge-nav a:hover  { border-color: var(--link); color: var(--link); }
   .charge-nav a.active { background: var(--link); border-color: var(--link); color: #fff; font-weight: 700; }
 
   .trip-header h1 { margin: 0 0 4px 0; }
-  .trip-header p  { margin: 0 0 20px 0; color: #888; font-size: 0.85rem; }
+  .trip-header p  { margin: 0 0 20px 0; color: var(--tc-muted); font-size: 0.85rem; }
 
   .trip-card { background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
 
   .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
   .field.full { grid-column: 1 / -1; }
-  .field label { font-size: 0.65rem; text-transform: uppercase; font-weight: 700; color: #888; letter-spacing: 0.06em; }
+  .field label { font-size: 0.65rem; text-transform: uppercase; font-weight: 700; color: var(--tc-muted); letter-spacing: 0.06em; }
   .field input, .field select {
     padding: 9px 12px; border-radius: 8px; border: 1px solid var(--dash-border);
     background: var(--bg); color: var(--text); font-size: 0.85rem; box-sizing: border-box; width: 100%;
   }
-  .field .hint { font-size: 0.62rem; color: #888; }
+  .trip-container input::placeholder, .trip-container textarea::placeholder { color: var(--tc-muted); opacity: 1; }
+  .field .hint { font-size: 0.62rem; color: var(--tc-muted); }
   .quick-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
   .quick-row button {
     font-size: 0.68rem; padding: 3px 10px; border-radius: 14px; cursor: pointer;
-    border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; transition: all 0.15s;
+    border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--tc-muted); transition: all 0.15s;
   }
   .quick-row button:hover { border-color: var(--link); color: var(--link); }
 
@@ -60,7 +71,7 @@ permalink: /trip-calculator/
   /* dotted connector between rows */
   .route-row:not(:last-child) .rs-dot::after { content: ''; position: absolute; left: 25px; top: 24px; height: calc(100% - 14px); border-left: 2px dotted var(--dash-border); }
   .rs-addr { min-width: 0; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.84rem; }
-  .rs-btn { border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; border-radius: 8px; padding: 6px 8px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
+  .rs-btn { border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--tc-muted); border-radius: 8px; padding: 6px 8px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
   .rs-btn:hover { border-color: var(--link); color: var(--link); }
   .rs-charge.on { background: var(--link); border-color: var(--link); color: #fff; }
   .rs-loc.locating { opacity: 0.55; pointer-events: none; }
@@ -93,9 +104,9 @@ permalink: /trip-calculator/
     background: #16a34a; border: 2px solid var(--dash-card); box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
   .rs-slider .rs-pct { font-size: 0.78rem; font-weight: 700; color: #16a34a; min-width: 56px; }
-  .rs-slider .rs-pct small { font-weight: 400; color: #888; }
+  .rs-slider .rs-pct small { font-weight: 400; color: var(--tc-muted); }
   /* optional $/kWh cost for charging at this stop (default free) */
-  .rs-slider .rs-cost { display: flex; align-items: center; gap: 3px; font-size: 0.72rem; color: #888; white-space: nowrap; cursor: text; }
+  .rs-slider .rs-cost { display: flex; align-items: center; gap: 3px; font-size: 0.72rem; color: var(--tc-muted); white-space: nowrap; cursor: text; }
   .rs-slider .rs-cost-input {
     width: 56px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--dash-border);
     background: var(--bg); color: var(--text); font-size: 0.74rem; text-align: right;
@@ -105,6 +116,15 @@ permalink: /trip-calculator/
 
   .opt-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; margin-top: 16px; }
   .opt-row .field { flex: 1; min-width: 130px; }
+  /* Departure holds the most (a date + two time inputs) so give it more room and a
+     date field wide enough to show MM/DD/YYYY without being squeezed. The two time
+     inputs share a fixed width so they line up vertically under each other. */
+  .opt-row .dep-field { flex: 1.6 1 17rem; min-width: 16.5rem; }
+  .dep-row { display: flex; gap: 6px; align-items: center; }
+  .dep-row + .dep-row { margin-top: 6px; }
+  .dep-date { flex: 1 1 9rem; min-width: 8.5rem; }
+  .dep-time { flex: 0 0 7.25rem; }
+  .dep-arrive-lbl { flex: 1 1 auto; text-align: right; font-size: 0.62rem; color: var(--tc-muted); font-weight: 600; text-transform: none; letter-spacing: 0; white-space: nowrap; }
   .check { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--text); }
   .check input { width: auto; }
 
@@ -115,13 +135,13 @@ permalink: /trip-calculator/
   .go-btn:hover { opacity: 0.9; }
   .go-btn:disabled { opacity: 0.5; cursor: progress; }
 
-  .status-msg { font-size: 0.78rem; color: #888; margin-top: 10px; text-align: center; min-height: 1em; }
+  .status-msg { font-size: 0.78rem; color: var(--tc-muted); margin-top: 10px; text-align: center; min-height: 1em; }
   .status-msg.err { color: #ef4444; }
 
   /* Save / recall trips toolbar */
   .saved-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--dash-border); }
   .saved-bar select { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; min-width: 140px; max-width: 100%; }
-  .saved-bar button, .saved-import { font-size: 0.74rem; padding: 6px 12px; border-radius: 14px; cursor: pointer; border: 1px solid var(--dash-border); background: var(--dash-card); color: #888; transition: all 0.15s; line-height: 1.2; }
+  .saved-bar button, .saved-import { font-size: 0.74rem; padding: 6px 12px; border-radius: 14px; cursor: pointer; border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--tc-muted); transition: all 0.15s; line-height: 1.2; }
   .saved-bar button:hover, .saved-import:hover { border-color: var(--link); color: var(--link); }
   .saved-import { display: inline-flex; align-items: center; }
   .saved-spacer { flex: 1 1 auto; }
@@ -133,16 +153,16 @@ permalink: /trip-calculator/
   .tune-row .field input { padding: 9px 11px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.85rem; width: 100%; }
   .tune-save { background: var(--link); border-color: var(--link); color: #fff; cursor: pointer; font-family: inherit; flex: 0 0 auto; }
   .tune-save:hover { background: #4d33b8; }
-  .tune-status { font-size: 0.74rem; color: #888; margin-top: 12px; line-height: 1.5; }
+  .tune-status { font-size: 0.74rem; color: var(--tc-muted); margin-top: 12px; line-height: 1.5; }
   .tune-list { margin-top: 12px; display: flex; flex-direction: column; }
-  .tune-list-head { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; font-weight: 700; margin-bottom: 4px; }
+  .tune-list-head { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tc-muted); font-weight: 700; margin-bottom: 4px; }
   .tune-rec { display: flex; gap: 10px; align-items: center; font-size: 0.74rem; color: var(--text); padding: 5px 0; border-top: 1px solid var(--dash-border); }
-  .tune-rec > span:first-child { flex: 0 0 5.5rem; color: #888; }
-  .tune-rec > span:nth-child(2) { color: #888; }
+  .tune-rec > span:first-child { flex: 0 0 5.5rem; color: var(--tc-muted); }
+  .tune-rec > span:nth-child(2) { color: var(--tc-muted); }
   .tune-ratio { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
   .tune-ratio.pos { color: #16a34a; }
   .tune-ratio.neg { color: #d97706; }
-  .tune-del { border: none; background: none; color: #888; cursor: pointer; font-size: 1.05rem; line-height: 1; padding: 0 2px; }
+  .tune-del { border: none; background: none; color: var(--tc-muted); cursor: pointer; font-size: 1.05rem; line-height: 1; padding: 0 2px; }
   .tune-del:hover { color: #ef4444; }
 
   /* Results */
@@ -150,8 +170,8 @@ permalink: /trip-calculator/
   .result-hero { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
   .hero-stat { flex: 1; min-width: 130px; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 12px; padding: 16px; text-align: center; }
   .hero-stat .big { font-size: 1.7rem; font-weight: 800; line-height: 1.1; }
-  .hero-stat .lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-top: 4px; }
-  .hero-stat .sub { font-size: 0.7rem; color: #888; margin-top: 3px; }
+  .hero-stat .lbl { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tc-muted); margin-top: 4px; }
+  .hero-stat .sub { font-size: 0.7rem; color: var(--tc-muted); margin-top: 3px; }
 
   /* Departure → arrival estimate */
   .eta-banner { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; color: var(--text);
@@ -159,10 +179,10 @@ permalink: /trip-calculator/
     padding: 12px 16px; margin-bottom: 18px; }
   .eta-ico { font-size: 1.4rem; line-height: 1; }
   .eta-text b { font-weight: 800; }
-  .eta-sub { display: block; font-size: 0.7rem; color: #888; margin-top: 3px; }
+  .eta-sub { display: block; font-size: 0.7rem; color: var(--tc-muted); margin-top: 3px; }
 
   /* Route options */
-  .routes-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; font-weight: 700; margin-bottom: 8px; }
+  .routes-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tc-muted); font-weight: 700; margin-bottom: 8px; }
   .routes-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
   .route-card {
     flex: 1; min-width: 140px; text-align: left; cursor: pointer; font-family: inherit;
@@ -172,10 +192,10 @@ permalink: /trip-calculator/
   .route-card:hover { border-color: var(--link); }
   .route-card.sel { border-color: var(--link); box-shadow: inset 0 0 0 1px var(--link); background: rgba(93,63,211,0.06); }
   .route-card .rc-top { font-size: 1.05rem; font-weight: 700; }
-  .route-card .rc-dim { color: #888; font-weight: 400; font-size: 0.8rem; }
+  .route-card .rc-dim { color: var(--tc-muted); font-weight: 400; font-size: 0.8rem; }
   .route-card .rc-energy { font-size: 0.8rem; color: var(--link); font-weight: 600; margin-top: 3px; }
   .route-card .rc-tags { margin-top: 7px; display: flex; gap: 5px; flex-wrap: wrap; }
-  .rtag { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: var(--dash-border); color: #888; }
+  .rtag { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: var(--dash-border); color: var(--tc-muted); }
   .rtag.eff { background: #22c55e22; color: #16a34a; }
   .route-card .rc-role { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
   .rc-role-quickest { color: #2563eb; }
@@ -183,6 +203,12 @@ permalink: /trip-calculator/
   .rc-role-scenic { color: #b45309; }
   .ors-save { padding: 0 14px; border: 1px solid var(--link); background: var(--link); color: #fff; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
   .ors-save:hover { filter: brightness(1.07); }
+  /* Collapsed "key saved" confirmation (key itself stays hidden) */
+  .ors-saved { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 38px; }
+  .ors-on { font-size: 0.82rem; font-weight: 700; color: #16a34a; white-space: nowrap; }
+  .ors-link { background: none; border: none; padding: 0; font: inherit; font-size: 0.74rem; font-weight: 600; color: var(--link); cursor: pointer; text-decoration: underline; }
+  .ors-link.ors-remove { color: var(--tc-muted); }
+  .ors-link:hover { filter: brightness(1.15); }
 
   .fleet-note { font-size: 0.74rem; color: var(--text); background: #3b82f614; border: 1px solid #3b82f640; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; }
 
@@ -190,12 +216,12 @@ permalink: /trip-calculator/
   .summary-card { padding: 16px 18px; }
   .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
   .summary-grid > div { text-align: center; }
-  .sg-lbl { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 3px; }
+  .sg-lbl { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tc-muted); margin-bottom: 3px; }
   .sg-val { font-weight: 800; font-size: 1rem; }
   .sg-green { color: #2ecc71; }
   .sg-amber { color: #f39c12; }
   /* cost-breakdown caption under the stat grid (e.g. "$29 home + $17 DCFC") */
-  .sg-costnote { text-align: center; font-size: 0.7rem; color: #888; margin-top: 12px; }
+  .sg-costnote { text-align: center; font-size: 0.7rem; color: var(--tc-muted); margin-top: 12px; }
   .sg-costnote b { color: var(--text); font-weight: 600; }
   /* Charging stops */
   .stop { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--dash-border); }
@@ -203,12 +229,12 @@ permalink: /trip-calculator/
   .stop-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--link); color: #fff; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
   .stop-main { flex: 1; min-width: 0; }
   .stop-name { font-weight: 600; font-size: 0.9rem; }
-  .stop-sub { font-size: 0.72rem; color: #888; margin-top: 1px; }
+  .stop-sub { font-size: 0.72rem; color: var(--tc-muted); margin-top: 1px; }
   .stop-charge { font-size: 0.8rem; margin-top: 5px; }
   .stop-charge b { color: var(--link); }
   /* Address + map deep-links under each suggested DC fast stop */
   .stop-links { margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.72rem; }
-  .stop-addr { color: #888; }
+  .stop-addr { color: var(--tc-muted); }
   .stop-links a { color: var(--link); text-decoration: none; font-weight: 600; border: 1px solid var(--dash-border); border-radius: 999px; padding: 2px 9px; transition: all 0.15s; }
   .stop-links a:hover { border-color: var(--link); background: rgba(93,63,211,0.08); }
   /* Hand-off to a phone maps app */
@@ -223,12 +249,12 @@ permalink: /trip-calculator/
   .export-btn.tlog:hover { background: #4d33b8; }
   .export-btn.cheat { background: #0f766e; border-color: #0f766e; color: #fff; cursor: pointer; font-family: inherit; }
   .export-btn.cheat:hover { background: #0c5e57; }
-  .export-note { font-size: 0.7rem; color: #888; margin-top: 10px; line-height: 1.5; }
+  .export-note { font-size: 0.7rem; color: var(--tc-muted); margin-top: 10px; line-height: 1.5; }
   .net-badge { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
   .net-tesla { background: #e8222220; color: #e82222; }
   .net-ea    { background: #00b04f20; color: #00963f; }
   .net-cp    { background: #f9731620; color: #f97316; }
-  .stops-summary { font-size: 0.78rem; color: #888; margin: 6px 0 14px; }
+  .stops-summary { font-size: 0.78rem; color: var(--tc-muted); margin: 6px 0 14px; }
   .stops-note { font-size: 0.78rem; color: var(--text); padding: 4px 0; }
   .stops-key { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
   .stops-key input { flex: 1; min-width: 160px; padding: 8px 11px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
@@ -249,7 +275,7 @@ permalink: /trip-calculator/
   .breakdown td { padding: 8px 4px; border-bottom: 1px solid var(--dash-border); vertical-align: middle; }
   .breakdown tr:last-child td { border-bottom: none; }
   .breakdown td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
-  .breakdown .factor-src { font-size: 0.62rem; color: #888; display: block; margin-top: 1px; }
+  .breakdown .factor-src { font-size: 0.62rem; color: var(--tc-muted); display: block; margin-top: 1px; }
   .src-data  { color: #22c55e; }
   .src-model { color: #eab308; }
 
@@ -257,9 +283,9 @@ permalink: /trip-calculator/
   .soc-bar { height: 22px; border-radius: 6px; background: var(--dash-border); overflow: hidden; position: relative; display: flex; }
   .soc-fill { background: linear-gradient(90deg, #22c55e, #16a34a); transition: width 0.4s; }
   .soc-used { background: repeating-linear-gradient(45deg, #ef444455, #ef444455 6px, transparent 6px, transparent 12px); }
-  .soc-labels { display: flex; justify-content: space-between; font-size: 0.62rem; color: #888; margin-top: 4px; }
+  .soc-labels { display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--tc-muted); margin-top: 4px; }
 
-  .disclaimer { font-size: 0.66rem; color: #888; line-height: 1.5; margin-top: 6px; }
+  .disclaimer { font-size: 0.66rem; color: var(--tc-muted); line-height: 1.5; margin-top: 6px; }
   .disclaimer b { color: var(--text); }
 
   .dev-banner { font-size: 0.76rem; background: #eab30818; border: 1px solid #eab30855; color: var(--text); border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; line-height: 1.45; }
@@ -401,15 +427,15 @@ permalink: /trip-calculator/
         <label>Vehicle</label>
         <select id="vehSel"></select>
       </div>
-      <div class="field">
+      <div class="field dep-field">
         <label>Departure</label>
-        <div style="display:flex;gap:6px">
-          <input id="depDate" type="date" style="flex:1 1 auto;min-width:0">
-          <input id="depTime" type="time" step="300" title="24-hour clock" style="flex:0 0 7.25rem">
+        <div class="dep-row">
+          <input id="depDate" type="date" class="dep-date" title="Departure date">
+          <input id="depTime" type="time" step="300" title="Departure time (24-hour clock)" class="dep-time">
         </div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:1px">
-          <label for="arriveByTime" style="font-size:0.62rem;color:#888;font-weight:600;text-transform:none;letter-spacing:0;white-space:nowrap">…or arrive by</label>
-          <input id="arriveByTime" type="time" step="300" title="Target arrival (24h) — shows your latest departure time" style="flex:0 0 7.25rem">
+        <div class="dep-row">
+          <label for="arriveByTime" class="dep-arrive-lbl">…or arrive by</label>
+          <input id="arriveByTime" type="time" step="300" title="Target arrival (24h) — shows your latest departure time" class="dep-time">
         </div>
         <span class="hint">Set a departure time for an arrival estimate, or an “arrive by” time for a leave-by time</span>
       </div>
@@ -442,18 +468,14 @@ permalink: /trip-calculator/
       <div style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:6px">
         <label class="check"><input type="checkbox" id="roundTrip" onchange="onRoundTripToggle()"> Round trip</label>
         <label class="check" id="destChargeWrap" style="display:none"><input type="checkbox" id="canChargeDest" onchange="onRoundTripToggle()"> Can charge at destination</label>
-        <label class="check" id="destRateWrap" style="display:none;gap:4px"><small style="color:#888">$</small><input id="destRate" type="number" min="0" step="0.01" style="width:64px"><small style="color:#888">/kWh at destination</small></label>
+        <label class="check" id="destRateWrap" style="display:none;gap:4px"><small style="color:var(--tc-muted)">$</small><input id="destRate" type="number" min="0" step="0.01" style="width:64px"><small style="color:var(--tc-muted)">/kWh at destination</small></label>
       </div>
     </div>
 
     <div class="opt-row">
       <div class="field" style="flex:1;min-width:240px">
         <label>Route alternatives <span style="font-weight:400;text-transform:none">(optional)</span></label>
-        <div style="display:flex;gap:6px">
-          <input id="orsKeyInput" type="password" autocomplete="off" placeholder="openrouteservice API key" style="flex:1 1 auto;min-width:0" onchange="saveORSKey()">
-          <button type="button" class="ors-save" onclick="saveORSKey()">Save</button>
-        </div>
-        <span class="hint">Free key from <a href="https://openrouteservice.org/dev/#/signup" target="_blank" rel="noopener">openrouteservice.org</a> — adds quickest / most efficient / scenic routes (kept only in this browser)</span>
+        <div id="orsKeyBox"></div>
       </div>
     </div>
 
@@ -472,9 +494,9 @@ permalink: /trip-calculator/
   </div>
 
   <div id="results">
-    <div id="routeOptions"></div>
-    <div class="fleet-note" id="fleetNote" style="display:none"></div>
+    <!-- Headline answer first: the verdict, a data caveat if relevant, then the key numbers. -->
     <div class="verdict" id="verdict"></div>
+    <div class="fleet-note" id="fleetNote" style="display:none"></div>
 
     <div class="result-hero">
       <div class="hero-stat"><div class="big" id="rDist">–</div><div class="lbl">Distance</div><div class="sub" id="rDistSub"></div></div>
@@ -483,22 +505,15 @@ permalink: /trip-calculator/
       <div class="hero-stat"><div class="big" id="rTemp">–</div><div class="lbl">Trip temp</div><div class="sub" id="rTempSub"></div></div>
     </div>
 
+    <!-- The route: pick an alternative, see it drawn, then the timing. The map sits
+         high, right under the headline stats; routeOptions is empty without an
+         openrouteservice key, so the map stays directly under the stats in that case. -->
+    <div id="routeOptions"></div>
+    <div id="map"></div>
+
     <div class="eta-banner" id="etaBanner" style="display:none"></div>
 
-    <!-- Cost / gas report — same stat-grid format as Road Trips on Analytics -->
-    <div class="trip-card summary-card" id="tripSummary" style="display:none">
-      <div class="summary-grid">
-        <div><div class="sg-lbl">Charged</div><div class="sg-val" id="sgCharged">–</div></div>
-        <div><div class="sg-lbl">Est. cost</div><div class="sg-val" id="sgCost">–</div></div>
-        <div><div class="sg-lbl">Saved vs Gas</div><div class="sg-val" id="sgSaved">–</div></div>
-        <div><div class="sg-lbl">DCFC Time</div><div class="sg-val" id="sgDcfc">–</div></div>
-        <div><div class="sg-lbl" id="sgGasStopsLbl">Gas Stops</div><div class="sg-val" id="sgGasStops">–</div></div>
-        <div><div class="sg-lbl">Time vs Gas</div><div class="sg-val" id="sgTimeVsGas">–</div></div>
-        <div><div class="sg-lbl">Stops</div><div class="sg-val" id="sgStops">–</div></div>
-      </div>
-      <div class="sg-costnote" id="sgCostNote"></div>
-    </div>
-
+    <!-- The charging plan: the battery arc across the trip, then the stop-by-stop detail. -->
     <div class="trip-card" id="socCard" style="display:none">
       <h4 style="margin:0 0 12px 0;font-size:0.9rem;">State of charge</h4>
       <div class="soc-bar-wrap">
@@ -515,6 +530,21 @@ permalink: /trip-calculator/
       <div id="stopsBody"></div>
     </div>
 
+    <!-- Bottom line: cost and gas comparison for the whole trip. -->
+    <div class="trip-card summary-card" id="tripSummary" style="display:none">
+      <div class="summary-grid">
+        <div><div class="sg-lbl">Charged</div><div class="sg-val" id="sgCharged">–</div></div>
+        <div><div class="sg-lbl">Est. cost</div><div class="sg-val" id="sgCost">–</div></div>
+        <div><div class="sg-lbl">Saved vs Gas</div><div class="sg-val" id="sgSaved">–</div></div>
+        <div><div class="sg-lbl">DCFC Time</div><div class="sg-val" id="sgDcfc">–</div></div>
+        <div><div class="sg-lbl" id="sgGasStopsLbl">Gas Stops</div><div class="sg-val" id="sgGasStops">–</div></div>
+        <div><div class="sg-lbl">Time vs Gas</div><div class="sg-val" id="sgTimeVsGas">–</div></div>
+        <div><div class="sg-lbl">Stops</div><div class="sg-val" id="sgStops">–</div></div>
+      </div>
+      <div class="sg-costnote" id="sgCostNote"></div>
+    </div>
+
+    <!-- Act on it: send the route to a maps app, then printable sheets. -->
     <div class="trip-card" id="exportCard" style="display:none">
       <h4 style="margin:0 0 10px 0;font-size:0.9rem;">📲 Send route to your maps app</h4>
       <div class="export-btns" id="exportBtns"></div>
@@ -541,8 +571,6 @@ permalink: /trip-calculator/
       <div class="tune-status" id="tuneStatus"></div>
       <div class="tune-list" id="tuneList"></div>
     </div>
-
-    <div id="map"></div>
 
     <div class="trip-card breakdown">
       <h4>How this estimate was built</h4>
@@ -833,7 +861,8 @@ function initUI(){
   // Default departure time to 08:00 (24h). Drives the arrival estimate.
   document.getElementById('depTime').value = '08:00';
   // Restore a previously-saved openrouteservice key (unlocks route alternatives).
-  document.getElementById('orsKeyInput').value = getORSKey();
+  // Collapses to a compact "on" chip when a key already exists.
+  renderORSKeyUI();
   // Default the destination-charge rate to your average public $/kWh (so a
   // round-trip top-up is billed like a public charger, not free — editable).
   document.getElementById('destRate').value = COST.publicAvg.toFixed(2);
@@ -1384,12 +1413,40 @@ function saveOCMKey(){
 }
 
 function getORSKey(){ try { return localStorage.getItem('orsKey') || ''; } catch(e){ return ''; } }
+// Route-alternatives key UI: once saved it COLLAPSES to a compact "on" confirmation
+// (the key stays hidden in localStorage) instead of sitting in a visible field —
+// same idea as the Open Charge Map key. Pass editing=true to re-open the input.
+function renderORSKeyUI(editing){
+  const box = document.getElementById('orsKeyBox');
+  if (!box) return;
+  const key = getORSKey();
+  if (key && !editing){
+    box.innerHTML =
+        '<div class="ors-saved">'
+      +   '<span class="ors-on">✓ Route alternatives on</span>'
+      +   '<button type="button" class="ors-link" onclick="editORSKey()">Change</button>'
+      +   '<button type="button" class="ors-link ors-remove" onclick="removeORSKey()">Remove</button>'
+      + '</div>';
+  } else {
+    box.innerHTML =
+        '<div style="display:flex;gap:6px">'
+      +   '<input id="orsKeyInput" type="password" autocomplete="off" placeholder="openrouteservice API key" style="flex:1 1 auto;min-width:0" value="' + esc(key)
+      +     '" onkeydown="if(event.key===\'Enter\'){event.preventDefault();saveORSKey();}">'
+      +   '<button type="button" class="ors-save" onclick="saveORSKey()">Save</button>'
+      + '</div>'
+      + '<span class="hint">Free key from <a href="https://openrouteservice.org/dev/#/signup" target="_blank" rel="noopener">openrouteservice.org</a> — adds quickest / most efficient / scenic routes (kept only in this browser)</span>';
+    if (editing){ const inp = document.getElementById('orsKeyInput'); if (inp){ inp.focus(); inp.select(); } }
+  }
+}
 function saveORSKey(){
   const el = document.getElementById('orsKeyInput');
   const v = el ? el.value.trim() : '';
   try { localStorage.setItem('orsKey', v); } catch(e){}
+  renderORSKeyUI();
   setStatus(v ? 'Route-alternatives key saved (this browser only). Click Estimate to use it.' : 'Route-alternatives key cleared.');
 }
+function editORSKey(){ renderORSKeyUI(true); }
+function removeORSKey(){ try { localStorage.removeItem('orsKey'); } catch(e){} renderORSKeyUI(); setStatus('Route-alternatives key removed.'); }
 
 function matchNetwork(operator){
   const t = (operator || '').toLowerCase();
@@ -2491,7 +2548,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
         <div class="stop-main">
           <div class="stop-name">${esc(s.name)}<span class="net-badge net-wp">${s.net==='AC'?'charge here':s.net}</span></div>
           <div class="stop-sub">${mileLabel}</div>
-          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here${s.addedKWh!=null?` &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ${s.rate>0?`~$${(s.addedKWh*s.rate).toFixed(2)} <small style="color:#888">@ $${s.rate.toFixed(2)}/kWh</small>`:`<span style="color:#16a34a">free</span>`}`:''}</div>
+          <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> here${s.addedKWh!=null?` &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ${s.rate>0?`~$${(s.addedKWh*s.rate).toFixed(2)} <small style="color:var(--tc-muted)">@ $${s.rate.toFixed(2)}/kWh</small>`:`<span style="color:#16a34a">free</span>`}`:''}</div>
         </div>
       </div>`;
     } else {
