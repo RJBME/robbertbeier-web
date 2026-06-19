@@ -61,7 +61,7 @@ permalink: /trip-calculator/
 
   /* Google-Maps-style reorderable route list */
   #routeStops { display: flex; flex-direction: column; }
-  .route-row { display: grid; grid-template-columns: 18px 16px 1fr auto auto auto auto auto; align-items: center; gap: 7px; padding: 4px 0; position: relative; }
+  .route-row { display: grid; grid-template-columns: 18px 16px 1fr auto; align-items: center; gap: 7px; padding: 4px 0; position: relative; }
   .route-row.dragging { opacity: 0.5; }
   .rs-handle { cursor: grab; color: #aaa; font-size: 0.95rem; text-align: center; user-select: none; touch-action: none; }
   .rs-handle:active { cursor: grabbing; }
@@ -76,8 +76,11 @@ permalink: /trip-calculator/
   .rs-charge.on { background: var(--link); border-color: var(--link); color: #fff; }
   .rs-clock.on { background: var(--link); border-color: var(--link); color: #fff; }
   .rs-loc.locating { opacity: 0.55; pointer-events: none; }
-  .rs-del { visibility: hidden; }
-  .route-row.removable .rs-del { visibility: visible; color: #ef4444; }
+  /* All per-stop action buttons in one flex cell so hidden ones (⚡/🕒 on endpoints,
+     × on a 2-stop route) collapse with no leftover grid gaps / trailing white space. */
+  .rs-actions { display: flex; align-items: center; gap: 6px; }
+  .rs-del { display: none; }
+  .route-row.removable .rs-del { display: inline-block; color: #ef4444; }
   /* charge slider row (full width under the stop) */
   .rs-slider { grid-column: 3 / -1; display: none; align-items: center; flex-wrap: wrap; gap: 10px; padding: 4px 2px 8px; }
   .rs-slider.show { display: flex; }
@@ -139,19 +142,25 @@ permalink: /trip-calculator/
   .stop.wp-stop .stop-num { background: #16a34a; }
   .net-wp { background: #16a34a20; color: #16a34a; }
 
-  .opt-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; margin-top: 16px; }
-  .opt-row .field { flex: 1; min-width: 130px; }
-  /* Departure holds the most (a date + two time inputs) so give it more room and a
-     date field wide enough to show MM/DD/YYYY without being squeezed. The two time
-     inputs share a fixed width so they line up vertically under each other. */
-  .opt-row .dep-field { flex: 1.6 1 17rem; min-width: 16.5rem; }
-  .dep-row { display: flex; gap: 6px; align-items: center; }
-  .dep-row + .dep-row { margin-top: 6px; }
-  .dep-date { flex: 1 1 9rem; min-width: 8.5rem; }
-  .dep-time { flex: 0 0 7.25rem; }
-  .dep-arrive-lbl { flex: 1 1 auto; text-align: right; font-size: 0.62rem; color: var(--tc-muted); font-weight: 600; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+  /* Grouped option sections: related fields sit under a small heading in a
+     responsive grid that TOP-aligns each field, so a short field never leaves a
+     tall neighbour stranded with empty space above it (the old flex-end rows did). */
+  .form-section { margin-top: 18px; }
+  .form-section + .form-section { border-top: 1px solid var(--dash-border); padding-top: 16px; }
+  .form-head { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 800; color: var(--tc-muted); margin-bottom: 12px; }
+  .opt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px 18px; align-items: start; }
+  .opt-grid-2 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .opt-tag { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--tc-muted); }
+  .route-alt-field { margin-top: 14px; }
+  /* date + time share a row but may wrap and shrink (min-width:0) so they never
+     spill past very narrow phones (~320px); date grows to fill, time stays compact. */
+  .dep-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .dep-date { flex: 1 1 9rem; min-width: 0; max-width: 14rem; }
+  .dep-time { flex: 0 1 7.25rem; min-width: 0; }
+  .dep-time-wide { max-width: 12rem; }
   .check { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--text); }
   .check input { width: auto; }
+  .check-stack { display: flex; flex-direction: column; gap: 7px; padding-top: 3px; }
 
   .go-btn {
     width: 100%; margin-top: 18px; padding: 13px; border: none; border-radius: 10px;
@@ -393,9 +402,8 @@ permalink: /trip-calculator/
   @media (max-width: 600px) {
     .field-grid { grid-template-columns: 1fr; }
     .hero-stat .big { font-size: 1.4rem; }
-    /* keep the option rows from ever exceeding the screen width on phones */
-    .opt-row { gap: 12px; }
-    .opt-row > .field, .opt-row > div { flex: 1 1 100%; min-width: 0; }
+    /* stack every option field full-width on phones */
+    .opt-grid, .opt-grid-2 { grid-template-columns: 1fr; }
     .tlog-sheet .kv, .tlog-sheet .boxes, .tlog-sheet .cheat-grid { grid-template-columns: 1fr; }
   }
 
@@ -449,59 +457,78 @@ permalink: /trip-calculator/
       <div class="quick-row"><button type="button" onclick="addStop()">＋ Add stop</button></div>
     </div>
 
-    <div class="opt-row">
-      <div class="field">
-        <label>Vehicle</label>
-        <select id="vehSel"></select>
-      </div>
-      <div class="field dep-field">
-        <label>Departure</label>
-        <div class="dep-row">
-          <input id="depDate" type="date" class="dep-date" title="Departure date">
-          <input id="depTime" type="time" step="300" title="Departure time (24-hour clock)" class="dep-time">
+    <!-- Vehicle & charge levels -->
+    <div class="form-section">
+      <div class="form-head">Vehicle &amp; charge</div>
+      <div class="opt-grid">
+        <div class="field">
+          <label>Vehicle</label>
+          <select id="vehSel"></select>
         </div>
-        <div class="dep-row">
-          <label for="arriveByTime" class="dep-arrive-lbl">…or arrive by</label>
-          <input id="arriveByTime" type="time" step="300" title="Target arrival (24h) — shows your latest departure time" class="dep-time">
+        <div class="field">
+          <label>Start charge % <span class="opt-tag">(optional)</span></label>
+          <input id="startSoc" type="number" min="0" max="100" placeholder="e.g. 80">
+          <span class="hint">Battery % when you leave — blank assumes full</span>
         </div>
-        <span class="hint">Set a departure time for an arrival estimate, or an “arrive by” time for a leave-by time</span>
-      </div>
-      <div class="field">
-        <label>Road type</label>
-        <select id="roadType">
-          <option value="auto">Auto (from route)</option>
-          <option value="highway">Mostly highway</option>
-          <option value="mixed">Mixed</option>
-          <option value="city">Mostly city</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Efficiency override <span style="font-weight:400;text-transform:none">(optional)</span></label>
-        <input id="effOverride" type="number" step="0.05" min="0.5" max="6" placeholder="use model">
-        <span class="hint">mi/kWh — blank = use model</span>
+        <div class="field">
+          <label>Reserve buffer %</label>
+          <input id="reserve" type="number" min="0" max="50" value="10">
+          <span class="hint">Don't plan to arrive below this</span>
+        </div>
       </div>
     </div>
 
-    <div class="opt-row">
-      <div class="field">
-        <label>Start charge % <span style="font-weight:400;text-transform:none">(optional)</span></label>
-        <input id="startSoc" type="number" min="0" max="100" placeholder="e.g. 80">
-      </div>
-      <div class="field">
-        <label>Reserve buffer %</label>
-        <input id="reserve" type="number" min="0" max="50" value="10">
-        <span class="hint">Don't plan to arrive below this</span>
-      </div>
-      <div style="flex:1;min-width:150px;display:flex;flex-direction:column;gap:6px">
-        <label class="check"><input type="checkbox" id="roundTrip" onchange="onRoundTripToggle()"> Round trip</label>
-        <label class="check" id="destChargeWrap" style="display:none"><input type="checkbox" id="canChargeDest" onchange="onRoundTripToggle()"> Can charge at destination</label>
-        <label class="check" id="destRateWrap" style="display:none;gap:4px"><small style="color:var(--tc-muted)">$</small><input id="destRate" type="number" min="0" step="0.01" style="width:64px"><small style="color:var(--tc-muted)">/kWh at destination</small></label>
+    <!-- When you're leaving — a departure time gives an arrival estimate, OR set a
+         target arrival to get the latest leave-by time (use one or the other). -->
+    <div class="form-section">
+      <div class="form-head">When you're leaving</div>
+      <div class="opt-grid opt-grid-2">
+        <div class="field">
+          <label>Departure</label>
+          <div class="dep-row">
+            <input id="depDate" type="date" class="dep-date" title="Departure date">
+            <input id="depTime" type="time" step="300" class="dep-time" title="Departure time (24-hour clock)">
+          </div>
+          <span class="hint">When you'll leave → we estimate your arrival</span>
+        </div>
+        <div class="field">
+          <label>Or arrive by <span class="opt-tag">(optional)</span></label>
+          <input id="arriveByTime" type="time" step="300" class="dep-time-wide" title="Target arrival (24h) — shows your latest departure time">
+          <span class="hint">Target arrival → we find your latest leave-by time</span>
+        </div>
       </div>
     </div>
 
-    <div class="opt-row">
-      <div class="field" style="flex:1;min-width:240px">
-        <label>Route alternatives <span style="font-weight:400;text-transform:none">(optional)</span></label>
+    <!-- Route & terrain -->
+    <div class="form-section">
+      <div class="form-head">Route &amp; terrain</div>
+      <div class="opt-grid">
+        <div class="field">
+          <label>Road type</label>
+          <select id="roadType">
+            <option value="auto">Auto (from route)</option>
+            <option value="highway">Mostly highway</option>
+            <option value="mixed">Mixed</option>
+            <option value="city">Mostly city</option>
+          </select>
+          <span class="hint">Tunes the estimate for stop-and-go vs. cruising</span>
+        </div>
+        <div class="field">
+          <label>Efficiency override <span class="opt-tag">(optional)</span></label>
+          <input id="effOverride" type="number" step="0.05" min="0.5" max="6" placeholder="use model">
+          <span class="hint">mi/kWh — blank = use model</span>
+        </div>
+        <div class="field">
+          <label>Trip type</label>
+          <div class="check-stack">
+            <label class="check"><input type="checkbox" id="roundTrip" onchange="onRoundTripToggle()"> Round trip</label>
+            <label class="check" id="destChargeWrap" style="display:none"><input type="checkbox" id="canChargeDest" onchange="onRoundTripToggle()"> Can charge at destination</label>
+            <label class="check" id="destRateWrap" style="display:none;gap:4px"><small style="color:var(--tc-muted)">$</small><input id="destRate" type="number" min="0" step="0.01" style="width:64px"><small style="color:var(--tc-muted)">/kWh at destination</small></label>
+          </div>
+        </div>
+      </div>
+      <div class="field full route-alt-field">
+        <label>Route alternatives <span class="opt-tag">(optional)</span></label>
         <div id="orsKeyBox"></div>
       </div>
     </div>
@@ -926,11 +953,13 @@ function makeStopRow(addr, charge, cost, opts){
       `<span class="rs-handle" title="Drag to reorder">⠿</span>`
     + `<span class="rs-dot"></span>`
     + `<input class="rs-addr" type="text" placeholder="Address or place" autocomplete="${ac}">`
-    + `<button type="button" class="rs-btn rs-loc" title="Use my current location">📍</button>`
-    + `<button type="button" class="rs-btn rs-home" title="Use home">🏠</button>`
-    + `<button type="button" class="rs-btn rs-clock" title="Set a leave date/time (delays arrival)">🕒</button>`
-    + `<button type="button" class="rs-btn rs-charge" title="Charge here">⚡</button>`
-    + `<button type="button" class="rs-btn rs-del" title="Remove stop">×</button>`
+    + `<div class="rs-actions">`
+    +   `<button type="button" class="rs-btn rs-loc" title="Use my current location">📍</button>`
+    +   `<button type="button" class="rs-btn rs-home" title="Use home">🏠</button>`
+    +   `<button type="button" class="rs-btn rs-clock" title="Set a leave date/time (delays arrival)">🕒</button>`
+    +   `<button type="button" class="rs-btn rs-charge" title="Charge here">⚡</button>`
+    +   `<button type="button" class="rs-btn rs-del" title="Remove stop">×</button>`
+    + `</div>`
     + `<div class="rs-slider">`
     +   `<div class="rs-sched">`
     +     `<span class="rs-sched-lbl">Leave this stop</span>`
