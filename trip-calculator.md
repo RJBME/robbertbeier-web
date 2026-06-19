@@ -141,6 +141,18 @@ permalink: /trip-calculator/
   .route-row.powmode .rs-powwrap { display: flex; }
   .stop.wp-stop .stop-num { background: #16a34a; }
   .net-wp { background: #16a34a20; color: #16a34a; }
+  /* Phones: a stop with every control has six action buttons, which on a narrow
+     screen crush the address input down to a sliver and spill past the card edge.
+     Drop the buttons onto their own full-width line under the address, enlarge the
+     touch targets, and use a 16px input font so iOS doesn't zoom the page in when
+     a field gets focus. */
+  @media (max-width: 600px) {
+    .route-row { grid-template-columns: 18px 16px 1fr; row-gap: 6px; }
+    .rs-addr { grid-column: 3; grid-row: 1; }
+    .rs-actions { grid-column: 1 / -1; grid-row: 2; flex-wrap: wrap; gap: 8px; }
+    .rs-btn { padding: 9px 11px; font-size: 1.05rem; }
+    .rs-addr, .rs-dep-date, .rs-dep-time, .rs-power, .rs-slider .rs-cost-input { font-size: 16px; }
+  }
 
   /* Grouped option sections: related fields sit under a small heading in a
      responsive grid that TOP-aligns each field, so a short field never leaves a
