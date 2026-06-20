@@ -106,6 +106,7 @@ permalink: /charging/
   .cpm-stat { text-align: center; min-width: 0; }
   .cpm-stat-label { font-size: 0.6rem; text-transform: uppercase; color: #888; display: block; }
   .cpm-stat-value { font-size: 1.1rem; font-weight: bold; display: block; margin-top: 3px; }
+  .cpm-stat-value.cpm-tip { cursor: help; text-decoration: underline dotted; text-decoration-color: #999; text-underline-offset: 3px; }
   .cpm-overall { border-top: 2px solid var(--dash-border); }
 
   .assumptions-panel { display: none; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.78rem; color: #888; }
@@ -273,11 +274,14 @@ permalink: /charging/
     {% assign odo_date       = op[2] | strip %}
     {% assign odo_win_start  = op[5] | strip %}
     {% assign odo_vehicle_clean = odo_vehicle | strip | downcase %}
-    {% if veh_clean == odo_vehicle_clean and entry_date <= odo_date %}
+    {% if veh_clean == odo_vehicle_clean %}
       {% assign odo_idx = forloop.index0 %}
-      {% comment %} Is this session inside the tracked odometer window (>= first odo reading)? {% endcomment %}
+      {% comment %} Lifetime totals (veh_kwh/veh_cost) count EVERY session for this
+         vehicle so they reconcile with the all-time Overall row. The tracked
+         window — used only for the per-mile stats — is [first reading, last
+         reading], so it's bounded below by odo_win_start and above by odo_date. {% endcomment %}
       {% assign in_window = false %}
-      {% if odo_win_start != "" and entry_date >= odo_win_start %}{% assign in_window = true %}{% endif %}
+      {% if odo_win_start != "" and entry_date >= odo_win_start and entry_date <= odo_date %}{% assign in_window = true %}{% endif %}
       {% case odo_idx %}
         {% when 0 %}
           {% assign veh_cost_0 = veh_cost_0 | plus: c %}
@@ -466,8 +470,11 @@ permalink: /charging/
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Charged</span>
-          {% assign v_mwh = v_kwh | divided_by: 1000.0 %}
-          <span class="cpm-stat-value" title="{{ v_kwh | round: 1 }} kWh">{{ v_mwh | round: 2 }} MWh</span>
+          {% comment %} Show MWh to a fixed 2 decimals (hundredths-of-MWh integer math, same idiom as the cents formatting). {% endcomment %}
+          {% assign v_mwh_x100 = v_kwh | divided_by: 10.0 | round %}
+          {% assign v_mwh_whole = v_mwh_x100 | divided_by: 100 %}
+          {% assign v_mwh_frac = v_mwh_x100 | modulo: 100 %}
+          <span class="cpm-stat-value cpm-tip" title="{{ v_kwh | round: 1 }} kWh">{{ v_mwh_whole }}.{% if v_mwh_frac < 10 %}0{% endif %}{{ v_mwh_frac }} MWh</span>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Cost</span>
@@ -519,8 +526,10 @@ permalink: /charging/
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Charged</span>
-          {% assign total_mwh = total_kwh | divided_by: 1000.0 %}
-          <span class="cpm-stat-value" title="{{ total_kwh | round: 1 }} kWh">{{ total_mwh | round: 2 }} MWh</span>
+          {% assign tot_mwh_x100 = total_kwh | divided_by: 10.0 | round %}
+          {% assign tot_mwh_whole = tot_mwh_x100 | divided_by: 100 %}
+          {% assign tot_mwh_frac = tot_mwh_x100 | modulo: 100 %}
+          <span class="cpm-stat-value cpm-tip" title="{{ total_kwh | round: 1 }} kWh">{{ tot_mwh_whole }}.{% if tot_mwh_frac < 10 %}0{% endif %}{{ tot_mwh_frac }} MWh</span>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Cost</span>
