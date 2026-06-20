@@ -53,11 +53,14 @@ permalink: /charging/
     {% endfor %}
     {% if _first_date == "9999-99-99" %}{% assign _first_date = entry.date %}{% endif %}
 
-    {% comment %} Find the oldest odometer reading on or before first_session_date for this vehicle {% endcomment %}
+    {% comment %} Find the oldest odometer reading on or before first_session_date for this vehicle.
+       Track its DATE too — that's the start of the period over which we can measure miles. {% endcomment %}
     {% assign _first_odo = 0 %}
+    {% assign _first_odo_date = "" %}
     {% for mentry in _mileage_asc %}
       {% if mentry.vehicle == entry.vehicle and mentry.date <= _first_date %}
         {% assign _first_odo = mentry.odometer %}
+        {% assign _first_odo_date = mentry.date | date: "%Y-%m-%d" %}
       {% endif %}
     {% endfor %}
     {% comment %} If no odo reading before first session, use earliest available reading {% endcomment %}
@@ -65,15 +68,16 @@ permalink: /charging/
       {% for mentry in _mileage_asc %}
         {% if mentry.vehicle == entry.vehicle and _first_odo == 0 %}
           {% assign _first_odo = mentry.odometer %}
+          {% assign _first_odo_date = mentry.date | date: "%Y-%m-%d" %}
         {% endif %}
       {% endfor %}
     {% endif %}
 
-    {% comment %} Miles driven during tracked period = current odo - odo at first session {% endcomment %}
+    {% comment %} Miles driven during tracked period = current odo - odo at first odometer reading {% endcomment %}
     {% assign _tracked_miles = entry.odometer | minus: _first_odo %}
     {% if _tracked_miles <= 0 %}{% assign _tracked_miles = entry.odometer %}{% endif %}
 
-    {% assign _row = entry.vehicle | append: " | " | append: entry.odometer | append: " | " | append: entry.date | append: " | " | append: _first_date | append: " | " | append: _tracked_miles | append: " |" %}
+    {% assign _row = entry.vehicle | append: " | " | append: entry.odometer | append: " | " | append: entry.date | append: " | " | append: _first_date | append: " | " | append: _tracked_miles | append: " | " | append: _first_odo_date | append: " |" %}
     {% if odometer_entries == "" %}
       {% assign odometer_entries = _row %}
     {% else %}
@@ -193,6 +197,12 @@ permalink: /charging/
 {% assign veh_kwh_2   = 0.0 %}
 {% assign veh_cost_3  = 0.0 %}
 {% assign veh_kwh_3   = 0.0 %}
+{% comment %} Windowed sums (only sessions WITHIN the odometer-tracked period) —
+   used for cost/mile & kWh/mile so the numerator matches the tracked miles. {% endcomment %}
+{% assign veh_wcost_0 = 0.0 %}{% assign veh_wkwh_0 = 0.0 %}
+{% assign veh_wcost_1 = 0.0 %}{% assign veh_wkwh_1 = 0.0 %}
+{% assign veh_wcost_2 = 0.0 %}{% assign veh_wkwh_2 = 0.0 %}
+{% assign veh_wcost_3 = 0.0 %}{% assign veh_wkwh_3 = 0.0 %}
 
 {% for entry in site.charging %}
   {% assign k          = entry.energy_kwh | times: 1.0 %}
@@ -258,25 +268,33 @@ permalink: /charging/
   {% comment %} ── Per-vehicle cost/kWh accumulation ── {% endcomment %}
   {% assign veh_clean = veh | strip | downcase %}
   {% for odo in odometer_entries %}
-    {% assign op          = odo | strip | split: " | " %}
-    {% assign odo_vehicle = op[0] | strip %}
-    {% assign odo_date    = op[2] | strip %}
+    {% assign op             = odo | strip | split: " | " %}
+    {% assign odo_vehicle    = op[0] | strip %}
+    {% assign odo_date       = op[2] | strip %}
+    {% assign odo_win_start  = op[5] | strip %}
     {% assign odo_vehicle_clean = odo_vehicle | strip | downcase %}
     {% if veh_clean == odo_vehicle_clean and entry_date <= odo_date %}
       {% assign odo_idx = forloop.index0 %}
+      {% comment %} Is this session inside the tracked odometer window (>= first odo reading)? {% endcomment %}
+      {% assign in_window = false %}
+      {% if odo_win_start != "" and entry_date >= odo_win_start %}{% assign in_window = true %}{% endif %}
       {% case odo_idx %}
         {% when 0 %}
           {% assign veh_cost_0 = veh_cost_0 | plus: c %}
           {% assign veh_kwh_0  = veh_kwh_0  | plus: k %}
+          {% if in_window %}{% assign veh_wcost_0 = veh_wcost_0 | plus: c %}{% assign veh_wkwh_0 = veh_wkwh_0 | plus: k %}{% endif %}
         {% when 1 %}
           {% assign veh_cost_1 = veh_cost_1 | plus: c %}
           {% assign veh_kwh_1  = veh_kwh_1  | plus: k %}
+          {% if in_window %}{% assign veh_wcost_1 = veh_wcost_1 | plus: c %}{% assign veh_wkwh_1 = veh_wkwh_1 | plus: k %}{% endif %}
         {% when 2 %}
           {% assign veh_cost_2 = veh_cost_2 | plus: c %}
           {% assign veh_kwh_2  = veh_kwh_2  | plus: k %}
+          {% if in_window %}{% assign veh_wcost_2 = veh_wcost_2 | plus: c %}{% assign veh_wkwh_2 = veh_wkwh_2 | plus: k %}{% endif %}
         {% when 3 %}
           {% assign veh_cost_3 = veh_cost_3 | plus: c %}
           {% assign veh_kwh_3  = veh_kwh_3  | plus: k %}
+          {% if in_window %}{% assign veh_wcost_3 = veh_wcost_3 | plus: c %}{% assign veh_wkwh_3 = veh_wkwh_3 | plus: k %}{% endif %}
       {% endcase %}
     {% endif %}
   {% endfor %}
@@ -385,15 +403,16 @@ permalink: /charging/
       {% assign overall_odo_miles = overall_odo_miles | plus: tracked_miles %}
 
       {% case idx %}
-        {% when 0 %}{% assign v_cost = veh_cost_0 %}{% assign v_kwh = veh_kwh_0 %}
-        {% when 1 %}{% assign v_cost = veh_cost_1 %}{% assign v_kwh = veh_kwh_1 %}
-        {% when 2 %}{% assign v_cost = veh_cost_2 %}{% assign v_kwh = veh_kwh_2 %}
-        {% when 3 %}{% assign v_cost = veh_cost_3 %}{% assign v_kwh = veh_kwh_3 %}
+        {% when 0 %}{% assign v_cost = veh_cost_0 %}{% assign v_kwh = veh_kwh_0 %}{% assign vw_cost = veh_wcost_0 %}{% assign vw_kwh = veh_wkwh_0 %}
+        {% when 1 %}{% assign v_cost = veh_cost_1 %}{% assign v_kwh = veh_kwh_1 %}{% assign vw_cost = veh_wcost_1 %}{% assign vw_kwh = veh_wkwh_1 %}
+        {% when 2 %}{% assign v_cost = veh_cost_2 %}{% assign v_kwh = veh_kwh_2 %}{% assign vw_cost = veh_wcost_2 %}{% assign vw_kwh = veh_wkwh_2 %}
+        {% when 3 %}{% assign v_cost = veh_cost_3 %}{% assign v_kwh = veh_kwh_3 %}{% assign vw_cost = veh_wcost_3 %}{% assign vw_kwh = veh_wkwh_3 %}
       {% endcase %}
 
+      {% comment %} Per-mile rates use the WINDOWED charging (same period as tracked_miles). {% endcomment %}
       {% if tracked_miles > 0 %}
-        {% assign cpm = v_cost | divided_by: tracked_miles %}
-        {% assign kpm = v_kwh  | divided_by: tracked_miles %}
+        {% assign cpm = vw_cost | divided_by: tracked_miles %}
+        {% assign kpm = vw_kwh  | divided_by: tracked_miles %}
       {% else %}
         {% assign cpm = 0 %}{% assign kpm = 0 %}
       {% endif %}
@@ -448,8 +467,12 @@ permalink: /charging/
     {% endfor %}
 
     {% if odometer_entries.size > 1 and overall_odo_miles > 0 %}
-      {% assign overall_cpm = total_cost | divided_by: overall_odo_miles %}
-      {% assign overall_kpm = total_kwh  | divided_by: overall_odo_miles %}
+      {% comment %} Overall per-mile rates also use windowed charging (sum of the
+         per-vehicle windowed sums), to match the combined tracked miles. {% endcomment %}
+      {% assign overall_wcost = veh_wcost_0 | plus: veh_wcost_1 | plus: veh_wcost_2 | plus: veh_wcost_3 %}
+      {% assign overall_wkwh  = veh_wkwh_0  | plus: veh_wkwh_1  | plus: veh_wkwh_2  | plus: veh_wkwh_3 %}
+      {% assign overall_cpm = overall_wcost | divided_by: overall_odo_miles %}
+      {% assign overall_kpm = overall_wkwh  | divided_by: overall_odo_miles %}
       {% assign overall_cpm_cents = overall_cpm | times: 100 | round | modulo: 100 %}
       {% assign show_overall_per_mile = false %}
       {% if overall_odo_miles >= 500 %}{% assign show_overall_per_mile = true %}{% endif %}
@@ -486,6 +509,7 @@ permalink: /charging/
         </div>
       </div>
     {% endif %}
+    <p style="font-size:0.66rem;color:#888;margin:10px 4px 0;line-height:1.5">Cost/mile &amp; kWh/mile are measured over the <strong>odometer-tracked period</strong> (between your earliest and latest readings, where miles are known) — so the energy in the numerator matches those miles. <strong>Total charged</strong> &amp; <strong>total cost</strong> are all-time.</p>
   </div>
 
   <div class="media-grid">
