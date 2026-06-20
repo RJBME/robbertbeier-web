@@ -309,8 +309,9 @@
 <nav>
   <div class="nav-links">
     {% for item in site.data.navigation %}
+      {% assign item_link_clean = item.link | remove: '.html' %}
       <a href="{{ item.link }}"
-         {% if page.url == item.link or page.url == item.link | remove: '.html' %}class="active"{% endif %}>
+         {% if page.url == item.link or page.url == item_link_clean %}class="active"{% endif %}>
         {{ item.name }}
       </a>
     {% endfor %}
