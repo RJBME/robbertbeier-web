@@ -412,9 +412,10 @@ permalink: /charging/
       {% comment %} Per-mile rates use the WINDOWED charging (same period as tracked_miles). {% endcomment %}
       {% if tracked_miles > 0 %}
         {% assign cpm = vw_cost | divided_by: tracked_miles %}
-        {% assign kpm = vw_kwh  | divided_by: tracked_miles %}
+        {% assign whpm = vw_kwh | divided_by: tracked_miles | times: 1000 | round %}
+        {% if vw_kwh > 0 %}{% assign mpk = tracked_miles | times: 1.0 | divided_by: vw_kwh %}{% else %}{% assign mpk = 0 %}{% endif %}
       {% else %}
-        {% assign cpm = 0 %}{% assign kpm = 0 %}
+        {% assign cpm = 0 %}{% assign whpm = 0 %}{% assign mpk = 0 %}
       {% endif %}
 
       {% comment %} Only show per-mile metrics if we have enough odometer coverage {% endcomment %}
@@ -448,9 +449,17 @@ permalink: /charging/
           {% endif %}
         </div>
         <div class="cpm-stat">
-          <span class="cpm-stat-label">kWh / Mile</span>
+          <span class="cpm-stat-label">mi / kWh</span>
           {% if show_per_mile %}
-            <span class="cpm-stat-value">{{ kpm | round: 3 }}</span>
+            <span class="cpm-stat-value">{{ mpk | round: 2 }}</span>
+          {% else %}
+            <span class="cpm-stat-value" style="color:#aaa">—</span>
+          {% endif %}
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">Wh / Mile</span>
+          {% if show_per_mile %}
+            <span class="cpm-stat-value">{{ whpm }}</span>
           {% else %}
             <span class="cpm-stat-value" title="Add more odometer readings to mileage.yml — need 500+ tracked miles" style="color:#aaa">—</span>
           {% endif %}
@@ -472,7 +481,8 @@ permalink: /charging/
       {% assign overall_wcost = veh_wcost_0 | plus: veh_wcost_1 | plus: veh_wcost_2 | plus: veh_wcost_3 %}
       {% assign overall_wkwh  = veh_wkwh_0  | plus: veh_wkwh_1  | plus: veh_wkwh_2  | plus: veh_wkwh_3 %}
       {% assign overall_cpm = overall_wcost | divided_by: overall_odo_miles %}
-      {% assign overall_kpm = overall_wkwh  | divided_by: overall_odo_miles %}
+      {% assign overall_whpm = overall_wkwh | divided_by: overall_odo_miles | times: 1000 | round %}
+      {% if overall_wkwh > 0 %}{% assign overall_mpk = overall_odo_miles | times: 1.0 | divided_by: overall_wkwh %}{% else %}{% assign overall_mpk = 0 %}{% endif %}
       {% assign overall_cpm_cents = overall_cpm | times: 100 | round | modulo: 100 %}
       {% assign show_overall_per_mile = false %}
       {% if overall_odo_miles >= 500 %}{% assign show_overall_per_mile = true %}{% endif %}
@@ -491,9 +501,17 @@ permalink: /charging/
           {% endif %}
         </div>
         <div class="cpm-stat">
-          <span class="cpm-stat-label">kWh / Mile</span>
+          <span class="cpm-stat-label">mi / kWh</span>
           {% if show_overall_per_mile %}
-            <span class="cpm-stat-value">{{ overall_kpm | round: 3 }}</span>
+            <span class="cpm-stat-value">{{ overall_mpk | round: 2 }}</span>
+          {% else %}
+            <span class="cpm-stat-value" style="color:#aaa">—</span>
+          {% endif %}
+        </div>
+        <div class="cpm-stat">
+          <span class="cpm-stat-label">Wh / Mile</span>
+          {% if show_overall_per_mile %}
+            <span class="cpm-stat-value">{{ overall_whpm }}</span>
           {% else %}
             <span class="cpm-stat-value" style="color:#aaa">—</span>
           {% endif %}
