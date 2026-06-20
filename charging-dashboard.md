@@ -100,10 +100,10 @@ permalink: /charging/
   .status-footnote { font-size: 0.65rem; color: #888; display: block; margin-top: 4px; line-height: 1.4; }
 
   .cpm-grid { display: grid; gap: 16px; margin-bottom: 25px; }
-  .cpm-row { display: flex; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 12px; padding: 16px 20px; align-items: center; gap: 20px; flex-wrap: wrap; }
-  .cpm-vehicle { font-weight: bold; font-size: 0.9rem; flex: 1 1 160px; }
+  .cpm-row { display: grid; grid-template-columns: 1.7fr repeat(5, 1fr); column-gap: 14px; row-gap: 10px; align-items: center; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 12px; padding: 16px 20px; }
+  .cpm-vehicle { font-weight: bold; font-size: 0.9rem; min-width: 0; }
   .cpm-vehicle small { display: block; font-weight: normal; color: #888; font-size: 0.65rem; margin-top: 2px; }
-  .cpm-stat { text-align: center; flex: 1 1 100px; }
+  .cpm-stat { text-align: center; min-width: 0; }
   .cpm-stat-label { font-size: 0.6rem; text-transform: uppercase; color: #888; display: block; }
   .cpm-stat-value { font-size: 1.1rem; font-weight: bold; display: block; margin-top: 3px; }
   .cpm-overall { border-top: 2px solid var(--dash-border); }
@@ -169,9 +169,9 @@ permalink: /charging/
     /* Charts: stack vertically */
     .media-grid { grid-template-columns: 1fr; gap: 14px; }
 
-    /* CPM cards: tighter padding, stats wrap to 2-per-row */
-    .cpm-row { padding: 12px 14px; gap: 12px; }
-    .cpm-stat { flex: 1 1 80px; }
+    /* CPM cards: vehicle on its own row, stats in a 3-col grid below */
+    .cpm-row { grid-template-columns: repeat(3, 1fr); padding: 14px; column-gap: 10px; row-gap: 14px; }
+    .cpm-vehicle { grid-column: 1 / -1; }
 
     /* Assumptions panel: scrollable tables */
     .assumptions-panel { padding: 10px 12px; }
@@ -466,7 +466,8 @@ permalink: /charging/
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Charged</span>
-          <span class="cpm-stat-value">{{ v_kwh | round: 1 }} kWh</span>
+          {% assign v_mwh = v_kwh | divided_by: 1000.0 %}
+          <span class="cpm-stat-value" title="{{ v_kwh | round: 1 }} kWh">{{ v_mwh | round: 2 }} MWh</span>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Cost</span>
@@ -518,7 +519,8 @@ permalink: /charging/
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Charged</span>
-          <span class="cpm-stat-value">{{ total_kwh | round: 1 }} kWh</span>
+          {% assign total_mwh = total_kwh | divided_by: 1000.0 %}
+          <span class="cpm-stat-value" title="{{ total_kwh | round: 1 }} kWh">{{ total_mwh | round: 2 }} MWh</span>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Cost</span>
@@ -527,7 +529,7 @@ permalink: /charging/
         </div>
       </div>
     {% endif %}
-    <p style="font-size:0.66rem;color:#888;margin:10px 4px 0;line-height:1.5">Cost/mile &amp; kWh/mile are measured over the <strong>odometer-tracked period</strong> (between your earliest and latest readings, where miles are known) — so the energy in the numerator matches those miles. <strong>Total charged</strong> &amp; <strong>total cost</strong> are all-time.</p>
+    <p style="font-size:0.66rem;color:#888;margin:10px 4px 0;line-height:1.5">Cost/mile, mi/kWh &amp; Wh/mile are measured over the <strong>odometer-tracked period</strong> (between your earliest and latest readings, where miles are known) — so the energy in the numerator matches those miles. <strong>Total charged</strong> &amp; <strong>total cost</strong> are all-time.</p>
   </div>
 
   <div class="media-grid">

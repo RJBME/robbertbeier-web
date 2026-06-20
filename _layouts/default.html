@@ -51,8 +51,9 @@
       transition: background-color 0.3s, color 0.3s;
     }
 
-    /* ── Navigation ── */
-    nav {
+    /* ── Navigation ── (scoped to the top-level site nav only, so it
+       never leaks into page-embedded <nav> elements like .charge-nav) */
+    body > nav {
       margin-bottom: 2rem;
       border-bottom: 1px solid var(--border);
       padding-bottom: 1rem;
@@ -258,7 +259,7 @@
 
     /* ── Sticky nav (desktop / tablet ≥ 768 px) ── */
     @media (min-width: 768px) {
-      nav {
+      body > nav {
         position: sticky;
         top: 0;
         z-index: 500;
