@@ -106,8 +106,27 @@ permalink: /charging/
   .cpm-stat { text-align: center; min-width: 0; }
   .cpm-stat-label { font-size: 0.6rem; text-transform: uppercase; color: #888; display: block; }
   .cpm-stat-value { font-size: 1.1rem; font-weight: bold; display: block; margin-top: 3px; }
-  .cpm-stat-value.cpm-tip { cursor: help; text-decoration: underline dotted; text-decoration-color: #999; text-underline-offset: 3px; }
   .cpm-overall { border-top: 2px solid var(--dash-border); }
+
+  /* Custom tooltip — works on desktop hover AND mobile tap (native title:
+     attributes don't fire on touch and are flaky on desktop). */
+  .cpm-tip { position: relative; cursor: help; text-decoration: underline dotted; text-decoration-color: #999; text-underline-offset: 3px; }
+  .cpm-tip-bubble {
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    margin-bottom: 7px; padding: 4px 9px; border-radius: 6px;
+    background: var(--text); color: var(--dash-card);
+    font-size: 0.7rem; font-weight: 600; letter-spacing: 0; text-decoration: none;
+    white-space: nowrap; box-shadow: 0 3px 10px rgba(0,0,0,0.28);
+    opacity: 0; visibility: hidden; transition: opacity 0.12s ease;
+    z-index: 600; pointer-events: none;
+  }
+  .cpm-tip-bubble::after {
+    content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 5px solid transparent; border-top-color: var(--text);
+  }
+  .cpm-tip:hover .cpm-tip-bubble,
+  .cpm-tip:focus .cpm-tip-bubble,
+  .cpm-tip.is-open .cpm-tip-bubble { opacity: 1; visibility: visible; }
 
   .assumptions-panel { display: none; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.78rem; color: #888; }
   .assumptions-panel strong { color: var(--text); }
@@ -170,9 +189,16 @@ permalink: /charging/
     /* Charts: stack vertically */
     .media-grid { grid-template-columns: 1fr; gap: 14px; }
 
-    /* CPM cards: vehicle on its own row, stats in a 3-col grid below */
-    .cpm-row { grid-template-columns: repeat(3, 1fr); padding: 14px; column-gap: 10px; row-gap: 14px; }
-    .cpm-vehicle { grid-column: 1 / -1; }
+    /* CPM cards: a clean label-left / value-right spec list (no awkward
+       half-empty grid row). */
+    .cpm-row { grid-template-columns: 1fr; padding: 6px 16px 12px; row-gap: 0; }
+    .cpm-vehicle { grid-column: 1 / -1; padding: 10px 0 6px; }
+    .cpm-stat { display: flex; justify-content: space-between; align-items: baseline; text-align: left; gap: 12px; padding: 10px 0; border-top: 1px solid var(--dash-border); }
+    .cpm-stat-label { font-size: 0.72rem; margin: 0; }
+    .cpm-stat-value { font-size: 1.05rem; margin: 0; }
+    /* Right-anchor the tooltip so it can't overflow the card edge. */
+    .cpm-tip-bubble { left: auto; right: 0; transform: none; }
+    .cpm-tip-bubble::after { left: auto; right: 10px; transform: none; }
 
     /* Assumptions panel: scrollable tables */
     .assumptions-panel { padding: 10px 12px; }
@@ -474,7 +500,7 @@ permalink: /charging/
           {% assign v_mwh_x100 = v_kwh | divided_by: 10.0 | round %}
           {% assign v_mwh_whole = v_mwh_x100 | divided_by: 100 %}
           {% assign v_mwh_frac = v_mwh_x100 | modulo: 100 %}
-          <span class="cpm-stat-value cpm-tip" title="{{ v_kwh | round: 1 }} kWh">{{ v_mwh_whole }}.{% if v_mwh_frac < 10 %}0{% endif %}{{ v_mwh_frac }} MWh</span>
+          <span class="cpm-stat-value cpm-tip" tabindex="0" role="button" aria-label="{{ v_kwh | round: 1 }} kilowatt hours">{{ v_mwh_whole }}.{% if v_mwh_frac < 10 %}0{% endif %}{{ v_mwh_frac }} MWh<span class="cpm-tip-bubble">{{ v_kwh | round: 1 }} kWh</span></span>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Cost</span>
@@ -529,7 +555,7 @@ permalink: /charging/
           {% assign tot_mwh_x100 = total_kwh | divided_by: 10.0 | round %}
           {% assign tot_mwh_whole = tot_mwh_x100 | divided_by: 100 %}
           {% assign tot_mwh_frac = tot_mwh_x100 | modulo: 100 %}
-          <span class="cpm-stat-value cpm-tip" title="{{ total_kwh | round: 1 }} kWh">{{ tot_mwh_whole }}.{% if tot_mwh_frac < 10 %}0{% endif %}{{ tot_mwh_frac }} MWh</span>
+          <span class="cpm-stat-value cpm-tip" tabindex="0" role="button" aria-label="{{ total_kwh | round: 1 }} kilowatt hours">{{ tot_mwh_whole }}.{% if tot_mwh_frac < 10 %}0{% endif %}{{ tot_mwh_frac }} MWh<span class="cpm-tip-bubble">{{ total_kwh | round: 1 }} kWh</span></span>
         </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Total Cost</span>
@@ -540,6 +566,22 @@ permalink: /charging/
     {% endif %}
     <p style="font-size:0.66rem;color:#888;margin:10px 4px 0;line-height:1.5">Cost/mile, mi/kWh &amp; Wh/mile are measured over the <strong>odometer-tracked period</strong> (between your earliest and latest readings, where miles are known) — so the energy in the numerator matches those miles. <strong>Total charged</strong> &amp; <strong>total cost</strong> are all-time.</p>
   </div>
+
+  <script>
+    /* Total-Charged tooltip: tap toggles the exact-kWh bubble on touch
+       devices (where hover never fires); desktop also gets hover via CSS. */
+    (function(){
+      function closeTips(except){
+        document.querySelectorAll('.cpm-tip.is-open').forEach(function(t){ if (t !== except) t.classList.remove('is-open'); });
+      }
+      document.addEventListener('click', function(e){
+        var tip = e.target.closest('.cpm-tip');
+        if (tip){ e.preventDefault(); var open = tip.classList.contains('is-open'); closeTips(tip); tip.classList.toggle('is-open', !open); }
+        else { closeTips(null); }
+      });
+      document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeTips(null); });
+    })();
+  </script>
 
   <div class="media-grid">
     <div class="card">
