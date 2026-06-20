@@ -31,17 +31,27 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Current readings (today, 2026-05-21) ─────────────────────────────────────
+- date: "2026-06-20"
+  vehicle: "2025 Mach-E GT"
+  odometer: 13220
+  notes: "current reading"
+
+- date: "2026-06-20"
+  vehicle: "LRB's 2025 Mach-E GT"
+  odometer: 13399
+  notes: "current reading"
+
+# ── Previous readings ─────────────────────────────────────────────────────────
 - date: "2026-06-12"
   vehicle: "2025 Mach-E GT"
   odometer: 12898
-  notes: "current reading"
+  notes: ""
 
 - date: "2026-06-12"
   vehicle: "LRB's 2025 Mach-E GT"
   odometer: 13072
-  notes: "current reading"
+  notes: ""
 
-# ── Previous readings ─────────────────────────────────────────────────────────
 - date: "2026-05-31"
   vehicle: "2025 Mach-E GT"
   odometer: 12420
