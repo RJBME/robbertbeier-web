@@ -17,7 +17,10 @@ home_electricity:
     rate: 0.204
   - date: "2026-04-22"
     rate: 0.206
-  
+  - date: "2026-05-20"
+    rate: 0.207
+  - date: "2026-06-19"
+    rate: 0.215
 
 gas_savings:
   - date: "2025-08-22"
