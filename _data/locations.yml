@@ -138,3 +138,9 @@
   lat: 42.5404
   lng: -83.7886
   city: "Brighton, MI"
+
+- location: "Electrify America, Cadillac, MI"
+  lat: 44.2828
+  lng: -85.4030
+  city: "Cadillac, MI"
+  
