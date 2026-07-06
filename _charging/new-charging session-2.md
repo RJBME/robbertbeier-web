@@ -1,0 +1,16 @@
+---
+_schema: default
+date: 2026-07-02T00:00:00-04:00
+location: Electrify America, Cadillac, MI
+vehicle: 2025 Mach-E GT
+energy_kwh: 24.6
+cost: 15.65
+start_date: 2026-07-02T00:00:00-04:00
+start_time: '15:19'
+end_time: '15:30'
+soc_start: 20
+soc_end: 47
+soc_added: 27
+miles_added: 72
+notes: ''
+---
