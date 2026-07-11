@@ -499,6 +499,12 @@ permalink: /charging-analytics/
   .ev-fill { position: absolute; inset: 0; border-radius: 50%; opacity: 0.32; }
   .ev-edge { position: absolute; inset: 0; border-radius: 50%; border: 2px solid; opacity: 0.9; box-shadow: 0 1px 5px rgba(0,0,0,0.22); }
   .ev-core { position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 1px 2px rgba(0,0,0,0.45); }
+  .ev-map-icon { cursor: pointer; }
+  .ev-sym { transition: transform 0.12s ease; }
+  .ev-map-icon:hover { z-index: 1000 !important; }
+  .ev-map-icon:hover .ev-sym { transform: scale(1.14); }
+  #chargingMap .leaflet-tooltip { background: var(--dash-card,#fff); color: var(--text,#333); border: 1px solid var(--dash-border,#ddd); box-shadow: 0 2px 8px rgba(0,0,0,0.18); font-weight: 600; font-size: 11px; padding: 3px 8px; }
+  #chargingMap .leaflet-tooltip-top::before { border-top-color: var(--dash-border,#ddd); }
   #chargingMap { border-radius: 10px; }
   #chargingMap .leaflet-popup-content-wrapper { background: var(--dash-card,#fff); color: var(--text,#333); border: 1px solid var(--dash-border,#ddd); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
   #chargingMap .leaflet-popup-tip { background: var(--dash-card,#fff); }
@@ -5953,8 +5959,9 @@ function buildMap(sl) {
 
   const stats = {};
   sl.forEach(s => {
-    if (!stats[s.location]) stats[s.location] = { kwh: 0, sessions: 0, bucket: s.bucket };
+    if (!stats[s.location]) stats[s.location] = { kwh: 0, cost: 0, sessions: 0, bucket: s.bucket };
     stats[s.location].kwh      += s.kwh;
+    stats[s.location].cost     += (s.cost || 0);
     stats[s.location].sessions += 1;
   });
 
@@ -5977,18 +5984,24 @@ function buildMap(sl) {
     const st    = stats[loc.location];
     const color = BUCKET_COLORS[st.bucket] || '#888';
     const sz    = Math.round(MIN_SZ + Math.sqrt(st.kwh / maxKwh) * (MAX_SZ - MIN_SZ));
-    const avg   = st.sessions ? (st.kwh / st.sessions).toFixed(1) : '0';
+    const avg     = st.sessions ? (st.kwh / st.sessions).toFixed(1) : '0';
+    const netName = BUCKET_LABELS[st.bucket] || st.bucket;
+    const costStr = st.cost > 0 ? `$${st.cost.toFixed(2)}` : 'Free';
     const popup = `<b>${loc.location}</b>` +
       (loc.city ? `<br><small style="color:#888">${loc.city}</small>` : '') +
-      `<br>${st.kwh.toFixed(1)} kWh &nbsp;·&nbsp; ${st.sessions} session${st.sessions !== 1 ? 's' : ''}` +
-      `<br>Avg: ${avg} kWh/session`;
+      `<br><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:5px;vertical-align:middle"></span>${netName}` +
+      `<br><b>${st.kwh.toFixed(1)} kWh</b> &nbsp;·&nbsp; ${costStr}` +
+      `<br>${st.sessions} session${st.sessions !== 1 ? 's' : ''} &nbsp;·&nbsp; avg ${avg} kWh`;
     const icon = L.divIcon({
       className: 'ev-map-icon',
       html: `<div class="ev-sym" style="width:${sz}px;height:${sz}px"><span class="ev-fill" style="background:${color}"></span><span class="ev-edge" style="border-color:${color}"></span><span class="ev-core" style="background:${color}"></span></div>`,
       iconSize:   [sz, sz],
       iconAnchor: [sz / 2, sz / 2]
     });
-    L.marker([loc.lat, loc.lng], { icon }).bindPopup(popup).addTo(_markerGroup);
+    L.marker([loc.lat, loc.lng], { icon })
+      .bindPopup(popup)
+      .bindTooltip(`${loc.location} · ${Math.round(st.kwh)} kWh`, { direction: 'top', offset: [0, -sz / 2 - 3], opacity: 0.96 })
+      .addTo(_markerGroup);
     bounds.push([loc.lat, loc.lng]);
   });
 
