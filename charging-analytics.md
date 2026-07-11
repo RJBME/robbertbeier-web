@@ -1752,14 +1752,14 @@ const C_AMBER  = '#f39c12';
 const C_RED    = '#e74c3c';
 const C_VIOLET = '#5D3FD3';
 
-/* ── Per-vehicle colors — ONE source of truth so a given car is the SAME bold
-   palette color in every chart across the page. Unknown vehicles fall back to
-   the palette by index. Keyed by the exact vehicle names used in the data. ── */
+/* ── Per-vehicle colors — ONE source of truth so a given car is the SAME color
+   in every chart across the page. Set to each car's ACTUAL paint colour as a
+   real-world visual cue. Unknown vehicles fall back to the palette by index. ── */
 const VEHICLE_COLORS = {
-  '2025 Mach-E GT':        C_BLUE,
-  '2026 Mach-E SR':        C_GREEN,
-  "LRB's 2025 Mach-E GT":  C_PURPLE,
-  "LRB's 2026 Mach-E SR":  C_AMBER
+  '2025 Mach-E GT':        '#C2A76C',  // Desert Sand
+  '2026 Mach-E SR':        '#C8102E',  // Race Red
+  "LRB's 2025 Mach-E GT":  '#B5176B',  // Molten Magenta
+  "LRB's 2026 Mach-E SR":  '#3A6EA5'   // Adriatic Blue
 };
 const VEH_FALLBACK = [C_VIOLET, C_RED, C_BLUE, C_GREEN, C_AMBER, C_PURPLE];
 function vehColor(v, i) {

@@ -460,20 +460,21 @@ permalink: /charging/
       {% assign cpm_cents = cpm | times: 100 | round | modulo: 100 %}
       {% assign vc_cents  = v_cost | times: 100 | round | modulo: 100 %}
 
-      {% comment %} Distinct accent per vehicle so two same-owner cars (e.g. both RJB) don't share a colour. {% endcomment %}
+      {% comment %} Border + chip = the car's real paint colour (which specific car);
+         name text = owner's favourite colour (whose car — RJB purple, LRB orange). {% endcomment %}
       {% case odo_vehicle %}
-        {% when "2025 Mach-E GT" %}       {% assign accent = "#7b1fa2" %}
-        {% when "2026 Mach-E SR" %}       {% assign accent = "#0288d1" %}
-        {% when "LRB's 2025 Mach-E GT" %} {% assign accent = "#f39c12" %}
-        {% when "LRB's 2026 Mach-E SR" %} {% assign accent = "#16a34a" %}
-        {% else %}{% if odo_vehicle contains "LRB" %}{% assign accent = "#f39c12" %}{% else %}{% assign accent = "#7b1fa2" %}{% endif %}
+        {% when "2025 Mach-E GT" %}       {% assign paint = "#C2A76C" %}{% assign owner_color = "#7b1fa2" %}{% comment %}Desert Sand{% endcomment %}
+        {% when "2026 Mach-E SR" %}       {% assign paint = "#C8102E" %}{% assign owner_color = "#7b1fa2" %}{% comment %}Race Red{% endcomment %}
+        {% when "LRB's 2025 Mach-E GT" %} {% assign paint = "#B5176B" %}{% assign owner_color = "#f39c12" %}{% comment %}Molten Magenta{% endcomment %}
+        {% when "LRB's 2026 Mach-E SR" %} {% assign paint = "#3A6EA5" %}{% assign owner_color = "#f39c12" %}{% comment %}Adriatic Blue{% endcomment %}
+        {% else %}{% assign paint = "#7b7b7b" %}{% if odo_vehicle contains "LRB" %}{% assign owner_color = "#f39c12" %}{% else %}{% assign owner_color = "#7b1fa2" %}{% endif %}
       {% endcase %}
-      {% assign row_accent = "border-left: 4px solid " | append: accent | append: ";" %}
-      {% assign veh_color  = "color: " | append: accent | append: ";" %}
+      {% assign row_accent = "border-left: 4px solid " | append: paint | append: ";" %}
+      {% assign veh_color  = "color: " | append: owner_color | append: ";" %}
 
       <div class="cpm-row" style="{{ row_accent }}">
         <div class="cpm-vehicle" style="{{ veh_color }}">
-          {{ odo_vehicle }}
+          <span title="Paint colour" style="display:inline-block;width:11px;height:11px;border-radius:50%;background:{{ paint }};margin-right:7px;vertical-align:middle;border:1px solid rgba(128,128,128,0.35)"></span>{{ odo_vehicle }}
           <small style="color:#888">{{ odo_miles }} mi as of {{ odo_date }} · {{ tracked_miles }} mi tracked</small>
         </div>
         <div class="cpm-stat">
