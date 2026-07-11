@@ -464,9 +464,9 @@ permalink: /charging/
          name text = owner's favourite colour (whose car — RJB purple, LRB orange). {% endcomment %}
       {% case odo_vehicle %}
         {% when "2025 Mach-E GT" %}       {% assign paint = "#C2A76C" %}{% assign owner_color = "#7b1fa2" %}{% comment %}Desert Sand{% endcomment %}
-        {% when "2026 Mach-E SR" %}       {% assign paint = "#C8102E" %}{% assign owner_color = "#7b1fa2" %}{% comment %}Race Red{% endcomment %}
+        {% when "2026 Mach-E SR" %}       {% assign paint = "#E31E2E" %}{% assign owner_color = "#7b1fa2" %}{% comment %}Race Red{% endcomment %}
         {% when "LRB's 2025 Mach-E GT" %} {% assign paint = "#B5176B" %}{% assign owner_color = "#f39c12" %}{% comment %}Molten Magenta{% endcomment %}
-        {% when "LRB's 2026 Mach-E SR" %} {% assign paint = "#3A6EA5" %}{% assign owner_color = "#f39c12" %}{% comment %}Adriatic Blue{% endcomment %}
+        {% when "LRB's 2026 Mach-E SR" %} {% assign paint = "#2E7D9E" %}{% assign owner_color = "#f39c12" %}{% comment %}Adriatic Blue{% endcomment %}
         {% else %}{% assign paint = "#7b7b7b" %}{% if odo_vehicle contains "LRB" %}{% assign owner_color = "#f39c12" %}{% else %}{% assign owner_color = "#7b1fa2" %}{% endif %}
       {% endcase %}
       {% assign row_accent = "border-left: 4px solid " | append: paint | append: ";" %}

@@ -1757,9 +1757,9 @@ const C_VIOLET = '#5D3FD3';
    real-world visual cue. Unknown vehicles fall back to the palette by index. ── */
 const VEHICLE_COLORS = {
   '2025 Mach-E GT':        '#C2A76C',  // Desert Sand
-  '2026 Mach-E SR':        '#C8102E',  // Race Red
+  '2026 Mach-E SR':        '#E31E2E',  // Race Red
   "LRB's 2025 Mach-E GT":  '#B5176B',  // Molten Magenta
-  "LRB's 2026 Mach-E SR":  '#3A6EA5'   // Adriatic Blue
+  "LRB's 2026 Mach-E SR":  '#2E7D9E'   // Adriatic Blue (teal-leaning)
 };
 const VEH_FALLBACK = [C_VIOLET, C_RED, C_BLUE, C_GREEN, C_AMBER, C_PURPLE];
 function vehColor(v, i) {
