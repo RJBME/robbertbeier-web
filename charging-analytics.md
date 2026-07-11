@@ -1149,7 +1149,7 @@ permalink: /charging-analytics/
       ⚡ <strong>Michigan-honest calculation:</strong> Grid CO₂ subtracted using eGRID 2023 subregion rates.
       Road trip sessions use location-specific grid factors where available — Madison WI (MROE) charges at
       <strong>1,397 lbs/MWh</strong>, nearly 44% dirtier than home (RFCM, 971 lbs/MWh).
-      Comparison vehicle: <span id="co2BaselineNote">RJB → 2023 Escape (24.8 MPG actual) · LRB → 2016 Explorer (23.0 MPG)</span>.
+      Comparison vehicle: <span id="co2BaselineNote">RJB → 2023 Escape (27 MPG) · LRB → 2016 Explorer (23 MPG)</span>.
     </div>
 
     <!-- Solar scenario footnote -->
@@ -1656,8 +1656,8 @@ function getBucket(loc) {
 // Keys must exactly match vehicle field values in session files.
 // If a vehicle isn't listed here, the mpg from rates.yml is used.
 const VEHICLE_MPG = {
-  '2025 Mach-E GT':        24.8,   // RJB real-world from Fuelly (2023 Escape, 26 fill-ups)
-  '2026 Mach-E SR':        24.8,
+  '2025 Mach-E GT':        27,     // RJB — compared to the 2023 Escape it replaced (~27 mpg)
+  '2026 Mach-E SR':        27,     // RJB future car — same 27 mpg baseline
   "LRB's 2025 Mach-E GT":  23.0,   // LRB real-world (2016 Explorer 2.3L EcoBoost, per dash computer)
   "LRB's 2026 Mach-E SR":  23.0,
 };
@@ -1695,7 +1695,7 @@ const STATE_TO_EGRID = {
 
 // Get baseline MPG for a vehicle (for CO2 comparison)
 function getBaselineMpg(vehicle) {
-  return VEHICLE_MPG[vehicle] || 24.8;
+  return VEHICLE_MPG[vehicle] || 27;
 }
 
 // (getGasSavingsObj, getEgridFactor, getBucket defined above with memoization)
@@ -3291,16 +3291,16 @@ mkChart('chartHistogram', {
     countUp(breakEl, totalSavingsAll, v => fmtUSD(v));
     if (breakSub) {
       // Baseline gas-car MPG follows the current vehicle selection — each EV is
-      // compared to the specific gas car it replaced (RJB 24.8, LRB 23). One value
+      // compared to the specific gas car it replaced (RJB 27, LRB 23). One value
       // if a single baseline is in play, else a kWh-weighted average of the mix.
-      const mpgVals = [...new Set(sl.map(s => VEHICLE_MPG[s.vehicle] || 24.8))];
+      const mpgVals = [...new Set(sl.map(s => VEHICLE_MPG[s.vehicle] || 27))];
       let mpgLabel;
       if (mpgVals.length === 1) {
         mpgLabel = mpgVals[0] + ' mpg';
       } else {
         let wSum = 0, w = 0;
-        sl.forEach(s => { const m = VEHICLE_MPG[s.vehicle] || 24.8; wSum += m * s.kwh; w += s.kwh; });
-        mpgLabel = (w ? (wSum / w) : 24.8).toFixed(1) + ' mpg avg';
+        sl.forEach(s => { const m = VEHICLE_MPG[s.vehicle] || 27; wSum += m * s.kwh; w += s.kwh; });
+        mpgLabel = (w ? (wSum / w) : 27).toFixed(1) + ' mpg avg';
       }
       breakSub.textContent = 'saved vs. driving a ' + mpgLabel + ' gas car since ' + (sl[0]?.date || '');
     }
@@ -3514,9 +3514,9 @@ mkChart('chartHistogram', {
     const isMixed = activeVehicles.has('all') || activeVehicles.size > 1;
     const baseNote = document.getElementById('co2BaselineNote');
     if (baseNote) {
-      if (isMixed)    baseNote.textContent = 'RJB → 2023 Escape (24.8 MPG actual) · LRB → 2016 Explorer (23.0 MPG)';
+      if (isMixed)    baseNote.textContent = 'RJB → 2023 Escape (27 MPG) · LRB → 2016 Explorer (23 MPG)';
       else if (isLRB) baseNote.textContent = 'LRB → 2016 Explorer 2.3L EcoBoost (23.0 MPG real-world)';
-      else            baseNote.textContent = 'RJB → 2023 Ford Escape (24.8 MPG actual — 26 Fuelly fill-ups)';
+      else            baseNote.textContent = 'RJB → 2023 Ford Escape (27 MPG)';
     }
 
     // Monthly buckets
@@ -3708,7 +3708,7 @@ mkChart('chartHistogram', {
     // key: substring to match vehicle name — LRB = Explorer, else = Escape
     const GAS_SPECS = {
       lrb: { name: '2016 Explorer AWD', mpg: 23,   tank: 17.9 },
-      rjb: { name: '2023 Escape AWD',   mpg: 24.8, tank: 15.7 }
+      rjb: { name: '2023 Escape AWD',   mpg: 27,   tank: 15.7 }
     };
     function gasSpecForVehicle(vehicleName) {
       return (vehicleName || '').includes('LRB') ? GAS_SPECS.lrb : GAS_SPECS.rjb;
@@ -5416,7 +5416,7 @@ function buildGasSensitivity(sl) {
   // Savings at price P = (miles / mpg) * P - electricityCost
   const sessionData = sl.map(s => {
     const gs    = getGasSavingsObj(s.date, s.vehicle);
-    const mpg   = VEHICLE_MPG[s.vehicle] || 24.8;
+    const mpg   = VEHICLE_MPG[s.vehicle] || 27;
     const mi    = s.hasRealEff ? s.milesAdded : s.kwh * (gs.mi_per_kwh || 3.0);
     const gallons = mi / mpg;
     return { date: s.date, month: s.month, gallons, elecCost: s.cost, actualGasPrice: gs.gas_price };
@@ -5623,7 +5623,7 @@ function buildPerspectiveCards(sl) {
   const totalGallonsAvoided = sl.reduce((a,s) => {
     const gs = getGasSavingsObj(s.date, s.vehicle);
     const mi = (s.milesAdded > 0 ? s.milesAdded : s.kwh * (gs.mi_per_kwh || 3.0));
-    const mpg = VEHICLE_MPG[s.vehicle] || 24.8;
+    const mpg = VEHICLE_MPG[s.vehicle] || 27;
     return a + mi / mpg;
   }, 0);
   const totalCo2Avoided = sl.reduce((a,s) => a + (s.co2NetAvoided || 0), 0);
