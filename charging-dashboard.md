@@ -150,6 +150,7 @@ permalink: /charging/
   .badge-cp     { background: #f9731620; color: #f97316; }
   .badge-blink  { background: #22c55e20; color: #22c55e; }
   .badge-rivian { background: #eab30820; color: #d97706; }
+  .badge-ea     { background: #00b04f20; color: #00963f; }
   .badge-other  { background: #6b728020; color: #6b7280; }
 
   .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.84rem; color: var(--text) !important; }
@@ -215,6 +216,7 @@ permalink: /charging/
 {% assign cp_kwh      = 0.0 %}
 {% assign blink_kwh   = 0.0 %}
 {% assign rivian_kwh  = 0.0 %}
+{% assign ea_kwh      = 0.0 %}
 {% assign other_kwh   = 0.0 %}
 {% assign veh_cost_0  = 0.0 %}
 {% assign veh_kwh_0   = 0.0 %}
@@ -265,6 +267,7 @@ permalink: /charging/
   {% elsif loc contains "chargepoint" %} {% assign cp_kwh     = cp_kwh     | plus: k %}
   {% elsif loc contains "blink" %}       {% assign blink_kwh  = blink_kwh  | plus: k %}
   {% elsif loc contains "rivian" %}      {% assign rivian_kwh = rivian_kwh | plus: k %}
+  {% elsif loc contains "electrify" %}   {% assign ea_kwh     = ea_kwh     | plus: k %}
   {% else %}                             {% assign other_kwh  = other_kwh  | plus: k %}
   {% endif %}
 
@@ -639,6 +642,7 @@ permalink: /charging/
               {% elsif l contains 'chargepoint' %}badge-cp
               {% elsif l contains 'blink' %}badge-blink
               {% elsif l contains 'rivian' %}badge-rivian
+              {% elsif l contains 'electrify' %}badge-ea
               {% else %}badge-other{% endif %}">
               {{ log.location | truncate: 20 }}
             </span>
@@ -708,6 +712,7 @@ permalink: /charging/
     { label: 'CP',     val: {{ cp_kwh }},     color: '#FF7A14' },
     { label: 'Blink',  val: {{ blink_kwh }},  color: '#65A844' },
     { label: 'Rivian', val: {{ rivian_kwh }}, color: '#ffa500' },
+    { label: 'EA',     val: {{ ea_kwh }},     color: '#00963f' },
     { label: 'Other',  val: {{ other_kwh }},  color: '#616161' }
   ].filter(d => d.val > 0).sort((a, b) => b.val - a.val);
 

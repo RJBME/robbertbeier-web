@@ -145,6 +145,7 @@ permalink: /charging-analytics/
   .badge-cp     { background: #fff3e0; color: #FF7A14; }
   .badge-blink  { background: #e8f5e9; color: #65A844; }
   .badge-rivian { background: #fffde7; color: #ffa500; }
+  .badge-ea     { background: #e0f6ec; color: #00963f; }
   .badge-other  { background: #f5f5f5; color: #616161; }
 
   /* ── Insight callout ── */
@@ -817,6 +818,7 @@ permalink: /charging-analytics/
       <span class="badge badge-cp">ChargePoint</span>
       <span class="badge badge-blink">Blink</span>
       <span class="badge badge-rivian">Rivian</span>
+      <span class="badge badge-ea">Electrify America</span>
       <span class="badge badge-other">Other</span>
     </div>
     <div style="overflow-x:auto">
@@ -1633,6 +1635,7 @@ function getBucket(loc) {
           : l.includes('chargepoint') ? 'ChargePoint'
           : l.includes('blink') ? 'Blink'
           : l.includes('rivian') ? 'Rivian'
+          : l.includes('electrify') ? 'Electrify America'
           : 'Other';
   _bucketCache.set(loc, b);
   return b;
@@ -1697,7 +1700,8 @@ function fmtUSD(v) {
 }
 function badgeClass(b) {
   return { Work:'badge-work', Home:'badge-home', 'Tesla SC':'badge-tesla',
-           ChargePoint:'badge-cp', Blink:'badge-blink', Rivian:'badge-rivian', Other:'badge-other' }[b] || 'badge-other';
+           ChargePoint:'badge-cp', Blink:'badge-blink', Rivian:'badge-rivian',
+           'Electrify America':'badge-ea', Other:'badge-other' }[b] || 'badge-other';
 }
 
 const BUCKET_COLORS = {
@@ -1707,6 +1711,7 @@ const BUCKET_COLORS = {
   'ChargePoint':'#FF7A14',
   'Blink':      '#65A844',
   'Rivian':     '#ffa500',
+  'Electrify America': '#00963f',
   'Other':      '#909090'
 };
 
@@ -3670,7 +3675,7 @@ mkChart('chartHistogram', {
     const TRIP_RADIUS_MI  = 50;
     const TRIP_WINDOW_DAYS = 5;
     const DCFC_KW_THRESHOLD = 25; // avg kW threshold to classify as DCFC en-route
-    const DCFC_NETWORKS = ['Tesla SC', 'ChargePoint', 'Rivian', 'Blink'];
+    const DCFC_NETWORKS = ['Tesla SC', 'ChargePoint', 'Rivian', 'Blink', 'Electrify America'];
     const GAS_STOP_MIN  = 6; // minutes per gas fill-up (midpoint 5–7 min)
 
     // Per-vehicle gas car comparison specs
@@ -6134,6 +6139,7 @@ function buildHeatmap(sl) {
       'ChargePoint':['#e8e8e8', '#ffe0b2', '#ffb74d', '#FF7A14', '#bf360c'],
       'Blink':      ['#e8e8e8', '#c8e6c9', '#81c784', '#43a047', '#1b5e20'],
       'Rivian':     ['#e8e8e8', '#fff9c4', '#fff176', '#fdd835', '#f57f17'],
+      'Electrify America': ['#e8e8e8', '#a7e8c5', '#3fca86', '#00963f', '#00532a'],
       'Other':      ['#e8e8e8', '#e0e0e0', '#bdbdbd', '#757575', '#424242'],
     },
     dark: {
@@ -6143,6 +6149,7 @@ function buildHeatmap(sl) {
       'ChargePoint':['#2a2a2a', '#3a1a00', '#bf360c', '#f4511e', '#ff8a65'],
       'Blink':      ['#2a2a2a', '#0a2a0a', '#2e7d32', '#43a047', '#81c784'],
       'Rivian':     ['#2a2a2a', '#332600', '#f57f17', '#fdd835', '#fff176'],
+      'Electrify America': ['#2a2a2a', '#052a17', '#0a7a3a', '#00b04f', '#7ee6a8'],
       'Other':      ['#2a2a2a', '#333333', '#555555', '#888888', '#bdbdbd'],
     }
   };
@@ -6150,7 +6157,8 @@ function buildHeatmap(sl) {
   // Map bucket → label for legend
   var BUCKET_LABELS = {
     'Work': 'Work', 'Home': 'Home', 'Tesla SC': 'Tesla SC',
-    'ChargePoint': 'ChargePoint', 'Blink': 'Blink', 'Rivian': 'Rivian', 'Other': 'Public/Other'
+    'ChargePoint': 'ChargePoint', 'Blink': 'Blink', 'Rivian': 'Rivian',
+    'Electrify America': 'Electrify America', 'Other': 'Public/Other'
   };
 
   // Are we in single-vehicle mode? (exactly one vehicle selected, not 'all')
