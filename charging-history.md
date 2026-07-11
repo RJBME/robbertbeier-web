@@ -86,6 +86,7 @@ permalink: /charging-history/
   .badge-blink  { background: #22c55e20; color: #22c55e; }
   .badge-rivian { background: #eab30820; color: #d97706; }
   .badge-ea     { background: #00b04f20; color: #00963f; }
+  .badge-wc     { background: #51A95020; color: #51A950; }
   .badge-other  { background: #6b728020; color: #6b7280; }
 
   /* ── Table ── */
@@ -189,6 +190,7 @@ permalink: /charging-history/
           <option value="rivian">Rivian</option>
           <option value="blink">Blink</option>
           <option value="electrify">Electrify America</option>
+          <option value="wecharge">WeCharge</option>
           <option value="other">Other</option>
         </select>
       </div>
@@ -272,6 +274,7 @@ permalink: /charging-history/
         {% elsif log_loc contains "rivian" %}      {% assign brand = "rivian" %}
         {% elsif log_loc contains "blink" %}       {% assign brand = "blink" %}
         {% elsif log_loc contains "electrify" %}   {% assign brand = "electrify" %}
+        {% elsif log_loc contains "wecharge" %}    {% assign brand = "wecharge" %}
         {% else %}                                 {% assign brand = "other" %}
         {% endif %}
 
@@ -288,7 +291,7 @@ permalink: /charging-history/
         <td>{{ log.date | date: "%b %-d, '%y" }}</td>
         <td>
           {% assign l = log.location | downcase %}
-          <span title="{{ log.location }}" class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% elsif l contains 'electrify' %}badge-ea{% else %}badge-other{% endif %}">
+          <span title="{{ log.location }}" class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% elsif l contains 'electrify' %}badge-ea{% elsif l contains 'wecharge' %}badge-wc{% else %}badge-other{% endif %}">
             {{ log.location }}
           </span>
         </td>

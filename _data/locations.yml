@@ -143,3 +143,8 @@
   lat: 44.2828
   lng: -85.4030
   city: "Cadillac, MI"
+
+- location: "WeCharge, Bridgeport, MI"
+  lat: 43.3548
+  lng: -83.8732
+  city: "Bridgeport, MI"
