@@ -5985,7 +5985,7 @@ function buildMap(sl) {
     const color = BUCKET_COLORS[st.bucket] || '#888';
     const sz    = Math.round(MIN_SZ + Math.sqrt(st.kwh / maxKwh) * (MAX_SZ - MIN_SZ));
     const avg     = st.sessions ? (st.kwh / st.sessions).toFixed(1) : '0';
-    const netName = BUCKET_LABELS[st.bucket] || st.bucket;
+    const netName = st.bucket;  // already human-readable (Tesla SC, ChargePoint, Home, …)
     const costStr = st.cost > 0 ? `$${st.cost.toFixed(2)}` : 'Free';
     const popup = `<b>${loc.location}</b>` +
       (loc.city ? `<br><small style="color:#888">${loc.city}</small>` : '') +
