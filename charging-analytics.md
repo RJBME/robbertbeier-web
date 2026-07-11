@@ -493,11 +493,12 @@ permalink: /charging-analytics/
     .chart-grid-2 { grid-template-columns: 1fr !important; }
   }
   .ev-map-icon { background: transparent !important; border: none !important; overflow: visible !important; }
-  .ev-pulse { position: relative; overflow: visible; }
-  .ev-dot { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; border-radius: 50%; opacity: 0.35; box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
-  .ev-ring { position: absolute; top: 0; right: 0; bottom: 0; left: 0; inset: 0; border-radius: 50%; border: 2px solid; opacity: 0; animation: ev-pulse 2.2s ease-out 3; }
-  .ev-pin { position: absolute; bottom: 50%; left: 50%; transform: translateX(-50%); filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)); pointer-events: none; }
-  @keyframes ev-pulse { 0% { transform: scale(1); opacity: 0.75; } 100% { transform: scale(2.8); opacity: 0; } }
+  /* Proportional-symbol marker: translucent fill + crisp colored ring (size =
+     kWh) with a small white-outlined center dot marking the exact location. */
+  .ev-sym  { position: relative; }
+  .ev-fill { position: absolute; inset: 0; border-radius: 50%; opacity: 0.32; }
+  .ev-edge { position: absolute; inset: 0; border-radius: 50%; border: 2px solid; opacity: 0.9; box-shadow: 0 1px 5px rgba(0,0,0,0.22); }
+  .ev-core { position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; box-shadow: 0 0 0 2px #fff, 0 1px 2px rgba(0,0,0,0.45); }
   #chargingMap { border-radius: 10px; }
   #chargingMap .leaflet-popup-content-wrapper { background: var(--dash-card,#fff); color: var(--text,#333); border: 1px solid var(--dash-border,#ddd); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
   #chargingMap .leaflet-popup-tip { background: var(--dash-card,#fff); }
@@ -1509,7 +1510,7 @@ permalink: /charging-analytics/
       <div style="font-size:2rem;margin-bottom:8px">📍</div>
       <strong>No coordinates set yet</strong><br>
       Add <code>lat</code> / <code>lng</code> values to <code>_data/locations.yml</code> to enable this map.<br>
-      <span style="font-size:0.78rem">Circles are sized and colored by total kWh added at each location, with a pulsing ring indicating relative activity.</span>
+      <span style="font-size:0.78rem">Each location is a circle sized by total kWh added and colored by network.</span>
     </div>
     <div id="chargingMap" style="height:420px"></div>
   </div>
@@ -5971,7 +5972,7 @@ function buildMap(sl) {
   // Circle AREA ∝ kWh, so diameter ∝ √kWh — a location with 4× the energy reads
   // as 4× the area (not 4× the width). √ also spreads out the many small road-trip
   // stops that linear scaling squashed to the minimum size next to Home/Work.
-  const MIN_SZ = 18, MAX_SZ = 58;
+  const MIN_SZ = 16, MAX_SZ = 76;
   geoLocs.forEach(loc => {
     const st    = stats[loc.location];
     const color = BUCKET_COLORS[st.bucket] || '#888';
@@ -5981,10 +5982,9 @@ function buildMap(sl) {
       (loc.city ? `<br><small style="color:#888">${loc.city}</small>` : '') +
       `<br>${st.kwh.toFixed(1)} kWh &nbsp;·&nbsp; ${st.sessions} session${st.sessions !== 1 ? 's' : ''}` +
       `<br>Avg: ${avg} kWh/session`;
-    const pin = `<svg class="ev-pin" xmlns="http://www.w3.org/2000/svg" width="18" height="26" viewBox="0 0 18 26"><path d="M9 0C4.03 0 0 4.03 0 9c0 6.75 9 17 9 17s9-10.25 9-17C18 4.03 13.97 0 9 0z" fill="${color}"/><circle cx="9" cy="9" r="4" fill="white" opacity="0.85"/></svg>`;
     const icon = L.divIcon({
       className: 'ev-map-icon',
-      html: `<div class="ev-pulse" style="width:${sz}px;height:${sz}px"><div class="ev-dot" style="background:${color}"></div><div class="ev-ring" style="border-color:${color}"></div>${pin}</div>`,
+      html: `<div class="ev-sym" style="width:${sz}px;height:${sz}px"><span class="ev-fill" style="background:${color}"></span><span class="ev-edge" style="border-color:${color}"></span><span class="ev-core" style="background:${color}"></span></div>`,
       iconSize:   [sz, sz],
       iconAnchor: [sz / 2, sz / 2]
     });
