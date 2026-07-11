@@ -148,3 +148,23 @@
   lat: 43.3548
   lng: -83.8732
   city: "Bridgeport, MI"
+
+- location: "ChargePoint, Brewery Creek, Traverse City, MI"
+  lat: 44.7886
+  lng: -85.6396
+  city: "Traverse City, MI"
+
+- location: "ChargePoint, Mason Street, Charlevoix, MI"
+  lat: 45.3164
+  lng: -85.2597
+  city: "Charlevoix, MI"
+
+- location: "Rooted, Mancelona, MI"
+  lat: 44.8972
+  lng: -85.0668
+  city: "Mancelona, MI"
+
+- location: "Cabin"
+  lat: 44.9574
+  lng: -85.1357
+  city: ""
