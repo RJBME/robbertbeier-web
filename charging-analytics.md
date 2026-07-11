@@ -3294,8 +3294,21 @@ mkChart('chartHistogram', {
   const breakSub = document.getElementById('breakevenSub');
   if (breakEl) {
     countUp(breakEl, totalSavingsAll, v => fmtUSD(v));
-    if (breakSub) breakSub.textContent = 'saved vs. driving a ' +
-      (gasSavingsRates[0]?.mpg || 27) + 'mpg gas car since ' + (sl[0]?.date || '');
+    if (breakSub) {
+      // Baseline gas-car MPG follows the current vehicle selection — each EV is
+      // compared to the specific gas car it replaced (RJB 24.8, LRB 23). One value
+      // if a single baseline is in play, else a kWh-weighted average of the mix.
+      const mpgVals = [...new Set(sl.map(s => VEHICLE_MPG[s.vehicle] || 24.8))];
+      let mpgLabel;
+      if (mpgVals.length === 1) {
+        mpgLabel = mpgVals[0] + ' mpg';
+      } else {
+        let wSum = 0, w = 0;
+        sl.forEach(s => { const m = VEHICLE_MPG[s.vehicle] || 24.8; wSum += m * s.kwh; w += s.kwh; });
+        mpgLabel = (w ? (wSum / w) : 24.8).toFixed(1) + ' mpg avg';
+      }
+      breakSub.textContent = 'saved vs. driving a ' + mpgLabel + ' gas car since ' + (sl[0]?.date || '');
+    }
   }
 
   // 3-month trailing avg for projection
@@ -3699,8 +3712,8 @@ mkChart('chartHistogram', {
     // Per-vehicle gas car comparison specs
     // key: substring to match vehicle name — LRB = Explorer, else = Escape
     const GAS_SPECS = {
-      lrb: { name: '2023 Explorer AWD', mpg: 23, tank: 17.9 },
-      rjb: { name: '2023 Escape AWD',   mpg: 27, tank: 15.7 }
+      lrb: { name: '2016 Explorer AWD', mpg: 23,   tank: 17.9 },
+      rjb: { name: '2023 Escape AWD',   mpg: 24.8, tank: 15.7 }
     };
     function gasSpecForVehicle(vehicleName) {
       return (vehicleName || '').includes('LRB') ? GAS_SPECS.lrb : GAS_SPECS.rjb;
