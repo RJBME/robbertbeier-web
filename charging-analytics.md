@@ -1625,17 +1625,12 @@ const _egridCache = new Map();
 function getEgridFactor(locationStr) {
   if (_egridCache.has(locationStr)) return _egridCache.get(locationStr);
   let factor = EGRID_DEFAULT;
-  const locEntry = (locationData || []).find(l =>
-    l.name && l.name.toLowerCase() === locationStr.toLowerCase()
-  );
-  if (locEntry && locEntry.egrid_region && EGRID_FACTORS[locEntry.egrid_region]) {
-    factor = EGRID_FACTORS[locEntry.egrid_region];
-  } else {
-    const m1 = locationStr.match(/\b([A-Z]{2})\s*$/);
-    const m2 = !m1 && locationStr.match(/,\s*([A-Z]{2})\b/);
-    const st  = (m1 || m2 || [])[1];
-    if (st && STATE_TO_EGRID[st]) factor = EGRID_FACTORS[STATE_TO_EGRID[st]];
-  }
+  // Derive the eGRID subregion from the 2-letter state suffix in the location
+  // string (e.g. "…, WI" → MROE). Home/Work/Cabin have no suffix → default (MI).
+  const m1 = locationStr.match(/\b([A-Z]{2})\s*$/);
+  const m2 = !m1 && locationStr.match(/,\s*([A-Z]{2})\b/);
+  const st = (m1 || m2 || [])[1];
+  if (st && STATE_TO_EGRID[st]) factor = EGRID_FACTORS[STATE_TO_EGRID[st]];
   _egridCache.set(locationStr, factor);
   return factor;
 }
@@ -4584,7 +4579,10 @@ mkChart('chartHistogram', {
     if (timeSessions.length) {
       const durations = timeSessions.map(s => durationHours(s)).filter(Boolean);
 
-      const durBins = hist(durations, 10, 0, Math.min(Math.ceil(Math.max(...durations)), 24));
+      // durations can be empty even when timeSessions isn't (all zero/invalid) —
+      // Math.max(...[]) would be -Infinity and corrupt the bin range.
+      const durMax = durations.length ? Math.min(Math.ceil(Math.max(...durations)), 24) : 1;
+      const durBins = hist(durations, 10, 0, durMax);
       mkChart('chartDuration', {
         type: 'bar',
         data: {
