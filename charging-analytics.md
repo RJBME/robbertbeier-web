@@ -3633,12 +3633,19 @@ mkChart('chartHistogram', {
         locCo2[s.location].kwh  += s.kwh;
       });
       const locSorted = Object.entries(locCo2).sort((a,b) => b[1].net - a[1].net).slice(0, 10);
-      const minFactor = Math.min(...locSorted.map(([,v]) => v.factor));
-      const maxFactor = Math.max(...locSorted.map(([,v]) => v.factor));
+      // Colour scale spans ACTUAL grid factors only — solar sites (factor 0) are a
+      // separate zero-emission category; folding them in would drag the whole grid
+      // gradient toward amber and wash out the real MI/IL/WI grid differences.
+      const gridFactors = locSorted.map(([,v]) => v.factor).filter(f => f > 0);
+      const minFactor = gridFactors.length ? Math.min(...gridFactors) : 0;
+      const maxFactor = gridFactors.length ? Math.max(...gridFactors) : 1;
       const factorRange = maxFactor - minFactor || 1;
-      // Green (clean grid) → Amber (dirtier grid): avoids the muddy brown mid-range
+      const hasSolar = locSorted.some(([,v]) => v.factor <= 0);
+      const SOLAR_COLOR = 'rgba(0,170,75,0.92)';  // vivid green — zero-emission / solar
+      // Green (clean grid) → Amber (dirtier grid); solar gets its own vivid green.
       const locColors = locSorted.map(([,v]) => {
-        const t = (v.factor - minFactor) / factorRange;
+        if (v.factor <= 0) return SOLAR_COLOR;
+        const t = Math.max(0, Math.min(1, (v.factor - minFactor) / factorRange));
         return `rgba(${Math.round(46 + 199*t)},${Math.round(204 - 46*t)},${Math.round(113 - 102*t)},0.80)`;
       });
       mkChart('chartCo2ByLocation', {
@@ -3671,12 +3678,16 @@ mkChart('chartHistogram', {
       });
       // Tiny legend below the chart
       const legendEl = document.getElementById('co2LocLegend');
-      if (legendEl && factorRange > 0.01) {
+      if (legendEl && (factorRange > 0.01 || hasSolar)) {
         legendEl.style.display = '';
+        const dot = 'display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle';
         legendEl.innerHTML =
-          '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(46,204,113,0.85);margin-right:4px;vertical-align:middle"></span>Cleaner grid' +
-          '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(245,158,11,0.85);margin:0 4px 0 14px;vertical-align:middle"></span>Dirtier grid' +
-          ' &nbsp;·&nbsp; colour = relative grid CO₂ intensity';
+          (hasSolar
+            ? '<span style="' + dot + ';background:rgba(0,170,75,0.92);margin-right:4px"></span>☀️ Solar' +
+              '<span style="' + dot + ';background:rgba(46,204,113,0.85);margin:0 4px 0 16px"></span>Cleaner grid'
+            : '<span style="' + dot + ';background:rgba(46,204,113,0.85);margin-right:4px"></span>Cleaner grid') +
+          '<span style="' + dot + ';background:rgba(245,158,11,0.85);margin:0 4px 0 16px"></span>Dirtier grid' +
+          ' &nbsp;·&nbsp; colour = grid CO₂ intensity' + (hasSolar ? ' (solar = zero)' : '');
       } else if (legendEl) {
         legendEl.style.display = 'none';
       }
