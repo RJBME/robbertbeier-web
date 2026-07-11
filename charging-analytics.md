@@ -1625,12 +1625,19 @@ const _egridCache = new Map();
 function getEgridFactor(locationStr) {
   if (_egridCache.has(locationStr)) return _egridCache.get(locationStr);
   let factor = EGRID_DEFAULT;
-  // Derive the eGRID subregion from the 2-letter state suffix in the location
-  // string (e.g. "…, WI" → MROE). Home/Work/Cabin have no suffix → default (MI).
-  const m1 = locationStr.match(/\b([A-Z]{2})\s*$/);
-  const m2 = !m1 && locationStr.match(/,\s*([A-Z]{2})\b/);
-  const st = (m1 || m2 || [])[1];
-  if (st && STATE_TO_EGRID[st]) factor = EGRID_FACTORS[STATE_TO_EGRID[st]];
+  // Solar sites (own panels + net metering, self-generating) charge on sun
+  // energy → zero grid emissions. Flagged per location in _data/locations.yml
+  // (solar: true). Otherwise derive the eGRID subregion from the 2-letter state
+  // suffix (e.g. "…, WI" → MROE); Home/Work/Cabin have none → default (MI).
+  const entry = (locationData || []).find(l => l.location === locationStr);
+  if (entry && entry.solar) {
+    factor = 0;
+  } else {
+    const m1 = locationStr.match(/\b([A-Z]{2})\s*$/);
+    const m2 = !m1 && locationStr.match(/,\s*([A-Z]{2})\b/);
+    const st = (m1 || m2 || [])[1];
+    if (st && STATE_TO_EGRID[st]) factor = EGRID_FACTORS[STATE_TO_EGRID[st]];
+  }
   _egridCache.set(locationStr, factor);
   return factor;
 }

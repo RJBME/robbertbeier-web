@@ -93,6 +93,7 @@
   lat: 44.6319
   lng: -86.0909
   city: "Beulah, MI"
+  solar: true   # own solar panels + net metering — charging counts as zero-emission
 
 - location: "Tesla, The Arboretum, South Barrington, IL"
   lat: 42.0751
