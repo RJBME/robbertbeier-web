@@ -501,6 +501,13 @@ permalink: /charging-analytics/
   #chargingMap { border-radius: 10px; }
   #chargingMap .leaflet-popup-content-wrapper { background: var(--dash-card,#fff); color: var(--text,#333); border: 1px solid var(--dash-border,#ddd); box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
   #chargingMap .leaflet-popup-tip { background: var(--dash-card,#fff); }
+  /* Map controls: Fit-all button, size legend, scroll hint */
+  .ev-fit-btn svg { vertical-align: middle; }
+  .ev-size-legend { background: var(--dash-card,#fff); color: var(--text,#333); border: 1px solid var(--dash-border,#ddd); border-radius: 8px; padding: 6px 9px; font-size: 10px; line-height: 1.3; box-shadow: 0 1px 6px rgba(0,0,0,0.18); }
+  .ev-lg-scale { display: flex; align-items: flex-end; gap: 4px; margin-top: 5px; }
+  .ev-lg-c { display: inline-block; border-radius: 50%; background: #6b7280; opacity: 0.4; }
+  .ev-map-hint { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(0,0,0,0.72); color: #fff; font-size: 11px; font-weight: 600; padding: 3px 11px; border-radius: 14px; pointer-events: none; opacity: 0; transition: opacity 0.15s; white-space: nowrap; }
+  .ev-map-hint.show { opacity: 1; }
 
   /* Tighten gap between site nav and charging sub-nav */
   nav { margin-bottom: 0.75rem !important; }
@@ -5817,6 +5824,7 @@ let _leafletMap   = null;
 let _markerGroup  = null;
 let _tileLayer    = null; // tracked so we can swap light/dark tiles on theme change
 let _lastSl       = sessions;
+let _mapBounds    = null; // latlngs of currently-shown markers — used by the Fit-all button
 
 // Tile layer — single OSM source, CSS filter for dark mode
 // CartoDB dark tiles caused blank map issues; CSS invert is simpler and more reliable
@@ -5872,12 +5880,61 @@ window.addEventListener('load', function() {
   }
 
   try {
-    _leafletMap = L.map('chargingMap', { preferCanvas: true });
+    // scrollWheelZoom off by default so scrolling the page doesn't get hijacked
+    // into map zoom; it's enabled once the user clicks the map (see below).
+    _leafletMap = L.map('chargingMap', { preferCanvas: true, scrollWheelZoom: false });
     _applyTiles();
     // Reapply dark filter after tiles finish loading
     _tileLayer.on('load', () => _applyTiles());
     // Create marker group once — clearLayers() on rebuild keeps tile cache alive
     _markerGroup = L.layerGroup().addTo(_leafletMap);
+
+    // ── "Fit all" control — re-frames the map to every currently-shown location ──
+    const FitAllControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function(map) {
+        const c = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+        const a = L.DomUtil.create('a', 'ev-fit-btn', c);
+        a.href = '#'; a.title = 'Fit all locations'; a.setAttribute('role', 'button');
+        a.setAttribute('aria-label', 'Zoom out to fit all locations');
+        a.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5"/></svg>';
+        L.DomEvent.on(a, 'click', function(e) {
+          L.DomEvent.stop(e);
+          if (_mapBounds && _mapBounds.length > 1)        map.fitBounds(_mapBounds, { padding: [40, 40] });
+          else if (_mapBounds && _mapBounds.length === 1)  map.setView(_mapBounds[0], 13);
+        });
+        return c;
+      }
+    });
+    _leafletMap.addControl(new FitAllControl());
+
+    // ── Size legend — reminds readers the circle area encodes kWh ──
+    const SizeLegend = L.Control.extend({
+      options: { position: 'bottomleft' },
+      onAdd: function() {
+        const d = L.DomUtil.create('div', 'ev-size-legend');
+        d.innerHTML = '<b>Circle size</b> = kWh added' +
+          '<span class="ev-lg-scale">' +
+          '<i class="ev-lg-c" style="width:9px;height:9px"></i>' +
+          '<i class="ev-lg-c" style="width:15px;height:15px"></i>' +
+          '<i class="ev-lg-c" style="width:23px;height:23px"></i>' +
+          '<span style="margin-left:3px">more</span></span>';
+        L.DomEvent.disableClickPropagation(d);
+        return d;
+      }
+    });
+    _leafletMap.addControl(new SizeLegend());
+
+    // ── Don't hijack page scroll: wheel-zoom only after the map is clicked, and
+    //    release it when the pointer leaves. A hint tells the user what to do. ──
+    const _mapEl = _leafletMap.getContainer();
+    const hint = L.DomUtil.create('div', 'ev-map-hint', _mapEl);
+    hint.textContent = 'Click map to zoom';
+    _leafletMap.on('click', () => { _leafletMap.scrollWheelZoom.enable(); hint.classList.remove('show'); });
+    // Native enter/leave fire only on the container itself (no bubbling over markers)
+    _mapEl.addEventListener('mouseenter', () => { if (!_leafletMap.scrollWheelZoom.enabled()) hint.classList.add('show'); });
+    _mapEl.addEventListener('mouseleave', () => { _leafletMap.scrollWheelZoom.disable(); hint.classList.remove('show'); });
+
     _leafletMap.invalidateSize();
     buildMap(_lastSl);
   } catch(e) {
@@ -5906,15 +5963,19 @@ function buildMap(sl) {
   // This is far more efficient than eachLayer/removeLayer on vehicle filter change
   _markerGroup.clearLayers();
 
-  if (!geoLocs.length) return;
+  if (!geoLocs.length) { _mapBounds = null; return; }
 
   const maxKwh = Math.max(...geoLocs.map(l => stats[l.location].kwh), 1);
   const bounds = [];
 
+  // Circle AREA ∝ kWh, so diameter ∝ √kWh — a location with 4× the energy reads
+  // as 4× the area (not 4× the width). √ also spreads out the many small road-trip
+  // stops that linear scaling squashed to the minimum size next to Home/Work.
+  const MIN_SZ = 18, MAX_SZ = 58;
   geoLocs.forEach(loc => {
     const st    = stats[loc.location];
     const color = BUCKET_COLORS[st.bucket] || '#888';
-    const sz    = Math.round(24 + (st.kwh / maxKwh) * 40);
+    const sz    = Math.round(MIN_SZ + Math.sqrt(st.kwh / maxKwh) * (MAX_SZ - MIN_SZ));
     const avg   = st.sessions ? (st.kwh / st.sessions).toFixed(1) : '0';
     const popup = `<b>${loc.location}</b>` +
       (loc.city ? `<br><small style="color:#888">${loc.city}</small>` : '') +
@@ -5931,6 +5992,7 @@ function buildMap(sl) {
     bounds.push([loc.lat, loc.lng]);
   });
 
+  _mapBounds = bounds.length ? bounds : null;
   if (bounds.length === 1) {
     _leafletMap.setView(bounds[0], 13);
   } else if (bounds.length > 1) {
