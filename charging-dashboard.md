@@ -460,15 +460,16 @@ permalink: /charging/
       {% assign cpm_cents = cpm | times: 100 | round | modulo: 100 %}
       {% assign vc_cents  = v_cost | times: 100 | round | modulo: 100 %}
 
-      {% assign is_lrb = false %}
-      {% if odo_vehicle contains "LRB" %}{% assign is_lrb = true %}{% endif %}
-      {% if is_lrb %}
-        {% assign row_accent = "border-left: 4px solid #f39c12;" %}
-        {% assign veh_color  = "color: #f39c12;" %}
-      {% else %}
-        {% assign row_accent = "border-left: 4px solid #7b1fa2;" %}
-        {% assign veh_color  = "color: #7b1fa2;" %}
-      {% endif %}
+      {% comment %} Distinct accent per vehicle so two same-owner cars (e.g. both RJB) don't share a colour. {% endcomment %}
+      {% case odo_vehicle %}
+        {% when "2025 Mach-E GT" %}       {% assign accent = "#7b1fa2" %}
+        {% when "2026 Mach-E SR" %}       {% assign accent = "#0288d1" %}
+        {% when "LRB's 2025 Mach-E GT" %} {% assign accent = "#f39c12" %}
+        {% when "LRB's 2026 Mach-E SR" %} {% assign accent = "#16a34a" %}
+        {% else %}{% if odo_vehicle contains "LRB" %}{% assign accent = "#f39c12" %}{% else %}{% assign accent = "#7b1fa2" %}{% endif %}
+      {% endcase %}
+      {% assign row_accent = "border-left: 4px solid " | append: accent | append: ";" %}
+      {% assign veh_color  = "color: " | append: accent | append: ";" %}
 
       <div class="cpm-row" style="{{ row_accent }}">
         <div class="cpm-vehicle" style="{{ veh_color }}">

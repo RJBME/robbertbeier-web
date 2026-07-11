@@ -22,6 +22,8 @@
 #  VEHICLE NAMES IN USE:
 #    "2025 Mach-E GT"        RJB's car (first session 2025-08-22)
 #    "LRB's 2025 Mach-E GT"  LRB's car (first session 2026-05-02)
+#    "2026 Mach-E SR"        RJB's new car (picked up 2026-07)
+#    "LRB's 2026 Mach-E SR"  LRB's future car
 #
 #  HOW THE ANALYTICS PAGE USES THIS:
 #    - Latest odometer per vehicle → cost/mile, kWh/mile on dashboard
@@ -29,6 +31,14 @@
 #    - Efficiency trend charts use real miles when available
 #    - CO₂ calculations use real miles when available
 # ─────────────────────────────────────────────────────────────────────────────
+
+# ── NEW CAR: 2026 Mach-E SR — add your pickup (delivery) reading first ────────
+#   Uncomment on pickup day, fill in the real odometer, and record the delivery
+#   battery % in notes. This establishes the mileage baseline for the SR.
+# - date: "2026-07-13"                 # pickup date
+#   vehicle: "2026 Mach-E SR"
+#   odometer: 12                        # low starting miles at delivery
+#   notes: "Delivery — picked up at 82% battery"
 
 # ── Current readings (today, 2026-05-21) ─────────────────────────────────────
 - date: "2026-06-20"
