@@ -124,21 +124,20 @@ permalink: /charging-history/
 
   /* ── Note tooltip ── */
   .note-icon { position: relative; cursor: default; font-size: 1rem; display: inline-block; }
+  /* Fixed-position (coords set in JS) so long notes escape the table's
+     horizontal-scroll wrapper, which also clips vertically (overflow-x:auto
+     ⇒ overflow-y:auto per spec) and was cutting off the top of tall notes.
+     pre-wrap preserves the note's own line breaks; it scrolls if very long. */
   .note-tooltip {
-    display: none; position: absolute;
-    bottom: 130%; right: 0;
+    display: none; position: fixed; top: 0; left: 0;
     background: var(--dash-card); color: var(--text);
     border: 1px solid var(--dash-border);
-    padding: 8px 12px; border-radius: 8px;
-    font-size: 0.78rem; line-height: 1.5;
-    white-space: normal; width: max-content;
-    max-width: min(280px, 80vw);
-    z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-  }
-  .note-tooltip::after {
-    content: ''; position: absolute; top: 100%; right: 10px;
-    border: 5px solid transparent;
-    border-top-color: var(--dash-border);
+    padding: 9px 12px; border-radius: 8px;
+    font-size: 0.78rem; line-height: 1.5; text-align: left;
+    white-space: pre-wrap; overflow-wrap: break-word;
+    width: max-content; max-width: min(340px, 88vw);
+    max-height: min(60vh, 400px); overflow-y: auto;
+    z-index: 1000; box-shadow: 0 6px 24px rgba(0,0,0,0.20);
   }
   .note-icon:hover .note-tooltip,
   .note-icon.tip-open .note-tooltip { display: block; }
@@ -416,12 +415,40 @@ function resetFilters() {
 
 window.addEventListener('load', initFilters);
 
+// Position a note tooltip with fixed viewport coords so it escapes the table's
+// overflow wrapper. Prefers above the icon; flips below if there's no room.
+function positionNoteTip(icon) {
+  const tip = icon.querySelector('.note-tooltip');
+  if (!tip) return;
+  const pv = tip.style.visibility, pd = tip.style.display;
+  tip.style.visibility = 'hidden'; tip.style.display = 'block';   // measure while hidden
+  const r = icon.getBoundingClientRect();
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  const vw = window.innerWidth, vh = window.innerHeight, M = 8;
+  const top  = (r.top - th - 8 >= M)         ? r.top - th - 8      // above
+             : (r.bottom + th + 8 <= vh - M) ? r.bottom + 8        // below
+             : Math.max(M, vh - th - M);                           // clamp
+  const left = Math.max(M, Math.min(r.right - tw, vw - tw - M));   // right-align, clamp
+  tip.style.top = top + 'px'; tip.style.left = left + 'px';
+  tip.style.visibility = pv; tip.style.display = pd;
+}
+// Desktop hover: position once when entering each note icon
+let _lastTipIcon = null;
+document.addEventListener('mouseover', function(e) {
+  const icon = e.target.closest('.note-icon');
+  if (icon) { if (icon !== _lastTipIcon) { _lastTipIcon = icon; positionNoteTip(icon); } }
+  else _lastTipIcon = null;
+});
 // Touch: tap note icon to toggle tooltip, tap elsewhere to close
 document.addEventListener('click', function(e) {
   const icon = e.target.closest('.note-icon');
   document.querySelectorAll('.note-icon.tip-open').forEach(el => { if (el !== icon) el.classList.remove('tip-open'); });
-  if (icon) { e.preventDefault(); icon.classList.toggle('tip-open'); }
+  if (icon) { e.preventDefault(); icon.classList.toggle('tip-open'); if (icon.classList.contains('tip-open')) positionNoteTip(icon); }
 });
+// A fixed tooltip's coords go stale on scroll — close any tap-opened one
+window.addEventListener('scroll', function() {
+  document.querySelectorAll('.note-icon.tip-open').forEach(el => el.classList.remove('tip-open'));
+}, { passive: true });
 
 // Column sorting
 (function() {
