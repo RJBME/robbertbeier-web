@@ -5600,8 +5600,12 @@ function buildPerspectiveCards(sl) {
   let milesMethod = 'estimated';
 
   if (mileageHistory && mileageHistory.length >= 2) {
+    // Respect the vehicle filter: only count odometer miles for the selected car(s),
+    // so this matches the energy/CO2/gas stats (which all use the filtered sl).
+    const selVehs = new Set(sl.map(s => s.vehicle));
     const vehReadings = {};
     mileageHistory.forEach(e => {
+      if (!selVehs.has(e.vehicle)) return;
       if (!vehReadings[e.vehicle]) vehReadings[e.vehicle] = [];
       vehReadings[e.vehicle].push(e);
     });
