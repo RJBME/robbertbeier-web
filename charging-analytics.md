@@ -5596,45 +5596,21 @@ function buildPerspectiveCards(sl) {
   // ── Compute total miles ──────────────────────────────
   // Smart: use odometer interpolation if we have ≥2 readings spanning >30 days,
   // otherwise fall back to sum of miles_added + kWh-estimated remainder
+  // All-time miles driven — sum real FordPass miles_added per session where
+  // available, and fill the rest with a kWh × mi/kWh estimate. This matches the
+  // energy / gas / CO2 cards (all all-time) and respects the vehicle filter (sl).
+  // The odometer readings only cover a partial window, so a delta would badly
+  // undercount actual driving; they still power the precise Mileage-tab charts.
   let totalMiles = 0;
-  let milesMethod = 'estimated';
-
-  if (mileageHistory && mileageHistory.length >= 2) {
-    // Respect the vehicle filter: only count odometer miles for the selected car(s),
-    // so this matches the energy/CO2/gas stats (which all use the filtered sl).
-    const selVehs = new Set(sl.map(s => s.vehicle));
-    const vehReadings = {};
-    mileageHistory.forEach(e => {
-      if (!selVehs.has(e.vehicle)) return;
-      if (!vehReadings[e.vehicle]) vehReadings[e.vehicle] = [];
-      vehReadings[e.vehicle].push(e);
-    });
-    let odoMiles = 0;
-    let allSpanning = true;
-    Object.values(vehReadings).forEach(readings => {
-      const sorted = readings.sort((a,b) => a.date.localeCompare(b.date));
-      if (sorted.length < 2) { allSpanning = false; return; }
-      const daySpan = (new Date(sorted[sorted.length-1].date) - new Date(sorted[0].date)) / 86400000;
-      if (daySpan < 30) { allSpanning = false; return; }
-      odoMiles += sorted[sorted.length-1].odometer - sorted[0].odometer;
-    });
-    if (allSpanning && odoMiles > 0) {
-      totalMiles = odoMiles;
-      milesMethod = 'odometer';
+  const milesMethod = 'estimated';
+  sl.forEach(s => {
+    if (s.milesAdded && s.milesAdded > 0) {
+      totalMiles += s.milesAdded;
+    } else {
+      const gs = getGasSavingsObj(s.date, s.vehicle);
+      totalMiles += s.kwh * (gs.mi_per_kwh || 3.0);
     }
-  }
-
-  if (milesMethod === 'estimated') {
-    // Sum real miles_added where available, fill gaps with kWh × mi/kWh
-    sl.forEach(s => {
-      if (s.milesAdded && s.milesAdded > 0) {
-        totalMiles += s.milesAdded;
-      } else {
-        const gs = getGasSavingsObj(s.date, s.vehicle);
-        totalMiles += s.kwh * (gs.mi_per_kwh || 3.0);
-      }
-    });
-  }
+  });
 
   // ── Core stats ───────────────────────────────────────
   const totalKwh     = sl.reduce((a,s) => a + s.kwh, 0);
