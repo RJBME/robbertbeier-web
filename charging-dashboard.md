@@ -235,6 +235,9 @@ permalink: /charging/
 {% assign veh_wcost_2 = 0.0 %}{% assign veh_wkwh_2 = 0.0 %}
 {% assign veh_wcost_3 = 0.0 %}{% assign veh_wkwh_3 = 0.0 %}
 
+{% comment %} Home cost is billed wall-side; energy_kwh is battery-side. Uplift home ENERGY for COST only. {% endcomment %}
+{% assign home_mult = site.data.rates.home_charge_uplift | default: 0.10 | plus: 1 %}
+
 {% for entry in site.charging %}
   {% assign k          = entry.energy_kwh | times: 1.0 %}
   {% assign loc        = entry.location | downcase %}
@@ -254,7 +257,7 @@ permalink: /charging/
 
   {% comment %} ── Effective cost for this session ── {% endcomment %}
   {% if loc contains "home" %}
-    {% assign c = k | times: h_rate %}
+    {% assign c = k | times: h_rate | times: home_mult %}
   {% else %}
     {% assign c = entry.cost | times: 1.0 %}
   {% endif %}
@@ -631,7 +634,7 @@ permalink: /charging/
           {% endfor %}
 
           {% if log_loc contains "home" %}
-            {% assign display_cost = log.energy_kwh | times: h_rate %}
+            {% assign display_cost = log.energy_kwh | times: h_rate | times: home_mult %}
           {% else %}
             {% assign display_cost = log.cost | times: 1.0 %}
           {% endif %}

@@ -1577,6 +1577,8 @@ const VEHICLE_UBE = {
 };
 
 const homeRates       = {{ site.data.rates.home_electricity | jsonify }};
+// Wall-side vs battery-side charging loss — applied to HOME cost only (energy stays as-reported).
+const HOME_CHARGE_UPLIFT = 1 + ({{ site.data.rates.home_charge_uplift | default: 0.10 }});
 const gasSavingsRates = {{ site.data.rates.gas_savings       | jsonify }};
 const mileageHistory  = {{ site.data.mileage | jsonify }};
 const locationData    = {{ site.data.locations  | jsonify }} || [];
@@ -1774,7 +1776,7 @@ sessions.forEach(s => {
   try {
     const loc   = s.location.toLowerCase();
     const hRate = getStepRate(homeRates, s.date, 'rate', 0.196);
-    s.cost      = loc.includes('home') ? s.kwh * hRate : s.rawCost;
+    s.cost      = loc.includes('home') ? s.kwh * hRate * HOME_CHARGE_UPLIFT : s.rawCost;
     const gs    = getGasSavingsObj(s.date, s.vehicle) || { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
 
     // Real efficiency from FordPass miles_added — more accurate than assumed mi/kWh

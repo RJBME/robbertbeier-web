@@ -1,3 +1,8 @@
+# Home charging: energy_kwh is battery-side (what the Ford app reports), but you
+# pay for wall-side energy. Uplift home ENERGY by this fraction when computing
+# COST ONLY (energy shown in tables/charts stays as-reported). 0.10 = +10%.
+home_charge_uplift: 0.10
+
 home_electricity:
   - date: "2025-08-22"
     rate: 0.196

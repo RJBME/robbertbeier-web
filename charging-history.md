@@ -238,6 +238,8 @@ permalink: /charging-history/
     </thead>
     <tbody>
       {% assign all_logs = site.charging | sort: 'date' | reverse %}
+      {% comment %} Home cost billed wall-side; energy_kwh is battery-side. Uplift home ENERGY for COST only. {% endcomment %}
+      {% assign home_mult = site.data.rates.home_charge_uplift | default: 0.10 | plus: 1 %}
       {% for log in all_logs %}
         {% assign log_date = log.date | date: "%Y-%m-%d" %}
         {% assign log_loc  = log.location | downcase %}
@@ -256,7 +258,7 @@ permalink: /charging-history/
 
         {% comment %} ── Effective cost for display and JS filtering ── {% endcomment %}
         {% if log_loc contains "home" %}
-          {% assign display_cost = log.energy_kwh | times: h_rate %}
+          {% assign display_cost = log.energy_kwh | times: h_rate | times: home_mult %}
           {% assign cost_data    = display_cost %}
         {% else %}
           {% assign display_cost = log.cost | times: 1.0 %}
