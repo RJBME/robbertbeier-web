@@ -1039,7 +1039,8 @@ permalink: /charging-analytics/
       <div class="chart-wrap" style="height:220px"><canvas id="chartSeasonAvg"></canvas></div>
     </div>
     <div class="chart-card">
-      <p class="chart-title">Free Charging Index — % of kWh from Work per Month</p>
+      <p class="chart-title">Free Charging Index — % of kWh Charged Free per Month</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:#888;margin:-4px 0 6px">Stacked: Work vs. other free charging</p>
       <div class="chart-wrap" style="height:220px"><canvas id="chartFreeIndex"></canvas></div>
     </div>
   </div>
@@ -2093,6 +2094,7 @@ function rebuild(sl) {
   allMonths.forEach(m => {
     monthly[m] = { kwh:0, cost:0, saving:0, gasEquiv:0,
                    sessions:0, freeSessions:0, freeKwh:0, paidKwh:0,
+                   freeWorkKwh:0, freeOtherKwh:0,
                    workKwh:0, homeKwh:0, pubKwh:0 };
   });
   sl.forEach(s => {
@@ -2100,7 +2102,10 @@ function rebuild(sl) {
     m.kwh     += s.kwh;     m.cost    += s.cost;
     m.saving  += s.saving;  m.gasEquiv += s.gasEquiv;
     m.sessions++;
-    if (s.isFree) { m.freeKwh += s.kwh; m.freeSessions++; } else m.paidKwh += s.kwh;
+    if (s.isFree) {
+      m.freeKwh += s.kwh; m.freeSessions++;
+      if (s.bucket === 'Work') m.freeWorkKwh += s.kwh; else m.freeOtherKwh += s.kwh;
+    } else m.paidKwh += s.kwh;
     if      (s.bucket === 'Work') m.workKwh += s.kwh;
     else if (s.bucket === 'Home') m.homeKwh += s.kwh;
     else                           m.pubKwh  += s.kwh;
@@ -3256,32 +3261,41 @@ mkChart('chartHistogram', {
     }
   });
 
-  // Free charging index — % of kWh from Work each month
+  // Free charging index — % of kWh charged free each month, split Work vs Other,
+  // stacked so the top of the area is the total free share.
+  const pctOf = (part, tot) => tot > 0 ? +((part / tot) * 100).toFixed(1) : 0;
   mkChart('chartFreeIndex', {
     type: 'line',
     data: {
       labels: allMonths.map(monthLabel),
-      datasets: [{
-        label: '% Free (Work)',
-        data: allMonths.map(m => {
-          const tot = monthly[m].kwh;
-          return tot > 0 ? +((monthly[m].workKwh / tot) * 100).toFixed(1) : 0;
-        }),
-        borderColor: '#2ecc71',
-        backgroundColor: 'rgba(46,204,113,0.15)',
-        fill: true, borderWidth: 2.5, pointRadius: 3, tension: 0.35
-      }]
+      datasets: [
+        { label: 'Work',
+          data: allMonths.map(m => pctOf(monthly[m].freeWorkKwh, monthly[m].kwh)),
+          borderColor: '#0288d1', backgroundColor: 'rgba(2,136,209,0.30)',
+          fill: true, borderWidth: 2, pointRadius: 3, tension: 0.35 },
+        { label: 'Other free',
+          data: allMonths.map(m => pctOf(monthly[m].freeOtherKwh, monthly[m].kwh)),
+          borderColor: '#2ecc71', backgroundColor: 'rgba(46,204,113,0.40)',
+          fill: true, borderWidth: 2, pointRadius: 3, tension: 0.35 }
+      ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false }, datalabels: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(1)}% from Work` } }
+        legend: { display: true, position: 'top', labels: { color: tc(), boxWidth: 12, padding: 12, font: { size: 11 } } },
+        datalabels: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`,
+            footer: items => `Total free: ${items.reduce((a, i) => a + i.parsed.y, 0).toFixed(1)}%`
+          }
+        }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { color: tc() } },
+        x: { grid: { display: false }, ticks: { color: tc() }, stacked: true },
         y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '%' },
-             min: 0, max: 100, title: { display: true, text: '% Free', color: '#888' } }
+             min: 0, max: 100, stacked: true, title: { display: true, text: '% Free', color: '#888' } }
       }
     }
   });
