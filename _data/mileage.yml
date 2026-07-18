@@ -20,9 +20,9 @@
 #    5. All history from the old car stays intact in this file
 #
 #  VEHICLE NAMES IN USE:
-#    "2025 Mach-E GT"        RJB's car (first session 2025-08-22)
+#    "2025 Mach-E GT"        RJB's car (2025-08-22 → turned in 2026-07-13 @ 14,982 mi)
 #    "LRB's 2025 Mach-E GT"  LRB's car (first session 2026-05-02)
-#    "2026 Mach-E SR"        RJB's new car (picked up 2026-07)
+#    "2026 Mach-E SR"        RJB's car (picked up 2026-07-13 @ 22 mi — replaced the GT)
 #    "LRB's 2026 Mach-E SR"  LRB's future car
 #
 #  HOW THE ANALYTICS PAGE USES THIS:
@@ -32,19 +32,22 @@
 #    - CO₂ calculations use real miles when available
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ── NEW CAR: 2026 Mach-E SR — add your pickup (delivery) reading first ────────
-#   Uncomment on pickup day, fill in the real odometer, and record the delivery
-#   battery % in notes. This establishes the mileage baseline for the SR.
-# - date: "2026-07-13"                 # pickup date
-#   vehicle: "2026 Mach-E SR"
-#   odometer: 12                        # low starting miles at delivery
-#   notes: "Delivery — picked up at 82% battery"
+# ── Car swap 2026-07-13: turned in the 2025 GT, picked up the 2026 SR ─────────
+- date: "2026-07-13"
+  vehicle: "2026 Mach-E SR"
+  odometer: 22.3
+  notes: "Delivery / pickup — 86% battery (229 mi range) at 22.3 mi"
+
+- date: "2026-07-13"
+  vehicle: "2025 Mach-E GT"
+  odometer: 14982.2
+  notes: "Turned in / traded — final reading (51% battery, 137 mi range)"
 
 # ── Current readings ─────────────────────────────────────────────────────────
 - date: "2026-07-11"
   vehicle: "2025 Mach-E GT"
   odometer: 14935
-  notes: "current reading"
+  notes: ""
 
 - date: "2026-06-20"
   vehicle: "2025 Mach-E GT"
