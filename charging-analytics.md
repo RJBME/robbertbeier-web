@@ -1562,7 +1562,7 @@ permalink: /charging-analytics/
    RAW DATA FROM JEKYLL LIQUID
    ════════════════════════════════════════════════════════ */
 const sessions = [
-  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }}, milesAdded: {{ entry.miles_added | default: 0 }}, tempC: {{ entry.temperature_c | default: "null" }}, tempF: {{ entry.temperature_f | default: "null" }} }{% unless forloop.last %},{% endunless %}
+  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }}, milesAdded: {{ entry.miles_added | default: 0 }}, solar: {{ entry.solar | default: false }}, tempC: {{ entry.temperature_c | default: "null" }}, tempF: {{ entry.temperature_f | default: "null" }} }{% unless forloop.last %},{% endunless %}
   {% endfor %}
 ];
 
@@ -1800,7 +1800,11 @@ sessions.forEach(s => {
     // CO2 calculations — reuse effMiPerKwh already computed above; cache egridFactor
     const mpg        = getBaselineMpg(s.vehicle);
     const estMiles   = s.kwh * effMiPerKwh;
-    const egridFactor = getEgridFactor(s.location);
+    // Per-session solar flag (solar: true in the session file) → zero grid CO2,
+    // regardless of location. Lets a single Work charge on a solar array count as
+    // clean without making all Work charging solar. Location-level solar (e.g.
+    // Paul & Carol's) is still handled inside getEgridFactor.
+    const egridFactor = s.solar ? 0 : getEgridFactor(s.location);
     s.co2GasCould    = (estMiles / mpg) * CO2_GAS_KG_PER_GAL;
     s.co2GridEmit    = s.kwh * egridFactor;
     s.co2NetAvoided  = s.co2GasCould - s.co2GridEmit;

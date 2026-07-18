@@ -72,6 +72,10 @@ _inputs:
   cost:
     type: number
     comment: "Total cost in USD. Enter 0 for free sessions (Work, free public). Home cost is calculated automatically."
+  solar:
+    type: switch
+    label: "Solar (zero-emission)"
+    comment: "On = charged on solar/renewable power → counts as zero grid CO₂ for this session only. Leave OFF for normal grid charging, including regular Work."
   start_date:
     type: date
     label: "Charge Start Date"
