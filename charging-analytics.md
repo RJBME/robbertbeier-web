@@ -204,7 +204,8 @@ permalink: /charging-analytics/
     font-family: inherit; transition: all 0.15s; white-space: nowrap;
   }
   .vf-btn:hover { border-color: var(--link); color: var(--link); }
-  .vf-btn.active { background: var(--link); color: #fff; border-color: var(--link); }
+  /* Active pill uses its car's paint colour (--vf-color) — "All Vehicles" falls back to purple. */
+  .vf-btn.active { background: var(--vf-color, var(--link)); color: var(--vf-text, #fff); border-color: var(--vf-color, var(--link)); }
 
   /* ── Sticky vehicle filter bar ── */
   #vehicleFilterSticky {
@@ -1894,6 +1895,26 @@ function mkChart(id, config) {
 /* ════════════════════════════════════════════════════════
    VEHICLE FILTER
    ════════════════════════════════════════════════════════ */
+// Readable text on an active pill: dark on light paint (e.g. Desert Sand), else white.
+function vfTextColor(hex) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.slice(0,2),16), g = parseInt(c.slice(2,4),16), b = parseInt(c.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) / 255 > 0.6 ? '#1a1a1a' : '#fff';
+}
+// Build one vehicle-filter pill, tinted with its paint colour when active.
+function makeVfBtn(v) {
+  const btn = document.createElement('button');
+  btn.className = 'vf-btn' + (isVehicleActive(v) ? ' active' : '');
+  btn.textContent = v === 'all' ? 'All Vehicles' : v;
+  btn.dataset.vehicle = v;
+  btn.onclick = () => toggleVehicle(v);
+  if (v !== 'all' && VEHICLE_COLORS[v]) {
+    btn.style.setProperty('--vf-color', VEHICLE_COLORS[v]);
+    btn.style.setProperty('--vf-text', vfTextColor(VEHICLE_COLORS[v]));
+  }
+  return btn;
+}
+
 function buildVehicleFilter() {
   const el        = document.getElementById('vehicleFilterBtns');
   const stickyBar = document.getElementById('vehicleFilterSticky');
@@ -1912,27 +1933,13 @@ function buildVehicleFilter() {
     // Build inline vehicle buttons
     el.style.display = 'flex';
     el.innerHTML = '';
-    ['all', ...allVehicles].forEach(v => {
-      const btn = document.createElement('button');
-      btn.className = 'vf-btn' + (isVehicleActive(v) ? ' active' : '');
-      btn.textContent = v === 'all' ? 'All Vehicles' : v;
-      btn.dataset.vehicle = v;
-      btn.onclick = () => toggleVehicle(v);
-      el.appendChild(btn);
-    });
+    ['all', ...allVehicles].forEach(v => el.appendChild(makeVfBtn(v)));
 
     // Build sticky vehicle row buttons
     if (stickyRow) {
       stickyRow.style.display = 'flex';
       stickyRow.querySelectorAll('.vf-btn').forEach(b => b.remove());
-      ['all', ...allVehicles].forEach(v => {
-        const btn = document.createElement('button');
-        btn.className = 'vf-btn' + (isVehicleActive(v) ? ' active' : '');
-        btn.textContent = v === 'all' ? 'All Vehicles' : v;
-        btn.dataset.vehicle = v;
-        btn.onclick = () => toggleVehicle(v);
-        stickyRow.appendChild(btn);
-      });
+      ['all', ...allVehicles].forEach(v => stickyRow.appendChild(makeVfBtn(v)));
     }
   }
 
