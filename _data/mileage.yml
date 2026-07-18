@@ -44,6 +44,13 @@
   notes: "Turned in / traded — final reading (51% battery, 137 mi range)"
 
 # ── Current readings ─────────────────────────────────────────────────────────
+
+- date: "2026-07-18"
+  vehicle: "LRB's 2025 Mach-E GT"
+  odometer: 14244
+  notes: "current reading"
+
+# ── Previous readings ─────────────────────────────────────────────────────────
 - date: "2026-07-11"
   vehicle: "2025 Mach-E GT"
   odometer: 14935
@@ -57,9 +64,8 @@
 - date: "2026-06-20"
   vehicle: "LRB's 2025 Mach-E GT"
   odometer: 13399
-  notes: "current reading"
+  notes: ""
 
-# ── Previous readings ─────────────────────────────────────────────────────────
 - date: "2026-06-12"
   vehicle: "2025 Mach-E GT"
   odometer: 12898
