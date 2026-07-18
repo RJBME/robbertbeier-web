@@ -3285,11 +3285,13 @@ mkChart('chartHistogram', {
         { label: 'Work',
           data: allMonths.map(m => pctOf(monthly[m].freeWorkKwh, monthly[m].kwh)),
           borderColor: '#0288d1', backgroundColor: 'rgba(2,136,209,0.30)',
-          fill: true, borderWidth: 2, pointRadius: 3, tension: 0.35 },
+          fill: 'origin', borderWidth: 2, pointRadius: 3, tension: 0.35 },
         { label: 'Other free',
           data: allMonths.map(m => pctOf(monthly[m].freeOtherKwh, monthly[m].kwh)),
           borderColor: '#2ecc71', backgroundColor: 'rgba(46,204,113,0.40)',
-          fill: true, borderWidth: 2, pointRadius: 3, tension: 0.35 }
+          // fill to the PREVIOUS dataset, not zero — otherwise the green area
+          // overlays the blue Work band and muddies it
+          fill: '-1', borderWidth: 2, pointRadius: 3, tension: 0.35 }
       ]
     },
     options: {
