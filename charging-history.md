@@ -70,6 +70,26 @@ permalink: /charging-history/
   }
   .btn-reset:hover { border-color: var(--link); color: var(--link); }
 
+  /* ── Search box ── */
+  .filter-search {
+    padding: 8px 12px; border-radius: 8px; box-sizing: border-box; width: 100%;
+    border: 1px solid var(--dash-border); background: var(--bg); color: var(--text);
+    font-size: 0.85rem; font-family: inherit;
+  }
+  .filter-search:focus { outline: none; border-color: var(--link); }
+  .filter-search::placeholder { color: #999; }
+
+  /* ── Vehicle filter pills (match Analytics; active = car's paint colour) ── */
+  .veh-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .vf-btn {
+    background: var(--bg); border: 1px solid var(--dash-border);
+    padding: 5px 14px; border-radius: 20px; font-size: 0.76rem;
+    color: var(--text); cursor: pointer; font-weight: 600;
+    font-family: inherit; transition: all 0.15s; white-space: nowrap;
+  }
+  .vf-btn:hover { border-color: var(--link); color: var(--link); }
+  .vf-btn.active { background: var(--vf-color, var(--link)); color: var(--vf-text, #fff); border-color: var(--vf-color, var(--link)); }
+
   /* ── Location badges ── */
   .badge {
     padding: 3px 9px; border-radius: 20px;
@@ -177,6 +197,18 @@ permalink: /charging-history/
   </div>
 
   <div class="filter-bar">
+    <div class="filter-row" style="grid-template-columns:1fr;margin-bottom:12px">
+      <div class="filter-group">
+        <label>Search</label>
+        <input type="search" id="searchFilter" class="filter-search" placeholder="Search location, date, brand, notes…" oninput="applyFilters()" aria-label="Search charging sessions">
+      </div>
+    </div>
+    <div class="filter-row" style="grid-template-columns:1fr;margin-bottom:12px">
+      <div class="filter-group">
+        <label>Vehicle</label>
+        <div id="vehPills" class="veh-pills"></div>
+      </div>
+    </div>
     <div class="filter-row filter-row-brand">
       <div class="filter-group">
         <label>Brand</label>
@@ -207,10 +239,6 @@ permalink: /charging-history/
         <select id="yearFilter" onchange="applyFilters()">
           <option value="">All Years</option>
         </select>
-      </div>
-      <div class="filter-group">
-        <label>Vehicle</label>
-        <select id="vehFilter" onchange="applyFilters()"><option value="">All Vehicles</option></select>
       </div>
       <div class="filter-group">
         <label>Cost</label>
@@ -317,6 +345,20 @@ permalink: /charging-history/
 <script>
 const brandLocMap = {};
 
+// Vehicle paint colours (match the Analytics page) for the filter pills.
+const VEHICLE_PAINT = {
+  '2025 Mach-E GT':        '#C2A76C',  // Desert Sand
+  '2026 Mach-E SR':        '#E31E2E',  // Race Red
+  "LRB's 2025 Mach-E GT":  '#B5176B',  // Molten Magenta
+  "LRB's 2026 Mach-E SR":  '#2E7D9E'   // Adriatic Blue
+};
+function vfTextColor(hex) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.slice(0,2),16), g = parseInt(c.slice(2,4),16), b = parseInt(c.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) / 255 > 0.6 ? '#1a1a1a' : '#fff';
+}
+let _vehFilter = '';  // '' = all vehicles; set by the pills
+
 function initFilters() {
   // Sort rows by date+end_time descending (newest first).
   // Sessions without end_time get '99:99' so they sort last within their day.
@@ -350,9 +392,27 @@ function initFilters() {
   document.querySelectorAll('.log-row').forEach(row => years.add(row.getAttribute('data-year')));
   Array.from(years).sort().forEach(y => yearSel.add(new Option(y, y)));
 
-  // Populate vehicle filter
-  const vehSel = document.getElementById('vehFilter');
-  Array.from(vehicles).sort().forEach(v => vehSel.add(new Option(v, v)));
+  // Build vehicle filter pills (tinted with each car's paint colour when active)
+  const vehPills = document.getElementById('vehPills');
+  const makeVehPill = (val, label) => {
+    const btn = document.createElement('button');
+    btn.className = 'vf-btn' + (val === _vehFilter ? ' active' : '');
+    btn.textContent = label;
+    btn.dataset.veh = val;
+    if (val && VEHICLE_PAINT[val]) {
+      btn.style.setProperty('--vf-color', VEHICLE_PAINT[val]);
+      btn.style.setProperty('--vf-text', vfTextColor(VEHICLE_PAINT[val]));
+    }
+    btn.onclick = () => {
+      _vehFilter = val;
+      vehPills.querySelectorAll('.vf-btn').forEach(b => b.classList.toggle('active', b.dataset.veh === val));
+      applyFilters();
+    };
+    return btn;
+  };
+  vehPills.innerHTML = '';
+  vehPills.appendChild(makeVehPill('', 'All Vehicles'));
+  Array.from(vehicles).sort().forEach(v => vehPills.appendChild(makeVehPill(v, v)));
   applyFilters();
 }
 
@@ -376,8 +436,9 @@ function applyFilters() {
   const year     = document.getElementById('yearFilter').value;
   const brand    = document.getElementById('brandFilter').value;
   const loc      = document.getElementById('locFilter').value;
-  const veh      = document.getElementById('vehFilter').value;
+  const veh      = _vehFilter;
   const costType = document.getElementById('costFilter').value;
+  const search   = (document.getElementById('searchFilter').value || '').trim().toLowerCase();
 
   let totalKwh = 0, totalCost = 0, count = 0;
 
@@ -387,8 +448,10 @@ function applyFilters() {
     const matchLoc   = !loc      || row.getAttribute('data-loc')   === loc;
     const matchVeh   = !veh      || row.getAttribute('data-veh')   === veh;
     const matchCost  = !costType || row.getAttribute('data-type')  === costType;
+    // Free-text search matches any visible cell text plus the note content.
+    const matchSearch = !search || row.textContent.toLowerCase().includes(search);
 
-    if (matchYear && matchBrand && matchLoc && matchVeh && matchCost) {
+    if (matchYear && matchBrand && matchLoc && matchVeh && matchCost && matchSearch) {
       row.style.display = "";
       totalKwh  += parseFloat(row.getAttribute('data-kwh'));
       totalCost += parseFloat(row.getAttribute('data-cost'));
@@ -405,7 +468,10 @@ function applyFilters() {
 
 function resetFilters() {
   document.getElementById('brandFilter').value = '';
-  document.querySelectorAll('#yearFilter, #vehFilter, #costFilter').forEach(s => s.value = '');
+  document.querySelectorAll('#yearFilter, #costFilter').forEach(s => s.value = '');
+  document.getElementById('searchFilter').value = '';
+  _vehFilter = '';
+  document.querySelectorAll('#vehPills .vf-btn').forEach(b => b.classList.toggle('active', b.dataset.veh === ''));
   // Repopulate location with all locations
   const locSel = document.getElementById('locFilter');
   locSel.innerHTML = '<option value="">All Locations</option>';
