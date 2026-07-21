@@ -21,9 +21,9 @@
 #
 #  VEHICLE NAMES IN USE:
 #    "2025 Mach-E GT"        RJB's car (2025-08-22 → turned in 2026-07-13 @ 14,982 mi)
-#    "LRB's 2025 Mach-E GT"  LRB's car (first session 2026-05-02)
+#    "LRB's 2025 Mach-E GT"  LRB's car (first session 2026-05-02 → turned in 2026-07-20 @ 14,309.6 mi)
 #    "2026 Mach-E SR"        RJB's car (picked up 2026-07-13 @ 22 mi — replaced the GT)
-#    "LRB's 2026 Mach-E SR"  LRB's future car
+#    "LRB's 2026 Mach-E SR"  LRB's car (picked up 2026-07-20 @ 16.8 mi — replaced the GT)
 #
 #  HOW THE ANALYTICS PAGE USES THIS:
 #    - Latest odometer per vehicle → cost/mile, kWh/mile on dashboard
@@ -31,6 +31,17 @@
 #    - Efficiency trend charts use real miles when available
 #    - CO₂ calculations use real miles when available
 # ─────────────────────────────────────────────────────────────────────────────
+
+# ── Car swap 2026-07-20: LRB turned in the 2025 GT, picked up the 2026 SR ─────
+- date: "2026-07-20"
+  vehicle: "LRB's 2026 Mach-E SR"
+  odometer: 16.8
+  notes: "Delivery / pickup — Adriatic Blue Standard Range AWD — replaced the GT"
+
+- date: "2026-07-20"
+  vehicle: "LRB's 2025 Mach-E GT"
+  odometer: 14309.6
+  notes: "Turned in / traded — final reading"
 
 # ── Car swap 2026-07-13: turned in the 2025 GT, picked up the 2026 SR ─────────
 - date: "2026-07-13"
