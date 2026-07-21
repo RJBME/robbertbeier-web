@@ -103,8 +103,11 @@ permalink: /charging-analytics/
   }
 
   /* ── Chart grids ── */
-  .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
-  .chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  /* minmax(0,1fr) (not 1fr) so tracks can shrink below child min-content —
+     otherwise a Chart.js canvas with an inline pixel width forces the track
+     wider than the viewport and the chart is clipped on narrow screens. */
+  .chart-grid-2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; margin-bottom: 18px; }
+  .chart-grid-3 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); gap: 18px; margin-bottom: 18px; }
   .chart-full  { margin-bottom: 18px; }
 
   /* ── Chart card ── */
@@ -112,7 +115,7 @@ permalink: /charging-analytics/
     background: var(--dash-card); border: 1px solid var(--dash-border);
     border-radius: 12px; padding: 18px 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    max-width: 100%; box-sizing: border-box;
+    max-width: 100%; min-width: 0; box-sizing: border-box;
     /* CSS containment: layout+style prevents child changes from
        causing reflow outside the card. Safe in all modern browsers. */
     contain: layout style;
@@ -275,7 +278,7 @@ permalink: /charging-analytics/
 
   /* ── Responsive ── */
   @media (max-width: 767px) {
-    .chart-grid-2, .chart-grid-3 { grid-template-columns: 1fr; }
+    .chart-grid-2, .chart-grid-3 { grid-template-columns: minmax(0,1fr); }
     .section-nav a { padding: 5px 10px; font-size: 0.72rem; }
     .chart-card { padding: 12px 14px; }
     /* Fix: was repeat(4,1fr) — same as desktop, a no-op. Collapse to 2 cols on tablet/large-phone */
@@ -491,7 +494,7 @@ permalink: /charging-analytics/
     /* KPI strips: 2-col on small screens */
     .kpi-strip { grid-template-columns: repeat(2, 1fr) !important; }
     /* Chart grid: single col */
-    .chart-grid-2 { grid-template-columns: 1fr !important; }
+    .chart-grid-2 { grid-template-columns: minmax(0,1fr) !important; }
   }
   .ev-map-icon { background: transparent !important; border: none !important; overflow: visible !important; }
   /* Proportional-symbol marker: translucent fill + crisp colored ring (size =
