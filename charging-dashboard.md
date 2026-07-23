@@ -238,6 +238,33 @@ permalink: /charging/
 {% comment %} Home cost is billed wall-side; energy_kwh is battery-side. Uplift home ENERGY for COST only. {% endcomment %}
 {% assign home_mult = site.data.rates.home_charge_uplift | default: 0.10 | plus: 1 %}
 
+{% comment %}
+  ── Membership pass amortization (mirrors the analytics page) ──
+  A network pass (e.g. Electrify America Pass+) is a flat fee that buys a lower
+  per-kWh rate. Spread that fee across every session on the pass's network inside
+  its [start,end] window, weighted by each session's kWh, and add the share to
+  that session's cost below — so total cost, per-vehicle cost, cost/mile, and gas
+  savings all reflect the true all-in cost, exactly like _data/memberships.yml
+  drives on the analytics page. PRE-PASS: sum each pass's window kWh first.
+{% endcomment %}
+{% assign memberships  = site.data.memberships.memberships %}
+{% assign mbr_kwh_csv  = "" %}
+{% if memberships %}
+  {% for m in memberships %}
+    {% assign m_net  = m.network | downcase %}
+    {% assign m_wkwh = 0.0 %}
+    {% for entry in site.charging %}
+      {% assign e_loc  = entry.location | downcase %}
+      {% assign e_date = entry.date | date: "%Y-%m-%d" %}
+      {% if e_loc contains m_net and e_date >= m.start and e_date <= m.end %}
+        {% assign m_wkwh = m_wkwh | plus: entry.energy_kwh %}
+      {% endif %}
+    {% endfor %}
+    {% assign mbr_kwh_csv = mbr_kwh_csv | append: m_wkwh | append: "," %}
+  {% endfor %}
+{% endif %}
+{% assign mbr_kwh_arr = mbr_kwh_csv | split: "," %}
+
 {% for entry in site.charging %}
   {% assign k          = entry.energy_kwh | times: 1.0 %}
   {% assign loc        = entry.location | downcase %}
@@ -260,6 +287,20 @@ permalink: /charging/
     {% assign c = k | times: h_rate | times: home_mult %}
   {% else %}
     {% assign c = entry.cost | times: 1.0 %}
+  {% endif %}
+
+  {% comment %} ── Add this session's kWh-weighted share of any active membership fee ── {% endcomment %}
+  {% if memberships %}
+    {% for m in memberships %}
+      {% assign m_net = m.network | downcase %}
+      {% if loc contains m_net and entry_date >= m.start and entry_date <= m.end %}
+        {% assign m_wkwh = mbr_kwh_arr[forloop.index0] | times: 1.0 %}
+        {% if m_wkwh > 0 %}
+          {% assign m_share = m.fee | times: 1.0 | times: k | divided_by: m_wkwh %}
+          {% assign c = c | plus: m_share %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
   {% endif %}
 
   {% assign total_cost = total_cost | plus: c %}

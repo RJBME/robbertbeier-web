@@ -1,0 +1,39 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  _data/memberships.yml  —  EV charging network membership passes
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#  A flat, time-boxed fee for a charging network — e.g. Electrify America Pass+
+#  ($7/mo) — that buys a lower per-kWh rate. The flat fee is AMORTIZED across
+#  every session on that network inside [start, end], spread in proportion to
+#  each session's energy (kWh-weighted). The amortized share is ADDED to that
+#  session's charging cost, so the analytics "total cost", "avg ¢/kWh", savings,
+#  and cost/kWh charts all reflect the true, all-in cost of the pass.
+#
+#  Recomputed on every page load — so if you add more sessions inside an active
+#  window later, the fee automatically re-spreads across all of them and each
+#  session's effective ¢/kWh drops. You never have to edit old sessions.
+#
+#  FIELDS:
+#    network   Substring matched (case-insensitive) against a session's
+#              `location` string — use the same keyword the badges use:
+#              "electrify", "tesla", "chargepoint", "blink", "rivian", "wecharge".
+#    label     Human-readable plan name (shown in the analytics note/tooltips).
+#    fee       Flat fee in USD for the whole window.
+#    start     YYYY-MM-DD — first day the pass is active (inclusive).
+#    end       YYYY-MM-DD — last day the pass is active (inclusive).
+#    notes     Optional.
+#
+#  RENEWALS / FUTURE PASSES:
+#    A monthly pass that renews is just another row — add one entry per billing
+#    window you keep it. Each window amortizes its own fee across its own
+#    sessions independently. Buying a Tesla pass later? Add a row with
+#    network: "tesla". Nothing else in the code needs to change.
+# ─────────────────────────────────────────────────────────────────────────────
+
+memberships:
+  - network: "electrify"
+    label: "Electrify America Pass+"
+    fee: 7.00
+    start: "2026-07-22"
+    end: "2026-07-31"
+    notes: "First Pass+ month — $7/mo; member rate $0.30–0.45/kWh vs guest pricing"

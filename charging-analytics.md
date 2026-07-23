@@ -858,6 +858,7 @@ permalink: /charging-analytics/
         <tbody id="locationStatsBody"></tbody>
       </table>
     </div>
+    <p id="membershipNote" style="font-size:0.68rem;color:#777;margin:10px 4px 0;line-height:1.6;display:none"></p>
   </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
@@ -1585,6 +1586,10 @@ const homeRates       = {{ site.data.rates.home_electricity | jsonify }};
 const HOME_CHARGE_UPLIFT = 1 + ({{ site.data.rates.home_charge_uplift | default: 0.10 }});
 const gasSavingsRates = {{ site.data.rates.gas_savings       | jsonify }};
 const mileageHistory  = {{ site.data.mileage | jsonify }};
+// Network membership passes (e.g. Electrify America Pass+). Each pass's flat fee
+// is amortized across its network's sessions inside its window — see the
+// "MEMBERSHIP FEE AMORTIZATION" pass right after session enrichment below.
+const memberships     = {{ site.data.memberships.memberships | jsonify }} || [];
 const locationData    = {{ site.data.locations  | jsonify }} || [];
 const tripNotes       = {{ site.data.trip_notes | jsonify }} || [];
 
@@ -1830,6 +1835,60 @@ sessions.forEach(s => {
     s.tempC = null; s.tempF = null; s.hasTemp = false;
   }
 });
+
+/* ════════════════════════════════════════════════════════
+   MEMBERSHIP FEE AMORTIZATION
+   ────────────────────────────────────────────────────────
+   A network pass (e.g. Electrify America Pass+, $7/mo) is a flat fee that buys
+   a lower per-kWh rate. We spread that fee across every session on the pass's
+   network inside its [start, end] window, weighted by each session's energy
+   (kWh), and ADD the share to that session's cost. So `s.cost` becomes the true
+   all-in cost and every downstream metric (total cost, avg ¢/kWh, savings,
+   cost/kWh charts, per-session tables) reflects the pass automatically.
+
+   Because this runs on every page load over the CURRENT session set, adding
+   more sessions inside an active window later automatically re-spreads the fee
+   — older sessions' effective ¢/kWh drop, with no edits to old files. Defined
+   in _data/memberships.yml; add a row per renewal or new pass (any network).
+   ════════════════════════════════════════════════════════ */
+const _membershipNotes = [];
+(memberships || []).forEach(m => {
+  if (!m || !m.network || !m.fee || !m.start || !m.end) return;
+  const net = String(m.network).toLowerCase();
+  const inWindow = sessions.filter(s =>
+    s.location && s.location.toLowerCase().includes(net) &&
+    s.date >= m.start && s.date <= m.end
+  );
+  const windowKwh = inWindow.reduce((a, s) => a + (s.kwh || 0), 0);
+  if (windowKwh <= 0) return; // fee can't be spread until there's ≥1 session
+  inWindow.forEach(s => {
+    const share = m.fee * (s.kwh / windowKwh); // kWh-weighted share of the flat fee
+    s.membershipFee   = (s.membershipFee || 0) + share;
+    s.membershipLabel = m.label || net;
+    s.cost   += share;          // all-in cost
+    s.saving -= share;          // saving = gasEquiv - cost, keep consistent
+    s.isFree  = s.cost < 0.005; // (unchanged for paid EA sessions, but stay correct)
+  });
+  // Build a transparency note (so the amortized fee isn't invisible).
+  const todayStr   = new Date().toISOString().slice(0, 10);
+  const active     = todayStr >= m.start && todayStr <= m.end;
+  const addPerKwh  = (m.fee / windowKwh) * 100;                 // ¢/kWh added on average
+  const windowCost = inWindow.reduce((a, s) => a + s.cost, 0);  // all-in (incl. fee)
+  const blended    = (windowCost / windowKwh) * 100;            // ¢/kWh all-in
+  _membershipNotes.push(
+    `💳 <strong>${m.label || net}</strong> ($${m.fee.toFixed(2)}${active ? '' : ', ended'}) — ` +
+    `amortized across ${inWindow.length} session${inWindow.length === 1 ? '' : 's'} ` +
+    `(${windowKwh.toFixed(1)} kWh, ${m.start}→${m.end}), adding ~${addPerKwh.toFixed(1)}¢/kWh. ` +
+    `Effective all-in rate this window: <strong>${blended.toFixed(1)}¢/kWh</strong>. ` +
+    `Adding more sessions in this window re-spreads the fee automatically.`
+  );
+});
+(function renderMembershipNote() {
+  const el = document.getElementById('membershipNote');
+  if (!el || !_membershipNotes.length) return;
+  el.innerHTML = _membershipNotes.join('<br>');
+  el.style.display = '';
+})();
 
 /* ════════════════════════════════════════════════════════
    CHART FACTORY + ANIMATION HELPERS

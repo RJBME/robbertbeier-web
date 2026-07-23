@@ -145,6 +145,16 @@
   lng: -85.4030
   city: "Cadillac, MI"
 
+- location: "Electrify America, Lansing, MI"
+  lat: 42.73920926145576
+  lng: -84.67376036623341
+  city: "Lansing, MI"
+
+- location: "Electrify America, Grand Rapids, MI"
+  lat: 43.00944004118025
+  lng: -85.69025899036247
+  city: "Grand Rapids, MI"
+
 - location: "WeCharge, Bridgeport, MI"
   lat: 43.3548
   lng: -83.8732
