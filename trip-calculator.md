@@ -1240,6 +1240,8 @@ function enableStopDrag(){
   if (window.Sortable) return init();
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js';
+  s.integrity = 'sha384-BSxuMLxX+FCbTdYec3TbXlnMGEEM2QXTFdtDaveen71o+jswm2J36+xFqp8k4VHM';
+  s.crossOrigin = 'anonymous';
   s.onload = init; document.body.appendChild(s);
 }
 
@@ -3603,9 +3605,13 @@ function loadLeaflet(){
   _leafletPromise = new Promise(res => {
     const css = document.createElement('link');
     css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    css.integrity = 'sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H';
+    css.crossOrigin = 'anonymous';
     document.head.appendChild(css);
     const js = document.createElement('script');
     js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    js.integrity = 'sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH';
+    js.crossOrigin = 'anonymous';
     js.onload = res; document.body.appendChild(js);
   });
   return _leafletPromise;

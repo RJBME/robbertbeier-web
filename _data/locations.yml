@@ -9,14 +9,18 @@
 #
 # Add a new entry here whenever you add a new location to cloudcannon.config.yml.
 
+# PRIVACY: private residences (Home, Work, friends' homes, Cabin) are coarsened
+# to 2 decimals (~1 km) on purpose so the public map shows the general area but
+# does not pinpoint an exact address. Do NOT restore full-precision coordinates
+# for these. Public chargers (Tesla/EA/ChargePoint/etc.) keep exact coords.
 - location: "Home"
-  lat: 42.3714
-  lng: -83.4702
+  lat: 42.37    # coarsened (~1 km) — private residence, do not restore exact coords
+  lng: -83.47
   city: "Plymouth, MI"
 
 - location: "Work"
-  lat: 42.3023
-  lng: -83.2327
+  lat: 42.30    # coarsened (~1 km) — private/workplace
+  lng: -83.23
   city: ""
 
 - location: "Tesla, Lansing"
@@ -90,8 +94,8 @@
   city: "Canton, MI"
 
 - location: "Paul & Carol's, Beulah, MI"
-  lat: 44.6319
-  lng: -86.0909
+  lat: 44.63    # coarsened (~1 km) — friends' private residence
+  lng: -86.09
   city: "Beulah, MI"
   solar: true   # own solar panels + net metering — charging counts as zero-emission
 
@@ -176,6 +180,6 @@
   city: "Mancelona, MI"
 
 - location: "Cabin"
-  lat: 44.9524
-  lng: -85.1351
+  lat: 44.95    # coarsened (~1 km) — private residence
+  lng: -85.14
   city: "Bellaire, MI"
