@@ -1239,6 +1239,9 @@ function enableStopDrag(){
   }};
   if (window.Sortable) return init();
   const s = document.createElement('script');
+  // SRI NOTE: .integrity is a fingerprint of this EXACT file version. If you bump the
+  // version below you MUST regenerate the hash or the browser blocks the script:
+  //   curl -sSL "<url>" | openssl dgst -sha384 -binary | openssl base64 -A  → prefix "sha384-"
   s.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js';
   s.integrity = 'sha384-BSxuMLxX+FCbTdYec3TbXlnMGEEM2QXTFdtDaveen71o+jswm2J36+xFqp8k4VHM';
   s.crossOrigin = 'anonymous';
@@ -3603,6 +3606,9 @@ function loadLeaflet(){
   // instead of each appending another copy of Leaflet while the first is loading.
   if (_leafletPromise) return _leafletPromise;
   _leafletPromise = new Promise(res => {
+    // SRI NOTE: the integrity hashes below fingerprint these EXACT Leaflet 1.9.4 files.
+    // If you bump the version you MUST regenerate each hash or the browser blocks it:
+    //   curl -sSL "<url>" | openssl dgst -sha384 -binary | openssl base64 -A  → prefix "sha384-"
     const css = document.createElement('link');
     css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
     css.integrity = 'sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H';

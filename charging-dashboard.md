@@ -707,6 +707,11 @@ permalink: /charging/
   </div>
 </div>
 
+<!-- SRI NOTE: each integrity="sha384-…" is a fingerprint of that EXACT file version.
+     If you bump a version (e.g. chart.js@4.4.3 → 4.5.0) you MUST regenerate its hash,
+     or the browser blocks the file and the chart silently breaks. Regenerate with:
+       curl -sSL "<url>" | openssl dgst -sha384 -binary | openssl base64 -A
+     then prefix the result with "sha384-". -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" integrity="sha384-JUh163oCRItcbPme8pYnROHQMC6fNKTBWtRG3I3I0erJkzNgL7uxKlNwcrcFKeqF" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" integrity="sha384-y49Zu59jZHJL/PLKgZPv3k2WI9c0Yp3pWB76V8OBVCb0QBKS8l4Ff3YslzHVX76Y" crossorigin="anonymous"></script>
 <script>
