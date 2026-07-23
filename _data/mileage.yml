@@ -32,6 +32,11 @@
 #    - CO₂ calculations use real miles when available
 # ─────────────────────────────────────────────────────────────────────────────
 
+- date: "2026-07-22"
+  vehicle: "2026 Mach-E SR"
+  odometer: 672
+  notes: "current reading"
+
 # ── Car swap 2026-07-20: LRB turned in the 2025 GT, picked up the 2026 SR ─────
 - date: "2026-07-20"
   vehicle: "LRB's 2026 Mach-E SR"
