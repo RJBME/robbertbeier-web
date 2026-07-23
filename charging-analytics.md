@@ -2671,7 +2671,7 @@ mkChart('chartMonthlySourceSplit', {
           yMiKwh: {
             position: 'left',
             grid: { color: gc() },
-            ticks: { color: tc(), callback: v => v.toFixed(1) + ' mi/kWh' },
+            ticks: { color: tc(), callback: v => v.toFixed(2) + ' mi/kWh' },
             title: { display: true, text: 'mi / kWh  ↑ better', color: '#888' },
             beginAtZero: false
           },
@@ -4257,7 +4257,8 @@ mkChart('chartHistogram', {
           tooltip: { callbacks: { label: ctx => ` Avg ${ctx.parsed.x.toFixed(1)} kWh/session` } }
         },
         scales: {
-          x: { grid: { color: gc() }, ticks: { color: tc() }, beginAtZero: true },
+          // grace adds right-side headroom so the end-aligned value labels aren't clipped
+          x: { grid: { color: gc() }, ticks: { color: tc() }, beginAtZero: true, grace: '15%' },
           y: { grid: { display: false }, ticks: { color: tc() } }
         }
       }
@@ -4282,7 +4283,8 @@ mkChart('chartHistogram', {
           tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x.toFixed(2)}¢/mile (est.)` } }
         },
         scales: {
-          x: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '¢' }, beginAtZero: true },
+          // grace adds right-side headroom so the end-aligned value labels aren't clipped
+          x: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '¢' }, beginAtZero: true, grace: '15%' },
           y: { grid: { display: false }, ticks: { color: tc() } }
         }
       }
@@ -4351,7 +4353,7 @@ mkChart('chartHistogram', {
           yMiKwh: {
             position: 'left',
             grid: { color: gc() },
-            ticks: { color: tc(), callback: v => v.toFixed(1) + ' mi/kWh' },
+            ticks: { color: tc(), callback: v => v.toFixed(2) + ' mi/kWh' },
             title: { display: true, text: 'mi / kWh  ↑ better', color: '#888' },
             beginAtZero: false
           },
@@ -5312,7 +5314,7 @@ mkChart('chartHistogram', {
             scales: {
               x: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '°F' },
                    title: { display: true, text: `Ambient temp (°F)${excludeHome ? ' — home excluded' : ''}`, color: '#888' } },
-              y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v.toFixed(1) + ' mi/kWh' },
+              y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v.toFixed(2) + ' mi/kWh' },
                    title: { display: true, text: 'mi / kWh  ↑ better', color: '#888' }, beginAtZero: false }
             }
           }
@@ -5374,7 +5376,7 @@ mkChart('chartHistogram', {
                      ticks: { color: '#f39c12', callback: v => v + '°F' },
                      title: { display: true, text: 'Avg temp (°F)', color: '#f39c12' } },
             yEff:  { position: 'right', grid: { drawOnChartArea: false },
-                     ticks: { color: '#7b1fa2', callback: v => v.toFixed(1) + ' mi/kWh' },
+                     ticks: { color: '#7b1fa2', callback: v => v.toFixed(2) + ' mi/kWh' },
                      title: { display: true, text: 'mi/kWh', color: '#7b1fa2' }, beginAtZero: false }
           }
         }
