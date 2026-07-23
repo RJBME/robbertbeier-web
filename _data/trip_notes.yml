@@ -217,6 +217,23 @@
       place: "Tesla, Battle Creek"
       note: "Return charge"
 
+- key: "2026-07-22"
+  destination: "Blue Lake Fine Arts Camp, Twin Lake MI"
+  arrive: "2026-07-22"
+  depart: "2026-07-22"
+  dest_lat: 43.4126
+  dest_lng: -86.1286
+  description: "Round trip from Plymouth to Blue Lake Fine Arts Camp — Electrify America fast-charging stops in Lansing (outbound) and Grand Rapids (return)."
+  notes: "~384 mi round trip (excluding charging detours). First road trip in the 2026 Mach-E SR. Destination coords approximate (300 E Crystal Lake Rd, Twin Lake MI 49457)."
+  trip_miles: 384
+  itinerary:
+    - date: "2026-07-22"
+      place: "Electrify America, Lansing, MI"
+      note: "Outbound top-up (morning)"
+    - date: "2026-07-22"
+      place: "Electrify America, Grand Rapids, MI"
+      note: "Return charge (afternoon)"
+
 # ── TEMPLATE — copy this block for new trips ──────────────────────────────
 # - key: "YYYY-MM-DD"
 #   destination: ""
