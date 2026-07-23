@@ -4719,22 +4719,26 @@ mkChart('chartHistogram', {
       });
 
       // Avg charge rate by location (kW = kWh / hours)
+      // Build {bucket, avg} rows and sort largest → smallest so the chart reads
+      // top-to-bottom by charge rate. Runs on every render, so it re-sorts
+      // automatically if the underlying data changes (index 0 draws at the top).
       const rateBuckets = [...new Set(timeSessions.map(s => s.bucket))];
-      const rateByBucket = rateBuckets.map(b => {
+      const rateRows = rateBuckets.map(b => {
         const g = timeSessions.filter(s => s.bucket === b);
         const rates = g.map(s => {
           const h = durationHours(s);
           return h && h > 0 ? s.kwh / h : null;
         }).filter(Boolean);
-        return rates.length ? +(rates.reduce((a,v)=>a+v,0)/rates.length).toFixed(1) : 0;
-      });
+        const avg = rates.length ? +(rates.reduce((a,v)=>a+v,0)/rates.length).toFixed(1) : 0;
+        return { bucket: b, avg };
+      }).sort((a, b) => b.avg - a.avg);
       mkChart('chartAvgRate', {
         type: 'bar',
         data: {
-          labels: rateBuckets,
+          labels: rateRows.map(r => r.bucket),
           datasets: [{
-            data: rateByBucket,
-            backgroundColor: rateBuckets.map(b => BUCKET_COLORS[b] || '#888'),
+            data: rateRows.map(r => r.avg),
+            backgroundColor: rateRows.map(r => BUCKET_COLORS[r.bucket] || '#888'),
             borderRadius: 6
           }]
         },
