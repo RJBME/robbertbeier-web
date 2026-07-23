@@ -782,17 +782,17 @@ permalink: /charging/
           display: true,
           anchor: ctx => {
             const max = Math.max(...rawData.map(d => d.val));
-            return rawData[ctx.dataIndex].val / max > 0.25 ? 'center' : 'end';
+            return rawData[ctx.dataIndex].val / max > 0.55 ? 'center' : 'end';
           },
           align: ctx => {
             const max = Math.max(...rawData.map(d => d.val));
-            return rawData[ctx.dataIndex].val / max > 0.25 ? 'center' : 'end';
+            return rawData[ctx.dataIndex].val / max > 0.55 ? 'center' : 'end';
           },
           offset: 6,
           color: ctx => {
             const max = Math.max(...rawData.map(d => d.val));
             const d = rawData[ctx.dataIndex];
-            if (d.val / max <= 0.25) return d.color;
+            if (d.val / max <= 0.55) return d.color;
             const hex = d.color.replace('#','');
             const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
             return (0.299*r + 0.587*g + 0.114*b) / 255 > 0.45 ? '#222' : '#fff';

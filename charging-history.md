@@ -325,7 +325,7 @@ permalink: /charging-history/
           </span>
         </td>
         <td>{% assign veh = log.vehicle | default: "2025 Mach-E GT" %}{% if veh contains "LRB" %}LRB {% endif %}{% if veh contains "2025" %}'25{% elsif veh contains "2026" %}'26{% endif %} {% if veh contains "GT" %}GT{% elsif veh contains "SR" %}SR{% endif %}</td>
-        <td>{{ log.energy_kwh }}</td>
+        <td>{{ log.energy_kwh | round: 1 }}</td>
         <td>{% if log.miles_added and log.miles_added != 0 and log.miles_added != "" %}{{ log.miles_added }}{% else %}—{% endif %}</td>
         <td>{% if display_cost == 0 %}Free{% else %}${{ display_cost | split: "." | first }}.{% if cents < 10 %}0{{ cents }}{% else %}{{ cents }}{% endif %}{% endif %}</td>
         <td>
