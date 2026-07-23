@@ -62,7 +62,10 @@ _inputs:
         - "Rooted, Mancelona, MI"
   energy_kwh:
     type: number
-    comment: "Energy added in kWh"
+    comment: "Energy added in kWh. For public DC fast charging, use the network's DELIVERED/billed kWh (what you paid for — drives cost & CO₂). For home/other, the Ford app battery-side number."
+  battery_kwh:
+    type: number
+    comment: "OPTIONAL. Only for public DC fast charging where it differs from energy_kwh: the Ford app 'energy added' (battery-side). Used ONLY for mi/kWh efficiency. Leave blank/0 otherwise — efficiency then uses energy_kwh."
   vehicle:
     type: select
     options:

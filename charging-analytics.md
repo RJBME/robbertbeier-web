@@ -1567,7 +1567,7 @@ permalink: /charging-analytics/
    RAW DATA FROM JEKYLL LIQUID
    ════════════════════════════════════════════════════════ */
 const sessions = [
-  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }}, milesAdded: {{ entry.miles_added | default: 0 }}, solar: {{ entry.solar | default: false }}, tempC: {{ entry.temperature_c | default: "null" }}, tempF: {{ entry.temperature_f | default: "null" }} }{% unless forloop.last %},{% endunless %}
+  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }}, milesAdded: {{ entry.miles_added | default: 0 }}, batteryKwh: {{ entry.battery_kwh | default: "null" }}, solar: {{ entry.solar | default: false }}, tempC: {{ entry.temperature_c | default: "null" }}, tempF: {{ entry.temperature_f | default: "null" }} }{% unless forloop.last %},{% endunless %}
   {% endfor %}
 ];
 
@@ -1788,16 +1788,24 @@ sessions.forEach(s => {
     s.cost      = loc.includes('home') ? s.kwh * hRate * HOME_CHARGE_UPLIFT : s.rawCost;
     const gs    = getGasSavingsObj(s.date, s.vehicle) || { mpg: 27, gas_price: 3.26, mi_per_kwh: 3.0 };
 
-    // Real efficiency from FordPass miles_added — more accurate than assumed mi/kWh
+    // Real efficiency from FordPass miles_added — more accurate than assumed mi/kWh.
+    // EFFICIENCY uses BATTERY-SIDE energy (batteryKwh, from the Ford app) when the
+    // session provides it — for public DC fast charging, energy_kwh is the
+    // charger-DELIVERED/billed energy (drives cost & grid CO2), while batteryKwh is
+    // what actually reached the battery (drives mi/kWh). When batteryKwh is absent
+    // (home + most sessions) energy_kwh already IS battery-side, so it falls back to it.
     // Filter outliers: <1.5 mi/kWh (>667 Wh/mi) or >4.75 mi/kWh (<211 Wh/mi) are physically implausible
-    const rawMiPerKwh = s.milesAdded > 0 && s.kwh > 0 ? s.milesAdded / s.kwh : null;
+    const effKwh = (s.batteryKwh && s.batteryKwh > 0) ? s.batteryKwh : s.kwh;
+    const rawMiPerKwh = s.milesAdded > 0 && effKwh > 0 ? s.milesAdded / effKwh : null;
     s.hasRealEff   = rawMiPerKwh !== null && rawMiPerKwh >= 1.5 && rawMiPerKwh <= 4.75;
     s.realMiPerKwh = s.hasRealEff ? rawMiPerKwh : null;
-    s.realWhPerMi  = s.hasRealEff ? (s.kwh * 1000) / s.milesAdded : null;
+    s.realWhPerMi  = s.hasRealEff ? (effKwh * 1000) / s.milesAdded : null;
 
-    // Use real efficiency for gas savings if available, otherwise fall back to assumed
-    const effMiPerKwh = s.hasRealEff ? s.realMiPerKwh : (gs.mi_per_kwh || 3.0);
-    s.gasEquiv  = s.kwh * effMiPerKwh / (gs.mpg || 27) * (gs.gas_price || 3.26);
+    // Miles used for gas-equivalent & CO2: the ACTUAL FordPass miles when we have
+    // them, otherwise estimate from delivered energy × assumed mi/kWh. (When real,
+    // this equals miles_added exactly — independent of the delivered-vs-battery split.)
+    const estMiles = s.hasRealEff ? s.milesAdded : s.kwh * (gs.mi_per_kwh || 3.0);
+    s.gasEquiv  = estMiles / (gs.mpg || 27) * (gs.gas_price || 3.26);
     s.saving    = s.gasEquiv - s.cost;
     s.bucket    = getBucket(s.location);
     s.isFree    = s.cost < 0.005;
@@ -1806,9 +1814,8 @@ sessions.forEach(s => {
     const dp    = s.date.split('-');
     s.dow       = new Date(+dp[0], +dp[1]-1, +dp[2], 12).getDay();
 
-    // CO2 calculations — reuse effMiPerKwh already computed above; cache egridFactor
+    // CO2 calculations — reuse estMiles already computed above; cache egridFactor
     const mpg        = getBaselineMpg(s.vehicle);
-    const estMiles   = s.kwh * effMiPerKwh;
     // Per-session solar flag (solar: true in the session file) → zero grid CO2,
     // regardless of location. Lets a single Work charge on a solar array count as
     // clean without making all Work charging solar. Location-level solar (e.g.
@@ -5225,11 +5232,13 @@ mkChart('chartHistogram', {
     const cumAssumedArr  = [];
     sorted.forEach(s => {
       const gs = getGasSavingsObj(s.date, s.vehicle);
-      const realEff     = s.hasRealEff ? s.realMiPerKwh : (gs.mi_per_kwh || 3.0);
       const assumedEff  = gs.mi_per_kwh || 3.0;
       const gasPrice    = gs.gas_price || 3.26;
       const mpg         = gs.mpg || 27;
-      cumReal    += (s.kwh * realEff    / mpg * gasPrice) - s.cost;
+      // Real line: actual FordPass miles when known (so it's independent of the
+      // delivered-vs-battery energy split); Assumed line: delivered energy × assumed mi/kWh.
+      const realMiles   = s.hasRealEff ? s.milesAdded : s.kwh * assumedEff;
+      cumReal    += (realMiles   / mpg * gasPrice) - s.cost;
       cumAssumed += (s.kwh * assumedEff / mpg * gasPrice) - s.cost;
       cumRealArr.push(+cumReal.toFixed(2));
       cumAssumedArr.push(+cumAssumed.toFixed(2));

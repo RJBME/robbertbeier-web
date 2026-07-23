@@ -3,6 +3,7 @@ date: ""
 location: ""
 vehicle: "2026 Mach-E SR"
 energy_kwh: 0
+battery_kwh: 0
 cost: 0
 solar: false
 start_date: ""
