@@ -195,6 +195,11 @@ permalink: /charging-history/
     <div class="summary-item"><span class="summary-label">Filtered Cost</span><span class="summary-value" id="sumCost">$0.00</span></div>
     <div class="summary-item"><span class="summary-label">Sessions</span><span class="summary-value" id="sumCount">0</span></div>
   </div>
+  <p style="font-size:0.62rem;color:#888;margin:8px 4px 0;text-align:center;line-height:1.5">
+    <strong>Filtered Cost</strong> sums the charger receipts shown below — it excludes amortized network
+    subscription fees (e.g. the Electrify America Pass+ monthly fee). The Dashboard &amp; Analytics
+    pages spread those fees in, so their all-in cost runs a little higher.
+  </p>
 
   <div class="filter-bar">
     <div class="filter-row" style="grid-template-columns:1fr;margin-bottom:12px">
