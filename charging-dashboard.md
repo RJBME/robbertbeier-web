@@ -82,7 +82,9 @@ permalink: /charging/
     {% assign _yr = "2" %}
     {% if entry.vehicle contains "2026" %}{% assign _yr = "0" %}{% elsif entry.vehicle contains "2025" %}{% assign _yr = "1" %}{% endif %}
     {% assign _own = "0" %}{% if entry.vehicle contains "LRB" %}{% assign _own = "1" %}{% endif %}
-    {% assign _row = _yr | append: _own | append: "@" | append: entry.vehicle | append: " | " | append: entry.odometer | append: " | " | append: entry.date | append: " | " | append: _first_date | append: " | " | append: _tracked_miles | append: " | " | append: _first_odo_date | append: " |" %}
+    {% comment %} "retired" if this car's latest odometer note says it was turned in — drives the "look back" link. {% endcomment %}
+    {% assign _retired = "" %}{% if entry.notes contains "urned in" %}{% assign _retired = "retired" %}{% endif %}
+    {% assign _row = _yr | append: _own | append: "@" | append: entry.vehicle | append: " | " | append: entry.odometer | append: " | " | append: entry.date | append: " | " | append: _first_date | append: " | " | append: _tracked_miles | append: " | " | append: _first_odo_date | append: " | " | append: _retired | append: " |" %}
     {% if odometer_entries == "" %}
       {% assign odometer_entries = _row %}
     {% else %}
@@ -486,6 +488,7 @@ permalink: /charging/
       {% assign odo_miles      = op[1] | strip | plus: 0 %}
       {% assign odo_date       = op[2] | strip %}
       {% assign tracked_miles  = op[4] | strip | plus: 0 %}
+      {% assign odo_retired    = op[6] | strip %}
       {% assign idx            = forloop.index0 %}
 
       {% assign overall_odo_miles = overall_odo_miles | plus: tracked_miles %}
@@ -528,7 +531,7 @@ permalink: /charging/
         <div class="cpm-vehicle" style="{{ veh_color }}">
           <span title="Paint colour" style="display:inline-block;width:11px;height:11px;border-radius:50%;background:{{ paint }};margin-right:7px;vertical-align:middle;border:1px solid rgba(128,128,128,0.35)"></span>{{ odo_vehicle }}
           <small style="color:#888">{{ odo_miles }} mi as of {{ odo_date }} · {{ tracked_miles }} mi tracked</small>
-        </div>
+          {% if odo_retired contains "retired" %}<a href="/lookback/?v={{ odo_vehicle | url_encode }}" title="A retrospective look back at this car" style="display:inline-block;margin-top:3px;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;text-decoration:none;color:{{ paint }};opacity:0.85">↩ look back →</a>{% endif %}
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
           {% if show_per_mile %}

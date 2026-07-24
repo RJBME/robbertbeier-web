@@ -1161,7 +1161,7 @@ permalink: /charging-analytics/
       ⚡ <strong>Michigan-honest calculation:</strong> Grid CO₂ subtracted using eGRID 2023 subregion rates.
       Road trip sessions use location-specific grid factors where available — Madison WI (MROE) charges at
       <strong>1,397 lbs/MWh</strong>, nearly 44% dirtier than home (RFCM, 971 lbs/MWh).
-      Comparison vehicle: <span id="co2BaselineNote">RJB → 2023 Escape (27 MPG) · LRB → 2016 Explorer (23 MPG)</span>.
+      Comparison vehicle: <span id="co2BaselineNote">RJB → 2023 Escape (27 MPG) · LRB → 2023 Explorer (23 MPG)</span>.
     </div>
 
     <!-- Solar scenario footnote -->
@@ -1688,7 +1688,7 @@ function getBucket(loc) {
 const VEHICLE_MPG = {
   '2025 Mach-E GT':        27,     // RJB — compared to the 2023 Escape it replaced (~27 mpg)
   '2026 Mach-E SR':        27,     // RJB future car — same 27 mpg baseline
-  "LRB's 2025 Mach-E GT":  23.0,   // LRB real-world (2016 Explorer 2.3L EcoBoost, per dash computer)
+  "LRB's 2025 Mach-E GT":  23.0,   // LRB real-world (2023 Explorer 2.3L EcoBoost, per dash computer)
   "LRB's 2026 Mach-E SR":  23.0,
 };
 
@@ -3640,8 +3640,8 @@ mkChart('chartHistogram', {
     const isMixed = activeVehicles.has('all') || activeVehicles.size > 1;
     const baseNote = document.getElementById('co2BaselineNote');
     if (baseNote) {
-      if (isMixed)    baseNote.textContent = 'RJB → 2023 Escape (27 MPG) · LRB → 2016 Explorer (23 MPG)';
-      else if (isLRB) baseNote.textContent = 'LRB → 2016 Explorer 2.3L EcoBoost (23.0 MPG real-world)';
+      if (isMixed)    baseNote.textContent = 'RJB → 2023 Escape (27 MPG) · LRB → 2023 Explorer (23 MPG)';
+      else if (isLRB) baseNote.textContent = 'LRB → 2023 Explorer 2.3L EcoBoost (23.0 MPG real-world)';
       else            baseNote.textContent = 'RJB → 2023 Ford Escape (27 MPG)';
     }
 
@@ -3844,7 +3844,7 @@ mkChart('chartHistogram', {
     // Per-vehicle gas car comparison specs
     // key: substring to match vehicle name — LRB = Explorer, else = Escape
     const GAS_SPECS = {
-      lrb: { name: '2016 Explorer AWD', mpg: 23,   tank: 17.9 },
+      lrb: { name: '2023 Explorer AWD', mpg: 23,   tank: 17.9 },
       rjb: { name: '2023 Escape AWD',   mpg: 27,   tank: 15.7 }
     };
     function gasSpecForVehicle(vehicleName) {
