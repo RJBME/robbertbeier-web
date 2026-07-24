@@ -77,7 +77,12 @@ permalink: /charging/
     {% assign _tracked_miles = entry.odometer | minus: _first_odo %}
     {% if _tracked_miles <= 0 %}{% assign _tracked_miles = entry.odometer %}{% endif %}
 
-    {% assign _row = entry.vehicle | append: " | " | append: entry.odometer | append: " | " | append: entry.date | append: " | " | append: _first_date | append: " | " | append: _tracked_miles | append: " | " | append: _first_odo_date | append: " |" %}
+    {% comment %} Card sort key: newest model year first (2026→"0" sorts before 2025→"1"),
+       then RJB's (mine, "0") before LRB's ("1"). Prefixed as "NN@" and stripped at parse time. {% endcomment %}
+    {% assign _yr = "2" %}
+    {% if entry.vehicle contains "2026" %}{% assign _yr = "0" %}{% elsif entry.vehicle contains "2025" %}{% assign _yr = "1" %}{% endif %}
+    {% assign _own = "0" %}{% if entry.vehicle contains "LRB" %}{% assign _own = "1" %}{% endif %}
+    {% assign _row = _yr | append: _own | append: "@" | append: entry.vehicle | append: " | " | append: entry.odometer | append: " | " | append: entry.date | append: " | " | append: _first_date | append: " | " | append: _tracked_miles | append: " | " | append: _first_odo_date | append: " |" %}
     {% if odometer_entries == "" %}
       {% assign odometer_entries = _row %}
     {% else %}
@@ -88,6 +93,9 @@ permalink: /charging/
 {% endfor %}
 {% assign odometer_entries = odometer_entries | split: "
 " %}
+{% comment %} Order the vehicle cards newest-first (RJB before LRB) by sorting on the
+   "NN@" prefix built above; the prefix is stripped wherever a row is parsed. {% endcomment %}
+{% assign odometer_entries = odometer_entries | sort %}
 
 <style>
   .dash-container { font-family: -apple-system, sans-serif; max-width: 1000px; margin: auto; color: var(--text); }
@@ -345,7 +353,7 @@ permalink: /charging/
   {% comment %} ── Per-vehicle cost/kWh accumulation ── {% endcomment %}
   {% assign veh_clean = veh | strip | downcase %}
   {% for odo in odometer_entries %}
-    {% assign op             = odo | strip | split: " | " %}
+    {% assign op             = odo | split: "@" | last | strip | split: " | " %}
     {% assign odo_vehicle    = op[0] | strip %}
     {% assign odo_date       = op[2] | strip %}
     {% assign odo_win_start  = op[5] | strip %}
@@ -473,7 +481,7 @@ permalink: /charging/
     {% assign overall_odo_miles = 0 %}
 
     {% for odo in odometer_entries %}
-      {% assign op             = odo | strip | split: " | " %}
+      {% assign op             = odo | split: "@" | last | strip | split: " | " %}
       {% assign odo_vehicle    = op[0] | strip %}
       {% assign odo_miles      = op[1] | strip | plus: 0 %}
       {% assign odo_date       = op[2] | strip %}
