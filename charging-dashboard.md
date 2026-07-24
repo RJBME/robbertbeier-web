@@ -532,6 +532,7 @@ permalink: /charging/
           <span title="Paint colour" style="display:inline-block;width:11px;height:11px;border-radius:50%;background:{{ paint }};margin-right:7px;vertical-align:middle;border:1px solid rgba(128,128,128,0.35)"></span>{{ odo_vehicle }}
           <small style="color:#888">{{ odo_miles }} mi as of {{ odo_date }} · {{ tracked_miles }} mi tracked</small>
           {% if odo_retired contains "retired" %}<a href="/lookback/?v={{ odo_vehicle | url_encode }}" title="A retrospective look back at this car" style="display:inline-block;margin-top:3px;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;text-decoration:none;color:{{ paint }};opacity:0.85">↩ look back →</a>{% endif %}
+        </div>
         <div class="cpm-stat">
           <span class="cpm-stat-label">Cost / Mile</span>
           {% if show_per_mile %}
