@@ -616,7 +616,7 @@ permalink: /charging/
         </div>
       </div>
     {% endif %}
-    <p style="font-size:0.66rem;color:#888;margin:10px 4px 0;line-height:1.5">Cost/mile, mi/kWh &amp; Wh/mile are measured over the <strong>odometer-tracked period</strong> (between your earliest and latest readings, where miles are known) — so the energy in the numerator matches those miles. <strong>Total charged</strong> &amp; <strong>total cost</strong> are all-time.</p>
+    <p style="font-size:0.66rem;color:#888;margin:10px 4px 0;line-height:1.5">Cost/mile, mi/kWh &amp; Wh/mile are measured over the <strong>odometer-tracked period</strong> (between your earliest and latest readings, where miles are known) — so the energy in the numerator matches those miles. <strong>Total charged</strong> &amp; <strong>total cost</strong> are all-time. <strong>Home</strong> cost is energy added × your home rate × <strong>1.10</strong> — an estimated +10% for AC→DC wall-side charging losses (you pay for a bit more energy than reaches the battery).</p>
   </div>
 
   <script>

@@ -198,7 +198,8 @@ permalink: /charging-history/
   <p style="font-size:0.62rem;color:#888;margin:8px 4px 0;text-align:center;line-height:1.5">
     <strong>Filtered Cost</strong> sums the charger receipts shown below — it excludes amortized network
     subscription fees (e.g. the Electrify America Pass+ monthly fee). The Dashboard &amp; Analytics
-    pages spread those fees in, so their all-in cost runs a little higher.
+    pages spread those fees in, so their all-in cost runs a little higher. <strong>Home</strong> session cost
+    is the energy added × your home rate × <strong>1.10</strong> (an estimated +10% for AC→DC wall-side losses).
   </p>
 
   <div class="filter-bar">
@@ -415,9 +416,18 @@ function initFilters() {
     };
     return btn;
   };
+  // Order pills newest-model-year first, and RJB's (mine) before LRB's (Leah's).
+  const vehicleSort = (a, b) => {
+    const yr = s => { const m = String(s).match(/\b(20\d\d)\b/); return m ? +m[1] : 0; };
+    const yb = yr(b), ya = yr(a);
+    if (yb !== ya) return yb - ya;
+    const la = /LRB/.test(a) ? 1 : 0, lb = /LRB/.test(b) ? 1 : 0;
+    if (la !== lb) return la - lb;
+    return String(a).localeCompare(String(b));
+  };
   vehPills.innerHTML = '';
   vehPills.appendChild(makeVehPill('', 'All Vehicles'));
-  Array.from(vehicles).sort().forEach(v => vehPills.appendChild(makeVehPill(v, v)));
+  Array.from(vehicles).sort(vehicleSort).forEach(v => vehPills.appendChild(makeVehPill(v, v)));
   applyFilters();
 }
 

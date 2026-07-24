@@ -654,6 +654,12 @@ permalink: /charging-analytics/
     <div class="kpi-card"><span class="kpi-label">Avg kWh/Session</span><span class="kpi-value" id="kpi-avg-session">—</span></div>
     <div class="kpi-card"><span class="kpi-label">Months Active</span><span class="kpi-value" id="kpi-months">—</span></div>
   </div>
+  <p style="font-size:0.64rem;color:#888;margin:10px 4px 0;line-height:1.55">
+    <strong>Avg ¢/kWh</strong> is total cost ÷ energy added to the car. <strong>Home charging cost includes an
+    estimated +10%</strong> for wall-side losses (AC→DC): you pay for a little more energy than actually reaches
+    the battery, so home ¢/kWh sits ~10% above the raw electricity rate. Adjust <code>home_charge_uplift</code>
+    in <code>_data/rates.yml</code> to change it. Public fast-charging cost is the billed amount (no uplift).
+  </p>
 
   <!-- ═══════════════════════════════════════════════════ -->
   <!--  MONTHLY AI SUMMARY                                -->
@@ -1940,7 +1946,17 @@ function countUp(el, target, fmt, dur) {
   })(t0);
 }
 
-const allVehicles = [...new Set(sessions.map(s => s.vehicle))].sort();
+// Order vehicles newest-model-year first, and RJB's (mine) before LRB's (Leah's).
+// Used for the filter pills and the per-vehicle chart series so they stay consistent.
+function vehicleSort(a, b) {
+  const yr = s => { const m = String(s).match(/\b(20\d\d)\b/); return m ? +m[1] : 0; };
+  const yb = yr(b), ya = yr(a);
+  if (yb !== ya) return yb - ya;                    // newer model year first
+  const la = /LRB/.test(a) ? 1 : 0, lb = /LRB/.test(b) ? 1 : 0;
+  if (la !== lb) return la - lb;                    // RJB's (mine) before LRB's (Leah's)
+  return String(a).localeCompare(String(b));
+}
+const allVehicles = [...new Set(sessions.map(s => s.vehicle))].sort(vehicleSort);
 let activeVehicles = new Set(['all']); // 'all' means no individual filter
 let allCharts = [];
 let _hmRender = null;        // current heatmap render fn — updated on each rebuild
@@ -2630,7 +2646,7 @@ mkChart('chartMonthlySourceSplit', {
   // Chart 4: Real efficiency — dual axis: mi/kWh (left) and Wh/mi (right)
   // Data is stored as kWh/100mi; convert: mi/kWh = 100/x, Wh/mi = x*10
   if (document.getElementById('chartEfficiencyReal')) {
-    const vehiclesInData = [...new Set(sl.map(s => s.vehicle))].sort();
+    const vehiclesInData = [...new Set(sl.map(s => s.vehicle))].sort(vehicleSort);
     const allMonths = [...new Set(sl.map(s => s.month))].sort();
     const vehColorMap = {};
     vehiclesInData.forEach((v, i) => { vehColorMap[v] = vehColor(v, i); });
@@ -4169,7 +4185,7 @@ mkChart('chartHistogram', {
      Only shown when 2+ vehicles have data
   ════════════════════════════════════════ */
   (function buildVehicleComparison(sl) {
-    const vehiclesInData = [...new Set(sl.map(s => s.vehicle))].sort();
+    const vehiclesInData = [...new Set(sl.map(s => s.vehicle))].sort(vehicleSort);
     const section  = document.getElementById('vehicleCompSection');
     const navLink  = document.getElementById('navVehicleComp');
     if (vehiclesInData.length < 2) {
@@ -5291,7 +5307,7 @@ mkChart('chartHistogram', {
     tempSection.style.display = '';
 
     // Redefine locally — these are inside the efficiency IIFE and not in scope here
-    const tempVehicles = [...new Set(sl.map(s => s.vehicle))].sort();
+    const tempVehicles = [...new Set(sl.map(s => s.vehicle))].sort(vehicleSort);
     const tempPalette  = ['#7b1fa2','#f39c12','#0288d1','#2ecc71'];
     const vehColors2   = {};
     tempVehicles.forEach((v, i) => { vehColors2[v] = tempPalette[i % tempPalette.length]; });
