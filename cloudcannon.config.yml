@@ -19,11 +19,15 @@ collections_config:
 _inputs:
   date:
     type: date
+    required: true
+    comment: "REQUIRED — the session date. For an overnight charge, use the plug-OUT date (matches start_date being the day before). A blank date breaks the site build."
     options:
       time_format: false
       timezone: America/New_York
   location:
     type: select
+    required: true
+    comment: "REQUIRED — where you charged. Home/Work get special cost handling."
     options:
       values:
         - Home
