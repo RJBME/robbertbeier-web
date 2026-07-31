@@ -200,6 +200,20 @@ permalink: /charging-analytics/
   #vehicleFilterBtns {
     display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
   }
+  .dcfc-filter { margin: 0 0 16px; }
+  .dcfc-filter label {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+    background: var(--dash-card); border: 1px solid var(--dash-border);
+    border-radius: 20px; padding: 6px 14px; font-size: 0.76rem; font-weight: 600;
+    color: #888; user-select: none; transition: all 0.15s;
+  }
+  .dcfc-filter label:hover { border-color: var(--link); }
+  .dcfc-filter label.dcfc-active {
+    background: rgba(93,63,211,0.12); border-color: var(--link); color: var(--link);
+  }
+  .dcfc-filter input { accent-color: var(--link); width: 15px; height: 15px; cursor: pointer; margin: 0; }
+  .dcfc-filter small { color: #aaa; font-weight: 500; }
+  .dcfc-filter label.dcfc-active small { color: var(--link); opacity: 0.8; }
   .vf-btn {
     background: var(--dash-card); border: 1px solid var(--dash-border);
     padding: 5px 14px; border-radius: 20px; font-size: 0.76rem;
@@ -642,6 +656,14 @@ permalink: /charging-analytics/
   </div>
 
   <div id="vehicleFilterBtns" style="display:none"></div>
+
+  <!-- DCFC-only filter — restricts every chart/stat below to fast-charging sessions -->
+  <div class="dcfc-filter">
+    <label title="Show only DC fast-charging sessions (average power ≥ 25 kW)">
+      <input type="checkbox" id="dcfcOnlyToggle" onchange="toggleDcfcFilter(this.checked)">
+      <span>⚡ DC fast charging only <small>≥ 25 kW</small></span>
+    </label>
+  </div>
 
   <!-- KPI Strip — populated by JS -->
   <div class="kpi-strip">
@@ -2074,7 +2096,28 @@ function isVehicleActive(v) {
   return !activeVehicles.has('all') && activeVehicles.has(v);
 }
 
+// ── DCFC-only filter (avg charge power ≥ 25 kW; falls back to a DCFC-network
+//    heuristic for sessions that have no start/end timing data) ──
+let dcfcOnly = false;
+const DCFC_KW = 25;
+const DCFC_NETS = ['Tesla SC','ChargePoint','Rivian','Blink','Electrify America','WeCharge'];
+function isDcfcSession(s){
+  if (s.startTime && s.endTime && s.startDate) {
+    const st = new Date(s.startDate+'T'+s.startTime+':00'), en = new Date(s.date+'T'+s.endTime+':00');
+    let hrs = (en-st)/3600000; if (hrs<0) hrs+=24;
+    if (hrs>0 && hrs<24) return (s.kwh/hrs) >= DCFC_KW;
+  }
+  return DCFC_NETS.includes(s.bucket) && s.kwh >= 20;
+}
+function toggleDcfcFilter(on){
+  dcfcOnly = !!on;
+  const lbl = document.querySelector('.dcfc-filter label');
+  if (lbl) lbl.classList.toggle('dcfc-active', dcfcOnly);
+  toggleVehicle(); // undefined arg → re-apply filters only
+}
+
 function toggleVehicle(v) {
+  if (v !== undefined) {   // undefined → re-apply current filters without changing the vehicle set
   if (v === 'all') {
     // Reset to all-vehicles mode
     activeVehicles = new Set(['all']);
@@ -2093,6 +2136,7 @@ function toggleVehicle(v) {
       activeVehicles = new Set(['all']);
     }
   }
+  } // end vehicle-set mutation (skipped when v === undefined)
 
   // Sync active state on ALL .vf-btn elements (inline + sticky)
   document.querySelectorAll('.vf-btn').forEach(b => {
@@ -2102,6 +2146,7 @@ function toggleVehicle(v) {
   _lastSl = activeVehicles.has('all')
     ? sessions
     : sessions.filter(s => activeVehicles.has(s.vehicle));
+  if (dcfcOnly) _lastSl = _lastSl.filter(isDcfcSession);
 
   // ── Scroll preservation across rebuild ──
   // Strategy: find the section-header currently closest to (but below) the sticky
