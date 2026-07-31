@@ -548,7 +548,7 @@ permalink: /charging-analytics/
     /* Hide all UI chrome */
     nav, #chargingPageNav, #vehicleFilterSticky, #vehicleFilterBtns,
     #scrollProgress,
-    .section-nav, .back-top-pill, .back-link,
+    .section-nav, .back-top-pill, .back-link, .dcfc-filter,
     #printFab, #printPanel, #hm-tip, #locViewBtns, .loc-view-btn,
     .analytics-header > p { display: none !important; }
 
@@ -1569,6 +1569,11 @@ permalink: /charging-analytics/
     <span style="font-weight:800;font-size:0.88rem">📄 Print Report</span>
     <button id="printClose" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#888;padding:2px 6px;border-radius:6px;line-height:1" onmouseover="this.style.background='var(--dash-border)'" onmouseout="this.style.background=''">✕</button>
   </div>
+  <label id="printDcfcRow" title="Report only DC fast-charging sessions (≥25 kW), and auto-pick the fast-charging sections" style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--dash-border);cursor:pointer;font-size:0.8rem;font-weight:700;color:var(--text)">
+    <input type="checkbox" id="printDcfcOnly" style="width:15px;height:15px;accent-color:var(--link);cursor:pointer;flex-shrink:0">
+    <span>⚡ DC fast charging only</span>
+    <span style="font-weight:500;color:#999;font-size:0.68rem;margin-left:auto">≥ 25 kW</span>
+  </label>
   <div style="padding:8px 10px;border-bottom:1px solid var(--dash-border);display:flex;gap:8px">
     <button id="printSelectAll"  style="flex:1;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:8px;padding:5px;font-size:0.72rem;font-weight:700;cursor:pointer;color:var(--link);font-family:inherit" onmouseover="this.style.borderColor='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)'">All</button>
     <button id="printSelectNone" style="flex:1;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:8px;padding:5px;font-size:0.72rem;font-weight:700;cursor:pointer;color:#888;font-family:inherit">None</button>
@@ -2111,6 +2116,7 @@ function isDcfcSession(s){
 }
 function toggleDcfcFilter(on){
   dcfcOnly = !!on;
+  const cb = document.getElementById('dcfcOnlyToggle'); if (cb) cb.checked = dcfcOnly; // keep UI in sync (also when driven by the print report)
   const lbl = document.querySelector('.dcfc-filter label');
   if (lbl) lbl.classList.toggle('dcfc-active', dcfcOnly);
   toggleVehicle(); // undefined arg → re-apply filters only
@@ -6739,21 +6745,41 @@ function clearPrintState() {
   document.querySelectorAll('.print-first-sec').forEach(el => el.classList.remove('print-first-sec'));
 }
 
+// Sections that are meaningfully about DC fast charging — used to auto-pick the
+// report contents when "DC fast charging only" is ticked (user can still adjust).
+const DCFC_REPORT_SECS = new Set(['kpi','records','sources','economics','sessions','economics2','roadtrips','sessiondetail','map']);
+function syncDcfcSectionSelection() {
+  const on = document.getElementById('printDcfcOnly') && document.getElementById('printDcfcOnly').checked;
+  document.querySelectorAll('.print-cb').forEach(cb => { cb.checked = on ? DCFC_REPORT_SECS.has(cb.value) : true; });
+}
+let _dcfcReportActive = false; // true when we flipped the DCFC filter on just for this print
+
 function initPrint() {
   tagPrintSections();
   const fab   = document.getElementById('printFab');
   const panel = document.getElementById('printPanel');
   if (!fab || !panel) return;
 
-  fab.onclick   = () => { buildPrintPanel(); panel.classList.toggle('open'); };
+  fab.onclick   = () => { buildPrintPanel(); syncDcfcSectionSelection(); panel.classList.toggle('open'); };
   document.getElementById('printClose').onclick     = () => panel.classList.remove('open');
   document.getElementById('printSelectAll').onclick  = () => document.querySelectorAll('.print-cb').forEach(cb => cb.checked = true);
   document.getElementById('printSelectNone').onclick = () => document.querySelectorAll('.print-cb').forEach(cb => cb.checked = false);
+  const dcfcCb = document.getElementById('printDcfcOnly');
+  if (dcfcCb) dcfcCb.onchange = syncDcfcSectionSelection;
+
   document.getElementById('doPrint').onclick = () => {
     panel.classList.remove('open');
-    // Brief delay so panel closes before browser opens the print dialog
-    setTimeout(() => { applyPrintState(); window.print(); }, 80);
+    const wantDcfc = dcfcCb && dcfcCb.checked;
+    // If the report wants DCFC data but the page isn't filtered yet, flip it on and
+    // rebuild first — remember so we can restore afterward.
+    _dcfcReportActive = !!wantDcfc && !dcfcOnly;
+    if (_dcfcReportActive) toggleDcfcFilter(true);
+    const delay = _dcfcReportActive ? 520 : 80; // extra time for the DCFC rebuild + fade
+    setTimeout(() => { applyPrintState(); window.print(); }, delay);
   };
-  window.addEventListener('afterprint', clearPrintState);
+  window.addEventListener('afterprint', () => {
+    clearPrintState();
+    if (_dcfcReportActive) { toggleDcfcFilter(false); _dcfcReportActive = false; }
+  });
 }
 </script>
