@@ -289,6 +289,22 @@ permalink: /charging-analytics/
     align-self: center;
   }
   .back-top-pill:hover { color: var(--link); border-color: var(--link); }
+  .section-tab-link:hover { color: var(--link); border-color: var(--link); }
+  /* Focused single-section view — opened via ?section=<id> in its own tab */
+  body.section-focus .section-nav,
+  body.section-focus #vehicleFilterSticky,
+  body.section-focus #printFab,
+  body.section-focus #printPanel,
+  body.section-focus .section-tab-link,
+  body.section-focus .back-top-pill { display: none !important; }
+  .focus-banner { display: none; }
+  body.section-focus .focus-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--dash-card); border: 1px solid var(--dash-border);
+    border-radius: 10px; padding: 10px 16px; margin: 4px 0 20px; font-size: 0.85rem; color: var(--text);
+  }
+  .focus-banner a { color: var(--link); font-weight: 700; text-decoration: none; white-space: nowrap; }
+  .focus-banner a:hover { text-decoration: underline; }
 
   /* ── Responsive ── */
   @media (max-width: 767px) {
@@ -6044,6 +6060,7 @@ buildVehicleFilter();
 rebuild(sessions);
 initStickyBar();
 initPrint();
+initSectionFocus();
 
 /* ── Page Visibility API — reduce resource usage in background tabs ──────
    When the tab is hidden: suppress rAF-based animations, sticky bar scroll
@@ -6781,5 +6798,61 @@ function initPrint() {
     clearPrintState();
     if (_dcfcReportActive) { toggleDcfcFilter(false); _dcfcReportActive = false; }
   });
+}
+
+// ── Per-section "open in new tab" links + focused single-section view ──────
+// Each section header gets an "⤢ tab" link → /charging-analytics/?section=<id>.
+// When ?section=<id> is present, show ONLY that section (reusing the print
+// section tags), keep the filters, and add a "← Full analytics" banner.
+function initSectionFocus() {
+  document.querySelectorAll('.section-header[id]').forEach(hdr => {
+    if (hdr.querySelector('.section-tab-link')) return;
+    const a = document.createElement('a');
+    a.className = 'section-tab-link back-top-pill';
+    a.href = '/charging-analytics/?section=' + encodeURIComponent(hdr.id);
+    a.target = '_blank'; a.rel = 'noopener';
+    a.title = 'Open this section in its own tab';
+    a.textContent = '⤢ tab';
+    const pill = hdr.querySelector('.back-top-pill');
+    (pill || hdr.lastElementChild || hdr).insertAdjacentElement('afterend', a);
+  });
+
+  const target = new URLSearchParams(location.search).get('section');
+  if (!target) return;
+  const hdr = document.getElementById(target);
+  if (!hdr || !hdr.classList.contains('section-header')) return; // invalid → full page
+
+  document.body.classList.add('section-focus');
+  // Hide every tagged element that isn't part of the target section (KPI + other sections)
+  document.querySelectorAll('[data-print-sec]').forEach(el => {
+    if (el.dataset.printSec !== target) el.style.display = 'none';
+  });
+  // Banner just above the focused section, with a link back to the full page
+  const secName = (hdr.querySelector('h2') ? hdr.querySelector('h2').textContent : target).trim();
+  const banner = document.createElement('div');
+  banner.className = 'focus-banner';
+  banner.innerHTML = '<span>🔍 Focused view — <strong>' + secName + '</strong></span>'
+                   + '<a href="/charging-analytics/">← Full analytics</a>';
+  hdr.parentNode.insertBefore(banner, hdr);
+  document.title = secName + ' · EV Analytics';
+  // A focused Leaflet map is built on window.onload; once it exists, resize it and
+  // re-fit its bounds (it was sized wrong while other sections were still around).
+  if (target === 'map') {
+    // The map is built on window.onload (after this runs) and its fitBounds mis-sizes
+    // while focus mode is settling, over-zooming to ~19. Poll briefly and re-fit to the
+    // marker bounds until the zoom looks right, then stop (so we don't fight the user).
+    let ticks = 0;
+    const iv = setInterval(() => {
+      ticks++;
+      try {
+        if (_leafletMap && _mapBounds && _mapBounds.length > 1) {
+          _leafletMap.invalidateSize();
+          if (_leafletMap.getZoom() > 12) _leafletMap.fitBounds(_mapBounds, { padding: [40, 40] });
+          else { clearInterval(iv); return; } // framed correctly → done
+        }
+      } catch(e){}
+      if (ticks >= 12) clearInterval(iv);
+    }, 350);
+  }
 }
 </script>
