@@ -319,6 +319,8 @@ permalink: /charging-analytics/
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     background: var(--dash-card); border: 1px solid var(--dash-border);
     border-radius: 10px; padding: 10px 16px; margin: 4px 0 20px; font-size: 0.85rem; color: var(--text);
+    position: sticky; top: var(--sticky-bar-top, 62px); z-index: 20;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.16);
   }
   .focus-banner a { color: var(--link); font-weight: 700; text-decoration: none; white-space: nowrap; }
   .focus-banner a:hover { text-decoration: underline; }
@@ -333,7 +335,7 @@ permalink: /charging-analytics/
     /* Allow title + subtitle + back-to-top pill to wrap on narrow screens */
     .section-header { flex-wrap: wrap; }
     /* CO2 hero: reduce side padding so content isn't cramped */
-    .co2-hero { padding: 20px 16px 18px; }
+    .co2-hero, .ga-hero { padding: 20px 16px 18px; }
     /* Slightly smaller page title */
     .analytics-header h1 { font-size: 1.4rem; }
   }
@@ -441,6 +443,48 @@ permalink: /charging-analytics/
     font-size: 0.75rem; color: #f39c12; line-height: 1.5;
   }
   .co2-honesty strong { color: #f5c842; }
+
+  /* ── Gas Avoidance section — gold-on-indigo "money saved" theme (distinct from CO₂ green) ── */
+  .ga-hero {
+    background: linear-gradient(135deg, #241a3f 0%, #33245c 50%, #241a3f 100%);
+    border: 1px solid #f5c84240;
+    border-radius: 16px; padding: 28px 28px 24px; margin-bottom: 18px;
+    position: relative; overflow: hidden;
+  }
+  .ga-hero::before {
+    content: '⛽'; position: absolute; right: 24px; top: 16px;
+    font-size: 4rem; opacity: 0.14; pointer-events: none;
+  }
+  [data-theme="dark"] .ga-hero { background: linear-gradient(135deg, #15102b 0%, #1e1640 50%, #15102b 100%); }
+  .ga-headline {
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.14em;
+    color: #d4af37; margin-bottom: 6px; font-weight: 700;
+  }
+  .ga-number {
+    font-size: 3rem; font-weight: 900; color: #f5c842; line-height: 1;
+    margin-bottom: 4px; font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 24px rgba(245,200,66,0.25);
+  }
+  .ga-sub { font-size: 0.8rem; color: #e6d79a; opacity: 0.85; margin-bottom: 20px; }
+  .ga-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin-bottom: 0;
+  }
+  @media (max-width: 767px) { .ga-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px)  { .ga-grid { grid-template-columns: 1fr 1fr; } }
+  .ga-stat {
+    background: rgba(245,200,66,0.07); border: 1px solid rgba(245,200,66,0.2);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .ga-stat-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.09em; color: #e6d79a; opacity: 0.8; display: block; margin-bottom: 4px; }
+  .ga-stat-value { font-size: 1.15rem; font-weight: 800; color: #fff; display: block; line-height: 1.15; }
+  .ga-stat-sub   { font-size: 0.65rem; color: #e6d79a; opacity: 0.6; display: block; margin-top: 2px; }
+  .ga-note {
+    background: rgba(46,204,113,0.08); border: 1px solid rgba(46,204,113,0.28);
+    border-radius: 10px; padding: 12px 16px; margin-top: 14px;
+    font-size: 0.75rem; color: #6ee7a0; line-height: 1.5;
+  }
+  .ga-note strong { color: #a7f3c8; }
 
   .co2-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
   @media (max-width: 767px) { .co2-chart-row { grid-template-columns: 1fr; } }
@@ -1293,21 +1337,21 @@ permalink: /charging-analytics/
     Comparison baselines: <span id="gaBaselineNote">RJB → 27 mpg · LRB → 23 mpg</span>.
   </p>
 
-  <div class="co2-hero">
-    <div class="co2-headline">Total Saved vs. Gas</div>
-    <div class="co2-number" style="color:#2ecc71" id="gaHeroNum">—</div>
-    <div class="co2-sub" id="gaHeroSub">calculating…</div>
-    <div class="co2-grid">
-      <div class="co2-stat"><span class="co2-stat-label">Gallons Avoided</span><span class="co2-stat-value" id="gaGallons">—</span><span class="co2-stat-sub">never pumped</span></div>
-      <div class="co2-stat"><span class="co2-stat-label">Pump Visits Skipped</span><span class="co2-stat-value" id="gaPump">—</span><span class="co2-stat-sub">≈ 14 gal / fill-up</span></div>
-      <div class="co2-stat"><span class="co2-stat-label">Effective Discount</span><span class="co2-stat-value" id="gaDiscount">—</span><span class="co2-stat-sub">cheaper than gas</span></div>
-      <div class="co2-stat"><span class="co2-stat-label">EV Cost / Mile</span><span class="co2-stat-value" id="gaEvCpm">—</span><span class="co2-stat-sub">electricity, all-in</span></div>
-      <div class="co2-stat"><span class="co2-stat-label">Gas Cost / Mile</span><span class="co2-stat-value" id="gaGasCpm">—</span><span class="co2-stat-sub">at historical prices</span></div>
-      <div class="co2-stat"><span class="co2-stat-label">You Paid to Charge</span><span class="co2-stat-value" id="gaEvCost">—</span><span class="co2-stat-sub">for these miles</span></div>
-      <div class="co2-stat"><span class="co2-stat-label">Gas Would Have Cost</span><span class="co2-stat-value" id="gaGasCost">—</span><span class="co2-stat-sub">same miles, gas car</span></div>
-      <div class="co2-stat"><span class="co2-stat-label">Gas Break-Even</span><span class="co2-stat-value" id="gaBreakeven">—</span><span class="co2-stat-sub">gas below this beats EV</span></div>
+  <div class="ga-hero">
+    <div class="ga-headline">Total Saved vs. Gas</div>
+    <div class="ga-number" id="gaHeroNum">—</div>
+    <div class="ga-sub" id="gaHeroSub">calculating…</div>
+    <div class="ga-grid">
+      <div class="ga-stat"><span class="ga-stat-label">Gallons Avoided</span><span class="ga-stat-value" id="gaGallons">—</span><span class="ga-stat-sub">never pumped</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Pump Visits Skipped</span><span class="ga-stat-value" id="gaPump">—</span><span class="ga-stat-sub">≈ 14 gal / fill-up</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Effective Discount</span><span class="ga-stat-value" id="gaDiscount">—</span><span class="ga-stat-sub">cheaper than gas</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">EV Cost / Mile</span><span class="ga-stat-value" id="gaEvCpm">—</span><span class="ga-stat-sub">electricity, all-in</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Gas Cost / Mile</span><span class="ga-stat-value" id="gaGasCpm">—</span><span class="ga-stat-sub">at historical prices</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">You Paid to Charge</span><span class="ga-stat-value" id="gaEvCost">—</span><span class="ga-stat-sub">for these miles</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Gas Would Have Cost</span><span class="ga-stat-value" id="gaGasCost">—</span><span class="ga-stat-sub">same miles, gas car</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Gas Break-Even</span><span class="ga-stat-value" id="gaBreakeven">—</span><span class="ga-stat-sub">gas below this beats EV</span></div>
     </div>
-    <div class="co2-honesty" id="gaNote"></div>
+    <div class="ga-note" id="gaNote"></div>
   </div>
 
   <div class="chart-grid-2" style="margin-top:18px">
