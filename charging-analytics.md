@@ -491,23 +491,24 @@ permalink: /charging-analytics/
     font-size: 0.75rem; color: #6ee7a0; line-height: 1.5;
   }
   .ga-note strong { color: #a7f3c8; }
-  /* "If Work weren't free" scenario card */
+  /* "If Work weren't free" scenario card — kept DARK in both themes (like the
+     hero) so the shared .ga-stat white values/pale-gold labels stay readable.
+     On a light background they vanished. */
   .ga-scenario {
-    background: rgba(93,63,211,0.05); border: 1px solid rgba(245,200,66,0.28);
+    background: linear-gradient(135deg, #271d47 0%, #322551 100%);
+    border: 1px solid rgba(245,200,66,0.30);
     border-radius: 14px; padding: 20px 22px; margin-top: 18px;
   }
+  [data-theme="dark"] .ga-scenario { background: linear-gradient(135deg, #17112e 0%, #1f1743 100%); }
   @media (max-width: 767px) { .ga-scenario { padding: 16px; } }
   .ga-scenario-head { font-size: 0.98rem; font-weight: 800; color: #f5c842; margin-bottom: 6px; }
-  .ga-scenario-lead { font-size: 0.8rem; color: #999; line-height: 1.55; margin: 0 0 16px; max-width: 82ch; }
-  [data-theme="dark"] .ga-scenario-lead { color: #aaa; }
+  .ga-scenario-lead { font-size: 0.8rem; color: #b6adcf; line-height: 1.55; margin: 0 0 16px; max-width: 82ch; }
   .ga-scenario-punch {
-    margin-top: 14px; background: rgba(46,204,113,0.08);
-    border: 1px solid rgba(46,204,113,0.28); border-radius: 10px;
-    padding: 12px 16px; font-size: 0.8rem; color: #4fae6f; line-height: 1.5;
+    margin-top: 14px; background: rgba(46,204,113,0.10);
+    border: 1px solid rgba(46,204,113,0.30); border-radius: 10px;
+    padding: 12px 16px; font-size: 0.8rem; color: #7ee9a8; line-height: 1.5;
   }
-  [data-theme="dark"] .ga-scenario-punch { color: #6ee7a0; }
-  .ga-scenario-punch strong { color: #2e9d55; }
-  [data-theme="dark"] .ga-scenario-punch strong { color: #a7f3c8; }
+  .ga-scenario-punch strong { color: #b6f5cf; }
 
   .co2-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
   @media (max-width: 767px) { .co2-chart-row { grid-template-columns: 1fr; } }
@@ -1386,8 +1387,9 @@ permalink: /charging-analytics/
       — billed at your home electricity rate plus the ~10% wall-side loss. (Other free charging is left as-is.)
     </p>
     <div class="ga-grid">
-      <div class="ga-stat"><span class="ga-stat-label">Free Work Energy</span><span class="ga-stat-value" id="gaWorkKwh">—</span><span class="ga-stat-sub">charged at $0</span></div>
-      <div class="ga-stat"><span class="ga-stat-label">Would Cost at Home</span><span class="ga-stat-value" id="gaWorkHomeCost">—</span><span class="ga-stat-sub">home rate + 10%</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Free Work Energy</span><span class="ga-stat-value" id="gaWorkKwh">—</span><span class="ga-stat-sub">delivered to car</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Grid Draw if Home</span><span class="ga-stat-value" id="gaGridDraw">—</span><span class="ga-stat-sub">+10% wall-side loss</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Would Cost at Home</span><span class="ga-stat-value" id="gaWorkHomeCost">—</span><span class="ga-stat-sub">grid kWh × home rate</span></div>
       <div class="ga-stat"><span class="ga-stat-label">Adjusted EV Total</span><span class="ga-stat-value" id="gaAdjEv">—</span><span class="ga-stat-sub" id="gaAdjEvSub">vs today</span></div>
       <div class="ga-stat"><span class="ga-stat-label">Still Saved vs Gas</span><span class="ga-stat-value" id="gaAdjSave">—</span><span class="ga-stat-sub">even paying for Work</span></div>
       <div class="ga-stat"><span class="ga-stat-label">Adjusted EV ¢/mi</span><span class="ga-stat-value" id="gaAdjCpm">—</span><span class="ga-stat-sub" id="gaAdjCpmSub">vs gas</span></div>
@@ -4100,12 +4102,14 @@ mkChart('chartHistogram', {
         workHomeCost += kwh * getStepRate(homeRates, s.date, 'rate', 0.196) * HOME_CHARGE_UPLIFT;
       }
     });
+    const workGridKwh  = workKwh * HOME_CHARGE_UPLIFT;       // grid draw = delivered + wall-side loss
     const adjEV        = totEV + workHomeCost;               // what you'd have paid
     const adjSave      = totGas - adjEV;
     const adjBreakeven = totGallons > 0 ? adjEV / totGallons : 0;
     const adjCpm       = totMiles  > 0 ? adjEV / totMiles * 100 : 0;
     const baseBreakeven= totGallons > 0 ? totEV / totGallons : 0;
     $('gaWorkKwh',       workKwh.toFixed(0) + ' kWh');
+    $('gaGridDraw',      workGridKwh.toFixed(0) + ' kWh');
     $('gaWorkHomeCost',  fmtUSD(workHomeCost));
     $('gaAdjEv',         fmtUSD(adjEV));
     $('gaAdjEvSub',      'vs ' + fmtUSD(totEV) + ' today');
@@ -4115,7 +4119,7 @@ mkChart('chartHistogram', {
     $('gaAdjBreakeven',  totGallons > 0 ? '$' + adjBreakeven.toFixed(2) + '/gal' : '—');
     const punch = document.getElementById('gaScenarioPunch');
     if (punch) punch.innerHTML = (workKwh > 0.5)
-      ? `Even if you'd paid for <strong>every</strong> Work charge (${workKwh.toFixed(0)} kWh ≈ <strong>${fmtUSD(workHomeCost)}</strong> at home rates), you'd <strong>still save ${fmtUSD(adjSave)}</strong> versus the gas car. The break-even gas price only rises from <strong>$${baseBreakeven.toFixed(2)}</strong> to <strong>$${adjBreakeven.toFixed(2)}/gal</strong> — so the free Work charging is a nice bonus, not the whole story.`
+      ? `Even if you'd paid for <strong>every</strong> Work charge — ${workKwh.toFixed(0)} kWh into the car, about <strong>${workGridKwh.toFixed(0)} kWh</strong> pulled from the grid once you add the 10% wall-side loss, ≈ <strong>${fmtUSD(workHomeCost)}</strong> at home rates — you'd <strong>still save ${fmtUSD(adjSave)}</strong> versus the gas car. The break-even gas price only rises from <strong>$${baseBreakeven.toFixed(2)}</strong> to <strong>$${adjBreakeven.toFixed(2)}/gal</strong> — so the free Work charging is a nice bonus, not the whole story.`
       : `No Work charging in the current filter, so the numbers above already reflect only paid (and other free) charging — nothing to re-price here.`;
 
     const sorted = sl.slice().sort((a,b)=>a.date.localeCompare(b.date));
