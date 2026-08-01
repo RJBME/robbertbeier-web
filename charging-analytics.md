@@ -697,7 +697,11 @@ permalink: /charging-analytics/
   <script>
     /* Early theme init — prevents flash of wrong theme before layout JS runs */
     (function(){
-      var stored = localStorage.getItem('theme');
+      // Guard the read: Safari with "Block All Cookies" (or a sandboxed context)
+      // throws on localStorage access, which would otherwise abort this whole
+      // IIFE and take the favicon injection below down with it.
+      var stored = null;
+      try { stored = localStorage.getItem('theme'); } catch(e) {}
       var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
       document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
       /* Battery emoji favicon for charging pages */
@@ -2139,6 +2143,11 @@ const _membershipNotes = [];
    ════════════════════════════════════════════════════════ */
 Chart.register(ChartDataLabels);
 Chart.defaults.animation = false; // disable all chart animations — prevents CPU spike on rebuild
+// Cap canvas backing-store resolution at 2×. On 3× retina phones (iPhone,
+// high-end Android) uncapped DPR makes every one of the ~40+ chart canvases
+// allocate ~2.25× the pixels it needs — tens of MB of avoidable memory — for
+// no visible gain on data charts. 2× is still retina-sharp.
+Chart.defaults.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
 
 /* Cubic ease-out count-up animation — WeakMap keyed by element so detached
    DOM nodes can be garbage collected. RAF IDs also tracked in _cuRAFIds Set
