@@ -491,6 +491,23 @@ permalink: /charging-analytics/
     font-size: 0.75rem; color: #6ee7a0; line-height: 1.5;
   }
   .ga-note strong { color: #a7f3c8; }
+  /* "If Work weren't free" scenario card */
+  .ga-scenario {
+    background: rgba(93,63,211,0.05); border: 1px solid rgba(245,200,66,0.28);
+    border-radius: 14px; padding: 20px 22px; margin-top: 18px;
+  }
+  @media (max-width: 767px) { .ga-scenario { padding: 16px; } }
+  .ga-scenario-head { font-size: 0.98rem; font-weight: 800; color: #f5c842; margin-bottom: 6px; }
+  .ga-scenario-lead { font-size: 0.8rem; color: #999; line-height: 1.55; margin: 0 0 16px; max-width: 82ch; }
+  [data-theme="dark"] .ga-scenario-lead { color: #aaa; }
+  .ga-scenario-punch {
+    margin-top: 14px; background: rgba(46,204,113,0.08);
+    border: 1px solid rgba(46,204,113,0.28); border-radius: 10px;
+    padding: 12px 16px; font-size: 0.8rem; color: #4fae6f; line-height: 1.5;
+  }
+  [data-theme="dark"] .ga-scenario-punch { color: #6ee7a0; }
+  .ga-scenario-punch strong { color: #2e9d55; }
+  [data-theme="dark"] .ga-scenario-punch strong { color: #a7f3c8; }
 
   .co2-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
   @media (max-width: 767px) { .co2-chart-row { grid-template-columns: 1fr; } }
@@ -1359,6 +1376,24 @@ permalink: /charging-analytics/
       <div class="ga-stat"><span class="ga-stat-label">Gas Break-Even</span><span class="ga-stat-value" id="gaBreakeven">—</span><span class="ga-stat-sub">gas below this beats EV</span></div>
     </div>
     <div class="ga-note" id="gaNote"></div>
+  </div>
+
+  <div class="ga-scenario">
+    <div class="ga-scenario-head">🏠 What if Work charging weren't free?</div>
+    <p class="ga-scenario-lead">
+      A big chunk of your charging is free at Work, which flatters every number above. To pressure-test the
+      benefit, here's the same comparison if <strong>every Work session had instead been paid home charging</strong>
+      — billed at your home electricity rate plus the ~10% wall-side loss. (Other free charging is left as-is.)
+    </p>
+    <div class="ga-grid">
+      <div class="ga-stat"><span class="ga-stat-label">Free Work Energy</span><span class="ga-stat-value" id="gaWorkKwh">—</span><span class="ga-stat-sub">charged at $0</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Would Cost at Home</span><span class="ga-stat-value" id="gaWorkHomeCost">—</span><span class="ga-stat-sub">home rate + 10%</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Adjusted EV Total</span><span class="ga-stat-value" id="gaAdjEv">—</span><span class="ga-stat-sub" id="gaAdjEvSub">vs today</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Still Saved vs Gas</span><span class="ga-stat-value" id="gaAdjSave">—</span><span class="ga-stat-sub">even paying for Work</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Adjusted EV ¢/mi</span><span class="ga-stat-value" id="gaAdjCpm">—</span><span class="ga-stat-sub" id="gaAdjCpmSub">vs gas</span></div>
+      <div class="ga-stat"><span class="ga-stat-label">Adjusted Break-Even</span><span class="ga-stat-value" id="gaAdjBreakeven">—</span><span class="ga-stat-sub">gas below this beats EV</span></div>
+    </div>
+    <div class="ga-scenario-punch" id="gaScenarioPunch"></div>
   </div>
 
   <div class="chart-grid-2" style="margin-top:18px">
@@ -4052,6 +4087,36 @@ mkChart('chartHistogram', {
     $('gaBreakeven',totGallons > 0 ? '$' + (totEV / totGallons).toFixed(2) + '/gal' : '—');
     const note = document.getElementById('gaNote');
     if (note) note.innerHTML = `⛽ You've spent <strong>${fmtUSD(totEV)}</strong> on electricity for these miles — the same driving in the gas car would have cost <strong>${fmtUSD(totGas)}</strong> at each month's pump prices. Gas would have to average under <strong>$${totGallons>0?(totEV/totGallons).toFixed(2):'—'}/gal</strong> to have been the cheaper choice.`;
+
+    // ── "If Work charging weren't free" scenario ──
+    // Re-price every free Work session as if it had been paid home charging
+    // (home rate for that date + the ~10% wall-side uplift). Other free
+    // charging (public free, solar, etc.) is intentionally left untouched.
+    let workKwh = 0, workHomeCost = 0;
+    sl.forEach(s => {
+      if (s.bucket === 'Work') {
+        const kwh = s.kwh || 0;
+        workKwh      += kwh;
+        workHomeCost += kwh * getStepRate(homeRates, s.date, 'rate', 0.196) * HOME_CHARGE_UPLIFT;
+      }
+    });
+    const adjEV        = totEV + workHomeCost;               // what you'd have paid
+    const adjSave      = totGas - adjEV;
+    const adjBreakeven = totGallons > 0 ? adjEV / totGallons : 0;
+    const adjCpm       = totMiles  > 0 ? adjEV / totMiles * 100 : 0;
+    const baseBreakeven= totGallons > 0 ? totEV / totGallons : 0;
+    $('gaWorkKwh',       workKwh.toFixed(0) + ' kWh');
+    $('gaWorkHomeCost',  fmtUSD(workHomeCost));
+    $('gaAdjEv',         fmtUSD(adjEV));
+    $('gaAdjEvSub',      'vs ' + fmtUSD(totEV) + ' today');
+    $('gaAdjSave',       fmtUSD(adjSave));
+    $('gaAdjCpm',        totMiles > 0 ? adjCpm.toFixed(1) + '¢' : '—');
+    $('gaAdjCpmSub',     totMiles > 0 ? 'vs gas ' + (totGas / totMiles * 100).toFixed(1) + '¢' : 'vs gas');
+    $('gaAdjBreakeven',  totGallons > 0 ? '$' + adjBreakeven.toFixed(2) + '/gal' : '—');
+    const punch = document.getElementById('gaScenarioPunch');
+    if (punch) punch.innerHTML = (workKwh > 0.5)
+      ? `Even if you'd paid for <strong>every</strong> Work charge (${workKwh.toFixed(0)} kWh ≈ <strong>${fmtUSD(workHomeCost)}</strong> at home rates), you'd <strong>still save ${fmtUSD(adjSave)}</strong> versus the gas car. The break-even gas price only rises from <strong>$${baseBreakeven.toFixed(2)}</strong> to <strong>$${adjBreakeven.toFixed(2)}/gal</strong> — so the free Work charging is a nice bonus, not the whole story.`
+      : `No Work charging in the current filter, so the numbers above already reflect only paid (and other free) charging — nothing to re-price here.`;
 
     const sorted = sl.slice().sort((a,b)=>a.date.localeCompare(b.date));
     const monthTick = function(v){ return monthLabel(String(this.getLabelForValue(v)).slice(0,7)); };
