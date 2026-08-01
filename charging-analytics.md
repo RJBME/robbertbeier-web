@@ -650,6 +650,7 @@ permalink: /charging-analytics/
     <a href="#seasonal">Season/Year</a>
     <a href="#economics2">Break-Even</a>
     <a href="#co2">🌿 CO₂</a>
+    <a href="#gasavoid">⛽ Gas Avoidance</a>
     <a href="#roadtrips">Road Trips</a>
     <a href="#sessiondetail" id="navSessionDetail">Detail</a>
     <a href="#efficiency" id="navEfficiency">Efficiency</a>
@@ -1278,6 +1279,69 @@ permalink: /charging-analytics/
   </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
+  <!--  SECTION: GAS AVOIDANCE                            -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <div class="section-header" id="gasavoid">
+    <h2>⛽ Gas Avoidance</h2>
+    <span>the money — and gallons — you're not burning at the pump</span>
+    <a href="#top" class="back-top-pill">↑ top</a>
+  </div>
+
+  <p class="chart-sub" style="font-size:0.9rem;line-height:1.6;color:#888;margin:0 0 18px;max-width:78ch">
+    Every mile on electrons is a mile not bought at the pump. This is the whole story of the fuel benefit —
+    what you paid to charge vs. what the gas car it replaced would have cost, at the real pump prices of the day.
+    Comparison baselines: <span id="gaBaselineNote">RJB → 27 mpg · LRB → 23 mpg</span>.
+  </p>
+
+  <div class="co2-hero">
+    <div class="co2-headline">Total Saved vs. Gas</div>
+    <div class="co2-number" style="color:#2ecc71" id="gaHeroNum">—</div>
+    <div class="co2-sub" id="gaHeroSub">calculating…</div>
+    <div class="co2-grid">
+      <div class="co2-stat"><span class="co2-stat-label">Gallons Avoided</span><span class="co2-stat-value" id="gaGallons">—</span><span class="co2-stat-sub">never pumped</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Pump Visits Skipped</span><span class="co2-stat-value" id="gaPump">—</span><span class="co2-stat-sub">≈ 14 gal / fill-up</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Effective Discount</span><span class="co2-stat-value" id="gaDiscount">—</span><span class="co2-stat-sub">cheaper than gas</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">EV Cost / Mile</span><span class="co2-stat-value" id="gaEvCpm">—</span><span class="co2-stat-sub">electricity, all-in</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Gas Cost / Mile</span><span class="co2-stat-value" id="gaGasCpm">—</span><span class="co2-stat-sub">at historical prices</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">You Paid to Charge</span><span class="co2-stat-value" id="gaEvCost">—</span><span class="co2-stat-sub">for these miles</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Gas Would Have Cost</span><span class="co2-stat-value" id="gaGasCost">—</span><span class="co2-stat-sub">same miles, gas car</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Gas Break-Even</span><span class="co2-stat-value" id="gaBreakeven">—</span><span class="co2-stat-sub">gas below this beats EV</span></div>
+    </div>
+    <div class="co2-honesty" id="gaNote"></div>
+  </div>
+
+  <div class="chart-grid-2" style="margin-top:18px">
+    <div class="chart-card">
+      <p class="chart-title">Cumulative $ Saved vs. Gas</p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartGaCumSave"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Monthly — What You Paid vs. What Gas Would've Cost</p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartGaMonthly"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-grid-2" style="margin-top:18px">
+    <div class="chart-card">
+      <p class="chart-title">Cost per Mile — EV vs. Gas</p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartGaCpm"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Cumulative Gallons of Gas Avoided</p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartGaGallons"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-grid-2" style="margin-top:18px">
+    <div class="chart-card">
+      <p class="chart-title">Where the Savings Came From</p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartGaBySource"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Savings If Gas Cost… <span style="font-weight:400;color:#aaa">(sensitivity)</span></p>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartGaSensitivity"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ -->
   <!--  SECTION 8: ROAD TRIPS                             -->
   <!-- ═══════════════════════════════════════════════════ -->
   <div class="section-header" id="roadtrips">
@@ -1880,6 +1944,8 @@ sessions.forEach(s => {
     // them, otherwise estimate from delivered energy × assumed mi/kWh. (When real,
     // this equals miles_added exactly — independent of the delivered-vs-battery split.)
     const estMiles = s.hasRealEff ? s.milesAdded : s.kwh * (gs.mi_per_kwh || 3.0);
+    s.estMiles   = estMiles;                          // miles this session's energy is worth
+    s.gasGallons = estMiles / (gs.mpg || 27);         // gallons of gas those miles would burn
     s.gasEquiv  = estMiles / (gs.mpg || 27) * (gs.gas_price || 3.26);
     s.saving    = s.gasEquiv - s.cost;
     s.bucket    = getBucket(s.location);
@@ -3899,6 +3965,96 @@ mkChart('chartHistogram', {
         legendEl.style.display = 'none';
       }
     }
+  })(sl);
+
+  /* ════════════════════════════════════════
+     GAS AVOIDANCE — fuel cost/consumption benefit
+  ════════════════════════════════════════ */
+  (function buildGasAvoidance(sl) {
+    if (!document.getElementById('gasavoid')) return;
+    const $ = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+
+    const totMiles   = sl.reduce((a,s) => a + (s.estMiles || 0), 0);
+    const totGallons = sl.reduce((a,s) => a + (s.gasGallons || 0), 0);
+    const totEV      = sl.reduce((a,s) => a + s.cost, 0);
+    const totGas     = sl.reduce((a,s) => a + s.gasEquiv, 0);
+    const totSave    = totGas - totEV;
+    const AVG_TANK   = 14; // gal / fill-up (representative)
+
+    $('gaHeroNum', fmtUSD(totSave));
+    $('gaHeroSub', `over ${Math.round(totMiles).toLocaleString()} miles · ${totGallons.toFixed(0)} gallons of gas never bought`);
+    $('gaGallons',  totGallons.toFixed(0) + ' gal');
+    $('gaPump',     Math.round(totGallons / AVG_TANK).toLocaleString());
+    $('gaDiscount', totGas > 0 ? Math.round(totSave / totGas * 100) + '%' : '—');
+    $('gaEvCpm',    totMiles > 0 ? (totEV  / totMiles * 100).toFixed(1) + '¢' : '—');
+    $('gaGasCpm',   totMiles > 0 ? (totGas / totMiles * 100).toFixed(1) + '¢' : '—');
+    $('gaEvCost',   fmtUSD(totEV));
+    $('gaGasCost',  fmtUSD(totGas));
+    $('gaBreakeven',totGallons > 0 ? '$' + (totEV / totGallons).toFixed(2) + '/gal' : '—');
+    const note = document.getElementById('gaNote');
+    if (note) note.innerHTML = `⛽ You've spent <strong>${fmtUSD(totEV)}</strong> on electricity for these miles — the same driving in the gas car would have cost <strong>${fmtUSD(totGas)}</strong> at each month's pump prices. Gas would have to average under <strong>$${totGallons>0?(totEV/totGallons).toFixed(2):'—'}/gal</strong> to have been the cheaper choice.`;
+
+    const sorted = sl.slice().sort((a,b)=>a.date.localeCompare(b.date));
+    const monthTick = function(v){ return monthLabel(String(this.getLabelForValue(v)).slice(0,7)); };
+
+    // 1. Cumulative $ saved
+    let cum = 0; const cumSave = sorted.map(s => { cum += s.saving; return +cum.toFixed(2); });
+    mkChart('chartGaCumSave', { type:'line',
+      data:{ labels: sorted.map(s=>s.date), datasets:[{ data:cumSave, borderColor:C_GREEN, backgroundColor:'rgba(46,204,113,0.15)', fill:true, tension:0.25, pointRadius:0, borderWidth:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, datalabels:{display:false}, tooltip:{callbacks:{ title:c=>c[0].label, label:c=>' Saved '+fmtUSD(c.parsed.y)+' to date' }} },
+        scales:{ x:{grid:{display:false}, ticks:{color:tc(), font:{size:9}, maxTicksLimit:8, autoSkip:true, callback:monthTick}}, y:{grid:{color:gc()}, ticks:{color:tc(), callback:v=>'$'+v}, beginAtZero:true} } } });
+
+    // 2. Monthly: EV cost vs gas-equivalent cost
+    mkChart('chartGaMonthly', { type:'bar',
+      data:{ labels: allMonths.map(monthLabel), datasets:[
+        { label:'You paid (electric)', backgroundColor:C_VIOLET, borderRadius:3, data: allMonths.map(m=>+monthly[m].cost.toFixed(2)) },
+        { label:"Gas would've cost", backgroundColor:C_AMBER, borderRadius:3, data: allMonths.map(m=>+monthly[m].gasEquiv.toFixed(2)) } ] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{position:'bottom', labels:{color:tc(), boxWidth:10, font:{size:10}, padding:8}}, datalabels:{display:false}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmtUSD(c.parsed.y)}`}} },
+        scales:{ x:{grid:{display:false}, ticks:{color:tc(), font:{size:9}}}, y:{grid:{color:gc()}, ticks:{color:tc(), callback:v=>'$'+v}, beginAtZero:true} } } });
+
+    // 3. Cost per mile — EV vs gas (per vehicle)
+    const vehs = [...new Set(sl.map(s=>s.vehicle))].sort(vehicleSort);
+    const perVeh = vehs.map(v => {
+      const vs = sl.filter(s=>s.vehicle===v);
+      const mi = vs.reduce((a,s)=>a+(s.estMiles||0),0), ev = vs.reduce((a,s)=>a+s.cost,0), gas = vs.reduce((a,s)=>a+s.gasEquiv,0);
+      return { v, ev: mi>0?+(ev/mi*100).toFixed(1):0, gas: mi>0?+(gas/mi*100).toFixed(1):0 };
+    });
+    mkChart('chartGaCpm', { type:'bar',
+      data:{ labels: perVeh.map(x=>x.v.replace(/^LRB's /,'L: ').replace(' Mach-E','')), datasets:[
+        { label:'EV ¢/mi',  backgroundColor:C_GREEN, borderRadius:4, data: perVeh.map(x=>x.ev) },
+        { label:'Gas ¢/mi', backgroundColor:C_AMBER, borderRadius:4, data: perVeh.map(x=>x.gas) } ] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{position:'bottom', labels:{color:tc(), boxWidth:10, font:{size:10}, padding:8}},
+          datalabels:{ anchor:'end', align:'end', color:tc(), font:{size:9, weight:'bold'}, formatter:v=>v+'¢' }, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}¢/mi`}} },
+        scales:{ x:{grid:{display:false}, ticks:{color:tc(), font:{size:9}}}, y:{grid:{color:gc()}, ticks:{color:tc(), callback:v=>v+'¢'}, beginAtZero:true, grace:'15%'} } } });
+
+    // 4. Cumulative gallons avoided
+    let cg = 0; const cumGal = sorted.map(s => { cg += (s.gasGallons||0); return +cg.toFixed(1); });
+    mkChart('chartGaGallons', { type:'line',
+      data:{ labels: sorted.map(s=>s.date), datasets:[{ data:cumGal, borderColor:C_AMBER, backgroundColor:'rgba(243,156,18,0.15)', fill:true, tension:0.25, pointRadius:0, borderWidth:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, datalabels:{display:false}, tooltip:{callbacks:{ title:c=>c[0].label, label:c=>' '+Math.round(c.parsed.y).toLocaleString()+' gal avoided' }} },
+        scales:{ x:{grid:{display:false}, ticks:{color:tc(), font:{size:9}, maxTicksLimit:8, autoSkip:true, callback:monthTick}}, y:{grid:{color:gc()}, ticks:{color:tc(), callback:v=>v+' gal'}, beginAtZero:true} } } });
+
+    // 5. Savings by charging source
+    const bkSave = {}; sl.forEach(s => { bkSave[s.bucket] = (bkSave[s.bucket]||0) + s.saving; });
+    const bkRows = Object.entries(bkSave).map(([b,v])=>({b, v:+v.toFixed(0)})).sort((a,b)=>b.v-a.v);
+    mkChart('chartGaBySource', { type:'bar',
+      data:{ labels: bkRows.map(x=>x.b), datasets:[{ data: bkRows.map(x=>x.v), backgroundColor: bkRows.map(x=>BUCKET_COLORS[x.b]||'#909090'), borderRadius:5 }] },
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'end', color:tc(), font:{size:10, weight:'bold'}, formatter:v=>'$'+v.toLocaleString() }, tooltip:{callbacks:{label:c=>' '+fmtUSD(c.parsed.x)+' saved'}} },
+        scales:{ x:{grid:{color:gc()}, ticks:{color:tc(), callback:v=>'$'+v}, beginAtZero:true, grace:'15%'}, y:{grid:{display:false}, ticks:{color:tc(), font:{size:11}}} } } });
+
+    // 6. Sensitivity — total savings at hypothetical gas prices
+    const prices = [2,3,4,5,6,7];
+    const sens = prices.map(p => +(totGallons * p - totEV).toFixed(0));
+    mkChart('chartGaSensitivity', { type:'bar',
+      data:{ labels: prices.map(p=>'$'+p), datasets:[{ data: sens, backgroundColor: sens.map(v=>v>=0?C_GREEN:C_RED), borderRadius:4 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'end', color:tc(), font:{size:9, weight:'bold'}, formatter:v=>(v>=0?'+':'−')+'$'+Math.abs(v/1000).toFixed(1)+'k' }, tooltip:{callbacks:{ title:c=>'If gas averaged '+c[0].label+'/gal', label:c=>' Total savings: '+fmtUSD(c.parsed.y) }} },
+        scales:{ x:{grid:{display:false}, ticks:{color:tc(), font:{size:10}}, title:{display:true, text:'gas price ($/gal)', color:'#888', font:{size:9}}}, y:{grid:{color:gc()}, ticks:{color:tc(), callback:v=>'$'+(v/1000)+'k'}, grace:'12%'} } } });
   })(sl);
 
   /* ════════════════════════════════════════
@@ -6699,6 +6855,7 @@ const PRINT_SECTIONS = [
   { id: 'seasonal',     label: 'Season Over Season',     icon: '❄️' },
   { id: 'economics2',   label: 'Economics Deep Dive',    icon: '💎' },
   { id: 'co2',          label: 'CO₂ Avoidance',          icon: '🌿' },
+  { id: 'gasavoid',     label: 'Gas Avoidance',          icon: '⛽' },
   { id: 'roadtrips',    label: 'Road Trips',             icon: '🚗' },
   { id: 'vehiclecomp',  label: 'Vehicle Comparison',     icon: '🔄' },
   { id: 'sessiondetail',label: 'Session Detail',         icon: '🔬' },
@@ -6786,7 +6943,7 @@ function clearPrintState() {
 
 // Sections that are meaningfully about DC fast charging — used to auto-pick the
 // report contents when "DC fast charging only" is ticked (user can still adjust).
-const DCFC_REPORT_SECS = new Set(['kpi','records','sources','economics','sessions','economics2','roadtrips','sessiondetail','map']);
+const DCFC_REPORT_SECS = new Set(['kpi','records','sources','economics','sessions','economics2','co2','gasavoid','roadtrips','sessiondetail','map']);
 function syncDcfcSectionSelection() {
   const on = document.getElementById('printDcfcOnly') && document.getElementById('printDcfcOnly').checked;
   document.querySelectorAll('.print-cb').forEach(cb => { cb.checked = on ? DCFC_REPORT_SECS.has(cb.value) : true; });
