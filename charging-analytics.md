@@ -89,8 +89,10 @@ permalink: /charging-analytics/
   .section-header {
     margin: 54px 0 16px; display: flex; align-items: baseline; gap: 12px;
     border-bottom: 2px solid var(--dash-border); padding-bottom: 8px;
-    border-left: 3px solid var(--link); padding-left: 12px;
+    border-left: 5px solid var(--sec-color, var(--link)); padding-left: 14px;
     border-top-left-radius: 3px;
+    /* faint left-edge wash in the section's colour, fading out across the header */
+    background: linear-gradient(90deg, color-mix(in srgb, var(--sec-color, var(--link)) 12%, transparent), transparent 38%);
     scroll-margin-top: var(--scroll-pad, 80px);
   }
   .section-header h2 { margin: 0; font-size: 1.05rem; }
@@ -264,6 +266,12 @@ permalink: /charging-analytics/
     text-decoration: none; padding: 3px 10px;
     border-radius: 12px; border: 1px solid transparent;
     transition: all 0.12s; white-space: nowrap;
+  }
+  /* Section-legend dot — only on pills JS tagged with a --sec-color */
+  #stickyNavRow a[style*="--sec-color"]::before {
+    content: ''; display: inline-block; width: 7px; height: 7px;
+    border-radius: 50%; background: var(--sec-color);
+    margin-right: 5px; vertical-align: middle; position: relative; top: -1px;
   }
   #stickyNavRow a:hover { background: var(--link); color: #fff; border-color: var(--link); }
   #stickyNavRow a.nav-active { border-color: var(--link); color: #fff; background: var(--link); font-weight: 700; box-shadow: 0 1px 6px rgba(93,63,211,0.35); }
@@ -6367,6 +6375,7 @@ initStickyBar();
 initPrint();
 initSectionFocus();
 initCollapsible();
+initSectionColors();
 
 /* ── Page Visibility API — reduce resource usage in background tabs ──────
    When the tab is hidden: suppress rAF-based animations, sticky bar scroll
@@ -7206,6 +7215,28 @@ function _updateCollapseAllLabel() {
   const btn = document.getElementById('collapseAllBtn'); if (!btn) return;
   const anyOpen = Array.from(document.querySelectorAll('.section-header[id]')).some(h => !h.classList.contains('collapsed'));
   btn.textContent = anyOpen ? '⊟ Collapse all' : '⊞ Expand all';
+}
+/* ── Per-section rainbow accents ────────────────────────────────────────────
+   Each section header gets its own hue from a refined, on-brand palette that
+   cycles (red → orange → gold → green → teal → blue → violet, then repeats).
+   Drives the header's left bar + a faint left-edge wash so every section
+   boundary is colour-coded for wayfinding. The matching sticky-nav pill gets
+   a small colour dot so the nav doubles as a legend. ── */
+function initSectionColors() {
+  // Defined inside the function so it's not in the temporal dead zone when the
+  // init block calls this before this point in the file is reached.
+  const SECTION_PALETTE = ['#e05656','#e0883c','#d6a636','#3fb56f','#2fa6a1','#3f7fd6','#7a5cd0'];
+  const map = {};
+  document.querySelectorAll('.section-header[id]').forEach((h, i) => {
+    const c = SECTION_PALETTE[i % SECTION_PALETTE.length];
+    h.style.setProperty('--sec-color', c);
+    map[h.id] = c;
+  });
+  // Colour dot on each sticky-nav pill so the nav reads as a section legend.
+  document.querySelectorAll('#stickyNavRow a[href^="#"]').forEach(a => {
+    const c = map[a.getAttribute('href').slice(1)];
+    if (c) a.style.setProperty('--sec-color', c);
+  });
 }
 function initCollapsible() {
   if (document.body.classList.contains('section-focus')) return; // single-section view — nothing to fold
