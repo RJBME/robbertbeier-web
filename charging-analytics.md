@@ -4567,14 +4567,17 @@ mkChart('chartHistogram', {
   (function buildVehicleComparison(sl) {
     const vehiclesInData = [...new Set(sl.map(s => s.vehicle))].sort(vehicleSort);
     const section  = document.getElementById('vehicleCompSection');
-    const navLink  = document.getElementById('navVehicleComp');
+    // Both the full section-nav pill AND the compressed sticky-nav pill are
+    // hidden by default — reveal/hide them together.
+    const navLinks = [document.getElementById('navVehicleComp'),
+                      document.getElementById('stickyNavVehicle')];
     if (vehiclesInData.length < 2) {
       if (section) section.style.display = 'none';
-      if (navLink) navLink.style.display = 'none';
+      navLinks.forEach(n => { if (n) n.style.display = 'none'; });
       return;
     }
     if (section) section.style.display = '';
-    if (navLink) navLink.style.display = '';
+    navLinks.forEach(n => { if (n) n.style.display = ''; });
 
     // Per-vehicle colors (shared map → same color for a car everywhere)
     const vehColorMap = {};
