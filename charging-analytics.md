@@ -290,6 +290,23 @@ permalink: /charging-analytics/
   }
   .back-top-pill:hover { color: var(--link); border-color: var(--link); }
   .section-tab-link:hover { color: var(--link); border-color: var(--link); }
+  /* Collapsible sections — click a header to fold/unfold */
+  .section-header.collapsible { cursor: pointer; }
+  .section-header.collapsible::before {
+    content: '▾'; color: #aaa; font-size: 0.75em; margin-right: 2px; flex-shrink: 0;
+    transition: color 0.15s; font-weight: 400;
+  }
+  .section-header.collapsible:hover::before { color: var(--link); }
+  .section-header.collapsed::before { content: '▸'; }
+  .section-header.collapsed { margin-bottom: 8px; opacity: 0.72; }
+  .section-header.collapsed:hover { opacity: 1; }
+  .collapse-all-btn {
+    background: var(--dash-card); border: 1px solid var(--dash-border); color: #888;
+    border-radius: 20px; padding: 5px 14px; font-size: 0.72rem; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .collapse-all-btn:hover { border-color: var(--link); color: var(--link); }
+  body.section-focus .collapse-all-btn { display: none; }
   /* Focused single-section view — opened via ?section=<id> in its own tab */
   body.section-focus .section-nav,
   body.section-focus #vehicleFilterSticky,
@@ -679,6 +696,10 @@ permalink: /charging-analytics/
       <input type="checkbox" id="dcfcOnlyToggle" onchange="toggleDcfcFilter(this.checked)">
       <span>⚡ DC fast charging only <small>≥ 25 kW</small></span>
     </label>
+  </div>
+
+  <div style="margin:0 0 16px">
+    <button id="collapseAllBtn" class="collapse-all-btn" title="Fold or unfold every section">⊟ Collapse all</button>
   </div>
 
   <!-- KPI Strip — populated by JS -->
@@ -6061,6 +6082,7 @@ rebuild(sessions);
 initStickyBar();
 initPrint();
 initSectionFocus();
+initCollapsible();
 
 /* ── Page Visibility API — reduce resource usage in background tabs ──────
    When the tab is hidden: suppress rAF-based animations, sticky bar scroll
@@ -6770,6 +6792,7 @@ function syncDcfcSectionSelection() {
   document.querySelectorAll('.print-cb').forEach(cb => { cb.checked = on ? DCFC_REPORT_SECS.has(cb.value) : true; });
 }
 let _dcfcReportActive = false; // true when we flipped the DCFC filter on just for this print
+let _printCollapsed = null;    // sections we temporarily expanded so they print in full
 
 function initPrint() {
   tagPrintSections();
@@ -6786,17 +6809,23 @@ function initPrint() {
 
   document.getElementById('doPrint').onclick = () => {
     panel.classList.remove('open');
+    // Expand any folded sections so they print in full (restored afterprint)
+    _printCollapsed = Array.from(document.querySelectorAll('.section-header.collapsed'));
+    _printCollapsed.forEach(h => setSectionCollapsed(h, false, true));
     const wantDcfc = dcfcCb && dcfcCb.checked;
     // If the report wants DCFC data but the page isn't filtered yet, flip it on and
     // rebuild first — remember so we can restore afterward.
     _dcfcReportActive = !!wantDcfc && !dcfcOnly;
     if (_dcfcReportActive) toggleDcfcFilter(true);
-    const delay = _dcfcReportActive ? 520 : 80; // extra time for the DCFC rebuild + fade
+    const delay = (_dcfcReportActive || _printCollapsed.length) ? 520 : 80; // time for rebuild/resize + fade
     setTimeout(() => { applyPrintState(); window.print(); }, delay);
   };
   window.addEventListener('afterprint', () => {
     clearPrintState();
+    if (_printCollapsed && _printCollapsed.length) _printCollapsed.forEach(h => setSectionCollapsed(h, true, true));
+    _printCollapsed = null;
     if (_dcfcReportActive) { toggleDcfcFilter(false); _dcfcReportActive = false; }
+    _updateCollapseAllLabel();
   });
 }
 
@@ -6854,5 +6883,64 @@ function initSectionFocus() {
       if (ticks >= 12) clearInterval(iv);
     }, 350);
   }
+}
+
+// ── Collapsible sections — click a section header to fold/unfold it ──────────
+function _sectionBody(hdr) {
+  const wrap = hdr.closest('[data-print-sec]');
+  if (wrap && wrap !== hdr && !wrap.classList.contains('section-header')) {
+    // Wrapped sections (vehiclecomp/sessiondetail/efficiency): fold the wrapper's
+    // children except the header itself.
+    return Array.from(wrap.children).filter(c => c !== hdr);
+  }
+  const sec = (hdr.dataset && hdr.dataset.printSec) || hdr.id;
+  return Array.from(document.querySelectorAll('[data-print-sec="' + sec + '"]'))
+    .filter(el => el !== hdr && !el.classList.contains('section-header'));
+}
+function setSectionCollapsed(hdr, collapse, skipSave) {
+  hdr.classList.toggle('collapsed', collapse);
+  _sectionBody(hdr).forEach(el => { el.style.display = collapse ? 'none' : ''; });
+  if (!collapse) requestAnimationFrame(() => {
+    // Charts/maps in a hidden section don't size themselves — fix on expand.
+    _sectionBody(hdr).forEach(el => {
+      const cvs = el.tagName === 'CANVAS' ? [el] : (el.querySelectorAll ? Array.from(el.querySelectorAll('canvas')) : []);
+      cvs.forEach(cv => { const c = window.Chart && Chart.getChart(cv); if (c) { try { c.resize(); } catch(e){} } });
+    });
+    if (hdr.id === 'map' && window._leafletMap) { try { _leafletMap.invalidateSize(); if (_mapBounds && _mapBounds.length > 1) _leafletMap.fitBounds(_mapBounds, { padding: [40, 40] }); } catch(e){} }
+  });
+  if (!skipSave) _saveCollapse();
+}
+function _saveCollapse() {
+  try { localStorage.setItem('analyticsCollapsed', JSON.stringify(
+    Array.from(document.querySelectorAll('.section-header.collapsed')).map(h => h.id))); } catch(e){}
+}
+function _loadCollapse() {
+  try { return new Set(JSON.parse(localStorage.getItem('analyticsCollapsed') || '[]')); } catch(e){ return new Set(); }
+}
+function _updateCollapseAllLabel() {
+  const btn = document.getElementById('collapseAllBtn'); if (!btn) return;
+  const anyOpen = Array.from(document.querySelectorAll('.section-header[id]')).some(h => !h.classList.contains('collapsed'));
+  btn.textContent = anyOpen ? '⊟ Collapse all' : '⊞ Expand all';
+}
+function initCollapsible() {
+  if (document.body.classList.contains('section-focus')) return; // single-section view — nothing to fold
+  const saved = _loadCollapse();
+  document.querySelectorAll('.section-header[id]').forEach(hdr => {
+    hdr.classList.add('collapsible');
+    hdr.addEventListener('click', e => {
+      if (e.target.closest('a, button, input')) return; // let the ↑ top / ⤢ tab pills work
+      setSectionCollapsed(hdr, !hdr.classList.contains('collapsed'));
+      _updateCollapseAllLabel();
+    });
+    if (saved.has(hdr.id)) setSectionCollapsed(hdr, true, true);
+  });
+  const btn = document.getElementById('collapseAllBtn');
+  if (btn) btn.addEventListener('click', () => {
+    const collapse = Array.from(document.querySelectorAll('.section-header[id]')).some(h => !h.classList.contains('collapsed'));
+    document.querySelectorAll('.section-header[id]').forEach(h => setSectionCollapsed(h, collapse, true));
+    _saveCollapse();
+    _updateCollapseAllLabel();
+  });
+  _updateCollapseAllLabel();
 }
 </script>
