@@ -87,8 +87,11 @@ permalink: /charging-analytics/
 
   /* ── Section headers ── */
   .section-header {
-    margin: 36px 0 16px; display: flex; align-items: baseline; gap: 12px;
+    margin: 54px 0 16px; display: flex; align-items: baseline; gap: 12px;
     border-bottom: 2px solid var(--dash-border); padding-bottom: 8px;
+    border-left: 3px solid var(--link); padding-left: 12px;
+    border-top-left-radius: 3px;
+    scroll-margin-top: var(--scroll-pad, 80px);
   }
   .section-header h2 { margin: 0; font-size: 1.05rem; }
   .section-header span { font-size: 0.75rem; color: #666; }
@@ -263,7 +266,7 @@ permalink: /charging-analytics/
     transition: all 0.12s; white-space: nowrap;
   }
   #stickyNavRow a:hover { background: var(--link); color: #fff; border-color: var(--link); }
-  #stickyNavRow a.nav-active { border-color: var(--link); color: var(--link); background: rgba(93,63,211,0.08); }
+  #stickyNavRow a.nav-active { border-color: var(--link); color: #fff; background: var(--link); font-weight: 700; box-shadow: 0 1px 6px rgba(93,63,211,0.35); }
   #stickyVehicleRow {
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
     padding: 6px 20px 7px;
@@ -289,6 +292,9 @@ permalink: /charging-analytics/
     align-self: center;
   }
   .back-top-pill:hover { color: var(--link); border-color: var(--link); }
+  /* The "↑ top" pill carries margin-left:auto to push the action group right;
+     the "⤢ tab" pill sits directly beside it (no second auto-margin splitting them). */
+  .section-tab-link { margin-left: -6px !important; }
   .section-tab-link:hover { color: var(--link); border-color: var(--link); }
   /* Collapsible sections — click a header to fold/unfold */
   .section-header.collapsible { cursor: pointer; }
@@ -722,6 +728,7 @@ permalink: /charging-analytics/
       <a href="#seasonal">Season/Year</a>
       <a href="#economics2">Break-Even</a>
       <a href="#co2">🌿 CO₂</a>
+      <a href="#gasavoid">⛽ Gas</a>
       <a href="#roadtrips">Road Trips</a>
       <a href="#sessiondetail" id="stickyNavDetail">Detail</a>
       <a href="#efficiency" id="stickyNavEff">Efficiency</a>
@@ -2235,6 +2242,14 @@ function buildVehicleFilter() {
           navLinks.forEach(a => {
             a.classList.toggle('nav-active', a.getAttribute('href') === '#' + activeId);
           });
+          // Keep the active pill visible in the horizontally-scrolling nav strip (mobile)
+          const activeEl = document.querySelector('#stickyNavRow a.nav-active');
+          const row = document.getElementById('stickyNavRow');
+          if (activeEl && row && row.scrollWidth > row.clientWidth + 4) {
+            const rRow = row.getBoundingClientRect(), rEl = activeEl.getBoundingClientRect();
+            const target = row.scrollLeft + (rEl.left - rRow.left) - (row.clientWidth - rEl.width) / 2;
+            row.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+          }
         }
       });
     }, { rootMargin: '-10% 0px -50% 0px', threshold: 0 });
