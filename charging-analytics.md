@@ -320,7 +320,11 @@ permalink: /charging-analytics/
     cursor: pointer; font-family: inherit; transition: all 0.15s;
   }
   .collapse-all-btn:hover { border-color: var(--link); color: var(--link); }
+  .collapse-all-btn:disabled { opacity: 0.4; cursor: default; }
+  .collapse-all-btn:disabled:hover { border-color: var(--dash-border); color: #888; }
   body.section-focus .collapse-all-btn { display: none; }
+  /* Per-section fold/unfold pill — sits with the ↑ top / ⤢ tab pills */
+  .section-collapse-btn { margin-left: -6px !important; background: transparent; cursor: pointer; font-family: inherit; }
   /* Focused single-section view — opened via ?section=<id> in its own tab */
   body.section-focus .section-nav,
   body.section-focus #vehicleFilterSticky,
@@ -780,8 +784,9 @@ permalink: /charging-analytics/
     </label>
   </div>
 
-  <div style="margin:0 0 16px">
-    <button id="collapseAllBtn" class="collapse-all-btn" title="Fold or unfold every section">⊟ Collapse all</button>
+  <div style="margin:0 0 16px;display:flex;gap:8px;flex-wrap:wrap">
+    <button id="collapseAllBtn" class="collapse-all-btn" title="Fold every section">⊟ Collapse all</button>
+    <button id="expandAllBtn" class="collapse-all-btn" title="Unfold every section">⊞ Expand all</button>
   </div>
 
   <!-- KPI Strip — populated by JS -->
@@ -7162,7 +7167,7 @@ function initPrint() {
     if (_printCollapsed && _printCollapsed.length) _printCollapsed.forEach(h => setSectionCollapsed(h, true, true));
     _printCollapsed = null;
     if (_dcfcReportActive) { toggleDcfcFilter(false); _dcfcReportActive = false; }
-    _updateCollapseAllLabel();
+    _updateCollapseBtns();
   });
 }
 
@@ -7219,6 +7224,7 @@ function _sectionBody(hdr) {
 }
 function setSectionCollapsed(hdr, collapse, skipSave) {
   hdr.classList.toggle('collapsed', collapse);
+  if (hdr._syncCollapseLbl) hdr._syncCollapseLbl();   // keep this section's pill label in sync
   _sectionBody(hdr).forEach(el => { el.style.display = collapse ? 'none' : ''; });
   if (!collapse) {
     // Map re-fit runs OUTSIDE rAF: _settleMap() is setInterval-based so it still
@@ -7241,10 +7247,14 @@ function _saveCollapse() {
 function _loadCollapse() {
   try { return new Set(JSON.parse(localStorage.getItem('analyticsCollapsed') || '[]')); } catch(e){ return new Set(); }
 }
-function _updateCollapseAllLabel() {
-  const btn = document.getElementById('collapseAllBtn'); if (!btn) return;
-  const anyOpen = Array.from(document.querySelectorAll('.section-header[id]')).some(h => !h.classList.contains('collapsed'));
-  btn.textContent = anyOpen ? '⊟ Collapse all' : '⊞ Expand all';
+function _updateCollapseBtns() {
+  const hdrs = Array.from(document.querySelectorAll('.section-header[id]'));
+  const anyOpen   = hdrs.some(h => !h.classList.contains('collapsed'));
+  const anyClosed = hdrs.some(h =>  h.classList.contains('collapsed'));
+  const c = document.getElementById('collapseAllBtn');
+  const e = document.getElementById('expandAllBtn');
+  if (c) c.disabled = !anyOpen;    // nothing left to collapse
+  if (e) e.disabled = !anyClosed;  // nothing left to expand
 }
 /* ── Per-section rainbow accents ────────────────────────────────────────────
    Each section header gets its own hue from a refined, on-brand palette that
@@ -7273,20 +7283,39 @@ function initCollapsible() {
   const saved = _loadCollapse();
   document.querySelectorAll('.section-header[id]').forEach(hdr => {
     hdr.classList.add('collapsible');
-    hdr.addEventListener('click', e => {
-      if (e.target.closest('a, button, input')) return; // let the ↑ top / ⤢ tab pills work
+    // Per-section fold/unfold pill, grouped with the ↑ top / ⤢ tab pills.
+    const cbtn = document.createElement('button');
+    cbtn.type = 'button';
+    cbtn.className = 'section-collapse-btn back-top-pill';
+    const syncLbl = () => {
+      const collapsed = hdr.classList.contains('collapsed');
+      cbtn.textContent = collapsed ? '▸ expand' : '▾ collapse';
+      cbtn.title = collapsed ? 'Expand this section' : 'Collapse this section';
+    };
+    hdr._syncCollapseLbl = syncLbl;
+    cbtn.addEventListener('click', e => {
+      e.stopPropagation();
       setSectionCollapsed(hdr, !hdr.classList.contains('collapsed'));
-      _updateCollapseAllLabel();
+      _updateCollapseBtns();
+    });
+    hdr.appendChild(cbtn);
+    hdr.addEventListener('click', e => {
+      if (e.target.closest('a, button, input')) return; // let the ↑ top / ⤢ tab / fold pills work
+      setSectionCollapsed(hdr, !hdr.classList.contains('collapsed'));
+      _updateCollapseBtns();
     });
     if (saved.has(hdr.id)) setSectionCollapsed(hdr, true, true);
+    syncLbl();
   });
-  const btn = document.getElementById('collapseAllBtn');
-  if (btn) btn.addEventListener('click', () => {
-    const collapse = Array.from(document.querySelectorAll('.section-header[id]')).some(h => !h.classList.contains('collapsed'));
+  const setAll = collapse => {
     document.querySelectorAll('.section-header[id]').forEach(h => setSectionCollapsed(h, collapse, true));
     _saveCollapse();
-    _updateCollapseAllLabel();
-  });
-  _updateCollapseAllLabel();
+    _updateCollapseBtns();
+  };
+  const cAll = document.getElementById('collapseAllBtn');
+  const eAll = document.getElementById('expandAllBtn');
+  if (cAll) cAll.addEventListener('click', () => setAll(true));
+  if (eAll) eAll.addEventListener('click', () => setAll(false));
+  _updateCollapseBtns();
 }
 </script>
