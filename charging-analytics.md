@@ -6479,6 +6479,7 @@ window.addEventListener('load', function() {
 
     _leafletMap.invalidateSize();
     buildMap(_lastSl);
+    _settleMap();   // correct the over-zoom if the container wasn't sized yet at fit time
   } catch(e) {
     console.error('[EV Map] init failed:', e);
     if (noCoords) noCoords.style.display = '';
@@ -6546,6 +6547,32 @@ function buildMap(sl) {
   } else if (bounds.length > 1) {
     _leafletMap.fitBounds(bounds, { padding: [40, 40] });
   }
+}
+
+/* Leaflet's fitBounds over-zooms to ~19 when the map container is mis-sized at
+   fit time — a 0-width container (collapsed section, layout not yet settled)
+   can't frame the bounds, so it maxes the zoom and centers on a single point
+   (looks like a solid grey/water map). Poll briefly: resize the map, and once
+   the container actually has width, re-fit until the zoom looks sane, then stop.
+   Used on the full page, on expand, and in focused view. */
+function _settleMap() {
+  if (!_leafletMap || !_mapBounds || _mapBounds.length < 2) return;
+  let ticks = 0;
+  const iv = setInterval(() => {
+    ticks++;
+    try {
+      _leafletMap.invalidateSize();
+      const el = _leafletMap.getContainer();
+      if (el && el.clientWidth > 50) {            // only re-fit once it has real width
+        if (_leafletMap.getZoom() > 12) {
+          _leafletMap.fitBounds(_mapBounds, { padding: [40, 40] });
+        } else {
+          clearInterval(iv); return;              // framed correctly → done
+        }
+      }
+    } catch (e) {}
+    if (ticks >= 14) clearInterval(iv);           // give up after ~4s
+  }, 300);
 }
 
 /* ════════════════════════════════════════════════════════
@@ -7174,25 +7201,8 @@ function initSectionFocus() {
                    + '<a href="/charging-analytics/">← Full analytics</a>';
   hdr.parentNode.insertBefore(banner, hdr);
   document.title = secName + ' · EV Analytics';
-  // A focused Leaflet map is built on window.onload; once it exists, resize it and
-  // re-fit its bounds (it was sized wrong while other sections were still around).
-  if (target === 'map') {
-    // The map is built on window.onload (after this runs) and its fitBounds mis-sizes
-    // while focus mode is settling, over-zooming to ~19. Poll briefly and re-fit to the
-    // marker bounds until the zoom looks right, then stop (so we don't fight the user).
-    let ticks = 0;
-    const iv = setInterval(() => {
-      ticks++;
-      try {
-        if (_leafletMap && _mapBounds && _mapBounds.length > 1) {
-          _leafletMap.invalidateSize();
-          if (_leafletMap.getZoom() > 12) _leafletMap.fitBounds(_mapBounds, { padding: [40, 40] });
-          else { clearInterval(iv); return; } // framed correctly → done
-        }
-      } catch(e){}
-      if (ticks >= 12) clearInterval(iv);
-    }, 350);
-  }
+  // (A focused map is built on window.onload, which calls _settleMap() to re-fit
+  //  once the container is sized — so no extra handling is needed here.)
 }
 
 // ── Collapsible sections — click a section header to fold/unfold it ──────────
@@ -7210,14 +7220,18 @@ function _sectionBody(hdr) {
 function setSectionCollapsed(hdr, collapse, skipSave) {
   hdr.classList.toggle('collapsed', collapse);
   _sectionBody(hdr).forEach(el => { el.style.display = collapse ? 'none' : ''; });
-  if (!collapse) requestAnimationFrame(() => {
-    // Charts/maps in a hidden section don't size themselves — fix on expand.
-    _sectionBody(hdr).forEach(el => {
-      const cvs = el.tagName === 'CANVAS' ? [el] : (el.querySelectorAll ? Array.from(el.querySelectorAll('canvas')) : []);
-      cvs.forEach(cv => { const c = window.Chart && Chart.getChart(cv); if (c) { try { c.resize(); } catch(e){} } });
+  if (!collapse) {
+    // Map re-fit runs OUTSIDE rAF: _settleMap() is setInterval-based so it still
+    // corrects the over-zoom even when rAF is throttled (e.g. background tab).
+    if (hdr.id === 'map' && _leafletMap) { try { _leafletMap.invalidateSize(); _settleMap(); } catch(e){} }
+    // Charts in a hidden section don't size themselves — resize on the next frame.
+    requestAnimationFrame(() => {
+      _sectionBody(hdr).forEach(el => {
+        const cvs = el.tagName === 'CANVAS' ? [el] : (el.querySelectorAll ? Array.from(el.querySelectorAll('canvas')) : []);
+        cvs.forEach(cv => { const c = window.Chart && Chart.getChart(cv); if (c) { try { c.resize(); } catch(e){} } });
+      });
     });
-    if (hdr.id === 'map' && window._leafletMap) { try { _leafletMap.invalidateSize(); if (_mapBounds && _mapBounds.length > 1) _leafletMap.fitBounds(_mapBounds, { padding: [40, 40] }); } catch(e){} }
-  });
+  }
   if (!skipSave) _saveCollapse();
 }
 function _saveCollapse() {
