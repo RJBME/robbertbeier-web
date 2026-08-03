@@ -20,7 +20,7 @@ _inputs:
   date:
     type: date
     required: true
-    comment: "REQUIRED — the session date. For an overnight charge, use the plug-OUT date (matches start_date being the day before). A blank date breaks the site build."
+    comment: "The session date (plug-OUT date; for an overnight charge that's the day AFTER start_date). New entries pre-fill a placeholder date so a forgotten date can't break the build — ALWAYS change it to the real charge date. Never leave this blank."
     options:
       time_format: false
       timezone: America/New_York
