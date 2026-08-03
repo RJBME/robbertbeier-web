@@ -234,6 +234,46 @@
       place: "Electrify America, Grand Rapids, MI"
       note: "Return charge (afternoon)"
 
+- key: "2026-08-02"
+  destination: "Blue Lake Fine Arts Camp, Twin Lake MI"
+  arrive: "2026-08-02"
+  depart: "2026-08-02"
+  dest_lat: 43.4126
+  dest_lng: -86.1286
+  description: "Round trip from Plymouth to pick up Rowan from Blue Lake Fine Arts Camp — Electrify America fast-charging in Lansing (outbound) and Grand Rapids (return)."
+  notes: "Day trip (~7:10 AM–5:29 PM) to collect Rowan. Headline stats aggregate five 'This trip' legs (the meter reset at each charge). The car didn't log time/efficiency for the Lansing→Blue Lake leg, so its drive time is derived from the arrival-clock gap — overall drive time & efficiency are therefore approximate. A brief return rest-area stop is included."
+  blog_tag: ""
+  energy_screen: true
+  trip_miles: 386.4
+  trip_hours: "6:47:45"
+  trip_mi_per_kwh: 3.0
+  energy_driving_pct: 94
+  energy_climate_pct: 4
+  energy_accessories_pct: 2
+  energy_ext_temp_pct: 0
+  score_acceleration: 87
+  score_deceleration: 100
+  score_speed: 40
+  itinerary:
+    - date: "2026-08-02"
+      place: "Home — Plymouth, MI"
+      note: "Departed ~7:10 AM"
+    - date: "2026-08-02"
+      place: "Electrify America, Lansing, MI"
+      note: "Outbound charge — leg 1: 82.5 mi · 1:15:16 · 2.8 mi/kWh (arr 8:25 AM)"
+    - date: "2026-08-02"
+      place: "Blue Lake Fine Arts Camp, Twin Lake MI"
+      note: "Picked up Rowan — leg 2: 108.9 mi (arr 10:35 AM; car didn't log time/eff)"
+    - date: "2026-08-02"
+      place: "Electrify America, Grand Rapids, MI"
+      note: "Return charge — leg 3: 51.2 mi · 1:02:19 · 3.1 mi/kWh (arr 2:29 PM)"
+    - date: "2026-08-02"
+      place: "Rest area — bathroom break"
+      note: "leg 4: 56.9 mi · 1:16:27 · 3.0 mi/kWh"
+    - date: "2026-08-02"
+      place: "Home — Plymouth, MI"
+      note: "Arrived 5:29 PM — leg 5: 86.9 mi · 1:19:43 · 3.1 mi/kWh"
+
 # ── TEMPLATE — copy this block for new trips ──────────────────────────────
 # - key: "YYYY-MM-DD"
 #   destination: ""
