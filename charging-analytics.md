@@ -2033,8 +2033,12 @@ sessions.forEach(s => {
     // charger-DELIVERED/billed energy (drives cost & grid CO2), while batteryKwh is
     // what actually reached the battery (drives mi/kWh). When batteryKwh is absent
     // (home + most sessions) energy_kwh already IS battery-side, so it falls back to it.
+    // SANITY GUARD: the battery can't receive more energy than the charger delivered,
+    // so only trust batteryKwh when it's <= energy_kwh. Ford's "energy added" is a
+    // coarse SOC-based ESTIMATE (whole-% SOC rounding) and sometimes lands ABOVE the
+    // metered delivery — when it does it's unreliable, so fall back to delivered energy.
     // Filter outliers: <1.5 mi/kWh (>667 Wh/mi) or >4.75 mi/kWh (<211 Wh/mi) are physically implausible
-    const effKwh = (s.batteryKwh && s.batteryKwh > 0) ? s.batteryKwh : s.kwh;
+    const effKwh = (s.batteryKwh && s.batteryKwh > 0 && s.batteryKwh <= s.kwh) ? s.batteryKwh : s.kwh;
     const rawMiPerKwh = s.milesAdded > 0 && effKwh > 0 ? s.milesAdded / effKwh : null;
     s.hasRealEff   = rawMiPerKwh !== null && rawMiPerKwh >= 1.5 && rawMiPerKwh <= 4.75;
     s.realMiPerKwh = s.hasRealEff ? rawMiPerKwh : null;

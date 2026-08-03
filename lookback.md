@@ -112,7 +112,8 @@ sessions.forEach(s=>{
   const hRate=getStepRate(homeRates, s.date, 'rate', 0.196);
   s.cost = loc.includes('home') ? s.kwh*hRate*HOME_CHARGE_UPLIFT : s.rawCost;
   const gs=getGasSavingsObj(s.date, s.vehicle);
-  const effKwh=(s.batteryKwh && s.batteryKwh>0)?s.batteryKwh:s.kwh;
+  // battery-side energy can't exceed delivered — ignore an over-estimating Ford SOC reading (see charging-analytics)
+  const effKwh=(s.batteryKwh && s.batteryKwh>0 && s.batteryKwh<=s.kwh)?s.batteryKwh:s.kwh;
   const rawEff = s.milesAdded>0 && effKwh>0 ? s.milesAdded/effKwh : null;
   s.hasRealEff = rawEff!==null && rawEff>=1.5 && rawEff<=4.75;
   s.effKwh = effKwh; s.realEff = s.hasRealEff ? rawEff : null;
