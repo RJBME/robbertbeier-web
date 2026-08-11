@@ -26,6 +26,8 @@ home_electricity:
     rate: 0.207
   - date: "2026-06-19"
     rate: 0.215
+  - date: "2026-07-22"
+    rate: 0.211   # DTE bill Jun 20–Jul 22 2026: TOD meter $263.10 / 1246.11 kWh all-in ($369.33 total incl. separate CoolCurrents meter)
 
 gas_savings:
   - date: "2025-08-22"
