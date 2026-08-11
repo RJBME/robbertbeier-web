@@ -27,7 +27,7 @@ home_electricity:
   - date: "2026-06-19"
     rate: 0.215
   - date: "2026-07-22"
-    rate: 0.211   # DTE bill Jun 20–Jul 22 2026: TOD meter $263.10 / 1246.11 kWh all-in ($369.33 total incl. separate CoolCurrents meter)
+    rate: 0.198   # DTE TOD bill Jun 20–Jul 22 2026: OFF-PEAK all-in rate. All home charging happens overnight/early-AM (off-peak), never in the 11am–7pm on-peak window ($0.305 all-in). Off-peak = peak-specific charges + per-kWh share of common supply/delivery/surcharges/service/tax; reproduces the $263.10 TOD-meter total.
 
 gas_savings:
   - date: "2025-08-22"
