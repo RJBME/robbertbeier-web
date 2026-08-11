@@ -6378,19 +6378,21 @@ let _mapBounds    = null; // latlngs of currently-shown markers — used by the 
 const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
+// Dark mode = a CSS invert+hue-rotate on the whole tile pane (persists for tiles
+// loaded later, since it's on the container). This is all that changes on a theme
+// toggle — no need to touch the tile layer itself.
+function _applyTileFilter() {
+  const mapEl = document.getElementById('chargingMap');
+  if (!mapEl) return;
+  const tiles = mapEl.querySelector('.leaflet-tile-pane');
+  if (tiles) tiles.style.filter = isDark() ? 'invert(1) hue-rotate(180deg)' : '';
+}
 function _applyTiles() {
   if (!_leafletMap) return;
   if (_tileLayer) { _tileLayer.remove(); }
   _tileLayer = L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 });
   _tileLayer.addTo(_leafletMap);
-  // Apply CSS invert+hue-rotate for dark mode — reliable cross-browser approach
-  const mapEl = document.getElementById('chargingMap');
-  if (mapEl) {
-    const tiles = mapEl.querySelector('.leaflet-tile-pane');
-    if (tiles) {
-      tiles.style.filter = isDark() ? 'invert(1) hue-rotate(180deg)' : '';
-    }
-  }
+  _applyTileFilter();
 }
 
 buildVehicleFilter();
@@ -6434,8 +6436,9 @@ window.addEventListener('load', function() {
     // into map zoom; it's enabled once the user clicks the map (see below).
     _leafletMap = L.map('chargingMap', { preferCanvas: true, scrollWheelZoom: false });
     _applyTiles();
-    // Reapply dark filter after tiles finish loading
-    _tileLayer.on('load', () => _applyTiles());
+    // Reapply the dark filter after tiles finish loading (filter only — don't
+    // recreate the layer, which throws Leaflet's _fadeAnimated error mid-load).
+    _tileLayer.on('load', () => _applyTileFilter());
     // Create marker group once — clearLayers() on rebuild keeps tile cache alive
     _markerGroup = L.layerGroup().addTo(_leafletMap);
 
@@ -6992,8 +6995,8 @@ function buildHeatmap(sl) {
    THEME REACTIVITY
    ════════════════════════════════════════════════════════ */
 window.addEventListener('themeChanged', () => {
-  // Swap map tiles light ↔ dark
-  _applyTiles();
+  // Re-tint map tiles light ↔ dark (filter only — no layer rebuild)
+  _applyTileFilter();
   allCharts.forEach(chart => {
    try {
     if (!chart || !chart.data) return;   // skip any stale/destroyed instance
