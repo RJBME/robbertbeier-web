@@ -1155,7 +1155,7 @@ permalink: /charging-analytics/
     </div>
   </div>
 
-  <div class="chart-grid-2" style="margin-top:18px">
+  <div class="chart-grid-2" style="margin-top:18px;align-items:start">
     <div class="chart-card">
       <p class="chart-title">Session Size Distribution (kWh histogram)</p>
       <div class="chart-wrap" style="height:250px">
@@ -2678,6 +2678,7 @@ mkChart('chartLocationDonut', {
             const tot = ds.data.reduce((a, v) => a + v, 0);
             return chart.data.labels.map((label, i) => ({
               text: `${label}  ${tot > 0 ? (ds.data[i] / tot * 100).toFixed(1) : '0.0'}%  (${ds.data[i].toFixed(0)} kWh)`,
+              fontColor: tc(),   // custom generateLabels items don't inherit labels.color → set explicitly (theme-reactive: re-runs on update)
               fillStyle: ds.backgroundColor[i],
               strokeStyle: ds.backgroundColor[i],
               lineWidth: 0,
@@ -3366,6 +3367,7 @@ mkChart('chartDayOfWeek', {
             const tot = ds.data.reduce((a,v) => a+v, 0);
             return chart.data.labels.map((lbl, i) => ({
               text: `${lbl}  ${tot > 0 ? (ds.data[i]/tot*100).toFixed(0) : '0'}%`,
+              fontColor: tc(),
               fillStyle: ds.backgroundColor[i],
               strokeStyle: ds.borderColor,
               lineWidth: 0
@@ -3634,7 +3636,7 @@ mkChart('chartHistogram', {
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: tc() } },
-        y: { grid: { color: gc() }, ticks: { color: tc() }, beginAtZero: true,
+        y: { grid: { color: gc() }, ticks: { color: tc() }, beginAtZero: true, grace: '15%',
              title: { display: true, text: 'Avg kWh/session', color: '#888' } }
       }
     }
@@ -5273,6 +5275,7 @@ mkChart('chartHistogram', {
                 const tot = ds.data.reduce((a,v) => a+v, 0);
                 return chart.data.labels.map((label, i) => ({
                   text: `${label}  ${tot > 0 ? (ds.data[i]/tot*100).toFixed(0) : '0'}%`,
+                  fontColor: tc(),
                   fillStyle: ds.backgroundColor[i], strokeStyle: ds.backgroundColor[i], lineWidth: 0
                 }));
               }
