@@ -76,7 +76,7 @@
     <h1>SOS Practice Test</h1>
     
     <div id="progress-section">
-        <div class="progress-text" id="progress-text">Question 1 of 3</div>
+        <div class="progress-text" id="progress-text">Question 1 of 38</div>
         <div class="progress-bar-container">
             <div class="progress-bar-fill" id="progress-fill"></div>
         </div>
@@ -95,416 +95,217 @@
 </div>
 
 <script>
-    // 📝 The Data (Complete Unit 1 Study Guide)
+    // 📝 The Data (Asterisks mark questions that were bolded in the study guide)
     const quizData = [
-        // --- PAGE 1 ---
         {
-            question: "A Michigan driver's license is issued and regulated by?",
-            options: [
-                "The federal government", 
-                "The county", 
-                "The state", 
-                "The local police department"
-            ],
+            question: "* A Michigan driver's license is issued and regulated by?",
+            options: ["The federal government", "The county", "The state", "The local police department"],
             answer: 2 
         },
         {
             question: "After passing state licensing requirements, a driver is a ____ driver.",
-            options: [
-                "probationary",
-                "beginner",
-                "certified",
-                "advanced"
-            ],
+            options: ["probationary", "beginner", "certified", "advanced"],
             answer: 1
         },
-
-        // --- PAGE 2 ---
         {
-            question: "For your level one license, your driving coach must be at least how old?",
-            options: [
-                "18 and have a license",
-                "21 and have a license",
-                "25 and have a license",
-                "21, with or without a license"
-            ],
+            question: "* For your level one license, your driving coach must be at least how old?",
+            options: ["18 and have a license", "21 and have a license", "25 and have a license", "21, with or without a license"],
             answer: 1
         },
         {
             question: "Risk is the chance of injury, damage, loss, and:",
-            options: [
-                "delays",
-                "citations",
-                "death",
-                "traffic"
-            ],
+            options: ["delays", "citations", "death", "traffic"],
             answer: 2
         },
         {
             question: "It is important to decide how to manage available time, space, and ____ risk.",
-            options: [
-                "minimize",
-                "eliminate",
-                "ignore",
-                "increase"
-            ],
+            options: ["minimize", "eliminate", "ignore", "increase"],
             answer: 0
         },
         {
             question: "What is the largest reason for young drivers having fatal crashes?",
-            options: [
-                "Distracted driving",
-                "Speeding",
-                "Driving under the influence",
-                "Lack of driving experience"
-            ],
+            options: ["Distracted driving", "Speeding", "Driving under the influence", "Lack of driving experience"],
             answer: 3
         },
         {
             question: "When doing pre-driving checks, you should check each tire for proper:",
-            options: [
-                "alignment",
-                "tread wear",
-                "inflation",
-                "rotation"
-            ],
+            options: ["alignment", "tread wear", "inflation", "rotation"],
             answer: 2
         },
         {
             question: "When doing pre-driving checks, you should check all:",
-            options: [
-                "windows",
-                "lights",
-                "passengers",
-                "documents"
-            ],
+            options: ["windows", "lights", "passengers", "documents"],
             answer: 1
         },
         {
-            question: "With a parallel parked vehicle, from which direction do you approach to enter the vehicle?",
-            options: [
-                "The back",
-                "The front",
-                "The passenger's side",
-                "It doesn't matter"
-            ],
+            question: "* With a parallel parked vehicle, from which direction do you approach to enter the vehicle?",
+            options: ["The back", "The front", "The passenger's side", "It doesn't matter"],
             answer: 1
         },
         {
-            question: "What is the most important part of your vehicle?",
-            options: [
-                "The engine",
-                "The brakes",
-                "The tires",
-                "The steering wheel"
-            ],
+            question: "* What is the most important part of your vehicle?",
+            options: ["The engine", "The brakes", "The tires", "The steering wheel"],
             answer: 2
         },
         {
             question: "To know if your seat is adjusted correctly, you need to be sure you can easily move your foot between the pedals without ____ your heel from the floor.",
-            options: [
-                "sliding",
-                "twisting",
-                "dragging",
-                "lifting"
-            ],
+            options: ["sliding", "twisting", "dragging", "lifting"],
             answer: 3
         },
         {
             question: "Some vehicles have a small, flat footrest called a:",
-            options: [
-                "clutch pad",
-                "dead pedal",
-                "rest pedal",
-                "dummy pedal"
-            ],
+            options: ["clutch pad", "dead pedal", "rest pedal", "dummy pedal"],
             answer: 1
         },
         {
             question: "Before starting the engine, ensure the gear selector is in:",
-            options: [
-                "Neutral",
-                "Drive",
-                "Park",
-                "Reverse"
-            ],
+            options: ["Neutral", "Drive", "Park", "Reverse"],
             answer: 2
         },
         {
             question: "To start the engine, turn the key to the ____ position, check dashboard lights OR push Engine Start | Power button.",
-            options: [
-                "accessory",
-                "ignition",
-                "start",
-                "on"
-            ],
+            options: ["accessory", "ignition", "start", "on"],
             answer: 0
         },
-
-        // --- PAGE 3 ---
         {
-            question: "Is a child under the age of 4 ever allowed to sit in the front seat?",
-            options: [
-                "No, never",
-                "Yes, always",
-                "Yes, if the airbag is turned off AND all rear seats are occupied by children under age 4",
-                "Yes, if they are in a forward-facing car seat"
-            ],
+            question: "* Is a child under the age of 4 ever allowed to sit in the front seat?",
+            options: ["No, never", "Yes, always", "Yes, if the airbag is turned off AND all rear seats are occupied by children under age 4", "Yes, if they are in a forward-facing car seat"],
             answer: 2
         },
         {
             question: "Children under the age of ____ and less than 4'9\" must be secured in a child restraint system.",
-            options: [
-                "4 years old",
-                "6 years old",
-                "8 years old",
-                "10 years old"
-            ],
+            options: ["4 years old", "6 years old", "8 years old", "10 years old"],
             answer: 2
         },
         {
             question: "Before exiting your vehicle, ensure that children under ____ exit the vehicle or are supervised by someone 13 or older.",
-            options: [
-                "10",
-                "8",
-                "6",
-                "4"
-            ],
+            options: ["10", "8", "6", "4"],
             answer: 2
         },
         {
             question: "Your vehicle's outside mirrors should be adjusted in a way that the blind spots are:",
-            options: [
-                "reduced",
-                "eliminated",
-                "expanded",
-                "visible"
-            ],
+            options: ["reduced", "eliminated", "expanded", "visible"],
             answer: 0
         },
         {
-            question: "When is the best time to adjust your mirrors?",
-            options: [
-                "Before you adjust your seat",
-                "After you adjust your seat",
-                "While you are driving",
-                "Before you put your seatbelt on"
-            ],
+            question: "* When is the best time to adjust your mirrors?",
+            options: ["Before you adjust your seat", "After you adjust your seat", "While you are driving", "Before you put your seatbelt on"],
             answer: 1
         },
         {
             question: "Which mirror gives you the best vision of whatever is happening behind you?",
-            options: [
-                "Rearview mirror",
-                "Driver side mirror",
-                "Passenger side mirror",
-                "Both side mirrors combined"
-            ],
+            options: ["Rearview mirror", "Driver side mirror", "Passenger side mirror", "Both side mirrors combined"],
             answer: 0
         },
         {
-            question: "An advantage of using the enhanced mirror setting is the amount you have to move your head or shoulders is greatly:",
-            options: [
-                "increased",
-                "reduced",
-                "eliminated",
-                "unchanged"
-            ],
+            question: "* An advantage of using the enhanced mirror setting is the amount you have to move your head or shoulders is greatly:",
+            options: ["increased", "reduced", "eliminated", "unchanged"],
             answer: 1
         },
         {
             question: "How many blind zones does a vehicle have?",
-            options: [
-                "2",
-                "4",
-                "6",
-                "8"
-            ],
+            options: ["2", "4", "6", "8"],
             answer: 1
         },
         {
             question: "Where are a vehicle's blind zones located?",
-            options: [
-                "In the front and back only",
-                "On the sides only",
-                "In the front, in the back, and on each side of the vehicle",
-                "Directly under the tires and behind the trunk"
-            ],
+            options: ["In the front and back only", "On the sides only", "In the front, in the back, and on each side of the vehicle", "Directly under the tires and behind the trunk"],
             answer: 2
         },
         {
             question: "The blind zones that are the worst and most dangerous are on the:",
-            options: [
-                "front",
-                "back",
-                "sides",
-                "roof"
-            ],
+            options: ["front", "back", "sides", "roof"],
             answer: 2
         },
         {
             question: "The main value of making a head check to the left or right before changing lanes is that it covers areas ____ in the rearview mirror and side mirrors.",
-            options: [
-                "already visible",
-                "not visible",
-                "distorted",
-                "magnified"
-            ],
+            options: ["already visible", "not visible", "distorted", "magnified"],
             answer: 1
         },
         {
             question: "Which gear is used when towing a vehicle, in a car wash, or having to push a vehicle?",
-            options: [
-                "Park",
-                "Reverse",
-                "Neutral",
-                "Drive"
-            ],
+            options: ["Park", "Reverse", "Neutral", "Drive"],
             answer: 2
         },
         {
             question: "What is the first action you should take if the accelerator sticks, and you need to stop quickly?",
-            options: [
-                "Turn off the ignition",
-                "Pull the parking brake",
-                "Pump the gas pedal",
-                "Shift into Neutral and apply the brakes"
-            ],
+            options: ["Turn off the ignition", "Pull the parking brake", "Pump the gas pedal", "Shift into Neutral and apply the brakes"],
             answer: 3
         },
-
-        // --- PAGE 4 ---
         {
-            question: "If you're unfamiliar with the vehicle's instrument panel:",
-            options: [
-                "Guess based on symbols",
-                "Ask a passenger",
-                "Refer to the vehicle's owner's manual",
-                "Search the internet while driving"
-            ],
+            question: "* If you're unfamiliar with the vehicle's instrument panel:",
+            options: ["Guess based on symbols", "Ask a passenger", "Refer to the vehicle's owner's manual", "Search the internet while driving"],
             answer: 2
         },
         {
-            question: "What are emergency flashers used for?",
-            options: [
-                "To signal a turn",
-                "To warn other drivers of a problem",
-                "To indicate you are parking",
-                "To drive faster in rain"
-            ],
+            question: "* What are emergency flashers used for?",
+            options: ["To signal a turn", "To warn other drivers of a problem", "To indicate you are parking", "To drive faster in rain"],
             answer: 1
         },
         {
-            question: "If the red parking brake light is on, what does this indicate?",
-            options: [
-                "Your brakes are failing",
-                "Your parking brake is activated",
-                "You need brake fluid",
-                "Your brake lights are out"
-            ],
+            question: "* If the red parking brake light is on, what does this indicate?",
+            options: ["Your brakes are failing", "Your parking brake is activated", "You need brake fluid", "Your brake lights are out"],
             answer: 1
         },
         {
-            question: "What would be an indication if an airbag is not in proper operating condition?",
-            options: [
-                "The steering wheel will lock",
-                "The horn will not work",
-                "The airbag warning light will stay on",
-                "The check engine light will flash"
-            ],
+            question: "* What would be an indication if an airbag is not in proper operating condition?",
+            options: ["The steering wheel will lock", "The horn will not work", "The airbag warning light will stay on", "The check engine light will flash"],
             answer: 2
         },
         {
-            question: "What does it mean if your temperature light comes on when you are driving?",
-            options: [
-                "The heater is on",
-                "The outside temperature is freezing",
-                "The engine temp level is not safe",
-                "The air conditioning is failing"
-            ],
+            question: "* What does it mean if your temperature light comes on when you are driving?",
+            options: ["The heater is on", "The outside temperature is freezing", "The engine temp level is not safe", "The air conditioning is failing"],
             answer: 2
         },
         {
-            question: "What is the #1 safety device?",
-            options: [
-                "Air bags",
-                "Anti-lock brakes",
-                "Seat belts",
-                "Head restraints"
-            ],
+            question: "* What is the #1 safety device?",
+            options: ["Air bags", "Anti-lock brakes", "Seat belts", "Head restraints"],
             answer: 2
         },
         {
             question: "Safety belts are designed to be used with what?",
-            options: [
-                "Air bags",
-                "Car seats",
-                "Emergency flashers",
-                "Cruise control"
-            ],
+            options: ["Air bags", "Car seats", "Emergency flashers", "Cruise control"],
             answer: 0
         },
         {
-            question: "How should you be seated to provide maximum protection?",
-            options: [
-                "Leaning slightly forward",
-                "Straight up with your back firmly against the seat",
-                "Reclined comfortably",
-                "Shifted toward the center console"
-            ],
+            question: "* How should you be seated to provide maximum protection?",
+            options: ["Leaning slightly forward", "Straight up with your back firmly against the seat", "Reclined comfortably", "Shifted toward the center console"],
             answer: 1
         },
         {
-            question: "Correctly adjusted head restraints provide the most protection when a vehicle is struck from where?",
-            options: [
-                "The front",
-                "The side",
-                "The rear",
-                "During a rollover"
-            ],
+            question: "* Correctly adjusted head restraints provide the most protection when a vehicle is struck from where?",
+            options: ["The front", "The side", "The rear", "During a rollover"],
             answer: 2
         },
         {
             question: "If the head restraint is properly adjusted, where should it be?",
-            options: [
-                "At the base of the neck",
-                "In the middle of the person's head",
-                "Above the top of the head",
-                "Resting on the shoulders"
-            ],
+            options: ["At the base of the neck", "In the middle of the person's head", "Above the top of the head", "Resting on the shoulders"],
             answer: 1
         },
         {
             question: "If you are properly seated, the top of the steering wheel should be no higher than?",
-            options: [
-                "Your chin",
-                "Your eyes",
-                "The top of your shoulders",
-                "Your chest"
-            ],
+            options: ["Your chin", "Your eyes", "The top of your shoulders", "Your chest"],
             answer: 2
         },
         {
-            question: "When driving a vehicle with airbags, what is the recommended distance you should be from the steering wheel?",
-            options: [
-                "Minimum 5\" away",
-                "Minimum 10\" away",
-                "Minimum 15\" away",
-                "Minimum 20\" away"
-            ],
+            question: "* When driving a vehicle with airbags, what is the recommended distance you should be from the steering wheel?",
+            options: ["Minimum 5\" away", "Minimum 10\" away", "Minimum 15\" away", "Minimum 20\" away"],
             answer: 1
         },
         {
             question: "If your steering wheel has an airbag, where should your hands be positioned?",
-            options: [
-                "10 and 2",
-                "8 and 4",
-                "9 and 3",
-                "12 and 6"
-            ],
+            options: ["10 and 2", "8 and 4", "9 and 3", "12 and 6"],
             answer: 2
         }
     ];
+
+    // Array Shuffling Function (Fisher-Yates Algorithm)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
 
     // App Logic
     let currentQuestionIndex = 0;
@@ -589,10 +390,14 @@
         score = 0;
         quizBlock.style.display = 'block';
         scoreBoard.style.display = 'none';
+        
+        // Reshuffle for the next attempt
+        shuffleArray(quizData);
         loadQuestion();
     };
 
-    // Start the app
+    // Start the app: Shuffle first, then load
+    shuffleArray(quizData);
     loadQuestion();
 </script>
 </body>
