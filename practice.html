@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Michigan SOS Practice Test</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: #f4f7f6; 
+            color: #333; 
+            display: flex; 
+            justify-content: center; 
+            padding: 20px; 
+        }
+        .quiz-container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            max-width: 600px; 
+            width: 100%; 
+        }
+        h1 { font-size: 1.5rem; text-align: center; margin-bottom: 20px; }
+        .question { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; }
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option { 
+            padding: 12px 15px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+        }
+        .option:hover { background: #f0f0f0; }
+        .option.correct { border-color: #4CAF50; background: #e8f5e9; }
+        .option.wrong { border-color: #F44336; background: #ffebee; }
+        .btn { 
+            background: #0056b3; 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            margin-top: 20px; 
+            width: 100%; 
+            display: none; 
+        }
+        .btn:hover { background: #004494; }
+        .score-board { text-align: center; font-size: 1.5rem; display: none; }
+        .progress { text-align: center; color: #666; margin-bottom: 15px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <h1>SOS Practice Test</h1>
+    <div class="progress" id="progress">Question 1 of 3</div>
+    <div id="quiz-block">
+        <div class="question" id="question-text">Loading question...</div>
+        <div class="options" id="options-container"></div>
+        <button class="btn" id="next-btn">Next Question</button>
+    </div>
+    <div class="score-board" id="score-board">
+        <p>You scored <span id="score">0</span> out of <span id="total">0</span>!</p>
+        <button class="btn" id="restart-btn" style="display: block;">Restart Quiz</button>
+    </div>
+</div>
+
+<script>
+    // 📝 The Data: This is where we will paste the parsed questions later.
+    // The "answer" is the index of the correct option (starting at 0).
+    const quizData = [
+        {
+            question: "What should you do when approaching a flashing red traffic light?",
+            options: [
+                "Slow down and proceed with caution", 
+                "Stop, then proceed when it is safe to do so", 
+                "Maintain your speed and prepare to stop", 
+                "Treat it as a yield sign"
+            ],
+            answer: 1 
+        },
+        {
+            question: "In Michigan, what is the legal blood alcohol concentration (BAC) limit for drivers under 21?",
+            options: ["0.08%", "0.05%", "0.02%", "0.00%"],
+            answer: 2
+        },
+        {
+            question: "When are you required to use your headlights?",
+            options: [
+                "Only when it is raining or snowing", 
+                "From half an hour after sunset to half an hour before sunrise", 
+                "From 8 PM to 6 AM", 
+                "Whenever you drive on the highway"
+            ],
+            answer: 1
+        }
+    ];
+
+    // App Logic
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const nextBtn = document.getElementById('next-btn');
+    const progressText = document.getElementById('progress');
+    const quizBlock = document.getElementById('quiz-block');
+    const scoreBoard = document.getElementById('score-board');
+    const scoreSpan = document.getElementById('score');
+    const totalSpan = document.getElementById('total');
+    const restartBtn = document.getElementById('restart-btn');
+
+    function loadQuestion() {
+        nextBtn.style.display = 'none';
+        const currentQ = quizData[currentQuestionIndex];
+        questionText.textContent = currentQ.question;
+        progressText.textContent = `Question ${currentQuestionIndex + 1} of ${quizData.length}`;
+        optionsContainer.innerHTML = '';
+
+        currentQ.options.forEach((option, index) => {
+            const div = document.createElement('div');
+            div.className = 'option';
+            div.textContent = option;
+            div.onclick = () => selectOption(div, index, currentQ.answer);
+            optionsContainer.appendChild(div);
+        });
+    }
+
+    function selectOption(selectedDiv, selectedIndex, correctIndex) {
+        // Disable clicking once an answer is chosen
+        const allOptions = optionsContainer.children;
+        for (let i = 0; i < allOptions.length; i++) {
+            allOptions[i].onclick = null;
+            if (i === correctIndex) {
+                allOptions[i].classList.add('correct');
+            }
+        }
+
+        if (selectedIndex === correctIndex) {
+            score++;
+        } else {
+            selectedDiv.classList.add('wrong');
+        }
+
+        nextBtn.style.display = 'block';
+    }
+
+    nextBtn.onclick = () => {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < quizData.length) {
+            loadQuestion();
+        } else {
+            showScore();
+        }
+    };
+
+    function showScore() {
+        quizBlock.style.display = 'none';
+        progressText.style.display = 'none';
+        scoreBoard.style.display = 'block';
+        scoreSpan.textContent = score;
+        totalSpan.textContent = quizData.length;
+    }
+
+    restartBtn.onclick = () => {
+        currentQuestionIndex = 0;
+        score = 0;
+        quizBlock.style.display = 'block';
+        progressText.style.display = 'block';
+        scoreBoard.style.display = 'none';
+        loadQuestion();
+    };
+
+    // Start the app
+    loadQuestion();
+</script>
+</body>
+</html>
