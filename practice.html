@@ -127,6 +127,21 @@
         }
         .badge-good { background-color: #4CAF50; }
         .badge-review { background-color: #F44336; }
+
+        /* Mini-Test Review Button */
+        .btn-mini {
+            background: white; 
+            color: #F44336; 
+            border: 1px solid #F44336; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 0.8rem; 
+            cursor: pointer; 
+            margin-left: 10px; 
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-mini:hover { background: #F44336; color: white; }
     </style>
 </head>
 <body>
@@ -305,7 +320,7 @@
     let activeQuizData = []; 
     let currentQuestionIndex = 0;
     let score = 0;
-    let totalAnswered = 0; // Tracks questions actually answered for early exits
+    let totalAnswered = 0; 
     let categoryStats = {};
 
     // DOM Elements
@@ -330,20 +345,42 @@
         }
     }
 
+    // Standard Quiz Launch
     function startQuiz(numQuestions) {
         currentQuestionIndex = 0;
         score = 0;
         totalAnswered = 0;
-        categoryStats = {}; // Will dynamically populate as questions are answered
+        categoryStats = {}; 
         
         shuffleArray(masterQuizData);
         activeQuizData = masterQuizData.slice(0, numQuestions);
 
-        // UI Management
         splashScreen.style.display = 'none';
         quizBlock.style.display = 'block';
         progressSection.style.display = 'block';
         scoreBoard.style.display = 'none';
+        finishEarlyBtn.style.display = 'none';
+        
+        loadQuestion();
+    }
+
+    // Targeted Category Mini-Test Launch
+    function startCategoryQuiz(category) {
+        currentQuestionIndex = 0;
+        score = 0;
+        totalAnswered = 0;
+        categoryStats = {}; 
+        
+        // Filter master data to ONLY include the weak category
+        let categoryData = masterQuizData.filter(q => q.category === category);
+        shuffleArray(categoryData);
+        
+        // Take up to 5 questions
+        activeQuizData = categoryData.slice(0, 5);
+
+        scoreBoard.style.display = 'none';
+        quizBlock.style.display = 'block';
+        progressSection.style.display = 'block';
         finishEarlyBtn.style.display = 'none';
         
         loadQuestion();
@@ -378,7 +415,6 @@
             }
         }
 
-        // Initialize category tracking if this is the first time it appears
         if (!categoryStats[category]) {
             categoryStats[category] = { correct: 0, total: 0 };
         }
@@ -393,7 +429,7 @@
 
         totalAnswered++;
         nextBtn.style.display = 'block';
-        finishEarlyBtn.style.display = 'block'; // Show early exit option once an answer is given
+        finishEarlyBtn.style.display = 'block'; 
     }
 
     nextBtn.onclick = () => {
@@ -414,22 +450,27 @@
         quizBlock.style.display = 'none';
         progressSection.style.display = 'none';
         scoreBoard.style.display = 'block';
+        finishEarlyBtn.style.display = 'none';
         
         document.getElementById('score').textContent = score;
-        document.getElementById('total').textContent = totalAnswered; // Grade ONLY what they answered
+        document.getElementById('total').textContent = totalAnswered; 
         
         const percent = totalAnswered > 0 ? Math.round((score / totalAnswered) * 100) : 0;
         document.getElementById('score-percent').textContent = percent;
 
-        // Build the Category Breakdown HTML
         statsContainer.innerHTML = '';
         
         for (const [category, stats] of Object.entries(categoryStats)) {
             const percentage = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
             
-            // Determine styling based on the Michigan state 70% passing threshold
             let badgeClass = percentage >= 70 ? 'badge-good' : 'badge-review';
             let badgeText = percentage >= 70 ? 'Great Job' : 'Needs Review';
+            
+            // Only show the Practice button if they scored under 70%
+            let reviewButtonHTML = '';
+            if (percentage < 70) {
+                reviewButtonHTML = `<button class="btn-mini" onclick="startCategoryQuiz('${category}')">Practice 5 Qs</button>`;
+            }
 
             const statRow = document.createElement('div');
             statRow.className = 'stat-row';
@@ -438,7 +479,10 @@
                     <div class="stat-category">${category}</div>
                     <div style="color: #666; font-size: 0.8rem;">${stats.correct} / ${stats.total} correct (${percentage}%)</div>
                 </div>
-                <div class="stat-badge ${badgeClass}">${badgeText}</div>
+                <div style="display: flex; align-items: center;">
+                    <div class="stat-badge ${badgeClass}">${badgeText}</div>
+                    ${reviewButtonHTML}
+                </div>
             `;
             statsContainer.appendChild(statRow);
         }
