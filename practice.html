@@ -22,6 +22,28 @@
             width: 100%; 
         }
         h1 { font-size: 1.5rem; text-align: center; margin-bottom: 10px; }
+        
+        /* Splash Screen Styles */
+        #splash-screen { text-align: center; }
+        .splash-desc { color: #666; margin-bottom: 30px; font-size: 1.1rem; }
+        .btn-large { 
+            display: block; 
+            width: 100%; 
+            margin-bottom: 15px; 
+            padding: 15px; 
+            font-size: 1.1rem; 
+            background: #fff;
+            color: #0056b3;
+            border: 2px solid #0056b3;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-large:hover { background: #0056b3; color: white; }
+
+        /* Quiz Styles */
+        #quiz-block, #progress-section, #score-board { display: none; }
+        
         .progress-text { 
             text-align: center; 
             color: #666; 
@@ -54,7 +76,8 @@
         .option:hover { background: #f0f0f0; }
         .option.correct { border-color: #4CAF50; background: #e8f5e9; }
         .option.wrong { border-color: #F44336; background: #ffebee; }
-        .btn { 
+        
+        .btn-next { 
             background: #0056b3; 
             color: white; 
             border: none; 
@@ -66,10 +89,24 @@
             width: 100%; 
             display: none; 
         }
-        .btn:hover { background: #004494; }
+        .btn-next:hover { background: #004494; }
+
+        .btn-secondary {
+            background: #fff; 
+            color: #666; 
+            border: 2px solid #ccc; 
+            padding: 12px 20px; 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            cursor: pointer; 
+            margin-top: 10px; 
+            width: 100%; 
+            display: none;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover { background: #eee; }
         
         /* Stats Screen Styles */
-        .score-board { display: none; }
         .score-header { text-align: center; font-size: 1.5rem; margin-bottom: 20px; font-weight: bold;}
         .stats-container { margin-top: 20px; }
         .stat-row { 
@@ -95,8 +132,17 @@
 <body>
 
 <div class="quiz-container">
-    <h1 id="main-title">SOS Practice Test</h1>
+    <h1>SOS Practice Test</h1>
     
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+        <p class="splash-desc">Select your practice mode to begin.</p>
+        <button class="btn-large" onclick="startQuiz(15)">Quick Review (15 Questions)</button>
+        <button class="btn-large" onclick="startQuiz(55)">Half Exam (55 Questions)</button>
+        <button class="btn-large" onclick="startQuiz(111)">Full Simulation (All 111 Questions)</button>
+    </div>
+
+    <!-- Progress Bar -->
     <div id="progress-section">
         <div class="progress-text" id="progress-text">Question 1 of X</div>
         <div class="progress-bar-container">
@@ -104,13 +150,16 @@
         </div>
     </div>
 
+    <!-- Question Block -->
     <div id="quiz-block">
         <div class="question" id="question-text">Loading question...</div>
         <div class="options" id="options-container"></div>
-        <button class="btn" id="next-btn">Next Question</button>
+        <button class="btn-next" id="next-btn">Next Question</button>
+        <button class="btn-secondary" id="finish-early-btn">Finish & Rate Me</button>
     </div>
     
-    <div class="score-board" id="score-board">
+    <!-- Score Board -->
+    <div id="score-board">
         <div class="score-header">Test Complete!</div>
         <div style="text-align: center; font-size: 1.2rem; margin-bottom: 10px;">
             Overall Score: <span id="score">0</span> / <span id="total">0</span> (<span id="score-percent">0</span>%)
@@ -121,13 +170,13 @@
             <!-- Dynamic stats will populate here -->
         </div>
 
-        <button class="btn" id="restart-btn" style="display: block; margin-top: 30px;">Restart Quiz</button>
+        <button class="btn-next" id="restart-btn" style="display: block; margin-top: 30px;">Return to Main Menu</button>
     </div>
 </div>
 
 <script>
-    // 📝 The Data Base (Exhaustive & Categorized)
-    const quizData = [
+    // 📝 The Master Database (111 Questions)
+    const masterQuizData = [
         // --- PAGE 1 & 2: LICENSING & PRE-DRIVING ---
         { category: "Rules & Licensing", question: "* A Michigan driver's license is issued and regulated by?", options: ["The federal government", "The county", "The state", "The local police department"], answer: 2 },
         { category: "Rules & Licensing", question: "After passing state licensing requirements, a driver is a ____ driver.", options: ["probationary", "beginner", "certified", "advanced"], answer: 1 },
@@ -179,6 +228,7 @@
         { category: "Maneuvers & Turning", question: "When do you begin to reaccelerate during a turn?", options: ["As soon as you turn the wheel", "Halfway through the turn", "Just before coming completely out of the turn", "After your wheels are perfectly straight"], answer: 2 },
         { category: "Maneuvers & Turning", question: "When making a left turn, which lane should you turn into?", options: ["First lane closest to the curb", "The farthest right lane", "First lane after all yellow lines (left lane)", "Any lane is fine"], answer: 2 },
         { category: "Maneuvers & Turning", question: "When making a right turn, which lane should you turn into?", options: ["First lane closest to the center line", "First lane closest to the curb (right lane)", "The center lane", "Any lane is fine"], answer: 1 },
+        { category: "Maneuvers & Turning", question: "To turn left from a one-way street, you should do it from the ____ lane.", options: ["right", "center", "left", "any available"], answer: 2 },
         { category: "Maneuvers & Turning", question: "Turn signals need to be used how soon in advance?", options: ["1 to 2 seconds", "3 to 4 seconds", "5 to 6 seconds", "Just before turning"], answer: 1 },
         { category: "Maneuvers & Turning", question: "When should you use your mirrors? When changing ____ and ____.", options: ["lanes / direction", "music / temperature", "direct / speed", "gears / passengers"], answer: 2 },
         { category: "Maneuvers & Turning", question: "Why look in your rearview mirror prior to stopping or turning?", options: ["To check your blind spot", "The driver behind you may not stop or may do something unexpected", "To see if you have enough room to back up", "To verify your brake lights are working"], answer: 1 },
@@ -252,14 +302,18 @@
     ];
 
     // Tracking objects
+    let activeQuizData = []; 
     let currentQuestionIndex = 0;
     let score = 0;
+    let totalAnswered = 0; // Tracks questions actually answered for early exits
     let categoryStats = {};
 
     // DOM Elements
+    const splashScreen = document.getElementById('splash-screen');
     const questionText = document.getElementById('question-text');
     const optionsContainer = document.getElementById('options-container');
     const nextBtn = document.getElementById('next-btn');
+    const finishEarlyBtn = document.getElementById('finish-early-btn');
     const progressText = document.getElementById('progress-text');
     const progressFill = document.getElementById('progress-fill');
     const progressSection = document.getElementById('progress-section');
@@ -276,40 +330,35 @@
         }
     }
 
-    function initQuiz() {
+    function startQuiz(numQuestions) {
         currentQuestionIndex = 0;
         score = 0;
+        totalAnswered = 0;
+        categoryStats = {}; // Will dynamically populate as questions are answered
         
-        // Reset category stats dynamically based on the current array
-        categoryStats = {};
-        quizData.forEach(q => {
-            if (!categoryStats[q.category]) {
-                categoryStats[q.category] = { total: 0, correct: 0 };
-            }
-            categoryStats[q.category].total++;
-        });
+        shuffleArray(masterQuizData);
+        activeQuizData = masterQuizData.slice(0, numQuestions);
 
+        // UI Management
+        splashScreen.style.display = 'none';
         quizBlock.style.display = 'block';
         progressSection.style.display = 'block';
         scoreBoard.style.display = 'none';
+        finishEarlyBtn.style.display = 'none';
         
-        shuffleArray(quizData);
         loadQuestion();
     }
 
     function loadQuestion() {
         nextBtn.style.display = 'none';
-        const currentQ = quizData[currentQuestionIndex];
+        const currentQ = activeQuizData[currentQuestionIndex];
         
-        // Update Text
         questionText.textContent = currentQ.question;
-        progressText.textContent = `Question ${currentQuestionIndex + 1} of ${quizData.length}`;
+        progressText.textContent = `Question ${currentQuestionIndex + 1} of ${activeQuizData.length}`;
         
-        // Update Progress Bar
-        const progressPercentage = ((currentQuestionIndex) / quizData.length) * 100;
+        const progressPercentage = ((currentQuestionIndex) / activeQuizData.length) * 100;
         progressFill.style.width = `${progressPercentage}%`;
 
-        // Clear and load options
         optionsContainer.innerHTML = '';
         currentQ.options.forEach((option, index) => {
             const div = document.createElement('div');
@@ -323,11 +372,17 @@
     function selectOption(selectedDiv, selectedIndex, correctIndex, category) {
         const allOptions = optionsContainer.children;
         for (let i = 0; i < allOptions.length; i++) {
-            allOptions[i].onclick = null; // Disable clicks
+            allOptions[i].onclick = null; 
             if (i === correctIndex) {
                 allOptions[i].classList.add('correct');
             }
         }
+
+        // Initialize category tracking if this is the first time it appears
+        if (!categoryStats[category]) {
+            categoryStats[category] = { correct: 0, total: 0 };
+        }
+        categoryStats[category].total++;
 
         if (selectedIndex === correctIndex) {
             score++;
@@ -336,16 +391,22 @@
             selectedDiv.classList.add('wrong');
         }
 
+        totalAnswered++;
         nextBtn.style.display = 'block';
+        finishEarlyBtn.style.display = 'block'; // Show early exit option once an answer is given
     }
 
     nextBtn.onclick = () => {
         currentQuestionIndex++;
-        if (currentQuestionIndex < quizData.length) {
+        if (currentQuestionIndex < activeQuizData.length) {
             loadQuestion();
         } else {
             showScore();
         }
+    };
+
+    finishEarlyBtn.onclick = () => {
+        showScore();
     };
 
     function showScore() {
@@ -355,18 +416,20 @@
         scoreBoard.style.display = 'block';
         
         document.getElementById('score').textContent = score;
-        document.getElementById('total').textContent = quizData.length;
-        document.getElementById('score-percent').textContent = Math.round((score / quizData.length) * 100);
+        document.getElementById('total').textContent = totalAnswered; // Grade ONLY what they answered
+        
+        const percent = totalAnswered > 0 ? Math.round((score / totalAnswered) * 100) : 0;
+        document.getElementById('score-percent').textContent = percent;
 
         // Build the Category Breakdown HTML
         statsContainer.innerHTML = '';
         
         for (const [category, stats] of Object.entries(categoryStats)) {
-            const percentage = Math.round((stats.correct / stats.total) * 100);
+            const percentage = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
             
-            // Determine styling based on score (75% is passing threshold)
-            let badgeClass = percentage >= 75 ? 'badge-good' : 'badge-review';
-            let badgeText = percentage >= 75 ? 'Great Job' : 'Needs Review';
+            // Determine styling based on the Michigan state 70% passing threshold
+            let badgeClass = percentage >= 70 ? 'badge-good' : 'badge-review';
+            let badgeText = percentage >= 70 ? 'Great Job' : 'Needs Review';
 
             const statRow = document.createElement('div');
             statRow.className = 'stat-row';
@@ -382,11 +445,10 @@
     }
 
     restartBtn.onclick = () => {
-        initQuiz();
+        scoreBoard.style.display = 'none';
+        splashScreen.style.display = 'block';
     };
 
-    // Start the app
-    initQuiz();
 </script>
 </body>
 </html>
