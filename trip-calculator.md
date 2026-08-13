@@ -423,6 +423,8 @@ permalink: /trip-calculator/
   .soc-legend span { display: inline-flex; align-items: center; gap: 6px; }
   .soc-legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
   .soc-legend i.dash { height: 0; border-top: 2px dashed #f59e0b; }
+  .soc-arrive { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-top: 10px; }
+  .soc-arrive.low { color: #ef4444; }
   .adj-toggle.adj-remove-charger { color: #ef4444; border-color: #ef444455; margin-left: 6px; }
   .adj-toggle.adj-remove-charger:hover { border-color: #ef4444; color: #ef4444; }
   /* Swap a suggested charger for a nearby alternative */
@@ -1776,7 +1778,7 @@ function compute(A, B, rt, temp){
   const e = estimate(rt, temp);
   // Remember this estimate's context so a later "actual result" is compared to
   // what the RAW (un-tuned) model predicted — keeps self-tuning idempotent.
-  LAST_EST = { veh: e.vehName, rawModelEff: e.rawModelEff, miles: e.miles, energy: e.energy, tempF: temp.f };
+  LAST_EST = { veh: e.vehName, rawModelEff: e.rawModelEff, miles: e.miles, energy: e.energy, tempF: temp.f, batt: e.batt, effEff: e.effEff };
 
   // Hero stats
   document.getElementById('rDist').textContent = e.miles.toFixed(0) + ' mi';
@@ -2182,6 +2184,7 @@ const TESLA_REACH_TOL = 40; // mi — prefer Tesla unless a non-Tesla gets you t
 const CHARGER_FLOOR = 6;    // % — willing to run this low to REACH a charger (reserve is for the destination)
 const DEST_NEAR_MI = 12;    // mi — a compatible fast charger within this far of the destination means you can top up on arrival
 const DEST_CHARGER_FLOOR = 5; // % — OK to arrive this low at the destination WHEN there's a charger there (skips a marginal final top-up)
+const RESERVE_SLACK = 3;      // % — leeway below the reserve the planner tolerates before adding a stop (kills 2-min top-ups)
 function planSegment(fromMi, toMi, startSoc, reserve, chargers, nrg, maxTop){
   maxTop = maxTop || DCFC_TOP;
   const batt = nrg.batt;
@@ -2591,7 +2594,9 @@ function renderETA(plan, rt, round, oneWay, destSoc){
   if (dwellMins  > 0.5) partsArr.push(`${fmtMinsShort(dwellMins)} stopover`);
   const breakdown = partsArr.join(' + ');
   // Estimated battery % on arrival at the destination (from the charging planner).
-  const socTxt = (destSoc != null && isFinite(destSoc)) ? ` &nbsp;·&nbsp; <b>~${Math.round(destSoc)}%</b> on arrival` : '';
+  const rLeft = rangeMiFromSoc(destSoc);
+  const socTxt = (destSoc != null && isFinite(destSoc))
+    ? ` &nbsp;·&nbsp; <b>~${Math.round(destSoc)}%</b> on arrival${rLeft != null ? ` &nbsp;·&nbsp; ~${Math.round(rLeft)} mi range left` : ''}` : '';
 
   // "Arrive by" optimizer: the latest you can leave is target − total trip time.
   // It assumes the trip duration is independent of the departure clock, so it's
@@ -3013,6 +3018,10 @@ function printGuidanceSheet(){
   if (startSoc != null) facts.push(['Charge to before leaving', `<b>${startSoc}%</b>`]);
   if (depStr) facts.push(['Plan to leave', `<b>${E(depStr)}</b>`]);
   if (arrStr) facts.push([round ? 'Reach the destination' : "You'll arrive", `about <b>${E(arrStr)}</b>`]);
+  if (plan && plan.arriveSoc != null){
+    const rr = rangeMiFromSoc(plan.arriveSoc);
+    facts.push([round ? 'Arrive home with' : 'Arrive with', `about <b>${Math.round(plan.arriveSoc)}%</b>${rr != null ? ` (~${Math.round(rr)} mi range left)` : ''}`]);
+  }
   if (dist) facts.push(['Distance', `${E(dist)}${round ? ' (round trip)' : ''}`]);
   if (temp) facts.push(['Weather that day', E(temp)]);
   const factsHtml = facts.map(([k, v]) => `<div><span style="color:#555">${k}:</span> ${v}</div>`).join('');
@@ -3166,6 +3175,13 @@ function manualTag(origin, short){
   if (origin === 'adjust')  return short ? 'modified' : 'you modified';
   return short ? 'added' : 'you added';
 }
+// Approx. driving range (mi) left at a given battery %, from the last estimate's
+// usable battery + effective efficiency. Null until an estimate has run.
+function rangeMiFromSoc(pct){
+  if (!LAST_EST || pct == null || !isFinite(pct)) return null;
+  const r = pct / 100 * (LAST_EST.batt || 0) * (LAST_EST.effEff || 0);
+  return isFinite(r) && r > 0 ? r : null;
+}
 // Charge-amount unit <option>s: kWh added, % added, or an absolute "to %" target.
 function unitOptionsHtml(sel){
   return `<option value="kwh"${sel==='kwh'?' selected':''}>kWh</option>`
@@ -3316,6 +3332,9 @@ async function updateChargingPlan(rt, e, temp){
 
   const startSoc = Math.max(0, Math.min(100, +socEl.value));
   const reserve = Math.max(0, Math.min(50, +document.getElementById('reserve').value || 0));
+  // The planner enforces a slightly lower floor than the reserve so it won't add a
+  // stop just to gain the last couple percent; the real reserve still drives the UI.
+  const planReserve = Math.max(0, reserve - RESERVE_SLACK);
   const waypoints = (STATE && STATE.waypoints) || [];
   const manualStops = getManualStops();
   // A waypoint charges either to an explicit slider % OR via "from time here"
@@ -3422,7 +3441,7 @@ async function updateChargingPlan(rt, e, temp){
   // plan is built afterward with the resolved targets.
   const resolvePowerAnchors = (anchors, chargersForTiming) => {
     if (!anchors.some(a => a.mode === 'power' && a.powerKW > 0)) return;
-    const prov = planJourney(planMi, anchors, planNrg, startSoc, reserve, chargersForTiming);
+    const prov = planJourney(planMi, anchors, planNrg, startSoc, planReserve, chargersForTiming);
     const tl = walkTimeline(prov, rt, round, oneWay);
     if (!tl) return;   // no departure date set → can't time it; keep the fallback %
     anchors.forEach(a => {
@@ -3442,7 +3461,7 @@ async function updateChargingPlan(rt, e, temp){
     const manual = anchors.filter(a => a.manual);
     if (!manual.length) return;
     for (let pass = 0; pass < 2; pass++){
-      const prov = planJourney(planMi, anchors, planNrg, startSoc, reserve, chargersForTiming);
+      const prov = planJourney(planMi, anchors, planNrg, startSoc, planReserve, chargersForTiming);
       if (!prov || !prov.stops) return;
       manual.forEach(a => {
         const provStop = prov.stops.find(s => s.manual && Math.abs(s.alongMi - a.mile) < 0.5);
@@ -3463,7 +3482,7 @@ async function updateChargingPlan(rt, e, temp){
   // has pinned manual charge stops — those must be honored, so route through the
   // planner even if the trip would otherwise fit on the starting charge.
   if (!chargingWps.length && !manualStops.length){
-    const reachStart = nrg.reachMi(0, startSoc, reserve);
+    const reachStart = nrg.reachMi(0, startSoc, planReserve);
     if (!round && oneWay <= reachStart){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you can do this on the starting charge.</div>`;
@@ -3477,7 +3496,7 @@ async function updateChargingPlan(rt, e, temp){
     // the destination top-up (the planner charges the dest anchor to 90%) —
     // checked on the mirrored energy model. Otherwise fall through to the full
     // planner, which adds a return-leg stop if 90% can't get you home.
-    if (round && canChargeDest && oneWay <= reachStart && planMi <= planNrg.reachMi(oneWay, 90, reserve)){
+    if (round && canChargeDest && oneWay <= reachStart && planMi <= planNrg.reachMi(oneWay, 90, planReserve)){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No DC fast stop needed en route — you'll charge at your destination before the return.</div>`;
       setVerdict('ok', '✅', `No stop needed each way — just top up at your destination before heading back.`);
@@ -3486,7 +3505,7 @@ async function updateChargingPlan(rt, e, temp){
       renderExport(null, round, oneWay);
       return;
     }
-    if (round && !canChargeDest && planMi <= planNrg.reachMi(0, startSoc, reserve)){
+    if (round && !canChargeDest && planMi <= planNrg.reachMi(0, startSoc, planReserve)){
       card.style.display = 'block';
       body.innerHTML = `<div class="stops-note">✅ No charging stop needed — the whole round trip fits on your starting charge.</div>`;
       setVerdict('ok', '✅', `No charging stop needed — the whole round trip is within range.`);
@@ -3509,7 +3528,7 @@ async function updateChargingPlan(rt, e, temp){
     if (round && canChargeDest) acAnchors.push(destAnchor());
     resolvePowerAnchors(acAnchors, []);   // set "from time here" targets from dwell
     resolveAddedAnchors(acAnchors, []);   // set pinned-charger targets from add %/kWh
-    const acOnly = planJourney(planMi, acAnchors, planNrg, startSoc, reserve, []);
+    const acOnly = planJourney(planMi, acAnchors, planNrg, startSoc, planReserve, []);
     if (acOnly.feasible && !acOnly.stops.some(s => !s.waypoint)){
       card.style.display = 'block';
       renderStops(acOnly, e, reserve, round, startSoc, planNrg, oneWay);
@@ -3577,17 +3596,18 @@ async function updateChargingPlan(rt, e, temp){
   // moment you arrive — instead of inserting a marginal extra stop to protect it.
   // (This is what kills the "stop 2 min to add 5%" stops near a charged destination.)
   const destHasCharger = allChargers.some(c => c.alongMi >= planMi - DEST_NEAR_MI);
-  const destFloor = destHasCharger ? Math.min(reserve, DEST_CHARGER_FLOOR) : reserve;
+  const destFloor = destHasCharger ? Math.min(planReserve, DEST_CHARGER_FLOOR) : planReserve;
   // Plan with your preferred networks (Tesla / EA / ChargePoint) first. If that
   // leaves a gap no single charge can bridge, replan allowing any compatible CCS
   // charger so a normal interstate route doesn't dead-end — and flag that some
   // stops fall outside the preferred networks.
-  let plan = planJourney(planMi, anchors, planNrg, startSoc, reserve, prefChargers, destFloor);
+  let plan = planJourney(planMi, anchors, planNrg, startSoc, planReserve, prefChargers, destFloor);
   if (!plan.feasible){
-    const alt = planJourney(planMi, anchors, planNrg, startSoc, reserve, allChargers, destFloor);
+    const alt = planJourney(planMi, anchors, planNrg, startSoc, planReserve, allChargers, destFloor);
     if (alt.feasible){ alt.usedNonPreferred = true; plan = alt; }
   }
-  plan.destRelaxed = destFloor < reserve;   // arrival may dip below the reserve thanks to a destination charger
+  plan.destRelaxed = destFloor < reserve;   // arrival may dip below the reserve thanks to slack or a destination charger
+  plan.destHasCharger = destHasCharger;
   // If the planner's gap lands where a charger lookup FAILED (OCM throttled/offline),
   // it's missing data, not a real desert — flag it so the message says "retry" rather
   // than "add a waypoint". Failed miles are on the OUTBOUND leg; on a round trip they
@@ -3752,7 +3772,8 @@ function buildItineraryHtml(plan, tl, round, oneWay, startSoc, nrg){
   const sumParts = [`<b>${spanDays}-day trip</b>`];
   if (nights) sumParts.push(`${nights} night${nights > 1 ? 's' : ''} en route`);
   if (fastN)  sumParts.push(`${fastN} fast charge${fastN > 1 ? 's' : ''}`);
-  sumParts.push(`arrive ${round ? 'home ' : ''}${wkday(finalMs)} ~<b>${Math.round(plan.arriveSoc)}%</b>`);
+  const arrMi = nrg ? plan.arriveSoc / 100 * nrg.batt * nrg.effEff : null;
+  sumParts.push(`arrive ${round ? 'home ' : ''}${wkday(finalMs)} ~<b>${Math.round(plan.arriveSoc)}%</b>${arrMi != null && isFinite(arrMi) ? ` (~${Math.round(arrMi)} mi left)` : ''}`);
   let html = `<div class="itin-summary">${sumParts.join(' &nbsp;·&nbsp; ')}</div><div class="itin">`;
 
   // ── Render rows grouped by calendar day ──
@@ -3977,9 +3998,11 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
     return;
   }
   if (!plan.stops.length){
-    const lowNote = (plan.destRelaxed && plan.arriveSoc < reserve - 0.5)
+    const lowNote = (plan.destHasCharger && plan.arriveSoc < reserve - 0.5)
       ? ` There's a compatible fast charger ${roundTrip ? 'near home' : 'at your destination'} if you want to top up.` : '';
-    body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you'll arrive around ${Math.round(plan.arriveSoc)}%.${lowNote}</div>`;
+    const rMi = nrg ? plan.arriveSoc / 100 * nrg.batt * nrg.effEff : null;
+    const rTxt = (rMi != null && isFinite(rMi)) ? ` (~${Math.round(rMi)} mi range left)` : '';
+    body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you'll arrive around ${Math.round(plan.arriveSoc)}%${rTxt}.${lowNote}</div>`;
     return;
   }
   const dcfc = plan.stops.filter(isDcStop);
@@ -3991,7 +4014,9 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   const nWp = plan.stops.length - dcfc.length;
   const wpNote = nWp ? ` + ${nWp} waypoint charge${nWp>1?'s':''}` : '';
   const nNonPref = dcfc.filter(s => s.preferred === false).length;
-  setVerdict('ok', '✅', `Doable with <b>${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}</b>${wpNote} (~${Math.round(totalMin)} min fast-charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
+  const arriveRangeMi = nrg ? plan.arriveSoc / 100 * nrg.batt * nrg.effEff : null;
+  const arriveRangeTxt = (arriveRangeMi != null && isFinite(arriveRangeMi)) ? ` &nbsp;·&nbsp; ~${Math.round(arriveRangeMi)} mi range left` : '';
+  setVerdict('ok', '✅', `Doable with <b>${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}</b>${wpNote} (~${Math.round(totalMin)} min fast-charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>${arriveRangeTxt}.`);
   renderSocProfile(plan, startSoc, reserve, nrg, roundTrip, oneWay);
   const exN = getExcludedChargers().length;
   const exNote = exN ? `<div class="stops-note">🚫 You removed <b>${exN}</b> charger${exN>1?'s':''} from the plan. <button type="button" class="adj-toggle" onclick="restoreExcludedChargers()">Restore removed</button></div>` : '';
@@ -4004,9 +4029,9 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
     return;
   }
   if (titleEl) titleEl.innerHTML = '⚡ Charging stops';
-  let html = exNote + `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive ${roundTrip?'home':''} around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
+  let html = exNote + `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive ${roundTrip?'home':''} around <b>${Math.round(plan.arriveSoc)}%</b>${arriveRangeTxt}</div>`;
   if (nNonPref) html += `<div class="stops-note">ℹ️ To bridge a gap, ${nNonPref>1?`${nNonPref} stops use chargers`:'one stop uses a charger'} outside your preferred networks (Tesla / EA / ChargePoint), marked <b>other network</b> below. ${nNonPref>1?'They’re':'It’s'} a standard CCS station${nNonPref>1?'s':''} — start ${nNonPref>1?'them':'it'} with that network’s own app or a tap-to-pay card.</div>`;
-  if (plan.destRelaxed && plan.arriveSoc < reserve - 0.5) html += `<div class="stops-note">ℹ️ Planned to arrive ${roundTrip ? 'home' : 'at your destination'} around <b>${Math.round(plan.arriveSoc)}%</b> — a little under your ${Math.round(reserve)}% reserve, but there's a compatible fast charger ${roundTrip ? 'near home' : 'at the destination'}, so this skips a short extra top-up on the way. Add a stop if you'd rather keep the full buffer.</div>`;
+  if (plan.destHasCharger && plan.arriveSoc < reserve - 0.5) html += `<div class="stops-note">ℹ️ Planned to arrive ${roundTrip ? 'home' : 'at your destination'} around <b>${Math.round(plan.arriveSoc)}%</b> — a little under your ${Math.round(reserve)}% reserve, but there's a compatible fast charger ${roundTrip ? 'near home' : 'at the destination'}, so this skips a short extra top-up on the way. Add a stop if you'd rather keep the full buffer.</div>`;
   let dividerShown = false, n = 0, prevMi = 0;
   plan.stops.forEach((s) => {
     // For round trips, drop a "turnaround" divider when stops cross into the return leg.
@@ -4189,6 +4214,7 @@ function renderSocProfile(plan, startSoc, reserve, nrg, round, oneWay){
     dots += `<circle cx="${X(s.alongMi).toFixed(1)}" cy="${Y(arr).toFixed(1)}" r="3" fill="#16a34a"/>`;
   });
   const endLow = endSoc < reserve - 0.5;
+  const arrMi = (nrg.batt && nrg.effEff) ? endSoc / 100 * nrg.batt * nrg.effEff : null;
   dots += `<circle cx="${X(totalMi).toFixed(1)}" cy="${Y(endSoc).toFixed(1)}" r="3.6" fill="${endLow ? '#ef4444' : '#16a34a'}"/>`;
   // Start / arrival % callouts.
   const labels = `<text x="${X(0).toFixed(1)}" y="${(Y(startSoc) - 6).toFixed(1)}" font-size="10.5" font-weight="700" fill="currentColor">${Math.round(startSoc)}%</text>`
@@ -4202,6 +4228,7 @@ function renderSocProfile(plan, startSoc, reserve, nrg, round, oneWay){
     + `<polygon points="${areaPts}" fill="#6366f1" fill-opacity="0.08"/>`
     + segs + dots + labels + xaxis
     + `</svg>`
+    + `<div class="soc-arrive${endLow ? ' low' : ''}">Arrive ~${Math.round(endSoc)}%${arrMi != null ? ` &nbsp;·&nbsp; ~${Math.round(arrMi)} mi range left` : ''}</div>`
     + `<div class="soc-legend"><span><i style="background:#6366f1"></i>driving (down)</span><span><i style="background:#16a34a"></i>charging (up)</span><span><i class="dash"></i>reserve</span>`
     + (endLow ? `<span style="color:#ef4444;font-weight:600">⚠ arrives below reserve</span>` : '')
     + `</div></div>`;
