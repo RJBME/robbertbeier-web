@@ -317,6 +317,30 @@ permalink: /trip-calculator/
   .stops-key button { padding: 8px 14px; border-radius: 8px; border: none; background: var(--link); color: #fff; font-weight: 600; font-size: 0.8rem; cursor: pointer; }
   .stops-key a { color: var(--link); }
 
+  /* ── Manual charge-stop controls (adjust a suggested stop / add a charger) ── */
+  .stop-adjust { margin-top: 7px; }
+  .adj-toggle { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 12px; cursor: pointer;
+    border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--tc-muted); transition: all 0.15s; }
+  .adj-toggle:hover { border-color: var(--link); color: var(--link); }
+  .adj-form { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 8px; padding: 8px 10px;
+    border: 1px solid var(--dash-border); border-radius: 8px; background: var(--bg); }
+  .adj-form.hidden { display: none; }
+  .adj-form label { font-size: 0.72rem; color: var(--tc-muted); font-weight: 600; }
+  .adj-form .adj-val { width: 66px; padding: 5px 7px; border-radius: 6px; border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--text); font-size: 0.78rem; text-align: right; }
+  .adj-form .adj-unit { padding: 5px 6px; border-radius: 6px; border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--text); font-size: 0.78rem; }
+  .adj-form button { padding: 5px 12px; border-radius: 7px; border: none; background: var(--link); color: #fff; font-weight: 600; font-size: 0.75rem; cursor: pointer; }
+  .adj-form button.adj-remove { background: var(--dash-card); color: #ef4444; border: 1px solid var(--dash-border); }
+  .adj-form button.adj-remove:hover { border-color: #ef4444; }
+  .manual-badge { display: inline-block; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 7px; border-radius: 10px; margin-left: 6px; vertical-align: middle; background: #5d3fd320; color: #5d3fd3; }
+  .add-charge-panel { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--dash-border); }
+  .add-charge-panel .acp-head { font-size: 0.72rem; font-weight: 700; color: var(--tc-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .add-charge-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .add-charge-row select { flex: 1 1 200px; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
+  .add-charge-row input { width: 70px; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; text-align: right; }
+  .add-charge-row .acp-unit { width: auto; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--dash-border); background: var(--bg); color: var(--text); font-size: 0.8rem; }
+  .add-charge-row button { padding: 7px 14px; border-radius: 8px; border: none; background: var(--link); color: #fff; font-weight: 600; font-size: 0.8rem; cursor: pointer; }
+  @media (max-width: 600px) { .add-charge-row select { flex: 1 1 100%; } }
+
   /* ── Multi-day trip itinerary (road-trip view of the stops card) ──
      A day-grouped vertical timeline with arrival/departure clock times, charging
      woven in, and overnight stays called out. Single-day trips keep the compact
@@ -587,6 +611,11 @@ permalink: /trip-calculator/
           <label>Efficiency override <span class="opt-tag">(optional)</span></label>
           <input id="effOverride" type="number" step="0.05" min="0.5" max="6" placeholder="use model">
           <span class="hint">mi/kWh — blank = use model</span>
+        </div>
+        <div class="field">
+          <label>Usable battery override <span class="opt-tag">(optional)</span></label>
+          <input id="battOverride" type="number" step="0.5" min="10" max="250" placeholder="use model">
+          <span class="hint">kWh — blank = use model/log data</span>
         </div>
         <div class="field">
           <label>Trip type</label>
@@ -1532,6 +1561,9 @@ async function tripTemp(lat, lon, dateStr){
 //  Main flow
 // ============================================================
 let MAP, ROUTE_LAYER, STATE = null, LAST_ETA = null, LAST_EST = null;
+// Manual charge stops staged by a loaded/imported trip, applied once the route is
+// (re)planned (they reference charger coordinates, so they're route-independent).
+let PENDING_MANUAL = null;
 async function planTrip(){
   const btn = document.getElementById('goBtn');
   const stops = getRouteStops().filter(s => s.addr);
@@ -1584,6 +1616,9 @@ async function planTrip(){
 
     setStatus('');
     STATE = { A, B, routes, temp, sel: 0, waypoints };
+    // Re-attach any manual charge stops staged by a loaded/imported trip.
+    if (PENDING_MANUAL && PENDING_MANUAL.length){ STATE.manualStops = PENDING_MANUAL; }
+    PENDING_MANUAL = null;
     renderRouteOptions();
     compute(A, B, routes[0], temp);
     document.getElementById('results').style.display = 'block';
@@ -1613,11 +1648,15 @@ function estimate(rt, temp){
   const ovr      = parseFloat(document.getElementById('effOverride').value);
   const hasOvr   = !isNaN(ovr) && ovr > 0;
   const effEff   = hasOvr ? ovr : modelEff;
+  const battOvrRaw = parseFloat(document.getElementById('battOverride').value);
+  const hasBattOvr = !isNaN(battOvrRaw) && battOvrRaw > 0;
+  const batt     = hasBattOvr ? battOvrRaw : m.battery;
+  const battSrc  = hasBattOvr ? 'your manual override' : m.battSrc;
   const energy   = miles / effEff;
-  return { round, miles, hours: rt.hours * (round ? 2 : 1), vehName, m, batt: m.battery,
+  return { round, miles, hours: rt.hours * (round ? 2 : 1), vehName, m, batt,
            baseEff: m.baseEff, tempEff, tempMult: tempEff / m.baseEff, road, wx,
            rawModelEff, modelEff, calMult: cal.mult, calN: cal.n,
-           hasOvr, effEff, energy, pctBatt: energy / m.battery * 100 };
+           hasOvr, hasBattOvr, battSrc, effEff, energy, pctBatt: energy / batt * 100 };
 }
 
 function renderRouteOptions(){
@@ -1746,7 +1785,7 @@ function compute(A, B, rt, temp){
   } else {
     calRow.style.display = 'none';
   }
-  document.getElementById('bBatt').textContent = e.batt.toFixed(1) + ' kWh  (' + e.m.battSrc + ')';
+  document.getElementById('bBatt').textContent = e.batt.toFixed(1) + ' kWh  (' + e.battSrc + ')';
 
   // SoC + verdict
   buildVerdict(e.energy, e.batt, e.effEff);
@@ -2234,6 +2273,7 @@ function rebalanceCharges(stops, startSoc, reserve, destFloor, nrg, totalMi){
       const s = stops[i];
       s.arriveSoc = soc - nrg.socDrop(pos, s.alongMi);
       s.addedKWh = Math.max(0, s.target - s.arriveSoc) / 100 * batt;
+      if (s.dc && s.maxKW) s.mins = chargeMinutes(s.arriveSoc, s.target, batt, s.maxKW);
       soc = s.target; pos = s.alongMi; i++; continue;
     }
     let j = i; const idxs = [];
@@ -2285,9 +2325,15 @@ function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers, destFlo
     const r = planSegmentCapped(segStart, wp.mile, soc, reserve, chargers, nrg);
     r.stops.forEach(s => { all.push(s); if (s.overCap) overCap = true; });
     if (!r.feasible) return { needed: true, feasible: false, stops: all, gapFrom: r.gapFrom, reachMi: r.reachMi };
-    all.push({ waypoint: true, name: wp.name, net: wp.acNet || 'AC', alongMi: wp.mile,
+    // A user-pinned manual charger (wp.dc) renders + times like a DC fast stop;
+    // an AC "charge here" waypoint fills slowly during a parked dwell (mins = 0).
+    const wpMins = (wp.dc && wp.maxKW) ? chargeMinutes(r.arriveSoc, wp.chargeTo, nrg.batt, wp.maxKW) : 0;
+    all.push({ waypoint: true, dc: !!wp.dc, manual: !!wp.manual, mstId: wp.mstId,
+      name: wp.name, net: wp.dc ? (wp.net || 'Other') : (wp.acNet || 'AC'),
+      maxKW: wp.maxKW || 0, alongMi: wp.mile,
       arriveSoc: r.arriveSoc, target: wp.chargeTo, lat: wp.lat, lon: wp.lon,
       addedKWh: Math.max(0, wp.chargeTo - r.arriveSoc) / 100 * nrg.batt, rate: wp.rate || 0,
+      mins: wpMins, addUnit: wp.addUnit, addValue: wp.addValue, offMi: wp.offMi || 0,
       depMs: wp.depMs != null ? wp.depMs : null, mode: wp.mode || null, powerKW: wp.powerKW || 0 });
     soc = wp.chargeTo;
     segStart = wp.mile;
@@ -2348,7 +2394,7 @@ function applyElevationToHero(e, nrg, totalMi){
 // Cost / gas report in the same stat-grid format as Road Trips on Analytics.
 function renderSummary(plan, energyTrip, fromHome, miles){
   const stops = (plan && plan.stops) || [];
-  const dcfc = stops.filter(s => !s.waypoint);
+  const dcfc = stops.filter(isDcStop);
   let dcfcKWh = 0, dcfcCost = 0, dcfcMin = 0;
   dcfc.forEach(s => {
     const r = (COST[s.net] != null) ? COST[s.net] : COST.publicAvg;
@@ -2356,7 +2402,7 @@ function renderSummary(plan, energyTrip, fromHome, miles){
   });
   // Waypoint charges (hotels, etc.) bill at their own rate — default $0/kWh.
   let wpKWh = 0, wpCost = 0;
-  stops.filter(s => s.waypoint).forEach(s => {
+  stops.filter(isAcStop).forEach(s => {
     const kwh = s.addedKWh || 0;
     wpKWh += kwh; wpCost += kwh * (s.rate || 0);
   });
@@ -2420,7 +2466,7 @@ function walkTimeline(plan, rt, round, oneWay){
   const events = [];
   ((plan && plan.stops) || []).forEach(s => {
     if (s.alongMi == null) return;
-    events.push({ mile: s.alongMi, mins: s.waypoint ? 0 : (s.mins || 0),
+    events.push({ mile: s.alongMi, mins: s.mins || 0,
       depMs: (s.waypoint && s.depMs != null) ? s.depMs : null, ref: s });
   });
   const seen = new Set(events.map(e => Math.round(e.mile)));
@@ -2645,14 +2691,14 @@ function printTripLog(){
           ? ` · 🌙 overnight${leaveStr ? `, leave ${leaveStr}` : ''}`
           : ` · stay ~${fmtMinsShort(s._dwellH*60)}${leaveStr ? `, leave ${leaveStr}` : ''}`)
       : '';
-    const planLine = s.waypoint
+    const planLine = isAcStop(s)
       ? `${mile} · charge to ${Math.round(s.target)}%${s.addedKWh!=null?` · +${Math.round(s.addedKWh)} kWh`:''}${stayLog}`
       : `${mile} · arrive ${Math.round(s.arriveSoc)}% → ${Math.round(s.target)}% · +${Math.round(s.addedKWh)} kWh · ~${Math.round(s.mins)} min · up to ${Math.round(s.maxKW)} kW`;
     const lk = chargerLinks(s);
     const addr = lk.addrStr ? `<div class="addr">${E(lk.addrStr)}</div>` : '';
     rows += `<tr>
       <td>${n}</td>
-      <td><div class="cname">${E(s.name)}${s.waypoint ? ' (charge here)' : ` — ${E(s.net)}`}</div><div class="plan">${E(planLine)}</div>${addr}</td>
+      <td><div class="cname">${E(s.name)}${isAcStop(s) ? ' (charge here)' : ` — ${E(s.net)}${s.manual ? ' · you added' : ''}`}</div><div class="plan">${E(planLine)}</div>${addr}</td>
       <td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td>
     </tr>`;
   });
@@ -2662,6 +2708,7 @@ function printTripLog(){
     ['Distance', E(dist)],
     ['Est. energy', E(energy)],
     ['Est. efficiency', E(eff) + ' mi/kWh'],
+    ['Usable battery', E(txt('bBatt')) || '—'],
     ['Trip temp', E(temp) + (STATE.temp && STATE.temp.src ? ' (' + E(STATE.temp.src) + ')' : '')],
     ['Departure', E(depStr)],
     ['Est. arrival' + (round ? ' (at dest.)' : ''), E(arrStr)],
@@ -2751,8 +2798,8 @@ function printGuidanceSheet(){
   const dd = document.getElementById('depDate').value;
 
   const stops = (plan && plan.stops) || [];
-  const dcfc  = stops.filter(s => !s.waypoint);
-  const acWp  = stops.filter(s => s.waypoint);
+  const dcfc  = stops.filter(isDcStop);
+  const acWp  = stops.filter(isAcStop);
   // Total fast-charging across the whole trip (for the bottom line).
   const totalChargeMins = dcfc.reduce((sum, x) => sum + (x.mins || 0), 0);
 
@@ -2819,7 +2866,7 @@ function printGuidanceSheet(){
     const links = (lk.apple || lk.plug)
       ? `<div class="cs-links">${lk.apple ? `<a href="${lk.apple}" target="_blank" rel="noopener">📍 Open in Maps</a>` : ''}${lk.plug ? `<a href="${lk.plug}" target="_blank" rel="noopener">🔌 Check it on PlugShare</a>` : ''}</div>`
       : '';
-    if (s.waypoint){
+    if (isAcStop(s)){
       const fmtT = ms => new Date(ms).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' });
       const overnight = isOvernightStay(s);
       const badge = overnight ? `<span class="cheat-badge overnight">🌙 overnight</span>` : `<span class="cheat-badge slow">slow plug-in</span>`;
@@ -2843,7 +2890,7 @@ function printGuidanceSheet(){
       const how = NET_GUIDE[s.net] || NET_GUIDE_GENERIC;
       const tip = s.mins >= 25 ? 'Plenty of time for a meal or a walk.' : s.mins >= 12 ? 'Good time for a coffee or a restroom break.' : 'Quick top-up — just a few minutes.';
       cards += `<div class="cheat-stop">
-        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge fast">fast charge${s.net ? ` · ${E(s.net==='Other'?'another network':s.net)}` : ''}</span></div>
+        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge fast">fast charge${s.net ? ` · ${E(s.net==='Other'?'another network':s.net)}` : ''}</span>${s.manual ? ' <span class="cheat-badge" style="background:#5d3fd320;color:#5d3fd3">you added this stop</span>' : ''}</div>
         <div class="cs-where">${whereMi}${where ? ` · ${where}` : ''}${s.maxKW ? ` · up to ${Math.round(s.maxKW)} kW` : ''}</div>
         <div class="cs-do">Pull in with around <b>${Math.round(s.arriveSoc)}%</b> and <b>charge to ${Math.round(s.target)}%</b> — about <b>${Math.round(s.mins)} min</b>. ${tip}</div>
         <div class="cs-how"><b>How to charge here:</b> ${how}</div>
@@ -2930,6 +2977,70 @@ function closeTripLog(){
 function printTripLogNow(){ window.print(); }
 
 let CHARGER_LAYER = [];
+// A stop is a DC fast charge if it's an auto-suggested stop (not a waypoint) OR a
+// user-pinned manual charger (a waypoint tagged dc). An AC "charge here" waypoint
+// (hotel / Level-2 outlet) is neither — it's a slow parked charge.
+const isDcStop = s => !s.waypoint || !!s.dc;
+const isAcStop = s => !!(s.waypoint && !s.dc);
+
+// ── User-pinned manual charge stops ───────────────────────────────────────
+// Two entry points feed these: (1) "Adjust" on a suggested DC stop pins THAT
+// charger with a chosen amount of energy to add, and (2) "Add a charge stop"
+// pins a charger found along the route. Each records the charger identity plus
+// how much to add (% or kWh); the amount is resolved into a target SoC at plan
+// time from the stop's computed arrival. They live on STATE so a new trip clears
+// them, and are keyed by charger coordinates so re-adjusting the same charger
+// updates in place rather than stacking duplicates.
+function getManualStops(){ return (STATE && STATE.manualStops) || []; }
+function manualKey(lat, lon){ return 'm:' + (+lat).toFixed(4) + ',' + (+lon).toFixed(4); }
+function upsertManualStop(o){
+  if (!STATE) return;
+  if (!STATE.manualStops) STATE.manualStops = [];
+  const i = STATE.manualStops.findIndex(m => m.id === o.id);
+  if (i >= 0) STATE.manualStops[i] = { ...STATE.manualStops[i], ...o };
+  else STATE.manualStops.push(o);
+  refresh();
+}
+function removeManualStop(id){
+  if (!STATE || !STATE.manualStops) return;
+  STATE.manualStops = STATE.manualStops.filter(m => m.id !== id);
+  refresh();
+}
+// Apply an "adjust / add charge stop" form (the button's enclosing .adj-form
+// carries the charger identity in data-* attributes; the inputs carry the amount).
+function applyChargeAdjust(btn){
+  const f = btn.closest('.adj-form');
+  if (!f) return;
+  const lat = parseFloat(f.dataset.lat), lon = parseFloat(f.dataset.lon);
+  if (!isFinite(lat) || !isFinite(lon)) return;
+  const valEl = f.querySelector('.adj-val'), unitEl = f.querySelector('.adj-unit');
+  const value = parseFloat(valEl ? valEl.value : '');
+  if (!(value > 0)){ setStatus('Enter how much to add at this stop (a positive % or kWh).', true); return; }
+  upsertManualStop({
+    id: manualKey(lat, lon), lat, lon,
+    name: f.dataset.name || 'Charger', net: f.dataset.net || 'Other',
+    maxKW: parseFloat(f.dataset.kw) || MIN_DCFC_KW,
+    unit: (unitEl && unitEl.value === 'pct') ? 'pct' : 'kwh',
+    value
+  });
+}
+// "Add a charge stop" chooser: a charger is picked from the route's found list
+// (its identity is JSON in the option's value), then the amount form applies it.
+function addChargeStopFromChooser(){
+  const sel = document.getElementById('addChargeSel');
+  const valEl = document.getElementById('addChargeVal');
+  const unitEl = document.getElementById('addChargeUnit');
+  if (!sel || !sel.value){ setStatus('Pick a charger to add as a stop.', true); return; }
+  let c; try { c = JSON.parse(sel.value); } catch(_){ return; }
+  const value = parseFloat(valEl ? valEl.value : '');
+  if (!(value > 0)){ setStatus('Enter how much to add at this stop (a positive % or kWh).', true); return; }
+  upsertManualStop({
+    id: manualKey(c.lat, c.lon), lat: c.lat, lon: c.lon,
+    name: c.name || 'Charger', net: c.net || 'Other', maxKW: c.maxKW || MIN_DCFC_KW,
+    unit: (unitEl && unitEl.value === 'pct') ? 'pct' : 'kwh', value
+  });
+}
+
 async function updateChargingPlan(rt, e, temp){
   const card = document.getElementById('stopsCard');
   const body = document.getElementById('stopsBody');
@@ -2951,6 +3062,7 @@ async function updateChargingPlan(rt, e, temp){
   const startSoc = Math.max(0, Math.min(100, +socEl.value));
   const reserve = Math.max(0, Math.min(50, +document.getElementById('reserve').value || 0));
   const waypoints = (STATE && STATE.waypoints) || [];
+  const manualStops = getManualStops();
   // A waypoint charges either to an explicit slider % OR via "from time here"
   // (a charging power that fills the battery during the parked dwell).
   const isChargingWp = w => (!isNaN(w.chargeTo) && w.chargeTo > 0) || (w.chargeMode === 'power' && w.powerKW > 0);
@@ -3024,6 +3136,29 @@ async function updateChargingPlan(rt, e, temp){
   };
   const destAnchor = () => ({ mile: oneWay, chargeTo: 90, name: 'Destination charge',
     lat: STATE.B.lat, lon: STATE.B.lon, rate: parseFloat(document.getElementById('destRate').value) || 0 });
+  // User-pinned DC charger anchors: each is projected onto THIS route, mirrored
+  // onto the return leg like the AC anchors, and carries the charger identity so
+  // it renders + times as a fast stop. Its target SoC is resolved from the chosen
+  // "add %/kWh" once we know its arrival (resolveAddedAnchors, below).
+  const manualAnchorList = () => {
+    const out = [];
+    manualStops.forEach(mst => {
+      let mile = null, offMi = 0;
+      if (_wpCoords && mst.lat != null && mst.lon != null){
+        const pr = projectCharger(_wpCoords, _wpCum, mst.lat, mst.lon);
+        if (pr && isFinite(pr.alongMi)){ mile = pr.alongMi; offMi = pr.offMi; }
+      }
+      if (mile == null) return;
+      const rate = (mst.rate != null && mst.rate !== '') ? +mst.rate
+        : ((COST[mst.net] != null) ? COST[mst.net] : COST.publicAvg);
+      const base = { chargeTo: 80, name: mst.name, lat: mst.lat, lon: mst.lon, rate,
+        manual: true, dc: true, net: mst.net || 'Other', maxKW: mst.maxKW || MIN_DCFC_KW,
+        addUnit: mst.unit, addValue: +mst.value || 0, offMi, mstId: mst.id };
+      out.push({ ...base, mile });
+      if (round && mile < oneWay - 0.5) out.push({ ...base, mile: 2 * oneWay - mile, returnLeg: true });
+    });
+    return out;
+  };
   // Resolve "from time here" (power-mode) charges. The target % isn't known until
   // we know how long you're parked, which needs the ARRIVAL time, which needs a
   // plan. So run a provisional plan, walk its timeline for each power stop's
@@ -3045,11 +3180,31 @@ async function updateChargingPlan(rt, e, temp){
       anchors.forEach(b => { if (b.wpIndex === a.wpIndex) b.chargeTo = target; });
     });
   };
+  // Resolve each pinned manual charger's target from its "add %/kWh". Its arrival
+  // SoC comes from a provisional plan (like resolvePowerAnchors); two passes let
+  // back-to-back manual stops converge on each other's arrival. Mutates in place.
+  const resolveAddedAnchors = (anchors, chargersForTiming) => {
+    const manual = anchors.filter(a => a.manual);
+    if (!manual.length) return;
+    for (let pass = 0; pass < 2; pass++){
+      const prov = planJourney(planMi, anchors, planNrg, startSoc, reserve, chargersForTiming);
+      if (!prov || !prov.stops) return;
+      manual.forEach(a => {
+        const provStop = prov.stops.find(s => s.manual && Math.abs(s.alongMi - a.mile) < 0.5);
+        if (!provStop || provStop.arriveSoc == null) return;
+        const arrive = provStop.arriveSoc;
+        const add = a.addUnit === 'kwh' ? (a.addValue / planNrg.batt * 100) : a.addValue;
+        a.chargeTo = Math.max(arrive, Math.min(100, arrive + add));
+      });
+    }
+  };
   const energyTrip = planNrg.energyKWh(0, planMi);
   const fromHome = STATE && STATE.A && haversine(STATE.A.lat, STATE.A.lon, HOME.lat, HOME.lon) < 3;
 
-  // Reachable without charging? (no key/API call needed)
-  if (!chargingWps.length){
+  // Reachable without charging? (no key/API call needed). Skipped when the user
+  // has pinned manual charge stops — those must be honored, so route through the
+  // planner even if the trip would otherwise fit on the starting charge.
+  if (!chargingWps.length && !manualStops.length){
     const reachStart = nrg.reachMi(0, startSoc, reserve);
     if (!round && oneWay <= reachStart){
       card.style.display = 'block';
@@ -3084,18 +3239,18 @@ async function updateChargingPlan(rt, e, temp){
     }
   }
 
-  // AC "charge here" waypoints can make a trip feasible with no DC fast stop at
-  // all — and that needs no Open Charge Map key. Before asking for one, try a
-  // keyless plan that uses only the waypoint charges; if it works without any
-  // DC stop, render it and stop here.
-  if (chargingWps.length){
-    // Keyless attempt: can the AC "charge here" stops alone (plus a destination
-    // top-up on round trips) carry the trip with NO DC fast stop? Round trips now
-    // mirror each AC charge onto the return leg, so they get the same treatment
-    // one-way trips always had — no Open Charge Map key needed.
-    const acAnchors = acAnchorList();
+  // AC "charge here" waypoints (and pinned manual charger stops) can make a trip
+  // feasible with no auto-suggested DC fast stop at all — and that needs no Open
+  // Charge Map key. Before asking for one, try a keyless plan that uses only the
+  // waypoint / manual charges; if it works without any auto DC stop, render it.
+  if (chargingWps.length || manualStops.length){
+    // Keyless attempt: can the AC "charge here" stops + pinned manual chargers
+    // (plus a destination top-up on round trips) carry the trip with NO auto DC
+    // stop? Round trips mirror each charge onto the return leg — no OCM key needed.
+    const acAnchors = acAnchorList().concat(manualAnchorList());
     if (round && canChargeDest) acAnchors.push(destAnchor());
     resolvePowerAnchors(acAnchors, []);   // set "from time here" targets from dwell
+    resolveAddedAnchors(acAnchors, []);   // set pinned-charger targets from add %/kWh
     const acOnly = planJourney(planMi, acAnchors, planNrg, startSoc, reserve, []);
     if (acOnly.feasible && !acOnly.stops.some(s => !s.waypoint)){
       card.style.display = 'block';
@@ -3152,9 +3307,10 @@ async function updateChargingPlan(rt, e, temp){
   // top-up are SoC-reset points. The mirrored energy model is already planNrg.
   const allChargers = round ? mirrorForRoundTrip(chargers, rt.elev, oneWay).chargers : chargers;
   const prefChargers = allChargers.filter(c => c.preferred);
-  const anchors = acAnchorList();
+  const anchors = acAnchorList().concat(manualAnchorList());
   if (round && canChargeDest) anchors.push(destAnchor());
   resolvePowerAnchors(anchors, prefChargers);   // set "from time here" targets from dwell
+  resolveAddedAnchors(anchors, prefChargers);   // set pinned-charger targets from add %/kWh
   // If a compatible fast charger sits at / near the final destination, plan the
   // last leg to a lower arrival floor than the full reserve — you can top up the
   // moment you arrive — instead of inserting a marginal extra stop to protect it.
@@ -3316,7 +3472,7 @@ function buildItineraryHtml(plan, tl, round, oneWay, startSoc, nrg){
     const overnight = dwellH > 0 && arriveMs != null && depMs != null && !sameDay(arriveMs, depMs);
     const nightsCount = overnight ? nightsBetween(arriveMs, depMs) : 0;
     if (overnight) nights += nightsCount;
-    const kind = s.waypoint ? (overnight ? 'overnight' : (dwellH > 0 ? 'stopover' : 'wpcharge')) : 'charge';
+    const kind = isDcStop(s) ? 'charge' : (overnight ? 'overnight' : (dwellH > 0 ? 'stopover' : 'wpcharge'));
     items.push({ kind, ms: arriveMs != null ? arriveMs : tl.startMs, stop: s, onReturn,
       legMi, legEff, mileLabel, arriveMs, depMs, dwellH, overnight, nightsCount });
     prevMi = s.alongMi;
@@ -3331,7 +3487,7 @@ function buildItineraryHtml(plan, tl, round, oneWay, startSoc, nrg){
   // ── Headline summary: days / nights / fast charges / when you arrive ──
   const finalMs = round ? tl.endArriveMs : tl.destArriveMs;
   const spanDays = tripDay(finalMs);
-  const fastN = plan.stops.filter(s => !s.waypoint).length;
+  const fastN = plan.stops.filter(isDcStop).length;
   const sumParts = [`<b>${spanDays}-day trip</b>`];
   if (nights) sumParts.push(`${nights} night${nights > 1 ? 's' : ''} en route`);
   if (fastN)  sumParts.push(`${fastN} fast charge${fastN > 1 ? 's' : ''}`);
@@ -3365,7 +3521,7 @@ function buildItineraryHtml(plan, tl, round, oneWay, startSoc, nrg){
         : '';
       html += `<div class="itin-row charge"><div class="itin-time">${clock(it.arriveMs)}</div><div class="itin-mark"><span class="itin-ico">⚡</span></div>`
         + `<div class="itin-body">`
-        + `<div class="itin-title">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net] || 'net-other'}">${esc(s.net === 'Other' ? 'other network' : s.net)}</span>${it.onReturn ? '<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>' : ''}</div>`
+        + `<div class="itin-title">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net] || 'net-other'}">${esc(s.net === 'Other' ? 'other network' : s.net)}</span>${s.manual ? '<span class="net-badge" style="background:#5d3fd320;color:#5d3fd3">you added</span>' : ''}${it.onReturn ? '<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>' : ''}</div>`
         + `<div class="itin-detail">${s.town ? esc(s.town) + ' · ' : ''}${it.mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi > 1 ? ` · ${s.offMi.toFixed(1)} mi off route` : ''}</div>`
         + legLine(it)
         + `<div class="itin-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min${s._depMs != null ? `, leave ${clock(s._depMs)}` : ''} &nbsp;·&nbsp; ~$${dcCost(s).toFixed(2)}${s.overCap ? ` <span style="color:#eab308">⚠ above 80% — no closer charger</span>` : ''}</div>`
@@ -3405,6 +3561,71 @@ function buildItineraryHtml(plan, tl, round, oneWay, startSoc, nrg){
     }
   });
   html += `</div>`;
+  return html;
+}
+
+// The inline "adjust this charge" form for a single DC stop. For an auto-suggested
+// stop it starts collapsed behind a toggle; for an already-pinned manual stop it's
+// shown open with the current amount + a Remove button. Applying it pins/updates a
+// manual charge stop keyed to this charger and re-plans the rest of the trip.
+function chargeAdjustFormHtml(s){
+  if (!(s.lat != null && s.lon != null)) return '';
+  const isManual = !!s.manual;
+  const unit = isManual ? (s.addUnit || 'kwh') : 'kwh';
+  const val = isManual && s.addValue > 0 ? Math.round(s.addValue) : '';
+  const data = `data-lat="${esc(s.lat)}" data-lon="${esc(s.lon)}" data-name="${esc(s.name)}" data-net="${esc(s.net||'Other')}" data-kw="${esc(s.maxKW||MIN_DCFC_KW)}"`;
+  const form = `<div class="adj-form${isManual ? '' : ' hidden'}" ${data}>`
+    + `<label>Add</label>`
+    + `<input class="adj-val" type="number" min="0" step="1" value="${val}" placeholder="e.g. 20">`
+    + `<select class="adj-unit"><option value="kwh"${unit==='kwh'?' selected':''}>kWh</option><option value="pct"${unit==='pct'?' selected':''}>%</option></select>`
+    + `<button type="button" onclick="applyChargeAdjust(this)">Recalculate</button>`
+    + (isManual ? `<button type="button" class="adj-remove" onclick="removeManualStop('${esc(s.mstId||'')}')">Remove</button>` : '')
+    + `</div>`;
+  const toggle = isManual ? '' : `<button type="button" class="adj-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">✎ Adjust charge</button>`;
+  return `<div class="stop-adjust">${toggle}${form}</div>`;
+}
+
+// "Add a charge stop" chooser (features: add chargers as stops). Lists chargers
+// found along the route that aren't already pinned, so the user can pin one with
+// a chosen amount of energy to add. `includeManualList` also renders the pinned
+// stops with edit/remove (used by the itinerary view, which has no inline forms).
+function manualStopsPanelHtml(plan, rt, includeManualList){
+  const manual = getManualStops();
+  let html = '';
+  if (includeManualList && manual.length){
+    html += `<div class="add-charge-panel"><div class="acp-head">Your added / adjusted charge stops</div>`;
+    manual.forEach(m => {
+      const unitPct = m.unit === 'pct';
+      html += `<div class="adj-form" data-lat="${esc(m.lat)}" data-lon="${esc(m.lon)}" data-name="${esc(m.name)}" data-net="${esc(m.net||'Other')}" data-kw="${esc(m.maxKW||MIN_DCFC_KW)}">`
+        + `<label>${esc(m.name)} — add</label>`
+        + `<input class="adj-val" type="number" min="0" step="1" value="${esc(m.value)}">`
+        + `<select class="adj-unit"><option value="kwh"${unitPct?'':' selected'}>kWh</option><option value="pct"${unitPct?' selected':''}>%</option></select>`
+        + `<button type="button" onclick="applyChargeAdjust(this)">Recalculate</button>`
+        + `<button type="button" class="adj-remove" onclick="removeManualStop('${esc(m.id)}')">Remove</button>`
+        + `</div>`;
+    });
+    html += `</div>`;
+  }
+  const chargers = (rt && rt.chargers) || [];
+  const pinned = new Set(manual.map(m => m.id));
+  const avail = chargers.filter(c => c.lat != null && c.lon != null && !pinned.has(manualKey(c.lat, c.lon)))
+    .sort((a, b) => a.alongMi - b.alongMi);
+  if (avail.length){
+    const opts = avail.map(c => {
+      const v = esc(JSON.stringify({ lat: c.lat, lon: c.lon, name: c.name, net: c.net, maxKW: c.maxKW }));
+      return `<option value="${v}">${esc(c.name)} · ${esc(c.net === 'Other' ? 'other network' : c.net)} · mile ${Math.round(c.alongMi)} · up to ${Math.round(c.maxKW)} kW</option>`;
+    }).join('');
+    html += `<div class="add-charge-panel"><div class="acp-head">➕ Add a charge stop</div>`
+      + `<div class="add-charge-row">`
+      +   `<select id="addChargeSel"><option value="">Pick a charger along the route…</option>${opts}</select>`
+      +   `<span style="font-size:0.75rem;color:var(--tc-muted)">add</span>`
+      +   `<input id="addChargeVal" type="number" min="0" step="1" placeholder="e.g. 20">`
+      +   `<select id="addChargeUnit" class="acp-unit"><option value="kwh">kWh</option><option value="pct">%</option></select>`
+      +   `<button type="button" onclick="addChargeStopFromChooser()">Add stop</button>`
+      + `</div>`
+      + `<div style="font-size:0.68rem;color:var(--tc-muted);margin-top:6px">The trip re-plans to charge the chosen amount here, then fills in any other stops still needed.</div>`
+      + `</div>`;
+  }
   return html;
 }
 
@@ -3454,12 +3675,12 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
     body.innerHTML = `<div class="stops-note">✅ No charging stop needed — you'll arrive around ${Math.round(plan.arriveSoc)}%.${lowNote}</div>`;
     return;
   }
-  const dcfc = plan.stops.filter(s => !s.waypoint);
+  const dcfc = plan.stops.filter(isDcStop);
   // Annotate each stop with arrival / leave times + dwell so a scheduled (e.g.
   // overnight) charge can show when you'll get there and when you'll leave.
   const _rt = (STATE && STATE.routes && STATE.routes[STATE.sel]) ? STATE.routes[STATE.sel] : null;
   const tl = _rt ? walkTimeline(plan, _rt, roundTrip, oneWay) : null;
-  const totalMin = dcfc.reduce((s,x)=>s+x.mins,0);
+  const totalMin = dcfc.reduce((s,x)=>s+(x.mins||0),0);
   const nWp = plan.stops.length - dcfc.length;
   const wpNote = nWp ? ` + ${nWp} waypoint charge${nWp>1?'s':''}` : '';
   const nNonPref = dcfc.filter(s => s.preferred === false).length;
@@ -3468,7 +3689,8 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   // Multi-day road trip → a day-grouped itinerary. Single-day → the compact list.
   if (tl && isMultiDayTimeline(tl)){
     if (titleEl) titleEl.innerHTML = '🗺️ Trip itinerary';
-    body.innerHTML = buildItineraryHtml(plan, tl, roundTrip, oneWay, startSoc, nrg);
+    body.innerHTML = buildItineraryHtml(plan, tl, roundTrip, oneWay, startSoc, nrg)
+      + manualStopsPanelHtml(plan, _rt, true);
     return;
   }
   if (titleEl) titleEl.innerHTML = '⚡ Charging stops';
@@ -3492,7 +3714,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
     const legInfo = legMi > 0
       ? `<div class="stop-leg">${Math.round(legMi)} mi ${prevMi > 0 ? 'since last charge' : 'since start'}${legEff > 0 ? ` &nbsp;·&nbsp; ~${legEff.toFixed(1)} mi/kWh this leg` : ''}</div>`
       : '';
-    if (s.waypoint){
+    if (isAcStop(s)){
       const stay = (s._dwellH > 0)
         ? ` &nbsp;·&nbsp; <small style="color:var(--tc-muted)">stay ~${fmtMinsShort(s._dwellH*60)}${s._depMs!=null?`, leave ${new Date(s._depMs).toLocaleString([], { weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false })}`:''}</small>`
         : '';
@@ -3512,17 +3734,18 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
       html += `<div class="stop">
         <div class="stop-num">${n}</div>
         <div class="stop-main">
-          <div class="stop-name">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net]||'net-other'}">${esc(s.net==='Other'?'other network':s.net)}</span>${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
+          <div class="stop-name">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net]||'net-other'}">${esc(s.net==='Other'?'other network':s.net)}</span>${s.manual?'<span class="manual-badge">you added</span>':''}${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
           <div class="stop-sub">${s.town ? esc(s.town) + ' · ' : ''}${mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
           <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min &nbsp;·&nbsp; ~$${(s.addedKWh * ((COST[s.net]!=null)?COST[s.net]:COST.publicAvg)).toFixed(2)}${s.overCap?` <span style="color:#eab308">⚠ above 80% — no closer charger</span>`:''}</div>
           ${legInfo}
           <div class="stop-links">${lk.addrStr ? `<span class="stop-addr">${esc(lk.addrStr)}</span>` : ''}${lk.apple ? `<a href="${lk.apple}" target="_blank" rel="noopener">📍 Apple Maps</a>` : ''}${lk.plug ? `<a href="${lk.plug}" target="_blank" rel="noopener">🔌 PlugShare</a>` : ''}</div>
+          ${chargeAdjustFormHtml(s)}
         </div>
       </div>`;
     }
     prevMi = s.alongMi;
   });
-  body.innerHTML = html;
+  body.innerHTML = html + manualStopsPanelHtml(plan, _rt, false);
 }
 
 function clearChargerMarkers(){ if (MAP && CHARGER_LAYER.length){ CHARGER_LAYER.forEach(m => MAP.removeLayer(m)); } CHARGER_LAYER = []; }
@@ -3532,14 +3755,14 @@ async function drawChargerMarkers(stops, waypoints){
   const colors = { 'Tesla':'#e82222', 'Electrify America':'#00963f', 'ChargePoint':'#f97316' };
   let n = 0;
   (stops || []).forEach(s => {
-    if (s.waypoint){
+    if (isAcStop(s)){
       const m = L.circleMarker([s.lat, s.lon], { radius: 9, color: '#fff', weight: 2, fillColor: '#16a34a', fillOpacity: 1 })
         .addTo(MAP).bindPopup(`<b>★ ${esc(s.name)}</b><br>Waypoint · AC charge to ${Math.round(s.target)}%`);
       CHARGER_LAYER.push(m);
     } else {
       n++;
       const m = L.circleMarker([s.lat, s.lon], { radius: 9, color: '#fff', weight: 2, fillColor: colors[s.net]||'#5d3fd3', fillOpacity: 1 })
-        .addTo(MAP).bindPopup(`<b>Stop ${n}: ${esc(s.name)}</b><br>${s.net} · up to ${Math.round(s.maxKW)} kW<br>Charge to ${Math.round(s.target)}% (~${Math.round(s.mins)} min)`);
+        .addTo(MAP).bindPopup(`<b>Stop ${n}: ${esc(s.name)}${s.manual ? ' (you added)' : ''}</b><br>${s.net} · up to ${Math.round(s.maxKW)} kW<br>Charge to ${Math.round(s.target)}% (~${Math.round(s.mins)} min)`);
       CHARGER_LAYER.push(m);
     }
   });
@@ -3650,14 +3873,15 @@ async function drawMap(A, B, geometry){
 
 // Tweaking vehicle / road / charge after a route is loaded → live re-estimate
 // (no re-routing or weather call needed — same route, new numbers)
-['vehSel','roadType','startSoc','reserve','roundTrip','effOverride','canChargeDest','destRate','depTime'].forEach(id => {
+['vehSel','roadType','startSoc','reserve','roundTrip','effOverride','battOverride','canChargeDest','destRate','depTime'].forEach(id => {
   document.getElementById(id).addEventListener('change', refresh);
 });
-// Live-update while typing the efficiency override, but DEBOUNCED — otherwise every
-// keystroke re-runs the whole estimate + charging-plan pipeline. 'change' (blur /
-// Enter / spinner) above still updates immediately.
+// Live-update while typing the efficiency / battery override, but DEBOUNCED —
+// otherwise every keystroke re-runs the whole estimate + charging-plan pipeline.
+// 'change' (blur / Enter / spinner) above still updates immediately.
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 document.getElementById('effOverride').addEventListener('input', debounce(refresh, 250));
+document.getElementById('battOverride').addEventListener('input', debounce(refresh, 250));
 
 // Show the "can charge at destination" option only when round trip is on, and the
 // destination $/kWh rate field only when that box is checked.
@@ -3688,10 +3912,11 @@ function collectTrip(){
     v: 1,
     stops: getRouteStops(),
     veh: val('vehSel'), depDate: val('depDate'), depTime: val('depTime'), arriveBy: val('arriveByTime'),
-    roadType: val('roadType'), effOverride: val('effOverride'),
+    roadType: val('roadType'), effOverride: val('effOverride'), battOverride: val('battOverride'),
     startSoc: val('startSoc'), reserve: val('reserve'), destRate: val('destRate'),
     roundTrip: document.getElementById('roundTrip').checked,
-    canChargeDest: document.getElementById('canChargeDest').checked
+    canChargeDest: document.getElementById('canChargeDest').checked,
+    manualStops: getManualStops()
   };
 }
 
@@ -3714,10 +3939,13 @@ function applyTrip(d){
   const vs = document.getElementById('vehSel');
   if (d.veh && [...vs.options].some(o => o.value === d.veh)) vs.value = d.veh;
   setV('depDate', d.depDate); setV('depTime', d.depTime); setV('arriveByTime', d.arriveBy); setV('roadType', d.roadType);
-  setV('effOverride', d.effOverride); setV('startSoc', d.startSoc);
+  setV('effOverride', d.effOverride); setV('battOverride', d.battOverride); setV('startSoc', d.startSoc);
   setV('reserve', d.reserve); setV('destRate', d.destRate);
   document.getElementById('roundTrip').checked = !!d.roundTrip;
   document.getElementById('canChargeDest').checked = !!d.canChargeDest;
+  // Stage manual charge stops to re-attach after the next plan (they reference
+  // charger coordinates, so they don't depend on the route being loaded yet).
+  PENDING_MANUAL = Array.isArray(d.manualStops) ? d.manualStops : null;
   onRoundTripToggle();
   return true;
 }
@@ -3766,6 +3994,7 @@ function tripToMarkdown(d, name){
   row('Arrive by', d.arriveBy);
   row('Road type', d.roadType);
   row('Efficiency override', d.effOverride ? d.effOverride + ' mi/kWh' : '');
+  row('Usable battery override', d.battOverride ? d.battOverride + ' kWh' : '');
   row('Start charge', d.startSoc !== '' ? d.startSoc + '%' : '');
   row('Reserve buffer', d.reserve !== '' ? d.reserve + '%' : '');
   row('Round trip', d.roundTrip ? 'yes' : '');
