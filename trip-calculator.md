@@ -514,8 +514,17 @@ permalink: /trip-calculator/
   .tlog-sheet .cs-links a { color: #1a4fd6; text-decoration: none; margin-right: 16px; white-space: nowrap; }
   .tlog-sheet .cheat-map { border: 1px solid #999; border-radius: 8px; padding: 8px; margin-top: 12px; background: #eef1f5; }
   .tlog-sheet .cheat-map svg { width: 100%; height: auto; display: block; }
+  .tlog-sheet .cheat-leaflet { width: 100%; height: 240px; border-radius: 6px; overflow: hidden; background: #eef1f5; }
+  .tlog-sheet .cheat-leaflet .leaflet-container { font: inherit; background: #eef1f5; }
+  .tlog-sheet .cheat-pin span { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+    border-radius: 50%; color: #fff; font-weight: 700; font-size: 12px; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
   .tlog-sheet .cheat-map-key { font-size: 10px; color: #555; margin-top: 6px; text-align: center; }
   .tlog-sheet .cheat-map-key b { color: #111; }
+  /* Editable box for hand-typed extra directions (prints with whatever you type). */
+  .tlog-sheet .cheat-notes { border: 1px solid #888; border-radius: 8px; padding: 10px 12px; margin-top: 6px;
+    min-height: 90px; font-size: 13px; line-height: 1.55; outline: none; white-space: pre-wrap; }
+  .tlog-sheet .cheat-notes:empty:before { content: attr(data-placeholder); color: #9aa1ab; }
+  .tlog-sheet .cheat-notes:focus { border-color: #0f766e; box-shadow: 0 0 0 2px #0f766e22; }
   .tlog-sheet .cheat-basics { border: 1px solid #888; border-radius: 8px; padding: 6px 12px 4px; margin-top: 6px; font-size: 12px; }
   .tlog-sheet .cheat-basics ul { margin: 6px 0 4px; padding-left: 18px; }
   .tlog-sheet .cheat-basics li { margin: 0 0 6px 0; line-height: 1.45; }
@@ -545,9 +554,11 @@ permalink: /trip-calculator/
     body.tlog-open .tlog-sheet tr, body.tlog-open .tlog-sheet .cheat-bottom,
     body.tlog-open .tlog-sheet .cheat-grid, body.tlog-open .tlog-sheet .cheat-stop,
     body.tlog-open .tlog-sheet .cheat-basics, body.tlog-open .tlog-sheet .cheat-call,
-    body.tlog-open .tlog-sheet .cheat-map {
+    body.tlog-open .tlog-sheet .cheat-notes, body.tlog-open .tlog-sheet .cheat-map {
       break-inside: avoid; page-break-inside: avoid; }
     body.tlog-open .tlog-sheet thead { display: table-header-group; }
+    /* On-screen map controls are noise on paper; keep the required attribution. */
+    body.tlog-open .leaflet-control-zoom { display: none !important; }
   }
 </style>
 
@@ -3000,8 +3011,43 @@ function buildRouteMiniMapSvg(rt, plan, round, oneWay){
     + `</svg><div class="cheat-map-key"><b>Start</b> → numbered <b>fast stops</b> → <b>${round ? 'destination (and back)' : 'destination'}</b>${n ? '' : ' · no charging stops'} · grid ${gStep}° lat/lon</div></div>`;
 }
 
-// ── Co-driver "cheat sheet" ──
-// A low-stress, plain-language guide for someone who rarely DC fast-charges: the
+// Live route map for the cheat sheet: real tiles/roads for context, drawn into
+// the #cheatMap container after the sheet is in the DOM. Tiles render as images
+// when you Save as PDF once they've loaded. Kept small to save space on paper.
+let CHEAT_MAP = null;
+async function initCheatMap(geo, plan, round){
+  const el = document.getElementById('cheatMap');
+  if (!el || !geo || !STATE || !STATE.A || !STATE.B) return;
+  try { await loadLeaflet(); } catch(_){ return; }
+  if (!document.body.contains(el)) return;            // sheet closed while Leaflet loaded
+  if (CHEAT_MAP){ CHEAT_MAP.remove(); CHEAT_MAP = null; }
+  const map = L.map(el, { scrollWheelZoom: false, preferCanvas: true });
+  CHEAT_MAP = map;
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    { attribution: '© OpenStreetMap, © CARTO', maxZoom: 19 }).addTo(map);
+  const line = L.geoJSON(geo, { style: { color: '#5d3fd3', weight: 4, opacity: 0.9 } }).addTo(map);
+  const A = STATE.A, B = STATE.B;
+  L.marker([A.lat, A.lon]).addTo(map).bindPopup('Start');
+  L.marker([B.lat, B.lon]).addTo(map).bindPopup(round ? 'Turnaround' : 'Destination');
+  const colors = { 'Tesla': '#e82222', 'Electrify America': '#00963f', 'ChargePoint': '#f97316', 'Other': '#6b7280' };
+  const stops = ((plan && plan.stops) || []).filter(s => s.lat != null && s.lon != null).slice().sort((a, b) => a.alongMi - b.alongMi);
+  let n = 0;
+  stops.forEach(s => {
+    if (isAcStop(s)){
+      L.circleMarker([s.lat, s.lon], { radius: 6, color: '#fff', weight: 2, fillColor: '#16a34a', fillOpacity: 1 })
+        .addTo(map).bindPopup(esc(s.name));
+    } else {
+      n++;
+      const c = colors[s.net] || '#5d3fd3';
+      L.marker([s.lat, s.lon], { icon: L.divIcon({ className: 'cheat-pin', html: `<span style="background:${c}">${n}</span>`, iconSize: [22, 22], iconAnchor: [11, 11] }) })
+        .addTo(map).bindPopup(esc(s.name));
+    }
+  });
+  try { map.fitBounds(line.getBounds(), { padding: [24, 24] }); } catch(_){}
+  setTimeout(() => { try { map.invalidateSize(); } catch(_){} }, 80);
+}
+
+// ── Co-driver "cheat sheet" ── for someone who rarely DC fast-charges: the
 // bottom line, where/when to stop, exactly HOW to charge at each network, and a
 // short fast-charging primer. Shares the in-app overlay + print stylesheet with
 // the trip log, so "Print / Save as PDF" works the same — or open it on a phone
@@ -3042,9 +3088,13 @@ function printGuidanceSheet(){
   // One tap = the whole route (start → stops → destination, and back if round trip).
   let gUrl = '';
   try { gUrl = gmapsUrl(buildRoutePoints(plan, round, oneWay)); } catch(_){ gUrl = ''; }
-  // A static overview map of the route + stops (prints reliably, no tiles needed).
-  let miniMap = '';
-  try { miniMap = buildRouteMiniMapSvg(rt, plan, round, oneWay); } catch(_){ miniMap = ''; }
+  // A live map (Leaflet) of the route + stops — real roads/towns for context. The
+  // tiles render as images when you Save as PDF, once they've loaded on screen.
+  const geo = (rt && rt._reroute && rt._reroute.rr && rt._reroute.rr.geometry) || (rt && rt.geometry);
+  const hasMap = !!(geo && geo.coordinates && geo.coordinates.length > 1);
+  const miniMap = hasMap
+    ? `<div class="cheat-map"><div id="cheatMap" class="cheat-leaflet"></div><div class="cheat-map-key"><b>Start</b> &rarr; numbered <b>fast stops</b> &rarr; <b>${round ? 'destination (and back)' : 'destination'}</b></div></div>`
+    : '';
 
   // Plain-English bottom line.
   let bottom;
@@ -3152,6 +3202,9 @@ function printGuidanceSheet(){
     <h2>${stops.length ? 'Your stops, in order' : 'On the road'}</h2>
     ${cards}
 
+    <h2>Notes &amp; extra directions</h2>
+    <div class="cheat-notes" contenteditable="true" spellcheck="true" data-placeholder="Tap here to add anything: gate/lock codes, who to call, where to park, packing reminders, alternate chargers&hellip;"></div>
+
     <h2>Fast-charging, the easy way</h2>
     <div class="cheat-basics"><ul>
       <li><b>Set up the app first.</b> Before you go, install and sign into each charger's app with a card on file — it's the simplest way to start a charge.</li>
@@ -3166,6 +3219,7 @@ function printGuidanceSheet(){
     <div class="foot">Made with the EV Trip Calculator · estimates only — trust the car's range readout and real conditions first.</div>`;
 
   openTripLog(doc);
+  if (hasMap) initCheatMap(geo, plan, round);
 }
 
 // In-app trip-log sheet — opens as a full-screen overlay inside the app (works in an
@@ -3205,6 +3259,7 @@ function closeTripLog(){
   const ov = document.getElementById('tripLogOverlay');
   if (ov) ov.hidden = true;
   document.body.classList.remove('tlog-open');
+  if (CHEAT_MAP){ try { CHEAT_MAP.remove(); } catch(_){} CHEAT_MAP = null; }
 }
 function printTripLogNow(){ window.print(); }
 
