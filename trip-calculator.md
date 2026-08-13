@@ -2386,7 +2386,7 @@ function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers, destFlo
     const wpMins = (wp.dc && wp.maxKW) ? chargeMinutes(r.arriveSoc, wp.chargeTo, nrg.batt, wp.maxKW) : 0;
     all.push({ waypoint: true, dc: !!wp.dc, manual: !!wp.manual, mstId: wp.mstId, origin: wp.origin,
       name: wp.name, net: wp.dc ? (wp.net || 'Other') : (wp.acNet || 'AC'),
-      maxKW: wp.maxKW || 0, alongMi: wp.mile,
+      maxKW: wp.maxKW || 0, alongMi: wp.mile, ...pickAddr(wp),
       arriveSoc: r.arriveSoc, target: wp.chargeTo, lat: wp.lat, lon: wp.lon,
       addedKWh: Math.max(0, wp.chargeTo - r.arriveSoc) / 100 * nrg.batt, rate: wp.rate || 0,
       mins: wpMins, addUnit: wp.addUnit, addValue: wp.addValue, offMi: wp.offMi || 0,
@@ -3199,6 +3199,10 @@ function unitOptionsHtml(sel){
 // updates in place rather than stacking duplicates.
 function getManualStops(){ return (STATE && STATE.manualStops) || []; }
 function manualKey(lat, lon){ return 'm:' + (+lat).toFixed(4) + ',' + (+lon).toFixed(4); }
+// Carry just a charger's address fields so a pinned/adjusted stop keeps its street
+// address the way an auto-suggested stop does (otherwise modified stops show none).
+function pickAddr(o){ o = o || {}; return { town: o.town || '', addr: o.addr || '', city: o.city || '', state: o.state || '', zip: o.zip || '' }; }
+function addrDataAttrs(o){ const a = pickAddr(o); return `data-town="${esc(a.town)}" data-addr="${esc(a.addr)}" data-city="${esc(a.city)}" data-state="${esc(a.state)}" data-zip="${esc(a.zip)}"`; }
 function upsertManualStop(o){
   if (!STATE) return;
   if (!STATE.manualStops) STATE.manualStops = [];
@@ -3253,7 +3257,7 @@ function replaceCharger(btn){
   STATE.excludedChargers = STATE.excludedChargers.filter(k => k !== newKey);
   if (!STATE.manualStops) STATE.manualStops = [];
   const rec = { id: newKey, lat: c.lat, lon: c.lon, name: c.name || 'Charger', net: c.net || 'Other',
-    maxKW: c.maxKW || MIN_DCFC_KW, unit: 'to', value: (toPct > 0 ? Math.round(toPct) : 80), origin: 'replace' };
+    maxKW: c.maxKW || MIN_DCFC_KW, ...pickAddr(c), unit: 'to', value: (toPct > 0 ? Math.round(toPct) : 80), origin: 'replace' };
   const i = STATE.manualStops.findIndex(m => m.id === newKey);
   if (i >= 0) STATE.manualStops[i] = { ...STATE.manualStops[i], ...rec }; else STATE.manualStops.push(rec);
   refresh();
@@ -3274,6 +3278,7 @@ function applyChargeAdjust(btn){
     id: manualKey(lat, lon), lat, lon,
     name: f.dataset.name || 'Charger', net,
     maxKW: parseFloat(f.dataset.kw) || MIN_DCFC_KW,
+    ...pickAddr(f.dataset),
     unit,
     value, origin: f.dataset.origin || 'adjust'
   });
@@ -3307,6 +3312,7 @@ function addChargeStopFromChooser(){
     id: manualKey(c.lat, c.lon), lat: c.lat, lon: c.lon,
     name: c.name || 'Charger', net: (netEl && netEl.value) ? netEl.value : (c.net || 'Other'),
     maxKW: c.maxKW || MIN_DCFC_KW,
+    ...pickAddr(c),
     unit, value, origin: 'add'
   });
 }
@@ -3427,6 +3433,7 @@ async function updateChargingPlan(rt, e, temp){
         : ((COST[mst.net] != null) ? COST[mst.net] : COST.publicAvg);
       const base = { chargeTo: 80, name: mst.name, lat: mst.lat, lon: mst.lon, rate,
         manual: true, dc: true, net: mst.net || 'Other', maxKW: mst.maxKW || MIN_DCFC_KW,
+        ...pickAddr(mst),
         addUnit: mst.unit, addValue: +mst.value || 0, offMi, mstId: mst.id, origin: mst.origin || 'add' };
       out.push({ ...base, mile });
       if (round && mile < oneWay - 0.5) out.push({ ...base, mile: 2 * oneWay - mile, returnLeg: true });
@@ -3856,7 +3863,7 @@ function chargeAdjustFormHtml(s, chargers){
   const unit = isManual ? (s.addUnit || 'kwh') : 'kwh';
   const val = isManual && s.addValue > 0 ? Math.round(s.addValue) : '';
   const origin = isManual ? (s.origin || 'add') : 'adjust';
-  const data = `data-lat="${esc(s.lat)}" data-lon="${esc(s.lon)}" data-name="${esc(s.name)}" data-net="${esc(s.net||'Other')}" data-kw="${esc(s.maxKW||MIN_DCFC_KW)}" data-origin="${origin}"`;
+  const data = `data-lat="${esc(s.lat)}" data-lon="${esc(s.lon)}" data-name="${esc(s.name)}" data-net="${esc(s.net||'Other')}" data-kw="${esc(s.maxKW||MIN_DCFC_KW)}" data-origin="${origin}" ${addrDataAttrs(s)}`;
   const form = `<div class="adj-form${isManual ? '' : ' hidden'}" ${data}>`
     + `<label>Brand</label>`
     + `<select class="adj-net">${netOptionsHtml(s.net || 'Other')}</select>`
@@ -3891,7 +3898,7 @@ function replaceFormHtml(s, chargers){
     .sort((a, b) => Math.abs(a.alongMi - s.alongMi) - Math.abs(b.alongMi - s.alongMi));
   if (!alts.length) return '';
   const opts = alts.map(c => {
-    const v = esc(JSON.stringify({ lat: c.lat, lon: c.lon, name: c.name, net: c.net, maxKW: c.maxKW }));
+    const v = esc(JSON.stringify({ lat: c.lat, lon: c.lon, name: c.name, net: c.net, maxKW: c.maxKW, ...pickAddr(c) }));
     const d = Math.round(c.alongMi - s.alongMi);
     const dir = d === 0 ? 'same area' : (d > 0 ? `${d} mi later` : `${-d} mi earlier`);
     return `<option value="${v}">${esc(c.name)} · ${esc(c.net === 'Other' ? 'other' : c.net)} · ${dir} · up to ${Math.round(c.maxKW)} kW</option>`;
@@ -3911,7 +3918,7 @@ function manualStopsPanelHtml(plan, rt, includeManualList){
   if (includeManualList && manual.length){
     html += `<div class="add-charge-panel"><div class="acp-head">Your added / adjusted charge stops</div>`;
     manual.forEach(m => {
-      html += `<div class="adj-form" data-lat="${esc(m.lat)}" data-lon="${esc(m.lon)}" data-name="${esc(m.name)}" data-net="${esc(m.net||'Other')}" data-kw="${esc(m.maxKW||MIN_DCFC_KW)}" data-origin="${esc(m.origin||'add')}">`
+      html += `<div class="adj-form" data-lat="${esc(m.lat)}" data-lon="${esc(m.lon)}" data-name="${esc(m.name)}" data-net="${esc(m.net||'Other')}" data-kw="${esc(m.maxKW||MIN_DCFC_KW)}" data-origin="${esc(m.origin||'add')}" ${addrDataAttrs(m)}>`
         + `<label>${esc(m.name)} —</label>`
         + `<select class="adj-net">${netOptionsHtml(m.net || 'Other')}</select>`
         + `<label>add</label>`
@@ -3929,7 +3936,7 @@ function manualStopsPanelHtml(plan, rt, includeManualList){
     .sort((a, b) => a.alongMi - b.alongMi);
   if (avail.length){
     const opts = avail.map(c => {
-      const v = esc(JSON.stringify({ lat: c.lat, lon: c.lon, name: c.name, net: c.net, maxKW: c.maxKW }));
+      const v = esc(JSON.stringify({ lat: c.lat, lon: c.lon, name: c.name, net: c.net, maxKW: c.maxKW, ...pickAddr(c) }));
       return `<option value="${v}">${esc(c.name)} · ${esc(c.net === 'Other' ? 'other network' : c.net)} · mile ${Math.round(c.alongMi)} · up to ${Math.round(c.maxKW)} kW</option>`;
     }).join('');
     html += `<div class="add-charge-panel"><div class="acp-head">➕ Add a charge stop</div>`
