@@ -416,6 +416,16 @@ permalink: /trip-calculator/
   .soc-used { background: repeating-linear-gradient(45deg, #ef444455, #ef444455 6px, transparent 6px, transparent 12px); }
   .soc-labels { display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--tc-muted); margin-top: 4px; }
 
+  /* SoC-vs-distance profile (depletes on drives, rises at charges) */
+  .soc-profile-wrap { color: var(--text); }
+  .soc-profile-svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .soc-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.66rem; color: var(--tc-muted); margin-top: 10px; }
+  .soc-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .soc-legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .soc-legend i.dash { height: 0; border-top: 2px dashed #f59e0b; }
+  .adj-toggle.adj-remove-charger { color: #ef4444; border-color: #ef444455; margin-left: 6px; }
+  .adj-toggle.adj-remove-charger:hover { border-color: #ef4444; color: #ef4444; }
+
   .disclaimer { font-size: 0.66rem; color: var(--tc-muted); line-height: 1.5; margin-top: 6px; }
   .disclaimer b { color: var(--text); }
 
@@ -689,13 +699,14 @@ permalink: /trip-calculator/
     <!-- The charging plan: the battery arc across the trip, then the stop-by-stop detail. -->
     <div class="trip-card" id="socCard" style="display:none">
       <h4 style="margin:0 0 12px 0;font-size:0.9rem;">State of charge</h4>
-      <div class="soc-bar-wrap">
+      <div class="soc-bar-wrap" id="socBarWrap">
         <div class="soc-bar">
           <div class="soc-fill" id="socFill"></div>
           <div class="soc-used" id="socUsed"></div>
         </div>
         <div class="soc-labels"><span id="socStartLbl"></span><span id="socEndLbl"></span></div>
       </div>
+      <div id="socProfile" style="display:none"></div>
     </div>
 
     <div class="trip-card" id="stopsCard" style="display:none">
@@ -1836,6 +1847,14 @@ const NET_GUIDE = {
 };
 const NET_GUIDE_GENERIC = 'Open the car\u2019s charge door and plug in the big CCS connector (push until it clicks). Start the session by tapping the network\u2019s app or a credit card on the screen. If it hasn\u2019t started in a minute, there\u2019s a help phone number printed on the charger.';
 const NET_GUIDE_AC = 'This is normal, slow charging \u2014 use the cable that came with the car (or one provided). Plug it into the car and the outlet/station, and leave it plugged in the whole time you\u2019re parked. No app or rush needed.';
+// Print-safe brand colors for the cheat-sheet fast-charge badge, so an EA stop
+// reads green (not the generic red), Tesla red, ChargePoint orange.
+const CHEAT_NET_STYLE = {
+  'Tesla': 'background:#fde2e2;color:#b42318',
+  'Electrify America': 'background:#def7ec;color:#03543f',
+  'ChargePoint': 'background:#ffedd5;color:#9a3412',
+  'Other': 'background:#eee;color:#555'
+};
 const TESLA_MIN_KW = 200; // V3+ Superchargers (250 kW) work with the Ford NACS adapter; V2 (150) don't
 
 // Mach-E (extended range / GT) DC charging curve: power (kW) vs SoC (%).
@@ -2349,7 +2368,7 @@ function planJourney(totalMi, anchors, nrg, startSoc, reserve, chargers, destFlo
     // A user-pinned manual charger (wp.dc) renders + times like a DC fast stop;
     // an AC "charge here" waypoint fills slowly during a parked dwell (mins = 0).
     const wpMins = (wp.dc && wp.maxKW) ? chargeMinutes(r.arriveSoc, wp.chargeTo, nrg.batt, wp.maxKW) : 0;
-    all.push({ waypoint: true, dc: !!wp.dc, manual: !!wp.manual, mstId: wp.mstId,
+    all.push({ waypoint: true, dc: !!wp.dc, manual: !!wp.manual, mstId: wp.mstId, origin: wp.origin,
       name: wp.name, net: wp.dc ? (wp.net || 'Other') : (wp.acNet || 'AC'),
       maxKW: wp.maxKW || 0, alongMi: wp.mile,
       arriveSoc: r.arriveSoc, target: wp.chargeTo, lat: wp.lat, lon: wp.lon,
@@ -2629,7 +2648,7 @@ function renderTiming(plan, rt, round, oneWay){
     if (isDcStop(s)) detail.push(`${Math.round(s.arriveSoc)}% → ${Math.round(s.target)}% · +${Math.round(s.addedKWh)} kWh · ~${Math.round(s.mins)} min`);
     else if (s.target != null) detail.push(`charge to ${Math.round(s.target)}%${s.addedKWh != null ? ` · +${Math.round(s.addedKWh)} kWh` : ''}`);
     if (s._detourMin > 0.5) detail.push(`${fmtMinsShort(s._detourMin)} off-route detour`);
-    const manual = s.manual ? `<span class="tt-net" style="background:#5d3fd320;color:#5d3fd3">added</span>` : '';
+    const manual = s.manual ? `<span class="tt-net" style="background:#5d3fd320;color:#5d3fd3">${s.origin==='adjust'?'modified':'added'}</span>` : '';
     rows += `<tr>`
       + `<td class="tt-time">${dayCell(s._arriveMs)}${s._arriveMs != null ? clock(s._arriveMs) : '—'}</td>`
       + `<td class="tt-time">${s._depMs != null ? clock(s._depMs) : '—'}</td>`
@@ -2791,7 +2810,7 @@ function printTripLog(){
     const addr = lk.addrStr ? `<div class="addr">${E(lk.addrStr)}</div>` : '';
     rows += `<tr>
       <td>${n}</td>
-      <td><div class="cname">${E(s.name)}${isAcStop(s) ? ' (charge here)' : ` — ${E(s.net)}${s.manual ? ' · you added' : ''}`}</div><div class="plan">${E(planLine)}</div>${addr}</td>
+      <td><div class="cname">${E(s.name)}${isAcStop(s) ? ' (charge here)' : ` — ${E(s.net)}${s.manual ? (s.origin==='adjust' ? ' · you modified' : ' · you added') : ''}`}</div><div class="plan">${E(planLine)}</div>${addr}</td>
       <td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td>
     </tr>`;
   });
@@ -2982,8 +3001,9 @@ function printGuidanceSheet(){
     } else {
       const how = NET_GUIDE[s.net] || NET_GUIDE_GENERIC;
       const tip = s.mins >= 25 ? 'Plenty of time for a meal or a walk.' : s.mins >= 12 ? 'Good time for a coffee or a restroom break.' : 'Quick top-up — just a few minutes.';
+      const netStyle = CHEAT_NET_STYLE[s.net] || CHEAT_NET_STYLE.Other;
       cards += `<div class="cheat-stop">
-        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge fast">fast charge${s.net ? ` · ${E(s.net==='Other'?'another network':s.net)}` : ''}</span>${s.manual ? ' <span class="cheat-badge" style="background:#5d3fd320;color:#5d3fd3">you added this stop</span>' : ''}</div>
+        <div class="cs-head">Stop ${i} of ${stops.length} — ${E(s.name)} <span class="cheat-badge" style="${netStyle}">fast charge${s.net ? ` · ${E(s.net==='Other'?'another network':s.net)}` : ''}</span>${s.manual ? ` <span class="cheat-badge" style="background:#5d3fd320;color:#5d3fd3">${s.origin==='adjust'?'you modified this stop':'you added this stop'}</span>` : ''}</div>
         <div class="cs-where">${whereMi}${where ? ` · ${where}` : ''}${s.maxKW ? ` · up to ${Math.round(s.maxKW)} kW` : ''}</div>
         <div class="cs-do">Pull in with around <b>${Math.round(s.arriveSoc)}%</b> and <b>charge to ${Math.round(s.target)}%</b> — about <b>${Math.round(s.mins)} min</b>. ${tip}</div>
         <div class="cs-how"><b>How to charge here:</b> ${how}</div>
@@ -3089,6 +3109,8 @@ function manualKey(lat, lon){ return 'm:' + (+lat).toFixed(4) + ',' + (+lon).toF
 function upsertManualStop(o){
   if (!STATE) return;
   if (!STATE.manualStops) STATE.manualStops = [];
+  // Pinning a charger implies you want it — clear any earlier "removed" exclusion.
+  if (STATE.excludedChargers) STATE.excludedChargers = STATE.excludedChargers.filter(k => k !== o.id);
   const i = STATE.manualStops.findIndex(m => m.id === o.id);
   if (i >= 0) STATE.manualStops[i] = { ...STATE.manualStops[i], ...o };
   else STATE.manualStops.push(o);
@@ -3097,6 +3119,25 @@ function upsertManualStop(o){
 function removeManualStop(id){
   if (!STATE || !STATE.manualStops) return;
   STATE.manualStops = STATE.manualStops.filter(m => m.id !== id);
+  refresh();
+}
+// ── Removed (excluded) auto-suggested chargers ──
+// Fully drop a suggested charger from the plan: its key goes on an exclusion list
+// that the planner filters out, then the trip re-plans around it. If that leaves
+// no way through, renderStops calls it out and asks the user to restore/add one.
+function getExcludedChargers(){ return (STATE && STATE.excludedChargers) || []; }
+function excludeCharger(lat, lon){
+  if (!STATE) return;
+  if (!STATE.excludedChargers) STATE.excludedChargers = [];
+  const k = manualKey(lat, lon);
+  if (!STATE.excludedChargers.includes(k)) STATE.excludedChargers.push(k);
+  // A removed charger can't also be a pinned manual stop.
+  if (STATE.manualStops) STATE.manualStops = STATE.manualStops.filter(m => m.id !== k);
+  refresh();
+}
+function restoreExcludedChargers(){
+  if (!STATE) return;
+  STATE.excludedChargers = [];
   refresh();
 }
 // Apply an "adjust / add charge stop" form (the button's enclosing .adj-form
@@ -3115,7 +3156,7 @@ function applyChargeAdjust(btn){
     name: f.dataset.name || 'Charger', net,
     maxKW: parseFloat(f.dataset.kw) || MIN_DCFC_KW,
     unit: (unitEl && unitEl.value === 'pct') ? 'pct' : 'kwh',
-    value
+    value, origin: f.dataset.origin || 'adjust'
   });
 }
 // Brand/network <option>s (drives badge colors, map-marker color, cheat-sheet
@@ -3146,7 +3187,7 @@ function addChargeStopFromChooser(){
     id: manualKey(c.lat, c.lon), lat: c.lat, lon: c.lon,
     name: c.name || 'Charger', net: (netEl && netEl.value) ? netEl.value : (c.net || 'Other'),
     maxKW: c.maxKW || MIN_DCFC_KW,
-    unit: (unitEl && unitEl.value === 'pct') ? 'pct' : 'kwh', value
+    unit: (unitEl && unitEl.value === 'pct') ? 'pct' : 'kwh', value, origin: 'add'
   });
 }
 
@@ -3263,7 +3304,7 @@ async function updateChargingPlan(rt, e, temp){
         : ((COST[mst.net] != null) ? COST[mst.net] : COST.publicAvg);
       const base = { chargeTo: 80, name: mst.name, lat: mst.lat, lon: mst.lon, rate,
         manual: true, dc: true, net: mst.net || 'Other', maxKW: mst.maxKW || MIN_DCFC_KW,
-        addUnit: mst.unit, addValue: +mst.value || 0, offMi, mstId: mst.id };
+        addUnit: mst.unit, addValue: +mst.value || 0, offMi, mstId: mst.id, origin: mst.origin || 'add' };
       out.push({ ...base, mile });
       if (round && mile < oneWay - 0.5) out.push({ ...base, mile: 2 * oneWay - mile, returnLeg: true });
     });
@@ -3415,7 +3456,10 @@ async function updateChargingPlan(rt, e, temp){
   // Build plan inputs. Round trips mirror the DC chargers onto the return leg;
   // the AC "charge here" anchors (also mirrored) and an optional destination
   // top-up are SoC-reset points. The mirrored energy model is already planNrg.
-  const allChargers = round ? mirrorForRoundTrip(chargers, rt.elev, oneWay).chargers : chargers;
+  // Drop any chargers the user explicitly removed so the planner routes around them.
+  const excludedSet = new Set(getExcludedChargers());
+  const chargersUsable = chargers.filter(c => !excludedSet.has(manualKey(c.lat, c.lon)));
+  const allChargers = round ? mirrorForRoundTrip(chargersUsable, rt.elev, oneWay).chargers : chargersUsable;
   const prefChargers = allChargers.filter(c => c.preferred);
   const anchors = acAnchorList().concat(manualAnchorList());
   if (round && canChargeDest) anchors.push(destAnchor());
@@ -3631,7 +3675,7 @@ function buildItineraryHtml(plan, tl, round, oneWay, startSoc, nrg){
         : '';
       html += `<div class="itin-row charge"><div class="itin-time">${clock(it.arriveMs)}</div><div class="itin-mark"><span class="itin-ico">⚡</span></div>`
         + `<div class="itin-body">`
-        + `<div class="itin-title">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net] || 'net-other'}">${esc(s.net === 'Other' ? 'other network' : s.net)}</span>${s.manual ? '<span class="net-badge" style="background:#5d3fd320;color:#5d3fd3">you added</span>' : ''}${it.onReturn ? '<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>' : ''}</div>`
+        + `<div class="itin-title">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net] || 'net-other'}">${esc(s.net === 'Other' ? 'other network' : s.net)}</span>${s.manual ? `<span class="net-badge" style="background:#5d3fd320;color:#5d3fd3">${s.origin==='adjust'?'you modified':'you added'}</span>` : ''}${it.onReturn ? '<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>' : ''}</div>`
         + `<div class="itin-detail">${s.town ? esc(s.town) + ' · ' : ''}${it.mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi > 1 ? ` · ${s.offMi.toFixed(1)} mi off route` : ''}</div>`
         + legLine(it)
         + `<div class="itin-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min${s._depMs != null ? `, leave ${clock(s._depMs)}` : ''} &nbsp;·&nbsp; ~$${dcCost(s).toFixed(2)}${s.overCap ? ` <span style="color:#eab308">⚠ above 80% — no closer charger</span>` : ''}</div>`
@@ -3683,7 +3727,8 @@ function chargeAdjustFormHtml(s){
   const isManual = !!s.manual;
   const unit = isManual ? (s.addUnit || 'kwh') : 'kwh';
   const val = isManual && s.addValue > 0 ? Math.round(s.addValue) : '';
-  const data = `data-lat="${esc(s.lat)}" data-lon="${esc(s.lon)}" data-name="${esc(s.name)}" data-net="${esc(s.net||'Other')}" data-kw="${esc(s.maxKW||MIN_DCFC_KW)}"`;
+  const origin = isManual ? (s.origin || 'add') : 'adjust';
+  const data = `data-lat="${esc(s.lat)}" data-lon="${esc(s.lon)}" data-name="${esc(s.name)}" data-net="${esc(s.net||'Other')}" data-kw="${esc(s.maxKW||MIN_DCFC_KW)}" data-origin="${origin}"`;
   const form = `<div class="adj-form${isManual ? '' : ' hidden'}" ${data}>`
     + `<label>Brand</label>`
     + `<select class="adj-net">${netOptionsHtml(s.net || 'Other')}</select>`
@@ -3693,7 +3738,11 @@ function chargeAdjustFormHtml(s){
     + `<button type="button" onclick="applyChargeAdjust(this)">Recalculate</button>`
     + (isManual ? `<button type="button" class="adj-remove" onclick="removeManualStop('${esc(s.mstId||'')}')">Remove</button>` : '')
     + `</div>`;
-  const toggle = isManual ? '' : `<button type="button" class="adj-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">✎ Adjust charge</button>`;
+  // Auto-suggested stop: a toggle to adjust its charge, plus a full "remove this
+  // charger" that drops it from the plan and re-routes around it.
+  const toggle = isManual ? '' :
+      `<button type="button" class="adj-toggle" onclick="this.parentElement.querySelector('.adj-form').classList.toggle('hidden')">✎ Adjust charge</button>`
+    + `<button type="button" class="adj-toggle adj-remove-charger" onclick="excludeCharger(${+s.lat}, ${+s.lon})">✕ Remove charger</button>`;
   return `<div class="stop-adjust">${toggle}${form}</div>`;
 }
 
@@ -3746,7 +3795,14 @@ function manualStopsPanelHtml(plan, rt, includeManualList){
 
 function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   const body = document.getElementById('stopsBody');
+  const _rtTop = (STATE && STATE.routes && STATE.routes[STATE.sel]) ? STATE.routes[STATE.sel] : null;
   if (plan.needed && !plan.feasible){
+    // If the user removed chargers, a "can't complete" is likely their doing — say
+    // so and offer to restore, so a self-inflicted dead end is easy to correct.
+    const exN = getExcludedChargers().length;
+    const exAdvice = exN
+      ? `<div class="stops-note">🚫 You've removed <b>${exN}</b> charger${exN>1?'s':''}, and the remaining ones can't complete this trip. <button type="button" class="adj-toggle" onclick="restoreExcludedChargers()">Restore removed chargers</button> or add one below to fix it.</div>`
+      : '';
     // The reported gap sits where a charger lookup FAILED (OCM throttled/offline),
     // so it's almost certainly missing data, not a real charger desert — tell the
     // user to retry rather than sending them to insert a needless waypoint.
@@ -3772,7 +3828,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
         verdict = `Start charge too low to reach the first charger — charge before leaving or start higher.`;
       }
       setVerdict('tight', '⚠️', verdict);
-      body.innerHTML = `<div class="stops-note">⚠️ ${note}</div>`;
+      body.innerHTML = exAdvice + `<div class="stops-note">⚠️ ${note}</div>`;
       return;
     }
     // A genuine mid-route gap between chargers — reached only after also trying
@@ -3780,8 +3836,11 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
     let msg = `<div class="stops-note">⚠️ Couldn't build a complete charging plan`;
     if (plan.gapFrom != null) msg += ` — no compatible DC fast charger (CCS, ≥50 kW) between mile ${plan.gapFrom} and ~mile ${plan.reachMi}`;
     msg += `. That gap is longer than one charge can cover — add a stop/waypoint there to route past a charger.</div>`;
-    body.innerHTML = msg + (plan.stops.length ? `<div class="stops-summary">Partial plan: ${plan.stops.length} stop(s) before the gap.</div>` : '');
-    setVerdict('no', '🛑', `Couldn't complete a charging plan — gap near mile ${plan.gapFrom}. Add a waypoint there to route past a charger.`);
+    body.innerHTML = exAdvice + msg + (plan.stops.length ? `<div class="stops-summary">Partial plan: ${plan.stops.length} stop(s) before the gap.</div>` : '')
+      + manualStopsPanelHtml(plan, _rtTop, true);
+    setVerdict('no', '🛑', exN
+      ? `Removing ${exN} charger${exN>1?'s':''} left a gap near mile ${plan.gapFrom} — restore one or add a charge stop to fix it.`
+      : `Couldn't complete a charging plan — gap near mile ${plan.gapFrom}. Add a waypoint there to route past a charger.`);
     return;
   }
   if (!plan.stops.length){
@@ -3800,16 +3859,19 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
   const wpNote = nWp ? ` + ${nWp} waypoint charge${nWp>1?'s':''}` : '';
   const nNonPref = dcfc.filter(s => s.preferred === false).length;
   setVerdict('ok', '✅', `Doable with <b>${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}</b>${wpNote} (~${Math.round(totalMin)} min fast-charging) — arrive around <b>${Math.round(plan.arriveSoc)}%</b>.`);
+  renderSocProfile(plan, startSoc, reserve, nrg, roundTrip, oneWay);
+  const exN = getExcludedChargers().length;
+  const exNote = exN ? `<div class="stops-note">🚫 You removed <b>${exN}</b> charger${exN>1?'s':''} from the plan. <button type="button" class="adj-toggle" onclick="restoreExcludedChargers()">Restore removed</button></div>` : '';
   const titleEl = document.getElementById('stopsTitle');
   // Multi-day road trip → a day-grouped itinerary. Single-day → the compact list.
   if (tl && isMultiDayTimeline(tl)){
     if (titleEl) titleEl.innerHTML = '🗺️ Trip itinerary';
-    body.innerHTML = buildItineraryHtml(plan, tl, roundTrip, oneWay, startSoc, nrg)
+    body.innerHTML = exNote + buildItineraryHtml(plan, tl, roundTrip, oneWay, startSoc, nrg)
       + manualStopsPanelHtml(plan, _rt, true);
     return;
   }
   if (titleEl) titleEl.innerHTML = '⚡ Charging stops';
-  let html = `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive ${roundTrip?'home':''} around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
+  let html = exNote + `<div class="stops-summary">${dcfc.length} DC fast stop${dcfc.length!==1?'s':''}${wpNote} · ~${Math.round(totalMin)} min total fast-charging · arrive ${roundTrip?'home':''} around <b>${Math.round(plan.arriveSoc)}%</b></div>`;
   if (nNonPref) html += `<div class="stops-note">ℹ️ To bridge a gap, ${nNonPref>1?`${nNonPref} stops use chargers`:'one stop uses a charger'} outside your preferred networks (Tesla / EA / ChargePoint), marked <b>other network</b> below. ${nNonPref>1?'They’re':'It’s'} a standard CCS station${nNonPref>1?'s':''} — start ${nNonPref>1?'them':'it'} with that network’s own app or a tap-to-pay card.</div>`;
   if (plan.destRelaxed && plan.arriveSoc < reserve - 0.5) html += `<div class="stops-note">ℹ️ Planned to arrive ${roundTrip ? 'home' : 'at your destination'} around <b>${Math.round(plan.arriveSoc)}%</b> — a little under your ${Math.round(reserve)}% reserve, but there's a compatible fast charger ${roundTrip ? 'near home' : 'at the destination'}, so this skips a short extra top-up on the way. Add a stop if you'd rather keep the full buffer.</div>`;
   let dividerShown = false, n = 0, prevMi = 0;
@@ -3849,7 +3911,7 @@ function renderStops(plan, e, reserve, roundTrip, startSoc, nrg, oneWay){
       html += `<div class="stop">
         <div class="stop-num">${n}</div>
         <div class="stop-main">
-          <div class="stop-name">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net]||'net-other'}">${esc(s.net==='Other'?'other network':s.net)}</span>${s.manual?'<span class="manual-badge">you added</span>':''}${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
+          <div class="stop-name">${esc(s.name)}<span class="net-badge ${NET_CLASS[s.net]||'net-other'}">${esc(s.net==='Other'?'other network':s.net)}</span>${s.manual?`<span class="manual-badge">${s.origin==='adjust'?'you modified':'you added'}</span>`:''}${onReturn?'<span class="net-badge" style="background:#6b728020;color:#6b7280">return</span>':''}</div>
           <div class="stop-sub">${s.town ? esc(s.town) + ' · ' : ''}${mileLabel} · up to ${Math.round(s.maxKW)} kW${s.offMi>1?` · ${s.offMi.toFixed(1)} mi off route`:''}</div>
           <div class="stop-charge">Arrive <b>${Math.round(s.arriveSoc)}%</b> → charge to <b>${Math.round(s.target)}%</b> &nbsp;·&nbsp; +${s.addedKWh.toFixed(0)} kWh &nbsp;·&nbsp; ~${Math.round(s.mins)} min &nbsp;·&nbsp; ~$${(s.addedKWh * ((COST[s.net]!=null)?COST[s.net]:COST.publicAvg)).toFixed(2)}${s.overCap?` <span style="color:#eab308">⚠ above 80% — no closer charger</span>`:''}</div>
           ${legInfo}
@@ -3877,7 +3939,7 @@ async function drawChargerMarkers(stops, waypoints){
     } else {
       n++;
       const m = L.circleMarker([s.lat, s.lon], { radius: 9, color: '#fff', weight: 2, fillColor: colors[s.net]||'#5d3fd3', fillOpacity: 1 })
-        .addTo(MAP).bindPopup(`<b>Stop ${n}: ${esc(s.name)}${s.manual ? ' (you added)' : ''}</b><br>${s.net} · up to ${Math.round(s.maxKW)} kW<br>Charge to ${Math.round(s.target)}% (~${Math.round(s.mins)} min)`);
+        .addTo(MAP).bindPopup(`<b>Stop ${n}: ${esc(s.name)}${s.manual ? (s.origin==='adjust' ? ' (you modified)' : ' (you added)') : ''}</b><br>${s.net} · up to ${Math.round(s.maxKW)} kW<br>Charge to ${Math.round(s.target)}% (~${Math.round(s.mins)} min)`);
       CHARGER_LAYER.push(m);
     }
   });
@@ -3908,6 +3970,10 @@ function buildVerdict(energy, batt, effEff){
   const endMiles = Math.max(0, endSoc) / 100 * batt * effEff;
 
   socCard.style.display = 'block';
+  // Single-charge trips show the simple depletion bar; a charging trip swaps in the
+  // full SoC-vs-distance profile (renderSocProfile), so keep these two in sync.
+  const _bw = document.getElementById('socBarWrap'); if (_bw) _bw.style.display = '';
+  const _sp = document.getElementById('socProfile'); if (_sp) _sp.style.display = 'none';
   document.getElementById('socFill').style.width = Math.max(0, endSoc) + '%';
   document.getElementById('socUsed').style.width = Math.min(usedPct, Math.max(0, startSoc)) + '%';
   document.getElementById('socStartLbl').textContent = 'Start ' + Math.round(startSoc) + '%';
@@ -3926,6 +3992,91 @@ function buildVerdict(energy, batt, effEff){
     vEl.className = 'verdict ok';
     vEl.innerHTML = `<span class="vicon">✅</span><span>You'll make it comfortably — arriving around <b>${endSoc.toFixed(0)}%</b> with ~${Math.round(endMiles)} mi of range to spare.</span>`;
   }
+}
+
+// SoC-vs-distance profile: battery % ticks DOWN across each drive leg and jumps
+// UP at every charge, ending at the arrival %. Rendered as an SVG into the State
+// of charge card, replacing the single depletion bar whenever there are stops.
+function renderSocProfile(plan, startSoc, reserve, nrg, round, oneWay){
+  const card = document.getElementById('socCard');
+  const barWrap = document.getElementById('socBarWrap');
+  const host = document.getElementById('socProfile');
+  if (!card || !host || !nrg) return;
+  if (startSoc == null || isNaN(startSoc)) return;
+  const totalMi = round ? oneWay * 2 : oneWay;
+  if (!(totalMi > 0)) return;
+  const stops = ((plan && plan.stops) || []).filter(s => s.alongMi != null).slice().sort((a, b) => a.alongMi - b.alongMi);
+
+  // Nodes: start, then (arrive ↓, target ↑) at each stop, then the arrival %.
+  const nodes = [{ mi: 0, soc: startSoc }];
+  let minSoc = startSoc, minMi = 0, lastPos = 0, lastSoc = startSoc;
+  stops.forEach(s => {
+    const arr = s.arriveSoc != null ? s.arriveSoc : (lastSoc - nrg.socDrop(lastPos, s.alongMi));
+    const tgt = s.target != null ? s.target : arr;
+    nodes.push({ mi: s.alongMi, soc: arr });
+    nodes.push({ mi: s.alongMi, soc: tgt });
+    if (arr < minSoc){ minSoc = arr; minMi = s.alongMi; }
+    lastPos = s.alongMi; lastSoc = tgt;
+  });
+  const endSoc = (plan && plan.arriveSoc != null) ? plan.arriveSoc : (lastSoc - nrg.socDrop(lastPos, totalMi));
+  nodes.push({ mi: totalMi, soc: endSoc });
+  if (endSoc < minSoc){ minSoc = endSoc; minMi = totalMi; }
+
+  const W = 640, H = 150, padL = 34, padR = 14, padT = 12, padB = 26;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const X = mi => padL + (mi / totalMi) * plotW;
+  const Y = pct => padT + (1 - Math.max(0, Math.min(100, pct)) / 100) * plotH;
+
+  // Horizontal gridlines + %labels at 0 / 50 / 100.
+  const grid = [0, 50, 100].map(g => {
+    const yy = Y(g).toFixed(1);
+    return `<line x1="${padL}" y1="${yy}" x2="${W - padR}" y2="${yy}" stroke="currentColor" stroke-opacity="0.12"/>`
+      + `<text x="${padL - 6}" y="${(+yy + 3).toFixed(1)}" text-anchor="end" font-size="10" fill="currentColor" fill-opacity="0.55">${g}</text>`;
+  }).join('');
+  // Reserve threshold.
+  const ry = Y(reserve).toFixed(1);
+  const reserveLine = `<line x1="${padL}" y1="${ry}" x2="${W - padR}" y2="${ry}" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="5 4"/>`
+    + `<text x="${W - padR}" y="${(+ry - 3).toFixed(1)}" text-anchor="end" font-size="9.5" fill="#f59e0b">reserve ${Math.round(reserve)}%</text>`;
+  // Area under the line.
+  const areaPts = `${X(0).toFixed(1)},${Y(0).toFixed(1)} `
+    + nodes.map(n => `${X(n.mi).toFixed(1)},${Y(n.soc).toFixed(1)}`).join(' ')
+    + ` ${X(totalMi).toFixed(1)},${Y(0).toFixed(1)}`;
+  // Segment-by-segment: green = charging (up), indigo = driving (down).
+  let segs = '';
+  for (let i = 1; i < nodes.length; i++){
+    const a = nodes[i - 1], b = nodes[i];
+    const charging = Math.abs(a.mi - b.mi) < 0.01 && b.soc > a.soc;
+    const col = charging ? '#16a34a' : '#6366f1';
+    segs += `<line x1="${X(a.mi).toFixed(1)}" y1="${Y(a.soc).toFixed(1)}" x2="${X(b.mi).toFixed(1)}" y2="${Y(b.soc).toFixed(1)}" stroke="${col}" stroke-width="${charging ? 4 : 2.6}" stroke-linecap="round"/>`;
+  }
+  // Dots: charge points (arrive) + start + end.
+  let dots = `<circle cx="${X(0).toFixed(1)}" cy="${Y(startSoc).toFixed(1)}" r="3.2" fill="#6366f1"/>`;
+  stops.forEach(s => {
+    const arr = s.arriveSoc != null ? s.arriveSoc : 0;
+    dots += `<circle cx="${X(s.alongMi).toFixed(1)}" cy="${Y(arr).toFixed(1)}" r="3" fill="#16a34a"/>`;
+  });
+  const endLow = endSoc < reserve - 0.5;
+  dots += `<circle cx="${X(totalMi).toFixed(1)}" cy="${Y(endSoc).toFixed(1)}" r="3.6" fill="${endLow ? '#ef4444' : '#16a34a'}"/>`;
+  // Start / arrival % callouts.
+  const labels = `<text x="${X(0).toFixed(1)}" y="${(Y(startSoc) - 6).toFixed(1)}" font-size="10.5" font-weight="700" fill="currentColor">${Math.round(startSoc)}%</text>`
+    + `<text x="${(W - padR).toFixed(1)}" y="${(Y(endSoc) - 7).toFixed(1)}" text-anchor="end" font-size="10.5" font-weight="700" fill="${endLow ? '#ef4444' : 'currentColor'}">arrive ${Math.round(endSoc)}%</text>`;
+  // X-axis mile endpoints.
+  const xaxis = `<text x="${padL}" y="${H - 8}" font-size="9.5" fill="currentColor" fill-opacity="0.55">0 mi</text>`
+    + `<text x="${W - padR}" y="${H - 8}" text-anchor="end" font-size="9.5" fill="currentColor" fill-opacity="0.55">${Math.round(totalMi)} mi</text>`;
+
+  const svg = `<div class="soc-profile-wrap"><svg class="soc-profile-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Battery state of charge across the trip">`
+    + grid + reserveLine
+    + `<polygon points="${areaPts}" fill="#6366f1" fill-opacity="0.08"/>`
+    + segs + dots + labels + xaxis
+    + `</svg>`
+    + `<div class="soc-legend"><span><i style="background:#6366f1"></i>driving (down)</span><span><i style="background:#16a34a"></i>charging (up)</span><span><i class="dash"></i>reserve</span>`
+    + (endLow ? `<span style="color:#ef4444;font-weight:600">⚠ arrives below reserve</span>` : '')
+    + `</div></div>`;
+
+  host.innerHTML = svg;
+  host.style.display = 'block';
+  if (barWrap) barWrap.style.display = 'none';
+  card.style.display = 'block';
 }
 
 function fmtDur(h){
