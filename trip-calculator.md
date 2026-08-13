@@ -2931,15 +2931,22 @@ function buildRouteMiniMapSvg(rt, plan, round, oneWay){
   const lats = coords.map(c => c[1]).concat([A.lat, B.lat], stops.map(s => s.lat));
   const lons = coords.map(c => c[0]).concat([A.lon, B.lon], stops.map(s => s.lon));
   const minLat = Math.min(...lats), maxLat = Math.max(...lats), minLon = Math.min(...lons), maxLon = Math.max(...lons);
-  const kx = Math.cos((minLat + maxLat) / 2 * Math.PI / 180);   // longitude squeeze at this latitude
+  // Pad the geographic bounds so the route sits inside a framed area with room for
+  // a lat/lon graticule + scale bar — some spatial context instead of a bare line.
+  const mLat = Math.max((maxLat - minLat) * 0.14, 0.04), mLon = Math.max((maxLon - minLon) * 0.14, 0.04);
+  const bMinLat = minLat - mLat, bMaxLat = maxLat + mLat, bMinLon = minLon - mLon, bMaxLon = maxLon + mLon;
+  const cMidLat = (bMinLat + bMaxLat) / 2;
+  const kx = Math.cos(cMidLat * Math.PI / 180);   // longitude squeeze at this latitude
   const px = lon => lon * kx, py = lat => -lat;
-  const x0 = px(minLon), x1 = px(maxLon), y0 = py(maxLat), y1 = py(minLat);
+  const x0 = px(bMinLon), x1 = px(bMaxLon), y0 = py(bMaxLat), y1 = py(bMinLat);
   const spanX = (x1 - x0) || 1e-6, spanY = (y1 - y0) || 1e-6;
   const W = 640, H = 360, pad = 26;
   const scale = Math.min((W - 2 * pad) / spanX, (H - 2 * pad) / spanY);
   const offX = (W - spanX * scale) / 2, offY = (H - spanY * scale) / 2;
-  const X = lon => (offX + (px(lon) - x0) * scale).toFixed(1);
-  const Y = lat => (offY + (py(lat) - y0) * scale).toFixed(1);
+  const PX = lon => offX + (px(lon) - x0) * scale;   // numeric px (gridlines / scale bar)
+  const PY = lat => offY + (py(lat) - y0) * scale;
+  const X = lon => PX(lon).toFixed(1);
+  const Y = lat => PY(lat).toFixed(1);
   const step = Math.max(1, Math.floor(coords.length / 320));
   let d = '';
   for (let i = 0; i < coords.length; i += step) d += (i === 0 ? 'M' : 'L') + X(coords[i][0]) + ' ' + Y(coords[i][1]) + ' ';
@@ -2958,11 +2965,39 @@ function buildRouteMiniMapSvg(rt, plan, round, oneWay){
   });
   const pin = (lon, lat, fill, label) => `<circle cx="${X(lon)}" cy="${Y(lat)}" r="6.5" fill="${fill}" stroke="#fff" stroke-width="1.8"/>`
     + `<text x="${X(lon)}" y="${(+Y(lat) - 10).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="#111">${label}</text>`;
+  // Lat/lon graticule + degree labels (spatial reference behind the route).
+  const gStep = [0.25, 0.5, 1, 2, 5, 10].find(s => Math.max(bMaxLat - bMinLat, bMaxLon - bMinLon) / s <= 5) || 10;
+  const gd = gStep < 1 ? 1 : 0;
+  let grat = '';
+  for (let la = Math.ceil(bMinLat / gStep) * gStep; la <= bMaxLat; la += gStep){
+    const yy = PY(la).toFixed(1);
+    grat += `<line x1="0" y1="${yy}" x2="${W}" y2="${yy}" stroke="#c3ccd6" stroke-width="1" stroke-dasharray="2 4"/>`
+      + `<text x="5" y="${(+yy - 3).toFixed(1)}" font-size="9" fill="#8a97a6">${Math.abs(la).toFixed(gd)}\u00b0${la >= 0 ? 'N' : 'S'}</text>`;
+  }
+  for (let lo = Math.ceil(bMinLon / gStep) * gStep; lo <= bMaxLon; lo += gStep){
+    const xx = PX(lo).toFixed(1);
+    grat += `<line x1="${xx}" y1="0" x2="${xx}" y2="${H}" stroke="#c3ccd6" stroke-width="1" stroke-dasharray="2 4"/>`
+      + `<text x="${(+xx + 3).toFixed(1)}" y="${H - 6}" font-size="9" fill="#8a97a6">${Math.abs(lo).toFixed(gd)}\u00b0${lo >= 0 ? 'E' : 'W'}</text>`;
+  }
+  // Distance scale bar (nice round number ≈ 40% of the width) + north arrow.
+  const milesWide = haversine(cMidLat, bMinLon, cMidLat, bMaxLon) || 1;
+  const pxPerMile = (PX(bMaxLon) - PX(bMinLon)) / milesWide;
+  const barMi = [500, 300, 200, 150, 100, 50, 25, 10, 5].find(m => m * pxPerMile <= (W - 2 * pad) * 0.4) || 5;
+  const bx0 = pad, by0 = H - 20, barPx = barMi * pxPerMile;
+  const scaleBar = `<line x1="${bx0}" y1="${by0}" x2="${(bx0 + barPx).toFixed(1)}" y2="${by0}" stroke="#4b5563" stroke-width="2"/>`
+    + `<line x1="${bx0}" y1="${by0 - 3}" x2="${bx0}" y2="${by0 + 3}" stroke="#4b5563" stroke-width="2"/>`
+    + `<line x1="${(bx0 + barPx).toFixed(1)}" y1="${by0 - 3}" x2="${(bx0 + barPx).toFixed(1)}" y2="${by0 + 3}" stroke="#4b5563" stroke-width="2"/>`
+    + `<text x="${(bx0 + barPx / 2).toFixed(1)}" y="${by0 - 5}" text-anchor="middle" font-size="9.5" fill="#4b5563">${barMi} mi</text>`;
+  const compass = `<g transform="translate(${W - 22},24)"><line x1="0" y1="9" x2="0" y2="-7" stroke="#4b5563" stroke-width="1.6"/>`
+    + `<path d="M0,-12 L3.5,-5 L-3.5,-5 Z" fill="#4b5563"/><text x="0" y="21" text-anchor="middle" font-size="9" fill="#4b5563">N</text></g>`;
   return `<div class="cheat-map"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Route overview map">`
+    + `<rect x="0" y="0" width="${W}" height="${H}" fill="#eef2f7"/>`
+    + grat
     + `<path d="${d}" fill="none" stroke="#5d3fd3" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>`
     + markers
     + pin(A.lon, A.lat, '#111', 'Start') + pin(B.lon, B.lat, '#1a4fd6', round ? 'Turn' : 'End')
-    + `</svg><div class="cheat-map-key"><b>Start</b> → numbered <b>fast stops</b> → <b>${round ? 'destination (and back)' : 'destination'}</b>${n ? '' : ' · no charging stops'}</div></div>`;
+    + scaleBar + compass
+    + `</svg><div class="cheat-map-key"><b>Start</b> → numbered <b>fast stops</b> → <b>${round ? 'destination (and back)' : 'destination'}</b>${n ? '' : ' · no charging stops'} · grid ${gStep}° lat/lon</div></div>`;
 }
 
 // ── Co-driver "cheat sheet" ──
