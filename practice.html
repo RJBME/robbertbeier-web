@@ -40,6 +40,8 @@
             transition: all 0.2s;
         }
         .btn-large:hover { background: #0056b3; color: white; }
+        .btn-highlight { background: #0056b3; color: white; font-weight: bold; }
+        .btn-highlight:hover { background: #004494; }
 
         /* Quiz Styles */
         #quiz-block, #progress-section, #score-board { display: none; }
@@ -155,6 +157,7 @@
         <button class="btn-large" onclick="startQuiz(15)">Quick Review (15 Questions)</button>
         <button class="btn-large" onclick="startQuiz(55)">Half Exam (55 Questions)</button>
         <button class="btn-large" onclick="startQuiz(111)">Full Simulation (All 111 Questions)</button>
+        <button class="btn-large btn-highlight" onclick="startMockTest()">SOS Mock Test (80 Questions)</button>
     </div>
 
     <!-- Progress Bar -->
@@ -364,6 +367,42 @@
         loadQuestion();
     }
 
+    // Mock Test Launch (80 Qs, prioritizes asterisks)
+    function startMockTest() {
+        currentQuestionIndex = 0;
+        score = 0;
+        totalAnswered = 0;
+        categoryStats = {}; 
+        
+        // Split data into starred and regular
+        let starredQs = masterQuizData.filter(q => q.question.includes('*'));
+        let regularQs = masterQuizData.filter(q => !q.question.includes('*'));
+        
+        shuffleArray(starredQs);
+        shuffleArray(regularQs);
+        
+        let mockData = [];
+        
+        if (starredQs.length >= 80) {
+            mockData = starredQs.slice(0, 80);
+        } else {
+            let remainingNeeded = 80 - starredQs.length;
+            mockData = starredQs.concat(regularQs.slice(0, remainingNeeded));
+        }
+        
+        // Shuffle the final combined list so asterisks are mixed in
+        shuffleArray(mockData);
+        activeQuizData = mockData;
+        
+        splashScreen.style.display = 'none';
+        quizBlock.style.display = 'block';
+        progressSection.style.display = 'block';
+        scoreBoard.style.display = 'none';
+        finishEarlyBtn.style.display = 'none';
+        
+        loadQuestion();
+    }
+
     // Targeted Category Mini-Test Launch
     function startCategoryQuiz(category) {
         currentQuestionIndex = 0;
@@ -371,11 +410,9 @@
         totalAnswered = 0;
         categoryStats = {}; 
         
-        // Filter master data to ONLY include the weak category
         let categoryData = masterQuizData.filter(q => q.category === category);
         shuffleArray(categoryData);
         
-        // Take up to 5 questions
         activeQuizData = categoryData.slice(0, 5);
 
         scoreBoard.style.display = 'none';
@@ -466,7 +503,6 @@
             let badgeClass = percentage >= 70 ? 'badge-good' : 'badge-review';
             let badgeText = percentage >= 70 ? 'Great Job' : 'Needs Review';
             
-            // Only show the Practice button if they scored under 70%
             let reviewButtonHTML = '';
             if (percentage < 70) {
                 reviewButtonHTML = `<button class="btn-mini" onclick="startCategoryQuiz('${category}')">Practice 5 Qs</button>`;
