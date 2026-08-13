@@ -235,6 +235,20 @@ permalink: /trip-calculator/
   .eta-text b { font-weight: 800; }
   .eta-sub { display: block; font-size: 0.7rem; color: var(--tc-muted); margin-top: 3px; }
 
+  /* Arrival / departure schedule table */
+  .timing-note { font-size: 0.72rem; color: var(--tc-muted); margin-bottom: 10px; line-height: 1.5; }
+  .timing-tablewrap { overflow-x: auto; }
+  table.timing-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .timing-table th { text-align: left; font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tc-muted); font-weight: 700; padding: 6px 8px; border-bottom: 1px solid var(--dash-border); white-space: nowrap; }
+  .timing-table td { padding: 8px; border-bottom: 1px solid var(--dash-border); vertical-align: top; }
+  .timing-table tr:last-child td { border-bottom: none; }
+  .timing-table td.tt-time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .timing-table .tt-name { font-weight: 600; }
+  .timing-table .tt-sub { font-size: 0.68rem; color: var(--tc-muted); margin-top: 1px; }
+  .timing-table tr.tt-end td, .timing-table tr.tt-start td { background: rgba(93,63,211,0.05); }
+  .timing-table .tt-net { display: inline-block; font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 1px 6px; border-radius: 9px; margin-left: 5px; vertical-align: middle; }
+  .tt-day { font-size: 0.62rem; font-weight: 700; color: var(--tc-muted); }
+
   /* Route options */
   .routes-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tc-muted); font-weight: 700; margin-bottom: 8px; }
   .routes-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -666,6 +680,12 @@ permalink: /trip-calculator/
 
     <div class="eta-banner" id="etaBanner" style="display:none"></div>
 
+    <!-- Per-stop arrival / departure schedule (honors any entered leave times). -->
+    <div class="trip-card" id="timingCard" style="display:none">
+      <h4 style="margin:0 0 4px 0;font-size:0.9rem;">🕐 Arrival &amp; departure times</h4>
+      <div id="timingBody"></div>
+    </div>
+
     <!-- The charging plan: the battery arc across the trip, then the stop-by-stop detail. -->
     <div class="trip-card" id="socCard" style="display:none">
       <h4 style="margin:0 0 12px 0;font-size:0.9rem;">State of charge</h4>
@@ -768,6 +788,7 @@ const DEFAULT_BATTERY = 91.7;
 const GAS = { mpg: {{ gs.mpg | default: 27 }}, price: {{ gs.gas_price | default: 4.0 }} };
 const GAS_STOP_MIN = 6;     // minutes per gas fill-up (matches analytics Road Trips)
 const GAS_TANK_GAL = 15.7;  // tank size of the comparison gas car (range = mpg × this)
+const DETOUR_MPH = 30;      // assumed local-road speed to leave the highway for an off-route charger and return
 function fmtMinsShort(m){ m = Math.round(m); return m >= 60 ? `${Math.floor(m/60)}h ${m%60}m` : `${m} min`; }
 const MIN_OWN_SESSIONS = 5; // below this, a vehicle borrows the fleet average
 const FLEET_FALLBACK_EFF = 3.0; // mi/kWh if a vehicle has no usable data
@@ -2466,7 +2487,7 @@ function walkTimeline(plan, rt, round, oneWay){
   const events = [];
   ((plan && plan.stops) || []).forEach(s => {
     if (s.alongMi == null) return;
-    events.push({ mile: s.alongMi, mins: s.mins || 0,
+    events.push({ mile: s.alongMi, mins: s.mins || 0, offMi: (s.offMi > 0 ? s.offMi : 0),
       depMs: (s.waypoint && s.depMs != null) ? s.depMs : null, ref: s });
   });
   const seen = new Set(events.map(e => Math.round(e.mile)));
@@ -2474,50 +2495,66 @@ function walkTimeline(plan, rt, round, oneWay){
     if (w.alongMi == null || seen.has(Math.round(w.alongMi))) return;
     const dm = (w.depDate && w.depTime) ? new Date(`${w.depDate}T${w.depTime}`).getTime() : null;
     if (dm == null || isNaN(dm)) return;
-    events.push({ mile: w.alongMi, mins: 0, depMs: dm, ref: { timeOnly: true, name: w.addr, alongMi: w.alongMi } });
+    events.push({ mile: w.alongMi, mins: 0, offMi: 0, depMs: dm, ref: { timeOnly: true, name: w.addr, alongMi: w.alongMi } });
   });
   events.sort((a, b) => a.mile - b.mile);
 
   let clock = startMs, pos = 0;
-  let driveMin = 0, outChargeMin = 0, outDwellMin = 0, totalChargeMin = 0, totalDwellMin = 0, destMs = null;
+  let outChargeMin = 0, outDwellMin = 0, totalChargeMin = 0, totalDwellMin = 0;
+  let outDetourMin = 0, totalDetourMin = 0, destMs = null;
   const stopTimes = new Map();
   for (const e of events){
+    const outbound = e.mile <= oneWay + 0.01;
     // Capture destination arrival the moment we'd reach mile oneWay (before any
     // return-leg events), so round trips report when you GET there.
     if (destMs == null && e.mile >= oneWay - 0.01) destMs = clock + driveMs(oneWay - pos);
-    const dmin = hpm * Math.max(0, e.mile - pos) * 60;
-    clock += dmin * 60000; driveMin += dmin;
+    // On-route drive to this stop's mile marker.
+    clock += driveMs(e.mile - pos);
+    // Detour OFF the highway to reach an off-route charger (added before arrival).
+    const detMin = e.offMi > 0 ? e.offMi / DETOUR_MPH * 60 : 0;
+    if (detMin){ clock += detMin * 60000; if (outbound) outDetourMin += detMin; totalDetourMin += detMin; }
     const arriveMs = clock;
+    // A scheduled leave time (hotel / meal) holds the clock; otherwise the leg is
+    // continuous and only the charge time is spent here.
     let dwellH = 0;
     if (e.depMs != null && e.depMs > arriveMs){ clock = e.depMs; dwellH = (e.depMs - arriveMs) / 3600000; }
     if (e.mins) clock += e.mins * 60000;
-    const outbound = e.mile <= oneWay + 0.01;
+    const leaveMs = clock;                       // done here, pulling away from the stall
+    // Detour BACK to the highway before the next leg.
+    if (detMin){ clock += detMin * 60000; if (outbound) outDetourMin += detMin; totalDetourMin += detMin; }
     if (dwellH > 0){ totalDwellMin += dwellH * 60; if (outbound) outDwellMin += dwellH * 60; }
     if (e.mins){ totalChargeMin += e.mins; if (outbound) outChargeMin += e.mins; }
-    stopTimes.set(e.mile, { arriveMs, depMs: clock, dwellH });
-    if (e.ref){ e.ref._arriveMs = arriveMs; e.ref._depMs = clock; e.ref._dwellH = dwellH; }
+    stopTimes.set(e.mile, { arriveMs, depMs: leaveMs, dwellH, detourMin: detMin });
+    if (e.ref){ e.ref._arriveMs = arriveMs; e.ref._depMs = leaveMs; e.ref._dwellH = dwellH; e.ref._detourMin = detMin * 2; }
     pos = e.mile;
   }
   if (destMs == null) destMs = clock + driveMs(oneWay - pos);
   const endMs = clock + driveMs(totalMi - pos);
-  driveMin += hpm * Math.max(0, totalMi - pos) * 60;
-  return { startMs, destArriveMs: destMs, endArriveMs: endMs, driveMin,
-    outChargeMin, outDwellMin, totalChargeMin, totalDwellMin, stopTimes };
+  // Driving time is whatever's left after charging, scheduled stopovers (dwell)
+  // and detours are removed — so the parts always sum back to the total elapsed.
+  const outDriveMin = (destMs - startMs) / 60000 - outChargeMin - outDwellMin;
+  const totalDriveMin = (endMs - startMs) / 60000 - totalChargeMin - totalDwellMin;
+  return { startMs, destArriveMs: destMs, endArriveMs: endMs,
+    outDriveMin, totalDriveMin, driveMin: totalDriveMin,
+    outChargeMin, outDwellMin, totalChargeMin, totalDwellMin,
+    outDetourMin, totalDetourMin, stopTimes };
 }
 
 function renderETA(plan, rt, round, oneWay, destSoc){
   const banner = document.getElementById('etaBanner');
   LAST_ETA = { plan, rt, round, oneWay, destSoc };  // cache so "arrive by" can recompute live
   const tl = walkTimeline(plan, rt, round, oneWay);
-  if (!tl){ banner.style.display = 'none'; return; }
+  if (!tl){ banner.style.display = 'none'; const tc = document.getElementById('timingCard'); if (tc) tc.style.display = 'none'; return; }
+  renderTiming(plan, rt, round, oneWay);
   const dep = new Date(tl.startMs);
-  const driveMin = rt.hours * 60;                 // one-way driving time
+  const driveMin = tl.outDriveMin;                // outbound driving incl. off-route detours
   const chargeMins = tl.outChargeMin;             // outbound DC fast-charging
   const dwellMins  = tl.outDwellMin;              // outbound scheduled stopovers (e.g. overnight)
+  const detourMins = tl.outDetourMin;             // outbound off-route detours (part of drive)
   const totalMin = (tl.destArriveMs - tl.startMs) / 60000;
   const clock = d => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const dayTime = d => d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + clock(d);
-  const partsArr = [`${fmtMinsShort(driveMin)} drive`];
+  const partsArr = [`${fmtMinsShort(driveMin)} drive${detourMins > 0.5 ? ` (incl. ${fmtMinsShort(detourMins)} charger detours)` : ''}`];
   if (chargeMins > 0.5) partsArr.push(`${fmtMinsShort(chargeMins)} charging`);
   if (dwellMins  > 0.5) partsArr.push(`${fmtMinsShort(dwellMins)} stopover`);
   const breakdown = partsArr.join(' + ');
@@ -2555,6 +2592,62 @@ function renderETA(plan, rt, round, oneWay, destSoc){
     + `<span class="eta-text">Depart <b>${dayTime(dep)}</b> → arrive${round ? ' at destination' : ''} <b>${arrLbl}</b>${socTxt}`
     + `<span class="eta-sub">${fmtMinsShort(totalMin)} total · ${breakdown}</span></span>`;
   banner.style.display = 'flex';
+}
+
+// ── Per-stop arrival / departure schedule ──
+// A compact table of when you reach and leave each stop, built from the same
+// timeline as the ETA banner (drive + charging + off-route detours, honoring any
+// entered leave times; legs with no set leave time run continuously). Works for
+// direct drives (just depart → arrive) and multi-stop routes alike.
+function renderTiming(plan, rt, round, oneWay){
+  const card = document.getElementById('timingCard');
+  const body = document.getElementById('timingBody');
+  if (!card || !body) return;
+  const tl = walkTimeline(plan, rt, round, oneWay);
+  if (!tl){ card.style.display = 'none'; return; }
+  const stops = ((plan && plan.stops) || []).filter(s => s.alongMi != null).slice().sort((a, b) => a.alongMi - b.alongMi);
+  const clock = ms => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  const multiDay = isMultiDayTimeline(tl);
+  const dayCell = ms => (multiDay && ms != null) ? `<div class="tt-day">${esc(new Date(ms).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }))}</div>` : '';
+  const startName = (STATE && STATE.A) ? STATE.A.name : 'Start';
+  const destName  = (STATE && STATE.B) ? STATE.B.name : 'Destination';
+  const netBadge = s => isAcStop(s)
+    ? `<span class="tt-net net-wp">${s.net === 'AC' ? 'charge here' : esc(s.net)}</span>`
+    : `<span class="tt-net ${NET_CLASS[s.net] || 'net-other'}">${esc(s.net === 'Other' ? 'other' : s.net)}</span>`;
+  let rows = `<tr class="tt-start"><td class="tt-time">${dayCell(tl.startMs)}${clock(tl.startMs)}</td><td class="tt-time">—</td>`
+    + `<td><div class="tt-name">Depart · ${esc(startName)}</div></td></tr>`;
+  let turned = false;
+  stops.forEach(s => {
+    const onReturn = round && oneWay && s.alongMi > oneWay;
+    if (onReturn && !turned){
+      rows += `<tr><td class="tt-time">${dayCell(tl.destArriveMs)}${clock(tl.destArriveMs)}</td><td class="tt-time">—</td>`
+        + `<td><div class="tt-name">↩ Turnaround · ${esc(destName)}</div></td></tr>`;
+      turned = true;
+    }
+    const mileLabel = onReturn ? `${Math.round(2 * oneWay - s.alongMi)} mi from home` : `mile ${Math.round(s.alongMi)}`;
+    const detail = [];
+    if (isDcStop(s)) detail.push(`${Math.round(s.arriveSoc)}% → ${Math.round(s.target)}% · +${Math.round(s.addedKWh)} kWh · ~${Math.round(s.mins)} min`);
+    else if (s.target != null) detail.push(`charge to ${Math.round(s.target)}%${s.addedKWh != null ? ` · +${Math.round(s.addedKWh)} kWh` : ''}`);
+    if (s._detourMin > 0.5) detail.push(`${fmtMinsShort(s._detourMin)} off-route detour`);
+    const manual = s.manual ? `<span class="tt-net" style="background:#5d3fd320;color:#5d3fd3">added</span>` : '';
+    rows += `<tr>`
+      + `<td class="tt-time">${dayCell(s._arriveMs)}${s._arriveMs != null ? clock(s._arriveMs) : '—'}</td>`
+      + `<td class="tt-time">${s._depMs != null ? clock(s._depMs) : '—'}</td>`
+      + `<td><div class="tt-name">${esc(s.name)}${netBadge(s)}${manual}</div><div class="tt-sub">${mileLabel}${detail.length ? ' · ' + detail.join(' · ') : ''}</div></td>`
+      + `</tr>`;
+  });
+  const finalMs = round ? tl.endArriveMs : tl.destArriveMs;
+  const finalName = round ? `${startName} (home)` : destName;
+  rows += `<tr class="tt-end"><td class="tt-time">${dayCell(finalMs)}${clock(finalMs)}</td><td class="tt-time">—</td>`
+    + `<td><div class="tt-name">Arrive · ${esc(finalName)}</div></td></tr>`;
+  const anySched = stops.some(s => s._dwellH > 0);
+  const note = anySched
+    ? `Times honor the leave time(s) you set; other legs run continuously — drive + charging + off-route detours.`
+    : `Continuous timeline from your departure — drive + charging + off-route charger detours. Set a leave time on a stop to pin its departure.`;
+  body.innerHTML = `<div class="timing-note">${note}</div>`
+    + `<div class="timing-tablewrap"><table class="timing-table">`
+    + `<thead><tr><th>Arrive</th><th>Leave</th><th>Stop</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  card.style.display = 'block';
 }
 
 // ── Hand the planned route off to a phone maps app ──
@@ -3013,30 +3106,46 @@ function applyChargeAdjust(btn){
   if (!f) return;
   const lat = parseFloat(f.dataset.lat), lon = parseFloat(f.dataset.lon);
   if (!isFinite(lat) || !isFinite(lon)) return;
-  const valEl = f.querySelector('.adj-val'), unitEl = f.querySelector('.adj-unit');
+  const valEl = f.querySelector('.adj-val'), unitEl = f.querySelector('.adj-unit'), netEl = f.querySelector('.adj-net');
   const value = parseFloat(valEl ? valEl.value : '');
   if (!(value > 0)){ setStatus('Enter how much to add at this stop (a positive % or kWh).', true); return; }
+  const net = (netEl && netEl.value) ? netEl.value : (f.dataset.net || 'Other');
   upsertManualStop({
     id: manualKey(lat, lon), lat, lon,
-    name: f.dataset.name || 'Charger', net: f.dataset.net || 'Other',
+    name: f.dataset.name || 'Charger', net,
     maxKW: parseFloat(f.dataset.kw) || MIN_DCFC_KW,
     unit: (unitEl && unitEl.value === 'pct') ? 'pct' : 'kwh',
     value
   });
 }
+// Brand/network <option>s (drives badge colors, map-marker color, cheat-sheet
+// how-to and cost). `sel` is preselected so a stop stays on its chosen brand.
+function netOptionsHtml(sel){
+  return ['Tesla', 'Electrify America', 'ChargePoint', 'Other']
+    .map(n => `<option value="${esc(n)}"${n === sel ? ' selected' : ''}>${esc(n)}</option>`).join('');
+}
+// When the "add a charge stop" charger picker changes, default its brand select
+// to the charger's detected network so the labels/colors stay cohesive.
+function onAddChargeSelChange(){
+  const sel = document.getElementById('addChargeSel'), netEl = document.getElementById('addChargeNet');
+  if (!sel || !netEl || !sel.value) return;
+  try { const c = JSON.parse(sel.value); netEl.value = c.net || 'Other'; } catch(_){}
+}
 // "Add a charge stop" chooser: a charger is picked from the route's found list
-// (its identity is JSON in the option's value), then the amount form applies it.
+// (its identity is JSON in the option's value), then the amount + brand apply it.
 function addChargeStopFromChooser(){
   const sel = document.getElementById('addChargeSel');
   const valEl = document.getElementById('addChargeVal');
   const unitEl = document.getElementById('addChargeUnit');
+  const netEl = document.getElementById('addChargeNet');
   if (!sel || !sel.value){ setStatus('Pick a charger to add as a stop.', true); return; }
   let c; try { c = JSON.parse(sel.value); } catch(_){ return; }
   const value = parseFloat(valEl ? valEl.value : '');
   if (!(value > 0)){ setStatus('Enter how much to add at this stop (a positive % or kWh).', true); return; }
   upsertManualStop({
     id: manualKey(c.lat, c.lon), lat: c.lat, lon: c.lon,
-    name: c.name || 'Charger', net: c.net || 'Other', maxKW: c.maxKW || MIN_DCFC_KW,
+    name: c.name || 'Charger', net: (netEl && netEl.value) ? netEl.value : (c.net || 'Other'),
+    maxKW: c.maxKW || MIN_DCFC_KW,
     unit: (unitEl && unitEl.value === 'pct') ? 'pct' : 'kwh', value
   });
 }
@@ -3052,6 +3161,7 @@ async function updateChargingPlan(rt, e, temp){
   clearChargerMarkers();
   document.getElementById('exportCard').style.display = 'none';
   document.getElementById('logCard').style.display = 'none';
+  document.getElementById('timingCard').style.display = 'none';
 
   if (socEl.value === '' || isNaN(+socEl.value)){
     card.style.display = 'block';
@@ -3575,6 +3685,8 @@ function chargeAdjustFormHtml(s){
   const val = isManual && s.addValue > 0 ? Math.round(s.addValue) : '';
   const data = `data-lat="${esc(s.lat)}" data-lon="${esc(s.lon)}" data-name="${esc(s.name)}" data-net="${esc(s.net||'Other')}" data-kw="${esc(s.maxKW||MIN_DCFC_KW)}"`;
   const form = `<div class="adj-form${isManual ? '' : ' hidden'}" ${data}>`
+    + `<label>Brand</label>`
+    + `<select class="adj-net">${netOptionsHtml(s.net || 'Other')}</select>`
     + `<label>Add</label>`
     + `<input class="adj-val" type="number" min="0" step="1" value="${val}" placeholder="e.g. 20">`
     + `<select class="adj-unit"><option value="kwh"${unit==='kwh'?' selected':''}>kWh</option><option value="pct"${unit==='pct'?' selected':''}>%</option></select>`
@@ -3597,7 +3709,9 @@ function manualStopsPanelHtml(plan, rt, includeManualList){
     manual.forEach(m => {
       const unitPct = m.unit === 'pct';
       html += `<div class="adj-form" data-lat="${esc(m.lat)}" data-lon="${esc(m.lon)}" data-name="${esc(m.name)}" data-net="${esc(m.net||'Other')}" data-kw="${esc(m.maxKW||MIN_DCFC_KW)}">`
-        + `<label>${esc(m.name)} — add</label>`
+        + `<label>${esc(m.name)} —</label>`
+        + `<select class="adj-net">${netOptionsHtml(m.net || 'Other')}</select>`
+        + `<label>add</label>`
         + `<input class="adj-val" type="number" min="0" step="1" value="${esc(m.value)}">`
         + `<select class="adj-unit"><option value="kwh"${unitPct?'':' selected'}>kWh</option><option value="pct"${unitPct?' selected':''}>%</option></select>`
         + `<button type="button" onclick="applyChargeAdjust(this)">Recalculate</button>`
@@ -3617,13 +3731,14 @@ function manualStopsPanelHtml(plan, rt, includeManualList){
     }).join('');
     html += `<div class="add-charge-panel"><div class="acp-head">➕ Add a charge stop</div>`
       + `<div class="add-charge-row">`
-      +   `<select id="addChargeSel"><option value="">Pick a charger along the route…</option>${opts}</select>`
+      +   `<select id="addChargeSel" onchange="onAddChargeSelChange()"><option value="">Pick a charger along the route…</option>${opts}</select>`
+      +   `<select id="addChargeNet" class="acp-unit" title="Charger brand — sets the labels &amp; colors">${netOptionsHtml('Other')}</select>`
       +   `<span style="font-size:0.75rem;color:var(--tc-muted)">add</span>`
       +   `<input id="addChargeVal" type="number" min="0" step="1" placeholder="e.g. 20">`
       +   `<select id="addChargeUnit" class="acp-unit"><option value="kwh">kWh</option><option value="pct">%</option></select>`
       +   `<button type="button" onclick="addChargeStopFromChooser()">Add stop</button>`
       + `</div>`
-      + `<div style="font-size:0.68rem;color:var(--tc-muted);margin-top:6px">The trip re-plans to charge the chosen amount here, then fills in any other stops still needed.</div>`
+      + `<div style="font-size:0.68rem;color:var(--tc-muted);margin-top:6px">Pick the charger and its <b>brand</b> (sets the labels &amp; colors), then how much to add. The trip re-plans to charge that amount here and fills in any other stops still needed.</div>`
       + `</div>`;
   }
   return html;
