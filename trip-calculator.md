@@ -1851,6 +1851,7 @@ const NET_CLASS = { 'Tesla': 'net-tesla', 'Electrify America': 'net-ea', 'Charge
 const NET_PREF = { 'Tesla': 3, 'Electrify America': 2, 'ChargePoint': 1, 'Other': 0 }; // tie-break order
 const MIN_DCFC_KW = 50;
 const REPLACE_RADIUS_MI = 50;   // when swapping a suggested charger, offer alternatives within this many route-miles
+const REMOVED_ZONE_MI = 25;     // removing a charger also suppresses auto-substitutes within this many route-miles (leave a gap, don't swap one in)
 
 // Friendly, plain-language "how to fast-charge here" notes for the co-driver cheat
 // sheet — written for someone who rarely DC fast-charges. Keyed by network; falls
@@ -3591,7 +3592,13 @@ async function updateChargingPlan(rt, e, temp){
   // top-up are SoC-reset points. The mirrored energy model is already planNrg.
   // Drop any chargers the user explicitly removed so the planner routes around them.
   const excludedSet = new Set(getExcludedChargers());
-  const chargersUsable = chargers.filter(c => !excludedSet.has(manualKey(c.lat, c.lon)));
+  // Along-route positions of the chargers you removed. We drop those AND their near
+  // neighbours from the auto-planner, so removing a charger leaves a real gap (and an
+  // honest "add one back" prompt) instead of silently swapping in the next charger.
+  const removedMiles = chargers.filter(c => excludedSet.has(manualKey(c.lat, c.lon))).map(c => c.alongMi);
+  const chargersUsable = chargers.filter(c =>
+    !excludedSet.has(manualKey(c.lat, c.lon)) &&
+    !removedMiles.some(mi => Math.abs(c.alongMi - mi) <= REMOVED_ZONE_MI));
   const allChargers = round ? mirrorForRoundTrip(chargersUsable, rt.elev, oneWay).chargers : chargersUsable;
   const prefChargers = allChargers.filter(c => c.preferred);
   const anchors = acAnchorList().concat(manualAnchorList());
