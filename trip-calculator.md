@@ -2186,6 +2186,7 @@ const CHARGER_FLOOR = 6;    // % — willing to run this low to REACH a charger 
 const DEST_NEAR_MI = 12;    // mi — a compatible fast charger within this far of the destination means you can top up on arrival
 const DEST_CHARGER_FLOOR = 5; // % — OK to arrive this low at the destination WHEN there's a charger there (skips a marginal final top-up)
 const RESERVE_SLACK = 3;      // % — leeway below the reserve the planner tolerates before adding a stop (kills 2-min top-ups)
+const MARGINAL_STOP_PCT = 5;  // % — a suggested stop adding less than this is trivial overhead; charge a bit more at the previous stop and drop it instead
 function planSegment(fromMi, toMi, startSoc, reserve, chargers, nrg, maxTop){
   maxTop = maxTop || DCFC_TOP;
   const batt = nrg.batt;
@@ -2246,14 +2247,23 @@ function planSegment(fromMi, toMi, startSoc, reserve, chargers, nrg, maxTop){
 // charger in range) raise the cap in small steps and use the lowest that works,
 // flagging any stop forced above 80%.
 function planSegmentCapped(fromMi, toMi, soc, reserve, chargers, nrg){
-  for (const cap of [DCFC_TOP, 85, 90, 95, 100]){
+  const caps = [DCFC_TOP, 85, 90, 95, 100];
+  const feasible = [];
+  for (const cap of caps){
     const r = planSegment(fromMi, toMi, soc, reserve, chargers, nrg, cap);
-    if (r.feasible){
-      if (cap > DCFC_TOP) r.stops.forEach(s => { if (s.target > DCFC_TOP) s.overCap = true; });
-      return r;
-    }
+    if (r.feasible) feasible.push({ cap, r });
   }
-  return planSegment(fromMi, toMi, soc, reserve, chargers, nrg, 100); // infeasible → gap info
+  if (!feasible.length) return planSegment(fromMi, toMi, soc, reserve, chargers, nrg, 100); // infeasible → gap info
+  // A "marginal" stop adds barely anything — it's mostly detour + plug-in overhead
+  // for a couple percent you could add at the PREVIOUS stop for the same charging
+  // time. So if the 80% plan has one, use the lowest cap that has NO marginal stop
+  // (charge a little more earlier and drop the trivial top-up). Falls back to the
+  // 80% plan when a small stop is genuinely unavoidable.
+  const hasMarginal = r => r.stops.some(s => (s.target - s.arriveSoc) < MARGINAL_STOP_PCT);
+  let pick = feasible[0];
+  if (hasMarginal(pick.r)) pick = feasible.find(p => !hasMarginal(p.r)) || pick;
+  if (pick.cap > DCFC_TOP) pick.r.stops.forEach(s => { if (s.target > DCFC_TOP + 5) s.overCap = true; });
+  return pick.r;
 }
 
 // ── Charge-level balancing (leverage the charging curve) ───────────────────
