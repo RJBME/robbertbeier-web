@@ -1858,7 +1858,7 @@ const REMOVED_ZONE_MI = 25;     // removing a charger also suppresses auto-subst
 // back to NET_GUIDE_GENERIC. NET_GUIDE_AC covers the slow "charge here" waypoints.
 const NET_GUIDE = {
   'Tesla': 'Superchargers need your NACS adapter. Park so the charge port (back driver-side) is near the post, plug the adapter onto the Tesla cable and into the car, then open the Tesla app, pick this location and your stall number, and tap to start. It begins on its own — the car screen shows the percentage.',
-  'Electrify America': 'Open the charge door and plug the big CCS connector into the car (push until it clicks). Start it with the Electrify America app — pick your plug number — or tap a credit card on the screen. The screen shows the progress.',
+  'Electrify America': 'Open the Electrify America app FIRST — pick this station and your plug number and start the session there — THEN plug the big CCS connector into the car (push until it clicks). Starting from the app gets the cheaper app (Pass / Pass+) rate; letting it auto-start when you plug in bills the pricier Plug&Charge rate. The screen shows the progress.',
   'ChargePoint': 'Tap your ChargePoint card or the app on the reader, then plug the big CCS connector into the car (push until it clicks). The screen shows the progress.',
 };
 const NET_GUIDE_GENERIC = 'Open the car\u2019s charge door and plug in the big CCS connector (push until it clicks). Start the session by tapping the network\u2019s app or a credit card on the screen. If it hasn\u2019t started in a minute, there\u2019s a help phone number printed on the charger.';
