@@ -183,3 +183,8 @@
   lat: 44.95    # coarsened (~1 km) — private residence
   lng: -85.14
   city: "Bellaire, MI"
+
+- location: "BP Pulse, Ann Arbor, MI"
+  lat: 42.241082861990165
+  lng: -83.74309195407746
+  city: "Ann Arbor, MI"

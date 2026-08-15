@@ -83,7 +83,7 @@ const locationData       = {{ site.data.locations | jsonify }} || [];
 /* ── Constants + lookups (copied from charging-analytics.md — keep in sync) ── */
 const VEHICLE_MPG = { '2025 Mach-E GT':27, '2026 Mach-E SR':27, "LRB's 2025 Mach-E GT":23.0, "LRB's 2026 Mach-E SR":23.0 };
 const VEHICLE_COLORS = { '2025 Mach-E GT':'#C2A76C', '2026 Mach-E SR':'#E31E2E', "LRB's 2025 Mach-E GT":'#B5176B', "LRB's 2026 Mach-E SR":'#2E7D9E' };
-const BUCKET_COLORS = { 'Work':'#0288d1','Home':'#7b1fa2','Tesla SC':'#CC0000','ChargePoint':'#FF7A14','Blink':'#65A844','Rivian':'#ffa500','Electrify America':'#00963f','WeCharge':'#51A950','Other':'#909090' };
+const BUCKET_COLORS = { 'Work':'#0288d1','Home':'#7b1fa2','Tesla SC':'#CC0000','ChargePoint':'#FF7A14','Blink':'#65A844','Rivian':'#ffa500','Electrify America':'#00963f','WeCharge':'#51A950','BP Pulse':'#8DC63F','Other':'#909090' };
 const CO2_GAS_KG_PER_GAL = 8.887, CO2_TREE_KG_PER_YEAR = 21;
 const EGRID_FACTORS = { RFCM:970.6*0.4536/1000, MROE:1397.3*0.4536/1000, MROW:920.1*0.4536/1000, RFCW:911.4*0.4536/1000, RFCE:596.9*0.4536/1000 };
 const EGRID_DEFAULT = EGRID_FACTORS.RFCM;
@@ -104,7 +104,7 @@ function getEgridFactor(locStr){
   return (st && STATE_TO_EGRID[st]) ? EGRID_FACTORS[STATE_TO_EGRID[st]] : EGRID_DEFAULT;
 }
 function getBucket(loc){ const l=loc.toLowerCase();
-  return l.includes('work')?'Work':l.includes('home')?'Home':l.includes('tesla')?'Tesla SC':l.includes('chargepoint')?'ChargePoint':l.includes('blink')?'Blink':l.includes('rivian')?'Rivian':l.includes('electrify')?'Electrify America':l.includes('wecharge')?'WeCharge':'Other'; }
+  return l.includes('work')?'Work':l.includes('home')?'Home':l.includes('tesla')?'Tesla SC':l.includes('chargepoint')?'ChargePoint':l.includes('blink')?'Blink':l.includes('rivian')?'Rivian':l.includes('electrify')?'Electrify America':l.includes('wecharge')?'WeCharge':l.includes('bp pulse')?'BP Pulse':'Other'; }
 
 /* ── Enrich ALL sessions, then amortize memberships (matches analytics) ──── */
 sessions.forEach(s=>{

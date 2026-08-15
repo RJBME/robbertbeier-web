@@ -64,6 +64,7 @@ _inputs:
         - "Paul & Carol's, Beulah, MI"
         - "Cabin"
         - "Rooted, Mancelona, MI"
+        - "BP Pulse, Ann Arbor, MI"
   energy_kwh:
     type: number
     comment: "Energy added in kWh. For public DC fast charging, use the network's DELIVERED/billed kWh (what you paid for — drives cost & CO₂). For home/other, the Ford app battery-side number."

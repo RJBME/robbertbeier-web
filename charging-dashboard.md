@@ -162,6 +162,7 @@ permalink: /charging/
   .badge-rivian { background: #eab30820; color: #d97706; }
   .badge-ea     { background: #00b04f20; color: #00963f; }
   .badge-wc     { background: #51A95020; color: #51A950; }
+  .badge-bp     { background: #8DC63F20; color: #5f8a25; }
   .badge-other  { background: #6b728020; color: #6b7280; }
 
   .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.84rem; color: var(--text) !important; }
@@ -705,6 +706,7 @@ permalink: /charging/
               {% elsif l contains 'rivian' %}badge-rivian
               {% elsif l contains 'electrify' %}badge-ea
               {% elsif l contains 'wecharge' %}badge-wc
+              {% elsif l contains 'bp pulse' %}badge-bp
               {% else %}badge-other{% endif %}">
               {{ log.location | truncate: 20 }}
             </span>
