@@ -108,6 +108,7 @@ permalink: /charging-history/
   .badge-ea     { background: #00b04f20; color: #00963f; }
   .badge-wc     { background: #51A95020; color: #51A950; }
   .badge-bp     { background: #8DC63F20; color: #5f8a25; }
+  .badge-shell  { background: #FBCE0720; color: #a67c00; }
   .badge-other  { background: #6b728020; color: #6b7280; }
 
   /* ── Table ── */
@@ -327,7 +328,7 @@ permalink: /charging-history/
         <td>{{ log.date | date: "%b %-d, '%y" }}</td>
         <td>
           {% assign l = log.location | downcase %}
-          <span title="{{ log.location }}" class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% elsif l contains 'electrify' %}badge-ea{% elsif l contains 'wecharge' %}badge-wc{% elsif l contains 'bp pulse' %}badge-bp{% else %}badge-other{% endif %}">
+          <span title="{{ log.location }}" class="badge {% if l contains 'work' %}badge-work{% elsif l contains 'home' %}badge-home{% elsif l contains 'tesla' %}badge-tesla{% elsif l contains 'chargepoint' %}badge-cp{% elsif l contains 'blink' %}badge-blink{% elsif l contains 'rivian' %}badge-rivian{% elsif l contains 'electrify' %}badge-ea{% elsif l contains 'wecharge' %}badge-wc{% elsif l contains 'bp pulse' %}badge-bp{% elsif l contains 'shell' %}badge-shell{% else %}badge-other{% endif %}">
             {{ log.location }}
           </span>
         </td>

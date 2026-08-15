@@ -188,3 +188,8 @@
   lat: 42.241082861990165
   lng: -83.74309195407746
   city: "Ann Arbor, MI"
+
+- location: "Shell Recharge, West Branch, MI"
+  lat: 44.2491161503364
+  lng: -84.22660640290987
+  city: "West Branch, MI"
