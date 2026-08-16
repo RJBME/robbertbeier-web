@@ -1,5 +1,5 @@
 ---
-date: "2026-08-03T00:00:00-04:00"
+date: "2026-08-16T00:00:00-04:00"
 location: ""
 vehicle: "2026 Mach-E SR"
 energy_kwh: 0
