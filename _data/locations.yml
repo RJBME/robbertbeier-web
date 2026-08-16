@@ -208,3 +208,8 @@
   lat: 44.66193187787192
   lng: -84.71565468564732
   city: "Grayling, MI"
+
+- location: "GM Energy/EVgo, Saginaw, MI"
+  lat: 43.451600538793144
+  lng: -83.89444865226432
+  city: "Saginaw, MI"

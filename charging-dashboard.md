@@ -165,6 +165,7 @@ permalink: /charging/
   .badge-bp     { background: #8DC63F20; color: #5f8a25; }
   .badge-shell  { background: #FBCE0720; color: #a67c00; }
   .badge-rede   { background: #FF525220; color: #d12f2f; }
+  .badge-evgo   { background: #14B8A620; color: #0e8074; }
   .badge-other  { background: #6b728020; color: #6b7280; }
 
   .charging-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.84rem; color: var(--text) !important; }
@@ -711,6 +712,7 @@ permalink: /charging/
               {% elsif l contains 'bp pulse' %}badge-bp
               {% elsif l contains 'shell' %}badge-shell
               {% elsif l contains 'red e' %}badge-rede
+              {% elsif l contains 'evgo' %}badge-evgo
               {% else %}badge-other{% endif %}">
               {{ log.location | truncate: 20 }}
             </span>

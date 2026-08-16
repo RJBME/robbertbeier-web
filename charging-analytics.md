@@ -158,6 +158,7 @@ permalink: /charging-analytics/
   .badge-bp     { background: #eef7dd; color: #5f8a25; }
   .badge-shell  { background: #fff8db; color: #a67c00; }
   .badge-rede   { background: #ffe3e3; color: #d12f2f; }
+  .badge-evgo   { background: #d9f5f1; color: #0e8074; }
   .badge-other  { background: #f5f5f5; color: #616161; }
 
   /* ── Insight callout ── */
@@ -1917,6 +1918,7 @@ function getBucket(loc) {
           : l.includes('bp pulse') ? 'BP Pulse'
           : l.includes('shell') ? 'Shell Recharge'
           : l.includes('red e') ? 'Red E'
+          : l.includes('evgo') ? 'GM Energy/EVgo'
           : 'Other';
   _bucketCache.set(loc, b);
   return b;
@@ -1982,7 +1984,7 @@ function fmtUSD(v) {
 function badgeClass(b) {
   return { Work:'badge-work', Home:'badge-home', 'Tesla SC':'badge-tesla',
            ChargePoint:'badge-cp', Blink:'badge-blink', Rivian:'badge-rivian',
-           'Electrify America':'badge-ea', 'WeCharge':'badge-wc', 'BP Pulse':'badge-bp', 'Shell Recharge':'badge-shell', 'Red E':'badge-rede', Other:'badge-other' }[b] || 'badge-other';
+           'Electrify America':'badge-ea', 'WeCharge':'badge-wc', 'BP Pulse':'badge-bp', 'Shell Recharge':'badge-shell', 'Red E':'badge-rede', 'GM Energy/EVgo':'badge-evgo', Other:'badge-other' }[b] || 'badge-other';
 }
 
 const BUCKET_COLORS = {
@@ -1997,6 +1999,7 @@ const BUCKET_COLORS = {
   'BP Pulse':   '#8DC63F',
   'Shell Recharge': '#FBCE07',
   'Red E':      '#FF5252',
+  'GM Energy/EVgo': '#14B8A6',
   'Other':      '#909090'
 };
 
@@ -2339,7 +2342,7 @@ function isVehicleActive(v) {
 //    heuristic for sessions that have no start/end timing data) ──
 let dcfcOnly = false;
 const DCFC_KW = 25;
-const DCFC_NETS = ['Tesla SC','ChargePoint','Rivian','Blink','Electrify America','WeCharge','BP Pulse','Shell Recharge','Red E'];
+const DCFC_NETS = ['Tesla SC','ChargePoint','Rivian','Blink','Electrify America','WeCharge','BP Pulse','Shell Recharge','Red E','GM Energy/EVgo'];
 function isDcfcSession(s){
   if (s.startTime && s.endTime && s.startDate) {
     const st = new Date(s.startDate+'T'+s.startTime+':00'), en = new Date(s.date+'T'+s.endTime+':00');
@@ -4247,7 +4250,7 @@ mkChart('chartHistogram', {
     const TRIP_RADIUS_MI  = 50;
     const TRIP_WINDOW_DAYS = 5;
     const DCFC_KW_THRESHOLD = 25; // avg kW threshold to classify as DCFC en-route
-    const DCFC_NETWORKS = ['Tesla SC', 'ChargePoint', 'Rivian', 'Blink', 'Electrify America', 'WeCharge', 'BP Pulse', 'Shell Recharge', 'Red E'];
+    const DCFC_NETWORKS = ['Tesla SC', 'ChargePoint', 'Rivian', 'Blink', 'Electrify America', 'WeCharge', 'BP Pulse', 'Shell Recharge', 'Red E', 'GM Energy/EVgo'];
     const GAS_STOP_MIN  = 6; // minutes per gas fill-up (midpoint 5–7 min)
 
     // Per-vehicle gas car comparison specs
@@ -6805,6 +6808,7 @@ function buildHeatmap(sl) {
       'BP Pulse':   ['#e8e8e8', '#e4f2c4', '#bfe07c', '#8DC63F', '#4a7314'],
       'Shell Recharge': ['#e8e8e8', '#fff3c4', '#ffe066', '#FBCE07', '#a67c00'],
       'Red E':      ['#e8e8e8', '#ffd6d6', '#ff9e9e', '#FF5252', '#a11f1f'],
+      'GM Energy/EVgo': ['#e8e8e8', '#c5efe9', '#6fd6c8', '#14B8A6', '#0a5f56'],
       'Other':      ['#e8e8e8', '#e0e0e0', '#bdbdbd', '#757575', '#424242'],
     },
     dark: {
@@ -6819,6 +6823,7 @@ function buildHeatmap(sl) {
       'BP Pulse':   ['#2a2a2a', '#1f2c0a', '#5f8a25', '#8DC63F', '#c7e992'],
       'Shell Recharge': ['#2a2a2a', '#332b05', '#a6890a', '#FBCE07', '#fde68a'],
       'Red E':      ['#2a2a2a', '#3a1010', '#c0392b', '#FF5252', '#ffb3b3'],
+      'GM Energy/EVgo': ['#2a2a2a', '#0a2925', '#0e8074', '#14B8A6', '#7fe3d7'],
       'Other':      ['#2a2a2a', '#333333', '#555555', '#888888', '#bdbdbd'],
     }
   };
@@ -6827,7 +6832,7 @@ function buildHeatmap(sl) {
   var BUCKET_LABELS = {
     'Work': 'Work', 'Home': 'Home', 'Tesla SC': 'Tesla SC',
     'ChargePoint': 'ChargePoint', 'Blink': 'Blink', 'Rivian': 'Rivian',
-    'Electrify America': 'Electrify America', 'WeCharge': 'WeCharge', 'BP Pulse': 'BP Pulse', 'Shell Recharge': 'Shell Recharge', 'Red E': 'Red E', 'Other': 'Public/Other'
+    'Electrify America': 'Electrify America', 'WeCharge': 'WeCharge', 'BP Pulse': 'BP Pulse', 'Shell Recharge': 'Shell Recharge', 'Red E': 'Red E', 'GM Energy/EVgo': 'GM Energy/EVgo', 'Other': 'Public/Other'
   };
 
   // Are we in single-vehicle mode? (exactly one vehicle selected, not 'all')
