@@ -193,3 +193,13 @@
   lat: 44.2491161503364
   lng: -84.22660640290987
   city: "West Branch, MI"
+
+- location: "Red E, Traverse City, MI"
+  lat: 44.74719617491072
+  lng: -85.52636471782552
+  city: "Traverse City, MI"
+
+- location: "Red E, Grayling, MI"
+  lat: 44.66193187787192
+  lng: -84.71565468564732
+  city: "Grayling, MI"
