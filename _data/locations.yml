@@ -159,6 +159,11 @@
   lng: -85.69025899036247
   city: "Grand Rapids, MI"
 
+- location: "Electrify America, Bay City, MI"
+  lat: 43.622479842775235
+  lng: -83.9322750395799
+  city: "Bay City, MI"
+
 - location: "WeCharge, Bridgeport, MI"
   lat: 43.3548
   lng: -83.8732
