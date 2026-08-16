@@ -77,11 +77,10 @@ _inputs:
     comment: "OPTIONAL. Only for public DC fast charging where it differs from energy_kwh: the Ford app 'energy added' (battery-side). Used ONLY for mi/kWh efficiency. Leave blank/0 otherwise — efficiency then uses energy_kwh."
   vehicle:
     type: select
+    comment: "The GT cars were retired 2026-07; only the current SR cars are selectable. Existing GT sessions keep their vehicle value and still show on the site."
     options:
       values:
-        - "2025 Mach-E GT"
         - "2026 Mach-E SR"
-        - "LRB's 2025 Mach-E GT"
         - "LRB's 2026 Mach-E SR"
   cost:
     type: number
