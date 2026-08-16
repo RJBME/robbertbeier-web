@@ -82,3 +82,7 @@ gas_savings:
     mpg: 27
     gas_price: 4.15
     mi_per_kwh: 3.0
+  - date: "2026-08-01"
+    mpg: 27
+    gas_price: 4.24
+    mi_per_kwh: 3.0
