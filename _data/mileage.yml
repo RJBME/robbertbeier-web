@@ -32,6 +32,16 @@
 #    - CO₂ calculations use real miles when available
 # ─────────────────────────────────────────────────────────────────────────────
 
+- date: "2026-08-17"
+  vehicle: "2026 Mach-E SR"
+  odometer: 2175
+  notes: "current reading"
+
+- date: "2026-08-17"
+  vehicle: "LRB's 2026 Mach-E SR"
+  odometer: 1843
+  notes: "current reading"
+
 - date: "2026-08-10"
   vehicle: "2026 Mach-E SR"
   odometer: 1728
