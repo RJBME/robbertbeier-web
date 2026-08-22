@@ -3566,7 +3566,7 @@ mkChart('chartHistogram', {
     <td><span class="badge ${badgeClass(s.bucket)}">${s.bucket}</span></td>
     <td><strong>${s.kwh}</strong></td>
     <td>${s.cost < 0.005 ? '<span style="color:#2ecc71">Free</span>' : fmtUSD(s.cost)}</td>
-    <td style="color:#2ecc71;font-weight:700">${fmtUSD(s.saving)}</td>
+    <td style="color:${s.saving >= 0 ? '#2ecc71' : s.saving <= -5 ? '#e74c3c' : '#f39c12'};font-weight:700">${fmtUSD(s.saving)}</td>
   </tr>
 `).join('');
 
