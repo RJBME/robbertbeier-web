@@ -4372,7 +4372,8 @@ mkChart('chartHistogram', {
       const locs       = [...new Set(trip.map(s => s.location))];
       const dateRange  = trip.length === 1 ? firstDate : firstDate + ' – ' + trip[trip.length-1].date;
       const isFree     = cost < 0.01;
-      const savingColor = saving < 0 ? C_RED : C_GREEN;
+      // green if it saved, amber if it lost under $5, red if it lost $5+ (matches Top-10 table)
+      const savingColor = saving >= 0 ? C_GREEN : saving <= -5 ? C_RED : C_AMBER;
 
       // Trip annotation
       const note = tripNote(firstDate);
