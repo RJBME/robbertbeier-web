@@ -1505,6 +1505,31 @@ permalink: /charging-analytics/
       <div class="chart-wrap" style="height:240px"><canvas id="chartVehicleEfficiency"></canvas></div>
       <p style="font-size:0.68rem;color:#888;margin-top:8px">LFP (Standard Range) chemistry maintains better capacity in cold vs. NCM (GT). Watch for winter divergence.</p>
     </div>
+
+    <!-- ── LFP vs NCM battery-chemistry comparison (only shown when BOTH chemistries have data) ── -->
+    <div id="chemCompSection" style="display:none;margin-top:8px">
+      <p class="chart-title" style="font-size:0.95rem;border-top:2px solid var(--dash-border);padding-top:18px;margin-bottom:2px">
+        🔋 Battery Chemistry — LFP vs NCM<span class="new-badge">✨ new · Aug '26</span>
+      </p>
+      <p class="chart-sub" style="font-size:0.68rem;color:#888;margin:0 0 14px">
+        Standard Range (LFP) vs GT (NCM) — both owners combined — how the two chemistries differ in real-world use
+      </p>
+
+      <div id="chemCompCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:18px"></div>
+
+      <div class="chart-grid-2">
+        <div class="chart-card">
+          <p class="chart-title">Charge-to-Full Behavior — Unplug SOC</p>
+          <p class="chart-sub" style="font-size:0.68rem;color:#888">LFP is designed to hit 100% regularly; NCM is kept near 80% for longevity. % of each chemistry's sessions with a recorded unplug SOC.</p>
+          <div class="chart-wrap" style="height:240px"><canvas id="chartChemSocEnd"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <p class="chart-title">Real Efficiency Distribution — mi/kWh</p>
+          <p class="chart-sub" style="font-size:0.68rem;color:#888">Lighter LFP SR vs heavier performance NCM GT. % of each chemistry's FordPass-metered sessions.</p>
+          <div class="chart-wrap" style="height:240px"><canvas id="chartChemEfficiency"></canvas></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
@@ -4808,6 +4833,133 @@ mkChart('chartHistogram', {
         }
       }
     });
+
+    /* ── Battery-chemistry comparison: LFP (Standard Range) vs NCM (GT) ──────
+       Aggregates all four cars into just two groups by chemistry. Only shown
+       when BOTH chemistries have sessions, so it stays hidden on single-car data. */
+    const chemOf = v => /\bSR\b/.test(v) ? 'LFP' : (/\bGT\b/.test(v) ? 'NCM' : null);
+    const CHEM_ORDER = ['LFP', 'NCM'];
+    const CHEM_META = {
+      LFP: { full: 'Standard Range · LFP', color: '#2E7D9E', ube: 72.6, guidance: 'Charge to 100% routinely' },
+      NCM: { full: 'GT · NCM',             color: '#C2A76C', ube: 91.7, guidance: 'Keep to ~80% daily' }
+    };
+    const chemSessions = {
+      LFP: sl.filter(s => chemOf(s.vehicle) === 'LFP'),
+      NCM: sl.filter(s => chemOf(s.vehicle) === 'NCM')
+    };
+    const chemSection = document.getElementById('chemCompSection');
+    const haveBothChem = chemSessions.LFP.length > 0 && chemSessions.NCM.length > 0;
+
+    if (chemSection && haveBothChem) {
+      chemSection.style.display = '';
+
+      // Per-chemistry aggregate stats
+      const chemStats = {};
+      CHEM_ORDER.forEach(k => {
+        const cs      = chemSessions[k];
+        const kwh     = cs.reduce((a,s) => a + s.kwh, 0);
+        const eff     = cs.filter(s => s.hasRealEff);
+        const avgEff  = eff.length ? eff.reduce((a,s) => a + s.realMiPerKwh, 0) / eff.length : null;
+        const recSoc  = cs.filter(s => s.socEnd > 0);          // 0 = unrecorded → excluded
+        const to100   = recSoc.length ? recSoc.filter(s => s.socEnd >= 99).length / recSoc.length * 100 : null;
+        chemStats[k] = {
+          sessions: cs.length, kwh,
+          avgKwh: cs.length ? kwh / cs.length : 0,
+          avgEff, pct100: to100, recSocN: recSoc.length
+        };
+      });
+
+      // Head-to-head infographic cards
+      const chemCardsEl = document.getElementById('chemCompCards');
+      if (chemCardsEl) {
+        chemCardsEl.innerHTML = CHEM_ORDER.map(k => {
+          const m  = CHEM_META[k];
+          const st = chemStats[k];
+          const eff100  = st.pct100 == null ? '—' : st.pct100.toFixed(0) + '%';
+          const effVal  = st.avgEff == null ? '—' : st.avgEff.toFixed(2);
+          return `<div style="background:var(--dash-card);border:2px solid ${m.color}55;border-radius:12px;padding:18px 16px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid ${m.color}30;padding-bottom:8px">
+              <span style="font-size:0.8rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:${m.color}">${k}</span>
+              <span style="font-size:0.62rem;color:#888">${m.full}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Usable kWh</div><div style="font-weight:800;font-size:1.1rem">${m.ube}</div></div>
+              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Sessions</div><div style="font-weight:800;font-size:1.1rem">${st.sessions}</div></div>
+              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Avg kWh</div><div style="font-weight:800;font-size:1.1rem">${st.avgKwh.toFixed(1)}</div></div>
+              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Avg mi/kWh</div><div style="font-weight:800;font-size:1.1rem">${effVal}</div></div>
+              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Charged to 100%</div><div style="font-weight:800;font-size:1.1rem;color:${m.color}">${eff100}</div></div>
+              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Guidance</div><div style="font-weight:700;font-size:0.72rem;line-height:1.25;margin-top:2px">${m.guidance}</div></div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // Chart: charge-to-full behaviour — unplug SOC distribution, % within each chemistry
+      const SOC_BINS = [[0,60],[60,70],[70,80],[80,90],[90,99],[99,101]];
+      const SOC_LABELS = ['<60%', '60s', '70s', '80s', '90s', '100%'];
+      mkChart('chartChemSocEnd', {
+        type: 'bar',
+        data: {
+          labels: SOC_LABELS,
+          datasets: CHEM_ORDER.map(k => {
+            const recSoc = chemSessions[k].filter(s => s.socEnd > 0);
+            const n = recSoc.length || 1;
+            return {
+              label: k,
+              data: SOC_BINS.map(([a,b]) => +(recSoc.filter(s => s.socEnd >= a && s.socEnd < b).length / n * 100).toFixed(1)),
+              backgroundColor: CHEM_META[k].color, borderRadius: 4
+            };
+          })
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10 } },
+            datalabels: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)}% of sessions` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tc() }, title: { display: true, text: 'Unplug SOC', color: '#888' } },
+            y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '%' }, beginAtZero: true,
+                 title: { display: true, text: '% of sessions', color: '#888' } }
+          }
+        }
+      });
+
+      // Chart: real-efficiency distribution — mi/kWh, % within each chemistry
+      const EFF_BINS = [[1.5,2],[2,2.5],[2.5,3],[3,3.5],[3.5,4],[4,4.75]];
+      const EFF_LABELS = ['1.5–2', '2–2.5', '2.5–3', '3–3.5', '3.5–4', '4+'];
+      mkChart('chartChemEfficiency', {
+        type: 'bar',
+        data: {
+          labels: EFF_LABELS,
+          datasets: CHEM_ORDER.map(k => {
+            const eff = chemSessions[k].filter(s => s.hasRealEff);
+            const n = eff.length || 1;
+            return {
+              label: k,
+              data: EFF_BINS.map(([a,b]) => +(eff.filter(s => s.realMiPerKwh >= a && s.realMiPerKwh < b).length / n * 100).toFixed(1)),
+              backgroundColor: CHEM_META[k].color, borderRadius: 4
+            };
+          })
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10 } },
+            datalabels: { display: false },
+            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)}% of sessions` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: tc() }, title: { display: true, text: 'mi / kWh  ↑ better', color: '#888' } },
+            y: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '%' }, beginAtZero: true,
+                 title: { display: true, text: '% of sessions', color: '#888' } }
+          }
+        }
+      });
+    } else if (chemSection) {
+      chemSection.style.display = 'none';
+    }
 
   })(sessions); // pass all sessions — vehicle comparison always uses full fleet data
 
