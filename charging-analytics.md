@@ -2776,7 +2776,7 @@ mkChart('chartLocationBar', {
       tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.x.toFixed(1)} kWh` } }
     },
     scales: {
-      x: { grid: { color: gc() }, ticks: { color: '#888' } },
+      x: { grid: { color: gc() }, ticks: { color: tc() }, grace: '10%' },
       y: { grid: { display: false }, ticks: { color: tc() } }
     }
   }
@@ -3018,7 +3018,7 @@ mkChart('chartMonthlySourceSplit', {
             // Mirror of left axis: Wh/mi = 1000 / mi/kWh
             // We define min/max to match the left axis range inverted
             ticks: {
-              color: '#888',
+              color: tc(),
               callback: v => Math.round(1000 / v) + ' Wh/mi'
             },
             title: { display: true, text: 'Wh / mi  ↓ better', color: '#888' },
@@ -3474,7 +3474,7 @@ mkChart('chartDayOfWeek', {
       },
       scales:{
         x:{ grid:{ display:false }, ticks:{ color:tc() } },
-        y:{ grid:{ color:gc() }, ticks:{ color:tc(), precision:0 }, beginAtZero:true,
+        y:{ grid:{ color:gc() }, ticks:{ color:tc(), precision:0 }, beginAtZero:true, grace:'12%',
             title:{ display:true, text:'Occurrences', color:'#888' } }
       }
     }
@@ -4723,7 +4723,7 @@ mkChart('chartHistogram', {
         scales: {
           // grace adds right-side headroom so the end-aligned value labels aren't clipped
           x: { grid: { color: gc() }, ticks: { color: tc() }, beginAtZero: true, grace: '15%' },
-          y: { grid: { display: false }, ticks: { color: tc() } }
+          y: { grid: { display: false }, ticks: { color: tc(), callback: function(v){ return this.getLabelForValue(v).replace(/^LRB's /,'L: ').replace(' Mach-E',''); } } }
         }
       }
     });
@@ -4749,7 +4749,7 @@ mkChart('chartHistogram', {
         scales: {
           // grace adds right-side headroom so the end-aligned value labels aren't clipped
           x: { grid: { color: gc() }, ticks: { color: tc(), callback: v => v + '¢' }, beginAtZero: true, grace: '15%' },
-          y: { grid: { display: false }, ticks: { color: tc() } }
+          y: { grid: { display: false }, ticks: { color: tc(), callback: function(v){ return this.getLabelForValue(v).replace(/^LRB's /,'L: ').replace(' Mach-E',''); } } }
         }
       }
     });
@@ -4824,7 +4824,7 @@ mkChart('chartHistogram', {
           yWhMi: {
             position: 'right',
             grid: { drawOnChartArea: false },
-            ticks: { color: '#888', callback: v => Math.round(1000/v) + ' Wh/mi' },
+            ticks: { color: tc(), callback: v => Math.round(1000/v) + ' Wh/mi' },
             title: { display: true, text: 'Wh / mi  ↓ better', color: '#888' },
             afterDataLimits: axis => {
               const left = axis.chart.scales.yMiKwh;
@@ -5466,7 +5466,7 @@ mkChart('chartHistogram', {
             tooltip:{ callbacks:{ label: ctx => ` ${ctx.parsed.x} sessions` } }
           },
           scales:{
-            x:{ grid:{ color: gc() }, ticks:{ color: tc(), precision:0 }, beginAtZero:true,
+            x:{ grid:{ color: gc() }, ticks:{ color: tc(), precision:0 }, beginAtZero:true, grace:'12%',
                 title:{ display:true, text:'Sessions', color:'#888' } },
             y:{ grid:{ display:false }, ticks:{ color: tc(), font:{ size:10 } } }
           }
