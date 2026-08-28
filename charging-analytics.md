@@ -1876,6 +1876,8 @@ let _locHdrsWired = false; // guard: only wire sort-header onclick once
 const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
 const tc     = () => isDark() ? '#c8c8c8' : '#555';   // tick / label color
 const gc     = () => isDark() ? '#3a3a3a' : '#e8e8e8'; // grid color
+// Right-side legends squish donut/polar charts on phones — stack under the chart on narrow screens.
+const legendPos = () => (window.innerWidth < 560 ? 'bottom' : 'right');
 
 function getStepRate(arr, date, field, fallback) {
   if (!Array.isArray(arr) || !arr.length) return fallback;
@@ -2707,7 +2709,7 @@ mkChart('chartLocationDonut', {
     cutout: '62%',
     plugins: {
       legend: {
-        position: 'right',
+        position: legendPos(),
         labels: {
           color: tc(), padding: 12, boxWidth: 14, font: { size: 11 },
           generateLabels: chart => {
@@ -3397,7 +3399,7 @@ mkChart('chartDayOfWeek', {
     responsive: true, maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'right',
+        position: legendPos(),
         labels: { color: tc(), boxWidth: 11, padding: 9,
           generateLabels: chart => {
             const ds = chart.data.datasets[0];
@@ -5434,7 +5436,7 @@ mkChart('chartHistogram', {
         },
         options: { responsive:true, maintainAspectRatio:false, cutout:'58%',
           plugins:{
-            legend:{ position:'right', labels:{ color: tc(), boxWidth: 12, padding: 8, font:{ size: 10 },
+            legend:{ position:legendPos(), labels:{ color: tc(), boxWidth: 12, padding: 8, font:{ size: 10 },
               generateLabels: chart => {
                 const ds  = chart.data.datasets[0];
                 const tot = ds.data.reduce((a,v) => a+v, 0);
@@ -5877,9 +5879,9 @@ mkChart('chartHistogram', {
 
     // Redefine locally — these are inside the efficiency IIFE and not in scope here
     const tempVehicles = [...new Set(sl.map(s => s.vehicle))].sort(vehicleSort);
-    const tempPalette  = ['#7b1fa2','#f39c12','#0288d1','#2ecc71'];
+    // Use the shared per-vehicle colours so a car is the SAME colour here as everywhere else.
     const vehColors2   = {};
-    tempVehicles.forEach((v, i) => { vehColors2[v] = tempPalette[i % tempPalette.length]; });
+    tempVehicles.forEach((v, i) => { vehColors2[v] = vehColor(v, i); });
 
     // Chart 1: Efficiency vs temperature scatter
     const buildTempScatter = () => {
@@ -5918,8 +5920,10 @@ mkChart('chartHistogram', {
     buildTempScatter();
     const toggleEl = document.getElementById('tempExcludeHome');
     if (toggleEl) {
-      // Remove old listener if rebuild fires (vehicle filter change)
+      // Replace the node to drop stale listeners, but carry over the live checked state
+      // (cloneNode copies the attribute, not the current .checked property).
       const newToggle = toggleEl.cloneNode(true);
+      newToggle.checked = toggleEl.checked;
       toggleEl.parentNode.replaceChild(newToggle, toggleEl);
       newToggle.addEventListener('change', buildTempScatter);
     }
@@ -7179,18 +7183,21 @@ window.addEventListener('themeChanged', () => {
     }
     if (chart.options.plugins?.datalabels) {
       const dl = chart.options.plugins.datalabels;
-      if (dl.color !== undefined && dl.color !== '#fff' && dl.color !== '#ffffff') {
+      // Only recolour fixed string colours — leave function-valued colours (per-bar
+      // contrast, e.g. chartAvgRate) and fixed white labels untouched.
+      if (typeof dl.color === 'string' && dl.color !== '#fff' && dl.color !== '#ffffff') {
         dl.color = tc();
       }
     }
-    // Update scale colors
-    ['x','y','r'].forEach(axis => {
-      const sc = chart.options.scales?.[axis];
+    // Update scale colors — walk EVERY scale incl. custom IDs (yMiKwh, yWhMi, yTemp, yEff).
+    Object.entries(chart.options.scales || {}).forEach(([id, sc]) => {
       if (!sc) return;
-      if (sc.ticks)         sc.ticks.color = axis === 'r' ? '#999' : tc();
-      if (sc.grid)          sc.grid.color  = gc();
-      if (sc.pointLabels)   sc.pointLabels.color = tc();
-      if (sc.title)         sc.title.color = '#888';
+      const isRadial = id === 'r';
+      const isCoded  = id === 'yTemp' || id === 'yEff'; // intentionally colour-coded axes
+      if (sc.ticks && !isCoded) sc.ticks.color = isRadial ? '#999' : tc();
+      if (sc.grid)              sc.grid.color  = gc();
+      if (sc.pointLabels)       sc.pointLabels.color = tc();
+      if (sc.title && !isCoded)  sc.title.color = '#888';
     });
     // Update dataset borderColor for donut/polar (segment borders match background)
     chart.data.datasets.forEach(ds => {
