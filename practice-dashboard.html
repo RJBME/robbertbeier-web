@@ -100,6 +100,7 @@
         <h1>Practice Dashboard</h1>
         <p class="subtitle">Michigan SOS road test prep</p>
         <div class="banner" id="banner" style="margin-top:16px;"></div>
+        <div class="src-note" id="sync-status" style="margin-top:12px;"></div>
     </div>
 
     <div id="dash"></div>
@@ -128,15 +129,34 @@
     const DAILY_GOAL = 80;
     const PASS = 70;
 
+    // ---- Live sync (Google Apps Script). Set SYNC_URL to '' to disable and use local/import only. ----
+    const SYNC_URL = 'https://script.google.com/macros/s/AKfycbx81DU5oNSU6yOO4Svm2EZIfXOJCv4HQwwjtXB5tmEqg4-IjSv71RJ7T9QjENk-II5I/exec';
+    const SYNC_SECRET = 'Daphnis_Tulip_Bronco';
+    const SYNC_USER = 'student';
+
     const LIVE_KEY = 'sosPracticeProgress';   // written by the practice app on this device
     const IMPORT_KEY = 'sosParentData';       // pasted from another device
+    const CLOUD_KEY = 'sosCloudCache';         // cached copy of the cloud data
+    let cloudOnline = true;
 
     function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
     function normalize(d) {
         d = d || {};
         return { best: d.best || {}, stats: d.stats || {}, sessions: Array.isArray(d.sessions) ? d.sessions : [], daily: d.daily || {} };
     }
+    async function fetchCloud() {
+        if (!SYNC_URL) return false;
+        try {
+            const r = await fetch(SYNC_URL + '?secret=' + encodeURIComponent(SYNC_SECRET) + '&user=' + encodeURIComponent(SYNC_USER) + '&action=load&_=' + Date.now());
+            const j = await r.json();
+            cloudOnline = true;
+            if (j && j.ok && j.data) { localStorage.setItem(CLOUD_KEY, JSON.stringify({ updated: j.updated, data: j.data })); }
+            return true;
+        } catch (e) { cloudOnline = false; return false; }
+    }
     function loadData() {
+        const cc = readJSON(CLOUD_KEY);
+        if (cc && cc.data) return { data: normalize(cc.data), source: 'cloud', updated: cc.updated };
         const imp = readJSON(IMPORT_KEY);
         if (imp) return { data: normalize(imp), source: 'imported' };
         const live = readJSON(LIVE_KEY);
@@ -156,7 +176,7 @@
         const bank = (typeof masterQuizData !== 'undefined') ? masterQuizData : [];
         const totalQ = bank.length;
         const starredTotal = bank.filter(q => q.starred).length;
-        const { data, source } = loadData();
+        const { data, source, updated } = loadData();
         const banner = document.getElementById('banner');
         const dash = document.getElementById('dash');
 
@@ -173,6 +193,7 @@
                     : 'Open &ldquo;Load data from another device&rdquo; below and paste the export code from the practice device.'}
             </div></div>`;
             renderImportStatus(source);
+            renderSyncStatus(source, updated);
             return;
         }
 
@@ -326,13 +347,40 @@
 
         dash.innerHTML = html;
         renderImportStatus(source);
+        renderSyncStatus(source, updated);
     }
 
     function renderImportStatus(source) {
         const el = document.getElementById('import-status');
         if (source === 'imported') el.innerHTML = 'Showing <strong>imported</strong> data from another device.';
         else if (source === 'device') el.innerHTML = 'Showing data saved on <strong>this device</strong>.';
+        else if (source === 'cloud') el.innerHTML = 'Live-synced from the practice device.';
         else el.textContent = '';
+    }
+
+    function renderSyncStatus(source, updated) {
+        const el = document.getElementById('sync-status');
+        if (!el) return;
+        if (source === 'cloud') {
+            const when = updated ? new Date(updated).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+            el.innerHTML = (cloudOnline ? '🔄 Live-synced' : '⚠️ Offline — showing last sync') +
+                (when ? ` &middot; updated ${when}` : '') + ' &middot; <a href="#" id="refresh-link">refresh</a>';
+        } else if (source === 'imported') {
+            el.innerHTML = 'Showing imported data' + (SYNC_URL ? ' (waiting for live sync&hellip;)' : '') + '.';
+        } else if (source === 'device') {
+            el.textContent = "Showing this device's data.";
+        } else {
+            el.textContent = SYNC_URL ? 'Waiting for the practice device to sync&hellip;' : '';
+        }
+        const rl = document.getElementById('refresh-link');
+        if (rl) rl.onclick = (e) => { e.preventDefault(); refresh(); };
+    }
+
+    async function refresh() {
+        const el = document.getElementById('sync-status');
+        if (el) el.textContent = 'Checking for updates…';
+        await fetchCloud();
+        render();
     }
 
     document.getElementById('import-btn').onclick = () => {
@@ -349,10 +397,17 @@
     };
     document.getElementById('clear-import-btn').onclick = () => {
         localStorage.removeItem(IMPORT_KEY);
+        localStorage.removeItem(CLOUD_KEY);
         render();
     };
 
-    render();
+    async function init() {
+        render();                 // instant, from any cached data
+        await fetchCloud();       // then pull the latest from the cloud
+        render();
+        if (SYNC_URL) setInterval(async () => { await fetchCloud(); render(); }, 60000); // auto-refresh
+    }
+    init();
 </script>
 </body>
 </html>

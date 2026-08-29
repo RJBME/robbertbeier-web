@@ -295,6 +295,7 @@
     function saveProgress() {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); }
         catch (e) { /* storage unavailable — app still works */ }
+        scheduleCloudPush();
     }
     let progress = loadProgress();
     progress.best = progress.best || {};        // mode label -> best percent
@@ -310,6 +311,23 @@
         const d = new Date(t);
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
+
+    // ---- Optional live sync (Google Apps Script). Set SYNC_URL to '' to disable. ----
+    const SYNC_URL = 'https://script.google.com/macros/s/AKfycbx81DU5oNSU6yOO4Svm2EZIfXOJCv4HQwwjtXB5tmEqg4-IjSv71RJ7T9QjENk-II5I/exec';
+    const SYNC_SECRET = 'Daphnis_Tulip_Bronco';
+    const SYNC_USER = 'student';
+    let _pushTimer = null;
+    function cloudPush() {
+        if (!SYNC_URL) return;
+        try {
+            fetch(SYNC_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ secret: SYNC_SECRET, user: SYNC_USER, action: 'save', data: progress })
+            }).catch(() => {}); // offline: next save retries
+        } catch (e) {}
+    }
+    function scheduleCloudPush() { if (!SYNC_URL) return; clearTimeout(_pushTimer); _pushTimer = setTimeout(cloudPush, 4000); }
     // migrate older format (progress.missed) into stats
     if (progress.missed) {
         for (const id in progress.missed) {
@@ -566,6 +584,7 @@
             progress.sessions.push({ t: Date.now(), mode: currentModeLabel, score: score, total: totalAnswered, pct: percent });
             if (progress.sessions.length > 500) progress.sessions.splice(0, progress.sessions.length - 500);
             saveProgress();
+            cloudPush(); // push the completed quiz right away
         }
 
         const resultMsg = document.getElementById('result-message');
