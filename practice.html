@@ -280,7 +280,7 @@
         <button class="btn-large" onclick="startQuiz(55, 'Half Exam')">Half Exam (55 Questions)</button>
         <div class="best-label" data-mode="Half Exam"></div>
 
-        <button class="btn-large" onclick="startQuiz(111, 'Full Simulation')">Full Simulation (All 111 Questions)</button>
+        <button class="btn-large" id="btn-full" onclick="startQuiz(masterQuizData.length, 'Full Simulation')">Full Simulation (All Questions)</button>
         <div class="best-label" data-mode="Full Simulation"></div>
 
         <button class="btn-large btn-highlight" onclick="startMockTest()">SOS Mock Test (80 Questions)</button>
@@ -738,6 +738,7 @@
 
     // ---- Init ----
     validateQuestions();
+    document.getElementById('btn-full').textContent = `Full Simulation (All ${masterQuizData.length} Questions)`;
     renderSplashBests();
 </script>
 </body>
