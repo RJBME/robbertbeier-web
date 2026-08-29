@@ -300,6 +300,16 @@
     progress.best = progress.best || {};        // mode label -> best percent
     progress.stats = progress.stats || {};      // question id -> { seen, correct, wrong, last }
     progress.sessions = progress.sessions || []; // [{ t, mode, score, total, pct }]
+    progress.daily = progress.daily || {};      // 'YYYY-MM-DD' -> { questionId: timesAnsweredThatDay }
+    // keep daily log bounded (last ~45 days)
+    (function pruneDaily() {
+        const keys = Object.keys(progress.daily).sort();
+        if (keys.length > 45) keys.slice(0, keys.length - 45).forEach(k => delete progress.daily[k]);
+    })();
+    function ymd(t) {
+        const d = new Date(t);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
     // migrate older format (progress.missed) into stats
     if (progress.missed) {
         for (const id in progress.missed) {
@@ -517,6 +527,10 @@
         if (isCorrect) st.correct++; else st.wrong++;
         st.last = Date.now();
         progress.stats[q.id] = st;
+        // daily unique-question log (for the 80-unique-per-day goal)
+        const dk = ymd(Date.now());
+        if (!progress.daily[dk]) progress.daily[dk] = {};
+        progress.daily[dk][q.id] = (progress.daily[dk][q.id] || 0) + 1;
         saveProgress();
 
         results.push({ q: q, chosen: chosenIndex, correct: isCorrect });
@@ -669,7 +683,7 @@
 
     document.getElementById('reset-progress-btn').onclick = () => {
         if (confirm('Clear all saved progress (best scores, question history, and stats) on this device?')) {
-            progress = { best: {}, stats: {}, sessions: [] };
+            progress = { best: {}, stats: {}, sessions: [], daily: {} };
             saveProgress();
             renderSplashBests();
         }

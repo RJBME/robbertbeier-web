@@ -134,7 +134,7 @@
     function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
     function normalize(d) {
         d = d || {};
-        return { best: d.best || {}, stats: d.stats || {}, sessions: Array.isArray(d.sessions) ? d.sessions : [] };
+        return { best: d.best || {}, stats: d.stats || {}, sessions: Array.isArray(d.sessions) ? d.sessions : [], daily: d.daily || {} };
     }
     function loadData() {
         const imp = readJSON(IMPORT_KEY);
@@ -144,7 +144,7 @@
         return { data: null, source: null };
     }
 
-    const dayKey = (t) => { const d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+    const dayKey = (t) => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
     const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     function daysUntilTest() {
@@ -178,14 +178,20 @@
 
         const sessions = data.sessions.slice().sort((a, b) => a.t - b.t);
         const stats = data.stats;
+        const daily = data.daily || {};
 
-        // per-day totals from sessions
-        const perDay = {};
-        sessions.forEach(s => {
-            const k = dayKey(s.t);
-            if (!perDay[k]) perDay[k] = { q: 0, correct: 0 };
-            perDay[k].q += s.total; perDay[k].correct += s.score;
-        });
+        // Daily counts. Goal is 80 UNIQUE questions/day, so prefer the daily
+        // unique-question log; fall back to session totals only for older data
+        // that predates that log.
+        const useUnique = Object.keys(daily).length > 0;
+        const unitLabel = useUnique ? 'unique questions' : 'questions';
+        const perDay = {};   // dayKey -> count
+        if (useUnique) {
+            Object.entries(daily).forEach(([k, ids]) => { perDay[k] = Object.keys(ids).length; });
+        } else {
+            sessions.forEach(s => { const k = dayKey(s.t); perDay[k] = (perDay[k] || 0) + s.total; });
+        }
+        const dayCount = (k) => perDay[k] || 0;
 
         // lifetime stats from per-question record
         let lifeSeen = 0, lifeCorrect = 0, seenCount = 0, starredSeen = 0;
@@ -204,30 +210,30 @@
 
         // today / streak / activity
         const today = new Date(); today.setHours(0, 0, 0, 0);
-        const todayQ = (perDay[dayKey(today)] || {}).q || 0;
+        const todayQ = dayCount(dayKey(today));
         const activeDays = Object.keys(perDay).length;
-        const totalAnswered = Object.values(perDay).reduce((a, d) => a + d.q, 0);
-        const avgPerActiveDay = activeDays ? Math.round(totalAnswered / activeDays) : 0;
-        const bestDay = Object.values(perDay).reduce((m, d) => Math.max(m, d.q), 0);
+        const totalAnswered = lifeSeen;                        // lifetime answers (includes repeats)
+        const sumDaily = Object.values(perDay).reduce((a, n) => a + n, 0);
+        const avgPerActiveDay = activeDays ? Math.round(sumDaily / activeDays) : 0;
+        const bestDay = activeDays ? Math.max(...Object.values(perDay)) : 0;
 
         // current goal streak (consecutive days meeting the goal, ending today or yesterday)
         let streak = 0; let d = new Date(today);
-        if (((perDay[dayKey(d)] || {}).q || 0) < DAILY_GOAL) d.setDate(d.getDate() - 1);
-        while (((perDay[dayKey(d)] || {}).q || 0) >= DAILY_GOAL) { streak++; d.setDate(d.getDate() - 1); }
-        // days on goal within the run-up
-        const daysMetGoal = Object.values(perDay).filter(x => x.q >= DAILY_GOAL).length;
+        if (dayCount(dayKey(d)) < DAILY_GOAL) d.setDate(d.getDate() - 1);
+        while (dayCount(dayKey(d)) >= DAILY_GOAL) { streak++; d.setDate(d.getDate() - 1); }
+        const daysMetGoal = Object.values(perDay).filter(n => n >= DAILY_GOAL).length;
 
         // last 14 days for the chart
         const days = [];
         for (let i = 13; i >= 0; i--) { const x = new Date(today); x.setDate(x.getDate() - i); days.push(x); }
-        const chartMax = Math.max(DAILY_GOAL, ...days.map(x => (perDay[dayKey(x)] || {}).q || 0)) * 1.15;
+        const chartMax = Math.max(DAILY_GOAL, ...days.map(x => dayCount(dayKey(x)))) * 1.15;
 
         let html = '';
 
         // KPI row
         const todayClass = todayQ >= DAILY_GOAL ? 'good' : (todayQ > 0 ? 'warn' : 'bad');
         html += `<div class="card"><div class="kpis">
-            <div class="kpi ${todayClass}"><div class="n">${todayQ}</div><div class="l">answered today (goal ${DAILY_GOAL})</div></div>
+            <div class="kpi ${todayClass}"><div class="n">${todayQ}</div><div class="l">${useUnique ? 'unique' : 'answered'} today (goal ${DAILY_GOAL})</div></div>
             <div class="kpi ${streak > 0 ? 'good' : ''}"><div class="n">${streak}</div><div class="l">day goal streak</div></div>
             <div class="kpi"><div class="n">${totalAnswered}</div><div class="l">total answered</div></div>
             <div class="kpi ${overallAcc >= PASS ? 'good' : 'warn'}"><div class="n">${overallAcc}%</div><div class="l">overall accuracy</div></div>
@@ -238,17 +244,17 @@
         // Today vs goal
         const todayPct = Math.min(100, Math.round(todayQ / DAILY_GOAL * 100));
         html += `<div class="card">
-            <div class="row-between"><span class="section-title" style="margin:0;">Today&rsquo;s goal</span><span class="muted">${todayQ} / ${DAILY_GOAL}</span></div>
+            <div class="row-between"><span class="section-title" style="margin:0;">Today&rsquo;s goal <span class="muted" style="font-weight:400;">(${DAILY_GOAL} ${unitLabel})</span></span><span class="muted">${todayQ} / ${DAILY_GOAL}</span></div>
             <div class="pbar"><div style="width:${todayPct}%;background:${todayQ >= DAILY_GOAL ? '#43a047' : '#0056b3'};"></div></div>
             <div class="muted" style="margin-top:8px;">${todayQ >= DAILY_GOAL ? '✅ Daily goal met!' : (todayQ > 0 ? `${DAILY_GOAL - todayQ} more to hit today&rsquo;s goal.` : 'No practice yet today.')}</div>
         </div>`;
 
         // Daily chart
-        html += `<div class="card"><div class="section-title">Daily Practice &mdash; last 14 days</div><div class="chart" id="chart">`;
+        html += `<div class="card"><div class="section-title">Daily Practice &mdash; last 14 days</div><div class="muted" style="margin:-6px 0 4px;">${useUnique ? 'Unique questions' : 'Questions'} answered each day &middot; goal ${DAILY_GOAL}</div><div class="chart" id="chart">`;
         const goalTopPct = 100 - (DAILY_GOAL / chartMax * 100);
         html += `<div class="goal-line" style="top:${goalTopPct}%;"></div><div class="goal-tag" style="top:${goalTopPct}%;">goal ${DAILY_GOAL}</div>`;
         days.forEach(x => {
-            const q = (perDay[dayKey(x)] || {}).q || 0;
+            const q = dayCount(dayKey(x));
             const h = Math.max(q > 0 ? 3 : 1, Math.round(q / chartMax * 100));
             const cls = q >= DAILY_GOAL ? 'met' : (q > 0 ? 'some' : 'none');
             const dow = x.toLocaleDateString(undefined, { weekday: 'narrow' });
