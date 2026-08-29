@@ -2,55 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SOS Practice">
+    <meta name="theme-color" content="#0056b3">
     <title>Michigan SOS Practice Test</title>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            background: #f4f7f6; 
-            color: #333; 
-            display: flex; 
-            justify-content: center; 
-            padding: 20px; 
+        html { -webkit-text-size-adjust: 100%; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
-        .quiz-container { 
-            background: white; 
-            padding: 30px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-            max-width: 600px; 
-            width: 100%; 
+        .quiz-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
         }
-        h1 { font-size: 1.5rem; text-align: center; margin-bottom: 10px; }
-        
+        h1 { font-size: 1.5rem; text-align: center; margin: 0 0 10px; }
+
         /* Splash Screen Styles */
         #splash-screen { text-align: center; }
         .splash-desc { color: #666; margin-bottom: 30px; font-size: 1.1rem; }
-        .btn-large { 
-            display: block; 
-            width: 100%; 
-            margin-bottom: 15px; 
-            padding: 15px; 
-            font-size: 1.1rem; 
+        .btn-large {
+            display: block;
+            width: 100%;
+            margin-bottom: 6px;
+            padding: 16px;
+            font-size: 1.1rem;
             background: #fff;
             color: #0056b3;
             border: 2px solid #0056b3;
             border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.15s;
         }
-        .btn-large:hover { background: #0056b3; color: white; }
+        .btn-large:active { transform: scale(0.99); background: #eef4fb; }
         .btn-highlight { background: #0056b3; color: white; font-weight: bold; }
-        .btn-highlight:hover { background: #004494; }
+        .btn-highlight:active { background: #004494; }
+        .best-label {
+            font-size: 0.8rem;
+            color: #4CAF50;
+            font-weight: bold;
+            margin-bottom: 15px;
+            min-height: 1em;
+        }
+        .splash-tools { margin-top: 20px; }
+        .link-btn {
+            background: none;
+            border: none;
+            color: #999;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 8px;
+        }
 
         /* Quiz Styles */
         #quiz-block, #progress-section, #score-board { display: none; }
-        
-        .progress-text { 
-            text-align: center; 
-            color: #666; 
-            margin-bottom: 10px; 
-            font-size: 0.9rem; 
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
         }
         .progress-bar-container {
             width: 100%;
@@ -66,56 +95,84 @@
             width: 0%;
             transition: width 0.3s ease;
         }
-        .question { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; }
+
+        .question { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; line-height: 1.35; }
         .options { display: flex; flex-direction: column; gap: 10px; }
-        .option { 
-            padding: 12px 15px; 
-            border: 2px solid #e0e0e0; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            transition: all 0.2s; 
+        .option {
+            padding: 14px 15px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            user-select: none;
+            -webkit-user-select: none;
         }
-        .option:hover { background: #f0f0f0; }
+        .option:active { background: #ececec; }
+        .option.answered { cursor: default; }
+        .option.answered:active { background: #fff; }
         .option.correct { border-color: #4CAF50; background: #e8f5e9; }
         .option.wrong { border-color: #F44336; background: #ffebee; }
-        
-        .btn-next { 
-            background: #0056b3; 
-            color: white; 
-            border: none; 
-            padding: 12px 20px; 
-            border-radius: 8px; 
-            font-size: 1rem; 
-            cursor: pointer; 
-            margin-top: 20px; 
-            width: 100%; 
-            display: none; 
+
+        .explanation-box {
+            display: none;
+            margin-top: 15px;
+            padding: 12px 15px;
+            background: #f0f6ff;
+            border-left: 4px solid #0056b3;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            color: #333;
         }
-        .btn-next:hover { background: #004494; }
+        .explanation-box strong { color: #0056b3; }
+
+        .btn-next {
+            background: #0056b3;
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+            display: none;
+        }
+        .btn-next:active { background: #004494; }
 
         .btn-secondary {
-            background: #fff; 
-            color: #666; 
-            border: 2px solid #ccc; 
-            padding: 12px 20px; 
-            border-radius: 8px; 
-            font-size: 1rem; 
-            cursor: pointer; 
-            margin-top: 10px; 
-            width: 100%; 
+            background: #fff;
+            color: #666;
+            border: 2px solid #ccc;
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
             display: none;
-            transition: all 0.2s;
         }
-        .btn-secondary:hover { background: #eee; }
-        
+        .btn-secondary:active { background: #eee; }
+
         /* Stats Screen Styles */
-        .score-header { text-align: center; font-size: 1.5rem; margin-bottom: 20px; font-weight: bold;}
-        .stats-container { margin-top: 20px; }
-        .stat-row { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 10px; 
+        .score-header { text-align: center; font-size: 1.5rem; margin-bottom: 20px; font-weight: bold; }
+        .section-heading {
+            margin-top: 30px;
+            margin-bottom: 0;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+            font-size: 1.1rem;
+        }
+        .stats-container { margin-top: 10px; }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
             border-bottom: 1px solid #eee;
             font-size: 0.95rem;
         }
@@ -126,38 +183,112 @@
             font-size: 0.8rem;
             color: white;
             font-weight: bold;
+            white-space: nowrap;
         }
         .badge-good { background-color: #4CAF50; }
         .badge-review { background-color: #F44336; }
 
         /* Mini-Test Review Button */
         .btn-mini {
-            background: white; 
-            color: #F44336; 
-            border: 1px solid #F44336; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-size: 0.8rem; 
-            cursor: pointer; 
-            margin-left: 10px; 
+            background: white;
+            color: #F44336;
+            border: 1px solid #F44336;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-left: 8px;
             font-weight: bold;
-            transition: all 0.2s;
+            white-space: nowrap;
         }
-        .btn-mini:hover { background: #F44336; color: white; }
+        .btn-mini:active { background: #F44336; color: white; }
+
+        /* Likely-on-Test Focus */
+        .focus-box {
+            margin-top: 10px;
+            padding: 15px;
+            background: #fff8e1;
+            border: 1px solid #FFE08A;
+            border-radius: 8px;
+        }
+        .focus-coverage { font-size: 0.85rem; color: #6b5900; margin-bottom: 10px; line-height: 1.4; }
+        .focus-score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .focus-score { font-size: 1.05rem; font-weight: bold; }
+        .focus-item {
+            display: flex;
+            gap: 8px;
+            padding: 8px 0;
+            border-top: 1px solid #f0e2b8;
+            font-size: 0.9rem;
+            line-height: 1.35;
+        }
+        .focus-mark { font-weight: bold; flex-shrink: 0; }
+        .focus-mark.ok { color: #2e7d32; }
+        .focus-mark.no { color: #c62828; }
+        .focus-qtext { flex: 1; }
+        .focus-ans { display: block; color: #555; font-size: 0.82rem; margin-top: 2px; }
+
+        /* Missed-Question Review */
+        .review-item { padding: 12px 0; border-bottom: 1px solid #eee; }
+        .review-q { font-weight: bold; margin-bottom: 6px; line-height: 1.35; }
+        .review-line { font-size: 0.9rem; margin: 2px 0; }
+        .review-correct { color: #2e7d32; }
+        .review-chosen { color: #c62828; }
+        .review-exp { color: #555; font-size: 0.88rem; margin-top: 5px; font-style: italic; }
+
+        /* Only apply hover effects on real pointing devices (not touch) */
+        @media (hover: hover) and (pointer: fine) {
+            .btn-large:hover { background: #0056b3; color: white; }
+            .btn-highlight:hover { background: #004494; }
+            .link-btn:hover { color: #666; }
+            .option:not(.answered):hover { background: #f0f0f0; }
+            .btn-next:hover { background: #004494; }
+            .btn-secondary:hover { background: #eee; }
+            .btn-mini:hover { background: #F44336; color: white; }
+        }
+
+        /* Phone layout */
+        @media (max-width: 640px) {
+            body { padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+            .quiz-container { padding: 20px 16px; border-radius: 10px; }
+            h1 { font-size: 1.35rem; }
+            .splash-desc { font-size: 1rem; margin-bottom: 24px; }
+            .btn-large { font-size: 1rem; }
+            .question { font-size: 1.1rem; }
+            .score-header { font-size: 1.35rem; }
+        }
     </style>
 </head>
 <body>
 
 <div class="quiz-container">
     <h1>SOS Practice Test</h1>
-    
+
     <!-- Splash Screen -->
     <div id="splash-screen">
         <p class="splash-desc">Select your practice mode to begin.</p>
-        <button class="btn-large" onclick="startQuiz(15)">Quick Review (15 Questions)</button>
-        <button class="btn-large" onclick="startQuiz(55)">Half Exam (55 Questions)</button>
-        <button class="btn-large" onclick="startQuiz(111)">Full Simulation (All 111 Questions)</button>
+
+        <button class="btn-large" onclick="startQuiz(15, 'Quick Review')">Quick Review (15 Questions)</button>
+        <div class="best-label" data-mode="Quick Review"></div>
+
+        <button class="btn-large" onclick="startQuiz(55, 'Half Exam')">Half Exam (55 Questions)</button>
+        <div class="best-label" data-mode="Half Exam"></div>
+
+        <button class="btn-large" onclick="startQuiz(111, 'Full Simulation')">Full Simulation (All 111 Questions)</button>
+        <div class="best-label" data-mode="Full Simulation"></div>
+
         <button class="btn-large btn-highlight" onclick="startMockTest()">SOS Mock Test (80 Questions)</button>
+        <div class="best-label" data-mode="SOS Mock Test"></div>
+
+        <div class="splash-tools">
+            <button class="link-btn" id="reset-progress-btn">Reset saved progress</button>
+        </div>
     </div>
 
     <!-- Progress Bar -->
@@ -172,164 +303,70 @@
     <div id="quiz-block">
         <div class="question" id="question-text">Loading question...</div>
         <div class="options" id="options-container"></div>
+        <div class="explanation-box" id="explanation-box"></div>
         <button class="btn-next" id="next-btn">Next Question</button>
-        <button class="btn-secondary" id="finish-early-btn">Finish & Rate Me</button>
+        <button class="btn-secondary" id="finish-early-btn">Finish &amp; Rate Me</button>
     </div>
-    
+
     <!-- Score Board -->
     <div id="score-board">
         <div class="score-header">Test Complete!</div>
         <div style="text-align: center; font-size: 1.2rem; margin-bottom: 10px;">
             Overall Score: <span id="score">0</span> / <span id="total">0</span> (<span id="score-percent">0</span>%)
         </div>
-        
-        <h3 style="margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Study Areas Breakdown</h3>
+        <div id="result-message" style="text-align: center; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;"></div>
+        <div id="best-message" style="text-align: center; font-size: 0.9rem; color: #666; margin-bottom: 10px;"></div>
+
+        <h3 class="section-heading">⭐ Likely-on-Test Focus</h3>
+        <div class="focus-box" id="focus-box"></div>
+
+        <h3 class="section-heading">Study Areas Breakdown</h3>
         <div class="stats-container" id="stats-container">
             <!-- Dynamic stats will populate here -->
+        </div>
+
+        <div id="review-section">
+            <h3 class="section-heading">Review Your Missed Questions</h3>
+            <div id="review-container"></div>
         </div>
 
         <button class="btn-next" id="restart-btn" style="display: block; margin-top: 30px;">Return to Main Menu</button>
     </div>
 </div>
 
+<!-- Question bank (separate file — edit questions here, not in the app logic) -->
+<script src="questions.js"></script>
 <script>
-    // 📝 The Master Database (111 Questions)
-    const masterQuizData = [
-        // --- PAGE 1 & 2: LICENSING & PRE-DRIVING ---
-        { category: "Rules & Licensing", question: "* A Michigan driver's license is issued and regulated by?", options: ["The federal government", "The county", "The state", "The local police department"], answer: 2 },
-        { category: "Rules & Licensing", question: "After passing state licensing requirements, a driver is a ____ driver.", options: ["probationary", "beginner", "certified", "advanced"], answer: 1 },
-        { category: "Rules & Licensing", question: "* For your level one license, your driving coach must be at least how old?", options: ["18 and have a license", "21 and have a license", "25 and have a license", "21, with or without a license"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "Risk is the chance of injury, damage, loss, and:", options: ["delays", "citations", "death", "traffic"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "It is important to decide how to manage available time, space, and ____ risk.", options: ["minimize", "eliminate", "ignore", "increase"], answer: 0 },
-        { category: "Safety & Pre-Driving", question: "What is the largest reason for young drivers having fatal crashes?", options: ["Distracted driving", "Speeding", "Driving under the influence", "Lack of driving experience"], answer: 3 },
-        { category: "Safety & Pre-Driving", question: "* When doing pre-driving checks, you should check each tire for proper:", options: ["alignment", "tread wear", "inflation", "rotation"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "When doing pre-driving checks, you should check all:", options: ["windows", "lights", "passengers", "documents"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "* With a parallel parked vehicle, from which direction do you approach to enter the vehicle?", options: ["The back", "The front", "The passenger's side", "It doesn't matter"], answer: 1 },
-        { category: "Vehicle Control", question: "* What is the most important part of your vehicle?", options: ["The engine", "The brakes", "The tires", "The steering wheel"], answer: 2 },
-        { category: "Vehicle Control", question: "To know if your seat is adjusted correctly, you need to be sure you can easily move your foot between the pedals without ____ your heel from the floor.", options: ["sliding", "twisting", "dragging", "lifting"], answer: 3 },
-        { category: "Vehicle Control", question: "Some vehicles have a small, flat footrest called a:", options: ["clutch pad", "dead pedal", "rest pedal", "dummy pedal"], answer: 1 },
-        { category: "Vehicle Control", question: "Before starting the engine, ensure the gear selector is in:", options: ["Neutral", "Drive", "Park", "Reverse"], answer: 2 },
-        { category: "Vehicle Control", question: "To start the engine, turn the key to the ____ position, check dashboard lights OR push Engine Start | Power button.", options: ["accessory", "ignition", "start", "on"], answer: 0 },
-        { category: "Vehicle Control", question: "When starting the engine, you should put your foot on the:", options: ["gas pedal", "clutch", "brake", "dead pedal"], answer: 2 },
+    // Pass threshold (per son's Driver's Ed class = 70%)
+    const PASS_THRESHOLD = 70;
 
-        // --- PAGE 3 & 4: SAFETY DEVICES & BLIND SPOTS ---
-        { category: "Safety & Pre-Driving", question: "* Is a child under the age of 4 ever allowed to sit in the front seat?", options: ["No, never", "Yes, always", "Yes, if the airbag is turned off AND all rear seats are occupied by children under age 4", "Yes, if they are in a forward-facing car seat"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "Children under the age of ____ and less than 4'9\" must be secured in a child restraint system.", options: ["4 years old", "6 years old", "8 years old", "10 years old"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "Before exiting your vehicle, ensure that children under ____ exit the vehicle or are supervised by someone 13 or older.", options: ["10", "8", "6", "4"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "Your vehicle's outside mirrors should be adjusted in a way that the blind spots are:", options: ["reduced", "eliminated", "expanded", "visible"], answer: 0 },
-        { category: "Safety & Pre-Driving", question: "* When is the best time to adjust your mirrors?", options: ["Before you adjust your seat", "After you adjust your seat", "While you are driving", "Before you put your seatbelt on"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "Which mirror gives you the best vision of whatever is happening behind you?", options: ["Rearview mirror", "Driver side mirror", "Passenger side mirror", "Both side mirrors combined"], answer: 0 },
-        { category: "Safety & Pre-Driving", question: "* An advantage of using the enhanced mirror setting is the amount you have to move your head or shoulders is greatly:", options: ["increased", "reduced", "eliminated", "unchanged"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "How many blind zones does a vehicle have?", options: ["2", "4", "6", "8"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "Where are a vehicle's blind zones located?", options: ["In the front and back only", "On the sides only", "In the front, in the back, and on each side of the vehicle", "Directly under the tires and behind the trunk"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "The blind zones that are the worst and most dangerous are on the:", options: ["front", "back", "sides", "roof"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "The main value of making a head check to the left or right before changing lanes is that it covers areas ____ in the rearview mirror and side mirrors.", options: ["already visible", "not visible", "distorted", "magnified"], answer: 1 },
-        { category: "Vehicle Control", question: "Which gear is used when towing a vehicle, in a car wash, or having to push a vehicle?", options: ["Park", "Reverse", "Neutral", "Drive"], answer: 2 },
-        { category: "Vehicle Control", question: "What is the first action you should take if the accelerator sticks, and you need to stop quickly?", options: ["Turn off the ignition", "Pull the parking brake", "Pump the gas pedal", "Shift into Neutral and apply the brakes"], answer: 3 },
-        { category: "Safety & Pre-Driving", question: "* If you're unfamiliar with the vehicle's instrument panel:", options: ["Guess based on symbols", "Ask a passenger", "Refer to the vehicle's owner's manual", "Search the internet while driving"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "* What are emergency flashers used for?", options: ["To signal a turn", "To warn other drivers of a problem", "To indicate you are parking", "To drive faster in rain"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "* If the red parking brake light is on, what does this indicate?", options: ["Your brakes are failing", "Your parking brake is activated", "You need brake fluid", "Your brake lights are out"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "* What would be an indication if an airbag is not in proper operating condition?", options: ["The steering wheel will lock", "The horn will not work", "The airbag warning light will stay on", "The check engine light will flash"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "* What does it mean if your temperature light comes on when you are driving?", options: ["The heater is on", "The outside temperature is freezing", "The engine temp level is not safe", "The air conditioning is failing"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "* What is the #1 safety device?", options: ["Air bags", "Anti-lock brakes", "Seat belts", "Head restraints"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "Safety belts are designed to be used with what?", options: ["Air bags", "Car seats", "Emergency flashers", "Cruise control"], answer: 0 },
-        { category: "Safety & Pre-Driving", question: "* How should you be seated to provide maximum protection?", options: ["Leaning slightly forward", "Straight up with your back firmly against the seat", "Reclined comfortably", "Shifted toward the center console"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "* Correctly adjusted head restraints provide the most protection when a vehicle is struck from where?", options: ["The front", "The side", "The rear", "During a rollover"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "If the head restraint is properly adjusted, where should it be?", options: ["At the base of the neck", "In the middle of the person's head", "Above the top of the head", "Resting on the shoulders"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "If you are properly seated, the top of the steering wheel should be no higher than?", options: ["Your chin", "Your eyes", "The top of your shoulders", "Your chest"], answer: 2 },
-        { category: "Safety & Pre-Driving", question: "* When driving a vehicle with airbags, what is the recommended distance you should be from the steering wheel?", options: ["Minimum 5\" away", "Minimum 10\" away", "Minimum 15\" away", "Minimum 20\" away"], answer: 1 },
-        { category: "Safety & Pre-Driving", question: "If your steering wheel has an airbag, where should your hands be positioned?", options: ["10 and 2", "8 and 4", "9 and 3", "12 and 6"], answer: 2 },
+    // ---- Persistent progress (localStorage) ----
+    const STORAGE_KEY = 'sosPracticeProgress';
+    function loadProgress() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+        catch (e) { return {}; }
+    }
+    function saveProgress() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); }
+        catch (e) { /* storage unavailable (private mode, etc.) — app still works */ }
+    }
+    let progress = loadProgress();
+    progress.missed = progress.missed || {}; // question id -> times missed
+    progress.best = progress.best || {};     // mode label -> best percent
 
-        // --- PAGE 5 & 6: TURNS, BRAKING, ACCELERATING ---
-        { category: "Maneuvers & Turning", question: "When should you brake when on a sharp curve?", options: ["Before entering the curve", "While in the middle of the curve", "As you exit the curve", "You should not brake, only coast"], answer: 0 },
-        { category: "Maneuvers & Turning", question: "During a turn, what speed should you go?", options: ["The posted speed limit", "The speed you slowed down to before the turn", "As fast as safely possible", "10 mph"], answer: 1 },
-        { category: "Maneuvers & Turning", question: "When do you begin to reaccelerate during a turn?", options: ["As soon as you turn the wheel", "Halfway through the turn", "Just before coming completely out of the turn", "After your wheels are perfectly straight"], answer: 2 },
-        { category: "Maneuvers & Turning", question: "When making a left turn, which lane should you turn into?", options: ["First lane closest to the curb", "The farthest right lane", "First lane after all yellow lines (left lane)", "Any lane is fine"], answer: 2 },
-        { category: "Maneuvers & Turning", question: "When making a right turn, which lane should you turn into?", options: ["First lane closest to the center line", "First lane closest to the curb (right lane)", "The center lane", "Any lane is fine"], answer: 1 },
-        { category: "Maneuvers & Turning", question: "To turn left from a one-way street, you should do it from the ____ lane.", options: ["right", "center", "left", "any available"], answer: 2 },
-        { category: "Maneuvers & Turning", question: "Turn signals need to be used how soon in advance?", options: ["1 to 2 seconds", "3 to 4 seconds", "5 to 6 seconds", "Just before turning"], answer: 1 },
-        { category: "Maneuvers & Turning", question: "When should you use your mirrors? When changing ____ and ____.", options: ["lanes / direction", "music / temperature", "direct / speed", "gears / passengers"], answer: 2 },
-        { category: "Maneuvers & Turning", question: "Why look in your rearview mirror prior to stopping or turning?", options: ["To check your blind spot", "The driver behind you may not stop or may do something unexpected", "To see if you have enough room to back up", "To verify your brake lights are working"], answer: 1 },
-        { category: "Vehicle Control", question: "Whenever you are about to accelerate, it is important to remember what?", options: ["Every vehicle accelerates differently", "To always floor the gas pedal", "To honk your horn first", "To lean forward in your seat"], answer: 0 },
-        { category: "Vehicle Control", question: "When accelerating, where does the weight of the car shift to?", options: ["Towards the front", "Towards the back", "To the left side", "To the right side"], answer: 1 },
-        { category: "Vehicle Control", question: "* Which foot is used to control the pedals?", options: ["Left", "Right", "Both", "Left for brake, Right for gas"], answer: 1 },
-        { category: "Vehicle Control", question: "Thrust acceleration is used to shift more weight to the rear wheels for traction, or to pass in ____ traffic.", options: ["slower", "higher-speed", "stopped", "city"], answer: 1 },
-        { category: "Vehicle Control", question: "Proper braking requires the ____ of your foot to be on the pedal.", options: ["heel", "arch", "ball", "toes"], answer: 2 },
-        { category: "Vehicle Control", question: "When you brake, where does the weight of the vehicle shift to?", options: ["Towards the back", "Towards the front", "Evenly across all four tires", "To the passenger side"], answer: 1 },
-        { category: "Vehicle Control", question: "* To control brake pressure, use your:", options: ["thigh and knee", "toes and ankle", "entire leg", "heel only"], answer: 1 },
-        { category: "Vehicle Control", question: "You can decelerate by simply releasing pressure from the:", options: ["accelerator", "brake", "clutch", "steering wheel"], answer: 0 },
+    function missCount(q) { return progress.missed[q.id] || 0; }
 
-        // --- PAGE 7 & 8: BACKING UP, PARKING, SIGNS ---
-        { category: "Parking & Backing Up", question: "When backing up, check your surroundings for:", options: ["traffic lights", "hazards", "speed limit signs", "potholes"], answer: 1 },
-        { category: "Parking & Backing Up", question: "When backing up, you should start with what speed?", options: ["5 mph", "Idle speed", "Light acceleration", "The posted speed limit"], answer: 1 },
-        { category: "Parking & Backing Up", question: "When backing up in a straight line, your left hand should be at:", options: ["9 o'clock", "10 o'clock", "12 o'clock", "6 o'clock"], answer: 2 },
-        { category: "Parking & Backing Up", question: "When backing up in a straight line, you should search through the ____ window.", options: ["driver side", "passenger side", "rear", "front windshield"], answer: 2 },
-        { category: "Parking & Backing Up", question: "When backing up, you should steer in the:", options: ["opposite direction you want to go", "same direction you want to go", "direction of traffic", "direction of the nearest curb"], answer: 1 },
-        { category: "Parking & Backing Up", question: "If you are backing up and want the rear of the vehicle to go left, be aware that the front of the vehicle:", options: ["stays stationary", "swings in the same direction", "swings in the opposite direction", "moves straight back"], answer: 2 },
-        { category: "Parking & Backing Up", question: "* When steering in reverse, vehicle movement is how much greater?", options: ["2 times", "5 times", "10 times", "It is the same"], answer: 2 },
-        { category: "Parking & Backing Up", question: "* What is the best way to avoid 'door dings' when parking?", options: ["Park far away", "Open your door slowly", "Park next to small cars", "Leave your windows down"], answer: 1 },
-        { category: "Parking & Backing Up", question: "When exiting your vehicle, watch for ____ by checking your mirrors and over your shoulder.", options: ["pedestrians", "trafic", "puddles", "signs"], answer: 1 },
-        { category: "Parking & Backing Up", question: "When backing out of a parking spot, you should always back ____ and look over your shoulder.", options: ["quickly", "slowly", "while honking", "using only your mirrors"], answer: 1 },
-        { category: "Parking & Backing Up", question: "When turning into a perpendicular parking spot, you should move at ____ speed.", options: ["10 mph", "idle", "thrust", "fast"], answer: 1 },
-        { category: "Parking & Backing Up", question: "When parallel parking, how far should a vehicle be from the curb?", options: ["No more than 6 to 12 inches", "1 to 2 feet", "2 to 3 feet", "Touching the curb"], answer: 0 },
-        { category: "Parking & Backing Up", question: "* When preparing to parallel park, how far should you position your vehicle from the vehicle you will park behind?", options: ["6 to 12 inches", "2 to 3 feet away", "4 to 5 feet away", "Right next to their mirror"], answer: 1 },
-        { category: "Parking & Backing Up", question: "A good hint to know when you are at a 45-degree angle while parallel parking is when your front bumper is even with the front vehicle's:", options: ["front door", "steering wheel", "rear bumper", "trunk lid"], answer: 2 },
-        { category: "Parking & Backing Up", question: "If you are driving in a neighborhood and there is not enough room to squeeze by an oncoming vehicle, what should you do?", options: ["Speed up to get past them quickly", "Honk until they move", "Pull over and wait behind parked vehicles", "Drive onto the sidewalk"], answer: 2 },
-        { category: "Parking & Backing Up", question: "Which way do your wheels face when parked facing downhill with or without a curb?", options: ["Away from the curb", "Straight ahead", "Toward the curb or grassy area", "It does not matter"], answer: 2 },
-        { category: "Parking & Backing Up", question: "* Turn your wheels left when you park which way?", options: ["Facing uphill with a curb", "Facing downhill with a curb", "Facing uphill without a curb", "Facing downhill without a curb"], answer: 0 },
-        
-        // --- PAGE 9: SPEED LIMITS, SIGNS, AND SIGNALS ---
-        { category: "Signs & Signals", question: "Signs, signals, and pavement markings provide information about:", options: ["restaurants and hotels", "laws, hazards and roads", "weather conditions", "vehicle maintenance"], answer: 1 },
-        { category: "Signs & Signals", question: "Traffic control devices serve what purpose?", options: ["To generate revenue", "To promote safety", "To decorate the roads", "To suggest routes"], answer: 1 },
-        { category: "Signs & Signals", question: "What is the absolute speed limit?", options: ["The speed of traffic", "The posted speed limit", "The speed safe for weather conditions", "70 mph"], answer: 1 },
-        { category: "Signs & Signals", question: "What is the basic speed limit?", options: ["The posted limit on a clear day", "The speed that is safe to travel based on the posted limit, weather, and traffic conditions", "15 mph in a neighborhood", "The minimum required speed on a highway"], answer: 1 },
-        { category: "Signs & Signals", question: "What is the speed limit in City Parks or Mobile Home Parks?", options: ["15 mph", "25 mph", "45 mph", "55 mph"], answer: 0 },
-        { category: "Signs & Signals", question: "The typical speed limit in Subdivision Areas and Business Districts is:", options: ["15 mph", "25 mph", "35 mph", "45 mph"], answer: 1 },
-        { category: "Signs & Signals", question: "The typical speed limit in Construction Zones when workers are present is:", options: ["25 mph", "35 mph", "45 mph", "55 mph"], answer: 2 },
-        { category: "Signs & Signals", question: "A reasonable and prudent speed for any set of conditions is a speed that gives a driver a:", options: ["fast route", "safe path of travel", "direct line to their destination", "smooth ride"], answer: 1 },
-        { category: "Signs & Signals", question: "What are regulatory signs?", options: ["Signs that warn of hazards", "Signs that show specific road rules and what is and is not prohibited", "Signs that tell you how far a city is", "Signs that mark state parks"], answer: 1 },
-        { category: "Signs & Signals", question: "* An example of a regulatory sign is a ____ sign.", options: ["School Zone", "Speed Limit", "Hospital", "Construction ahead"], answer: 1 },
-        { category: "Signs & Signals", question: "What colors are regulatory signs generally?", options: ["Black, white, and red", "Yellow and black", "Green and white", "Orange and black"], answer: 0 },
-        { category: "Signs & Signals", question: "Warning signs warn of potential ____ or changes to the route ahead.", options: ["detours", "hazards", "rest stops", "speed limits"], answer: 1 },
-        { category: "Signs & Signals", question: "A yellow pennant shaped sign means:", options: ["School Zone", "No Passing Zone", "Yield", "Stop"], answer: 1 },
-        { category: "Signs & Signals", question: "* An example of a warning sign is a ____ sign.", options: ["Stop", "Yield", "School Zone", "Speed Limit"], answer: 2 },
-        { category: "Signs & Signals", question: "What colors are construction signs?", options: ["Red", "Yellow", "Orange", "Pink"], answer: 2 },
-        { category: "Signs & Signals", question: "Construction signs are typically what shape?", options: ["Square", "Round", "Diamond", "Octagon"], answer: 2 },
-        { category: "Signs & Signals", question: "Incident or temporary signs are mostly diamond shaped and what color?", options: ["Orange", "Fluorescent Pink", "Yellow", "Red"], answer: 1 },
-        { category: "Signs & Signals", question: "What color are guide signs that give information on where you can find goods and services such as fuel, food, and hospitals?", options: ["Green", "Brown", "Blue", "White"], answer: 2 },
-        { category: "Signs & Signals", question: "Brown guide signs lead you to:", options: ["hospitals", "recreational and historical areas", "highways", "city centers"], answer: 1 },
-        { category: "Signs & Signals", question: "Green guide signs tell a driver:", options: ["how fast to go", "where to find food", "how far they are from a destination and names of streets", "historical landmarks"], answer: 2 },
-        
-        // --- PAGE 10: TRAFFIC LIGHTS ---
-        { category: "Signs & Signals", question: "What does a solid red light mean?", options: ["Yield to oncoming traffic", "Come to a complete stop at the stop line", "Slow down and proceed if clear", "Stop only if pedestrians are present"], answer: 1 },
-        { category: "Signs & Signals", question: "What does a solid yellow light mean?", options: ["Speed up", "The light will be red soon", "Yield to traffic", "Stop immediately"], answer: 1 },
-        { category: "Signs & Signals", question: "When facing a solid green light, proceed with caution and look:", options: ["left only", "right only", "left, right, left", "straight ahead"], answer: 2 },
-        { category: "Signs & Signals", question: "When stopped for a red signal, you should check for ____ before moving when the light turns green.", options: ["potholes", "trafic", "cops", "signs"], answer: 1 },
-        { category: "Signs & Signals", question: "If there is any traffic in the ____, wait until it is clear before proceeding on a green light.", options: ["crosswalk", "intersection", "turning lane", "shoulder"], answer: 1 },
-        { category: "Signs & Signals", question: "If a traffic signal has been green for a while, expect it to turn ____ soon.", options: ["red", "flashing yellow", "yellow", "off"], answer: 2 },
-        { category: "Signs & Signals", question: "What does a flashing red light mean?", options: ["Yield to oncoming traffic", "It is like a stop sign; stop behind the line", "Slow down and proceed with caution", "The intersection is closed"], answer: 1 },
-        { category: "Signs & Signals", question: "If all four directions have a flashing red light, treat it like a four way:", options: ["yield", "stop sign", "intersection", "green light"], answer: 1 },
-        { category: "Signs & Signals", question: "What does a flashing yellow light mean?", options: ["Stop immediately", "Slow down and proceed with caution", "The light will turn red soon", "Yield to all pedestrians only"], answer: 1 },
-        { category: "Signs & Signals", question: "You may turn right on red after you come to a complete stop, yield to pedestrians and traffic, and:", options: ["honk your horn", "make sure there is no sign prohibiting the turn", "flash your headlights", "shift into neutral"], answer: 1 },
-        { category: "Signs & Signals", question: "A Police Officer is directing traffic and waves you through an intersection. Follow their signal regardless of the:", options: ["trafic signal", "speed limit", "pedestrians", "lane markings"], answer: 0 },
-        { category: "Signs & Signals", question: "A solid green arrow means you may proceed in the arrow's direction, but you must still yield to other ____ and ____ if any.", options: ["cars / trucks", "trafic / pedestrians", "bikes / motorcycles", "signals / signs"], answer: 1 },
-        { category: "Signs & Signals", question: "* What does a Flashing Yellow Arrow mean?", options: ["Stop immediately", "Time to claim the intersection", "You must go straight only", "The signal is broken"], answer: 1 },
-        { category: "Signs & Signals", question: "A flashing yellow arrow allows drivers to ____ down and if the intersection is ____ to proceed.", options: ["speed / open", "slow / clear", "stop / empty", "coast / safe"], answer: 1 },
-        { category: "Signs & Signals", question: "If a traffic signal is not working at an intersection, what should you do?", options: ["Follow the car in front of you", "Honk your horn and proceed", "Come to a complete stop, then proceed when it is safe", "Treat it as a yield sign"], answer: 2 },
-        { category: "Signs & Signals", question: "Solid white lines indicate traffic is moving in the ____.", options: ["opposite direction", "same direction", "center lane", "HOV lane"], answer: 1 }
-    ];
-
-    // Tracking objects
-    let activeQuizData = []; 
+    // ---- Tracking objects ----
+    let activeQuizData = [];
     let currentQuestionIndex = 0;
-    let score = 0;
-    let totalAnswered = 0; 
-    let categoryStats = {};
+    let results = [];           // { q, chosen, correct } for every answered question
+    let currentModeLabel = '';
 
-    // DOM Elements
+    // ---- DOM Elements ----
     const splashScreen = document.getElementById('splash-screen');
     const questionText = document.getElementById('question-text');
     const optionsContainer = document.getElementById('options-container');
+    const explanationBox = document.getElementById('explanation-box');
     const nextBtn = document.getElementById('next-btn');
     const finishEarlyBtn = document.getElementById('finish-early-btn');
     const progressText = document.getElementById('progress-text');
@@ -337,142 +374,190 @@
     const progressSection = document.getElementById('progress-section');
     const quizBlock = document.getElementById('quiz-block');
     const scoreBoard = document.getElementById('score-board');
+    const focusBox = document.getElementById('focus-box');
     const statsContainer = document.getElementById('stats-container');
+    const reviewSection = document.getElementById('review-section');
+    const reviewContainer = document.getElementById('review-container');
     const restartBtn = document.getElementById('restart-btn');
 
-    // Array Shuffling Function
+    // ---- Array Shuffling (Fisher-Yates) ----
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [array[i], array[j]] = [array[j], array[i]];
         }
+        return array;
     }
 
-    // Standard Quiz Launch
-    function startQuiz(numQuestions) {
+    // ---- Confetti Effect (pure canvas, no dependencies) ----
+    function launchConfetti() {
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+        resize();
+        window.addEventListener('resize', resize);
+
+        const colors = ['#4CAF50', '#0056b3', '#F44336', '#FFC107', '#9C27B0', '#00BCD4'];
+        const pieces = [];
+        for (let i = 0; i < 160; i++) {
+            pieces.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * -canvas.height,
+                w: 6 + Math.random() * 6,
+                h: 8 + Math.random() * 8,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                rot: Math.random() * Math.PI * 2,
+                vr: (Math.random() - 0.5) * 0.2,
+                vy: 2 + Math.random() * 3,
+                vx: (Math.random() - 0.5) * 2,
+                sway: Math.random() * Math.PI * 2
+            });
+        }
+
+        const duration = 4000;
+        const start = performance.now();
+        function frame(now) {
+            const elapsed = now - start;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            pieces.forEach(p => {
+                p.y += p.vy;
+                p.sway += 0.05;
+                p.x += p.vx + Math.sin(p.sway) * 1.2;
+                p.rot += p.vr;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rot);
+                ctx.globalAlpha = elapsed > duration - 1000 ? Math.max(0, (duration - elapsed) / 1000) : 1;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                ctx.restore();
+            });
+            if (elapsed < duration) {
+                requestAnimationFrame(frame);
+            } else {
+                window.removeEventListener('resize', resize);
+                canvas.remove();
+            }
+        }
+        requestAnimationFrame(frame);
+    }
+
+    // ---- Shared setup for showing the quiz view ----
+    function beginSession(label) {
         currentQuestionIndex = 0;
-        score = 0;
-        totalAnswered = 0;
-        categoryStats = {}; 
-        
-        shuffleArray(masterQuizData);
-        activeQuizData = masterQuizData.slice(0, numQuestions);
+        results = [];
+        currentModeLabel = label;
 
         splashScreen.style.display = 'none';
         quizBlock.style.display = 'block';
         progressSection.style.display = 'block';
         scoreBoard.style.display = 'none';
         finishEarlyBtn.style.display = 'none';
-        
+        window.scrollTo(0, 0);
+
         loadQuestion();
     }
 
-    // Mock Test Launch (80 Qs, prioritizes asterisks)
+    // ---- Standard Quiz Launch ----
+    function startQuiz(numQuestions, label) {
+        shuffleArray(masterQuizData);
+        activeQuizData = masterQuizData.slice(0, numQuestions);
+        beginSession(label);
+    }
+
+    // ---- Mock Test Launch (80 Qs; prioritizes starred + previously-missed) ----
     function startMockTest() {
-        currentQuestionIndex = 0;
-        score = 0;
-        totalAnswered = 0;
-        categoryStats = {}; 
-        
-        // Split data into starred and regular
-        let starredQs = masterQuizData.filter(q => q.question.includes('*'));
-        let regularQs = masterQuizData.filter(q => !q.question.includes('*'));
-        
-        shuffleArray(starredQs);
-        shuffleArray(regularQs);
-        
-        let mockData = [];
-        
+        const weighted = (q) => missCount(q) + Math.random();
+
+        let starredQs = masterQuizData.filter(q => q.starred).sort((a, b) => weighted(b) - weighted(a));
+        let regularQs = masterQuizData.filter(q => !q.starred).sort((a, b) => weighted(b) - weighted(a));
+
+        let mockData;
         if (starredQs.length >= 80) {
             mockData = starredQs.slice(0, 80);
         } else {
-            let remainingNeeded = 80 - starredQs.length;
-            mockData = starredQs.concat(regularQs.slice(0, remainingNeeded));
+            mockData = starredQs.concat(regularQs.slice(0, 80 - starredQs.length));
         }
-        
-        // Shuffle the final combined list so asterisks are mixed in
+
         shuffleArray(mockData);
         activeQuizData = mockData;
-        
-        splashScreen.style.display = 'none';
-        quizBlock.style.display = 'block';
-        progressSection.style.display = 'block';
-        scoreBoard.style.display = 'none';
-        finishEarlyBtn.style.display = 'none';
-        
-        loadQuestion();
+        beginSession('SOS Mock Test');
     }
 
-    // Targeted Category Mini-Test Launch
+    // ---- Targeted Category Mini-Test Launch ----
     function startCategoryQuiz(category) {
-        currentQuestionIndex = 0;
-        score = 0;
-        totalAnswered = 0;
-        categoryStats = {}; 
-        
         let categoryData = masterQuizData.filter(q => q.category === category);
         shuffleArray(categoryData);
-        
         activeQuizData = categoryData.slice(0, 5);
-
-        scoreBoard.style.display = 'none';
-        quizBlock.style.display = 'block';
-        progressSection.style.display = 'block';
-        finishEarlyBtn.style.display = 'none';
-        
-        loadQuestion();
+        beginSession('Review: ' + category);
     }
 
+    // ---- Render one question (with shuffled answer options) ----
     function loadQuestion() {
         nextBtn.style.display = 'none';
+        finishEarlyBtn.style.display = 'none';
+        explanationBox.style.display = 'none';
+        explanationBox.innerHTML = '';
+
         const currentQ = activeQuizData[currentQuestionIndex];
-        
+
         questionText.textContent = currentQ.question;
         progressText.textContent = `Question ${currentQuestionIndex + 1} of ${activeQuizData.length}`;
-        
-        const progressPercentage = ((currentQuestionIndex) / activeQuizData.length) * 100;
+
+        const progressPercentage = (currentQuestionIndex / activeQuizData.length) * 100;
         progressFill.style.width = `${progressPercentage}%`;
 
+        // Shuffle the display order of the options each time.
+        const order = currentQ.options.map((_, i) => i);
+        shuffleArray(order);
+
         optionsContainer.innerHTML = '';
-        currentQ.options.forEach((option, index) => {
+        order.forEach(origIndex => {
             const div = document.createElement('div');
             div.className = 'option';
-            div.textContent = option;
-            div.onclick = () => selectOption(div, index, currentQ.answer, currentQ.category);
+            div.dataset.orig = origIndex;
+            div.textContent = currentQ.options[origIndex];
+            div.onclick = () => selectOption(div, origIndex, currentQ);
             optionsContainer.appendChild(div);
         });
     }
 
-    function selectOption(selectedDiv, selectedIndex, correctIndex, category) {
+    function selectOption(selectedDiv, chosenIndex, q) {
         const allOptions = optionsContainer.children;
         for (let i = 0; i < allOptions.length; i++) {
-            allOptions[i].onclick = null; 
-            if (i === correctIndex) {
+            allOptions[i].onclick = null;
+            allOptions[i].classList.add('answered');
+            if (Number(allOptions[i].dataset.orig) === q.answer) {
                 allOptions[i].classList.add('correct');
             }
         }
 
-        if (!categoryStats[category]) {
-            categoryStats[category] = { correct: 0, total: 0 };
-        }
-        categoryStats[category].total++;
-
-        if (selectedIndex === correctIndex) {
-            score++;
-            categoryStats[category].correct++;
-        } else {
+        const isCorrect = chosenIndex === q.answer;
+        if (!isCorrect) {
             selectedDiv.classList.add('wrong');
+            progress.missed[q.id] = missCount(q) + 1;
+            saveProgress();
         }
 
-        totalAnswered++;
+        results.push({ q: q, chosen: chosenIndex, correct: isCorrect });
+
+        // Show the explanation.
+        if (q.explanation) {
+            explanationBox.innerHTML = `<strong>${isCorrect ? 'Correct! ' : 'Answer: '}</strong>${q.explanation}`;
+            explanationBox.style.display = 'block';
+        }
+
         nextBtn.style.display = 'block';
-        finishEarlyBtn.style.display = 'block'; 
+        finishEarlyBtn.style.display = 'block';
     }
 
     nextBtn.onclick = () => {
         currentQuestionIndex++;
         if (currentQuestionIndex < activeQuizData.length) {
             loadQuestion();
+            window.scrollTo(0, 0);
         } else {
             showScore();
         }
@@ -482,30 +567,92 @@
         showScore();
     };
 
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
     function showScore() {
         progressFill.style.width = '100%';
         quizBlock.style.display = 'none';
         progressSection.style.display = 'none';
         scoreBoard.style.display = 'block';
         finishEarlyBtn.style.display = 'none';
-        
+        window.scrollTo(0, 0);
+
+        // Derive everything from the results list.
+        const totalAnswered = results.length;
+        const score = results.filter(r => r.correct).length;
+
         document.getElementById('score').textContent = score;
-        document.getElementById('total').textContent = totalAnswered; 
-        
+        document.getElementById('total').textContent = totalAnswered;
+
         const percent = totalAnswered > 0 ? Math.round((score / totalAnswered) * 100) : 0;
         document.getElementById('score-percent').textContent = percent;
 
+        // Pass / fail message + confetti.
+        const resultMsg = document.getElementById('result-message');
+        if (percent >= PASS_THRESHOLD) {
+            resultMsg.textContent = `🎉 You Passed! (${PASS_THRESHOLD}% needed)`;
+            resultMsg.style.color = '#4CAF50';
+            launchConfetti();
+        } else {
+            resultMsg.textContent = `Keep practicing — ${PASS_THRESHOLD}% needed to pass.`;
+            resultMsg.style.color = '#F44336';
+        }
+
+        // Best-score tracking (per mode).
+        const bestMsg = document.getElementById('best-message');
+        const prevBest = progress.best[currentModeLabel];
+        if (prevBest == null || percent > prevBest) {
+            progress.best[currentModeLabel] = percent;
+            saveProgress();
+            bestMsg.textContent = (prevBest == null)
+                ? `Best for "${currentModeLabel}": ${percent}%`
+                : `New best for "${currentModeLabel}"! (was ${prevBest}%)`;
+        } else {
+            bestMsg.textContent = `Best for "${currentModeLabel}": ${prevBest}%`;
+        }
+
+        // ---- Likely-on-Test Focus summary ----
+        const starredResults = results.filter(r => r.q.starred);
+        const totalStarredInBank = masterQuizData.filter(q => q.starred).length;
+        focusBox.innerHTML = '';
+        if (starredResults.length === 0) {
+            focusBox.innerHTML = `<div class="focus-coverage">None of the ${totalStarredInBank} questions flagged as likely on the official test came up this round. Try the SOS Mock Test to focus on them.</div>`;
+        } else {
+            const sCorrect = starredResults.filter(r => r.correct).length;
+            const sPercent = Math.round((sCorrect / starredResults.length) * 100);
+            const badgeClass = sPercent >= PASS_THRESHOLD ? 'badge-good' : 'badge-review';
+            const badgeText = sPercent >= PASS_THRESHOLD ? 'On Track' : 'Needs Review';
+
+            let html = `<div class="focus-coverage">This round included <strong>${starredResults.length}</strong> of the <strong>${totalStarredInBank}</strong> questions flagged as likely on the official test.</div>`;
+            html += `<div class="focus-score-row"><span class="focus-score">${sCorrect} / ${starredResults.length} correct (${sPercent}%)</span><span class="stat-badge ${badgeClass}">${badgeText}</span></div>`;
+            starredResults.forEach(r => {
+                const mark = r.correct ? '<span class="focus-mark ok">✓</span>' : '<span class="focus-mark no">✗</span>';
+                const wrongAns = r.correct ? '' : `<span class="focus-ans">You answered: ${escapeHtml(r.q.options[r.chosen])}</span>`;
+                html += `<div class="focus-item">${mark}<div class="focus-qtext">${escapeHtml(r.q.question)}<span class="focus-ans">Answer: ${escapeHtml(r.q.options[r.q.answer])}</span>${wrongAns}</div></div>`;
+            });
+            focusBox.innerHTML = html;
+        }
+
+        // ---- Category breakdown ----
+        const categoryStats = {};
+        results.forEach(r => {
+            const c = r.q.category;
+            if (!categoryStats[c]) categoryStats[c] = { correct: 0, total: 0 };
+            categoryStats[c].total++;
+            if (r.correct) categoryStats[c].correct++;
+        });
+
         statsContainer.innerHTML = '';
-        
         for (const [category, stats] of Object.entries(categoryStats)) {
             const percentage = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
-            
-            let badgeClass = percentage >= 70 ? 'badge-good' : 'badge-review';
-            let badgeText = percentage >= 70 ? 'Great Job' : 'Needs Review';
-            
+            const badgeClass = percentage >= PASS_THRESHOLD ? 'badge-good' : 'badge-review';
+            const badgeText = percentage >= PASS_THRESHOLD ? 'Great Job' : 'Needs Review';
+
             let reviewButtonHTML = '';
-            if (percentage < 70) {
-                reviewButtonHTML = `<button class="btn-mini" onclick="startCategoryQuiz('${category}')">Practice 5 Qs</button>`;
+            if (percentage < PASS_THRESHOLD) {
+                reviewButtonHTML = `<button class="btn-mini" onclick="startCategoryQuiz('${category.replace(/'/g, "\\'")}')">Practice 5 Qs</button>`;
             }
 
             const statRow = document.createElement('div');
@@ -522,13 +669,76 @@
             `;
             statsContainer.appendChild(statRow);
         }
+
+        // ---- Missed-question review ----
+        const missed = results.filter(r => !r.correct);
+        reviewContainer.innerHTML = '';
+        if (missed.length === 0) {
+            reviewSection.style.display = 'none';
+        } else {
+            reviewSection.style.display = 'block';
+            missed.forEach(({ q, chosen }) => {
+                const item = document.createElement('div');
+                item.className = 'review-item';
+                const expHTML = q.explanation ? `<div class="review-exp">${escapeHtml(q.explanation)}</div>` : '';
+                item.innerHTML = `
+                    <div class="review-q">${q.starred ? '⭐ ' : ''}${escapeHtml(q.question)}</div>
+                    <div class="review-line review-chosen">Your answer: ${escapeHtml(q.options[chosen])}</div>
+                    <div class="review-line review-correct">Correct answer: ${escapeHtml(q.options[q.answer])}</div>
+                    ${expHTML}
+                `;
+                reviewContainer.appendChild(item);
+            });
+        }
     }
 
     restartBtn.onclick = () => {
         scoreBoard.style.display = 'none';
         splashScreen.style.display = 'block';
+        renderSplashBests();
+        window.scrollTo(0, 0);
     };
 
+    // ---- Splash best-score labels ----
+    function renderSplashBests() {
+        document.querySelectorAll('.best-label[data-mode]').forEach(el => {
+            const b = progress.best[el.dataset.mode];
+            el.textContent = (b != null) ? `Best: ${b}%` : '';
+        });
+    }
+
+    document.getElementById('reset-progress-btn').onclick = () => {
+        if (confirm('Clear saved best scores and missed-question history on this device?')) {
+            progress = { missed: {}, best: {} };
+            saveProgress();
+            renderSplashBests();
+        }
+    };
+
+    // ---- Data validator (dev aid; logs to console, never blocks the app) ----
+    function validateQuestions() {
+        const issues = [];
+        const seenIds = new Set();
+        masterQuizData.forEach((q, i) => {
+            const where = `#${i} (${q.id || 'no-id'})`;
+            if (!q.id) issues.push(`${where}: missing id`);
+            else if (seenIds.has(q.id)) issues.push(`${where}: duplicate id`);
+            else seenIds.add(q.id);
+            if (!q.question) issues.push(`${where}: missing question text`);
+            if (!Array.isArray(q.options) || q.options.length !== 4) issues.push(`${where}: expected 4 options`);
+            if (typeof q.answer !== 'number' || q.answer < 0 || q.answer > 3) issues.push(`${where}: answer out of range`);
+            if (!q.explanation) issues.push(`${where}: missing explanation`);
+        });
+        if (issues.length) {
+            console.warn(`[SOS quiz] ${issues.length} data issue(s):\n` + issues.join('\n'));
+        } else {
+            console.info(`[SOS quiz] ${masterQuizData.length} questions loaded, all valid.`);
+        }
+    }
+
+    // ---- Init ----
+    validateQuestions();
+    renderSplashBests();
 </script>
 </body>
 </html>
