@@ -35,9 +35,9 @@
         }
         h1 { font-size: 1.5rem; text-align: center; margin: 0 0 10px; }
 
-        /* Splash Screen Styles */
+        /* Splash Screen */
         #splash-screen { text-align: center; }
-        .splash-desc { color: #666; margin-bottom: 30px; font-size: 1.1rem; }
+        .splash-desc { color: #666; margin-bottom: 24px; font-size: 1.1rem; }
         .btn-large {
             display: block;
             width: 100%;
@@ -58,57 +58,38 @@
             font-size: 0.8rem;
             color: #4CAF50;
             font-weight: bold;
-            margin-bottom: 15px;
+            margin-bottom: 14px;
             min-height: 1em;
         }
-        .splash-tools { margin-top: 20px; }
+        .splash-tools { margin-top: 18px; }
         .link-btn {
             background: none;
             border: none;
-            color: #999;
+            color: #0056b3;
             text-decoration: underline;
             cursor: pointer;
-            font-size: 0.85rem;
-            padding: 8px;
-        }
-
-        /* Quiz Styles */
-        #quiz-block, #progress-section, #score-board { display: none; }
-
-        .progress-text {
-            text-align: center;
-            color: #666;
-            margin-bottom: 10px;
             font-size: 0.9rem;
+            padding: 8px 6px;
         }
+        .link-btn.muted { color: #999; }
+
+        /* Quiz view */
+        #quiz-block, #progress-section, #score-board, #history-screen { display: none; }
+
+        .progress-text { text-align: center; color: #666; margin-bottom: 10px; font-size: 0.9rem; }
         .progress-bar-container {
-            width: 100%;
-            height: 10px;
-            background-color: #e0e0e0;
-            border-radius: 5px;
-            margin-bottom: 25px;
-            overflow: hidden;
+            width: 100%; height: 10px; background-color: #e0e0e0;
+            border-radius: 5px; margin-bottom: 25px; overflow: hidden;
         }
-        .progress-bar-fill {
-            height: 100%;
-            background-color: #4CAF50;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
+        .progress-bar-fill { height: 100%; background-color: #4CAF50; width: 0%; transition: width 0.3s ease; }
 
         .question { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; line-height: 1.35; }
         .options { display: flex; flex-direction: column; gap: 10px; }
         .option {
-            padding: 14px 15px;
-            min-height: 48px;
-            display: flex;
-            align-items: center;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            cursor: pointer;
+            padding: 14px 15px; min-height: 48px; display: flex; align-items: center;
+            border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer;
             transition: background 0.15s, border-color 0.15s;
-            user-select: none;
-            -webkit-user-select: none;
+            user-select: none; -webkit-user-select: none;
         }
         .option:active { background: #ececec; }
         .option.answered { cursor: default; }
@@ -117,124 +98,65 @@
         .option.wrong { border-color: #F44336; background: #ffebee; }
 
         .explanation-box {
-            display: none;
-            margin-top: 15px;
-            padding: 12px 15px;
-            background: #f0f6ff;
-            border-left: 4px solid #0056b3;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            line-height: 1.4;
-            color: #333;
+            display: none; margin-top: 15px; padding: 12px 15px; background: #f0f6ff;
+            border-left: 4px solid #0056b3; border-radius: 6px; font-size: 0.95rem;
+            line-height: 1.4; color: #333;
         }
         .explanation-box strong { color: #0056b3; }
 
         .btn-next {
-            background: #0056b3;
-            color: white;
-            border: none;
-            padding: 14px 20px;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 20px;
-            width: 100%;
-            display: none;
+            background: #0056b3; color: white; border: none; padding: 14px 20px;
+            border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 20px;
+            width: 100%; display: none;
         }
         .btn-next:active { background: #004494; }
-
         .btn-secondary {
-            background: #fff;
-            color: #666;
-            border: 2px solid #ccc;
-            padding: 14px 20px;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            margin-top: 10px;
-            width: 100%;
-            display: none;
+            background: #fff; color: #666; border: 2px solid #ccc; padding: 14px 20px;
+            border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 10px;
+            width: 100%; display: none;
         }
         .btn-secondary:active { background: #eee; }
 
-        /* Stats Screen Styles */
+        /* Stats / results */
         .score-header { text-align: center; font-size: 1.5rem; margin-bottom: 20px; font-weight: bold; }
         .section-heading {
-            margin-top: 30px;
-            margin-bottom: 0;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 5px;
-            font-size: 1.1rem;
+            margin-top: 30px; margin-bottom: 0; border-bottom: 2px solid #eee;
+            padding-bottom: 5px; font-size: 1.1rem;
         }
         .stats-container { margin-top: 10px; }
         .stat-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-            font-size: 0.95rem;
+            display: flex; justify-content: space-between; align-items: center; gap: 10px;
+            padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.95rem;
         }
         .stat-category { font-weight: bold; }
         .stat-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            color: white;
-            font-weight: bold;
-            white-space: nowrap;
+            padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; color: white;
+            font-weight: bold; white-space: nowrap;
         }
         .badge-good { background-color: #4CAF50; }
         .badge-review { background-color: #F44336; }
+        .badge-neutral { background-color: #9e9e9e; }
 
-        /* Mini-Test Review Button */
         .btn-mini {
-            background: white;
-            color: #F44336;
-            border: 1px solid #F44336;
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            margin-left: 8px;
-            font-weight: bold;
-            white-space: nowrap;
+            background: white; color: #F44336; border: 1px solid #F44336; padding: 6px 10px;
+            border-radius: 4px; font-size: 0.8rem; cursor: pointer; margin-left: 8px;
+            font-weight: bold; white-space: nowrap;
         }
         .btn-mini:active { background: #F44336; color: white; }
 
         /* Likely-on-Test Focus */
-        .focus-box {
-            margin-top: 10px;
-            padding: 15px;
-            background: #fff8e1;
-            border: 1px solid #FFE08A;
-            border-radius: 8px;
-        }
+        .focus-box { margin-top: 10px; padding: 15px; background: #fff8e1; border: 1px solid #FFE08A; border-radius: 8px; }
         .focus-coverage { font-size: 0.85rem; color: #6b5900; margin-bottom: 10px; line-height: 1.4; }
-        .focus-score-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 6px;
-        }
+        .focus-score-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
         .focus-score { font-size: 1.05rem; font-weight: bold; }
-        .focus-item {
-            display: flex;
-            gap: 8px;
-            padding: 8px 0;
-            border-top: 1px solid #f0e2b8;
-            font-size: 0.9rem;
-            line-height: 1.35;
-        }
+        .focus-item { display: flex; gap: 8px; padding: 8px 0; border-top: 1px solid #f0e2b8; font-size: 0.9rem; line-height: 1.35; }
         .focus-mark { font-weight: bold; flex-shrink: 0; }
         .focus-mark.ok { color: #2e7d32; }
         .focus-mark.no { color: #c62828; }
         .focus-qtext { flex: 1; }
         .focus-ans { display: block; color: #555; font-size: 0.82rem; margin-top: 2px; }
 
-        /* Missed-Question Review */
+        /* Missed review */
         .review-item { padding: 12px 0; border-bottom: 1px solid #eee; }
         .review-q { font-weight: bold; margin-bottom: 6px; line-height: 1.35; }
         .review-line { font-size: 0.9rem; margin: 2px 0; }
@@ -242,26 +164,37 @@
         .review-chosen { color: #c62828; }
         .review-exp { color: #555; font-size: 0.88rem; margin-top: 5px; font-style: italic; }
 
-        /* Only apply hover effects on real pointing devices (not touch) */
+        /* Progress / History */
+        .hstat-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-top: 12px; }
+        .hstat { background: #f7f9fc; border: 1px solid #e6ecf5; border-radius: 8px; padding: 12px 8px; text-align: center; }
+        .hstat-num { font-size: 1.5rem; font-weight: bold; color: #0056b3; line-height: 1.1; }
+        .hstat-label { font-size: 0.72rem; color: #666; margin-top: 4px; }
+        .hbar { width: 100%; height: 9px; background: #e6ecf5; border-radius: 5px; overflow: hidden; margin-top: 6px; }
+        .hbar-fill { height: 100%; border-radius: 5px; }
+        .cover-row { margin-top: 12px; font-size: 0.9rem; }
+        .cover-row .cover-label { display: flex; justify-content: space-between; }
+        .hsession { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .hsession-meta { color: #666; font-size: 0.8rem; }
+        .empty-note { color: #666; text-align: center; margin: 20px 0; font-size: 0.95rem; line-height: 1.5; }
+
         @media (hover: hover) and (pointer: fine) {
             .btn-large:hover { background: #0056b3; color: white; }
             .btn-highlight:hover { background: #004494; }
-            .link-btn:hover { color: #666; }
+            .link-btn:hover { color: #003a7a; }
             .option:not(.answered):hover { background: #f0f0f0; }
             .btn-next:hover { background: #004494; }
             .btn-secondary:hover { background: #eee; }
             .btn-mini:hover { background: #F44336; color: white; }
         }
-
-        /* Phone layout */
         @media (max-width: 640px) {
             body { padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
             .quiz-container { padding: 20px 16px; border-radius: 10px; }
             h1 { font-size: 1.35rem; }
-            .splash-desc { font-size: 1rem; margin-bottom: 24px; }
+            .splash-desc { font-size: 1rem; margin-bottom: 20px; }
             .btn-large { font-size: 1rem; }
             .question { font-size: 1.1rem; }
             .score-header { font-size: 1.35rem; }
+            .hstat-num { font-size: 1.3rem; }
         }
     </style>
 </head>
@@ -274,20 +207,25 @@
     <div id="splash-screen">
         <p class="splash-desc">Select your practice mode to begin.</p>
 
-        <button class="btn-large" onclick="startQuiz(15, 'Quick Review')">Quick Review (15 Questions)</button>
-        <div class="best-label" data-mode="Quick Review"></div>
+        <button class="btn-large" onclick="startQuiz(15, 'Short')">Short &mdash; 15 Questions</button>
+        <div class="best-label" data-mode="Short"></div>
 
-        <button class="btn-large" onclick="startQuiz(55, 'Half Exam')">Half Exam (55 Questions)</button>
-        <div class="best-label" data-mode="Half Exam"></div>
+        <button class="btn-large" onclick="startQuiz(40, 'Medium')">Medium &mdash; 40 Questions</button>
+        <div class="best-label" data-mode="Medium"></div>
 
-        <button class="btn-large" id="btn-full" onclick="startQuiz(masterQuizData.length, 'Full Simulation')">Full Simulation (All Questions)</button>
-        <div class="best-label" data-mode="Full Simulation"></div>
+        <button class="btn-large" onclick="startQuiz(80, 'Long')">Long &mdash; 80 Questions</button>
+        <div class="best-label" data-mode="Long"></div>
 
-        <button class="btn-large btn-highlight" onclick="startMockTest()">SOS Mock Test (80 Questions)</button>
+        <button class="btn-large" id="btn-full" onclick="startQuiz(masterQuizData.length, 'All Questions')">All Questions</button>
+        <div class="best-label" data-mode="All Questions"></div>
+
+        <button class="btn-large btn-highlight" onclick="startMockTest()">SOS Mock Test &mdash; 80 Questions</button>
         <div class="best-label" data-mode="SOS Mock Test"></div>
 
         <div class="splash-tools">
-            <button class="link-btn" id="reset-progress-btn">Reset saved progress</button>
+            <button class="link-btn" id="progress-btn">View progress</button>
+            <span style="color:#ccc">&middot;</span>
+            <button class="link-btn muted" id="reset-progress-btn">Reset saved progress</button>
         </div>
     </div>
 
@@ -317,13 +255,11 @@
         <div id="result-message" style="text-align: center; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px;"></div>
         <div id="best-message" style="text-align: center; font-size: 0.9rem; color: #666; margin-bottom: 10px;"></div>
 
-        <h3 class="section-heading">⭐ Likely-on-Test Focus</h3>
+        <h3 class="section-heading">&#11088; Likely-on-Test Focus</h3>
         <div class="focus-box" id="focus-box"></div>
 
         <h3 class="section-heading">Study Areas Breakdown</h3>
-        <div class="stats-container" id="stats-container">
-            <!-- Dynamic stats will populate here -->
-        </div>
+        <div class="stats-container" id="stats-container"></div>
 
         <div id="review-section">
             <h3 class="section-heading">Review Your Missed Questions</h3>
@@ -331,6 +267,13 @@
         </div>
 
         <button class="btn-next" id="restart-btn" style="display: block; margin-top: 30px;">Return to Main Menu</button>
+    </div>
+
+    <!-- Progress / History Screen -->
+    <div id="history-screen">
+        <div class="score-header">Your Progress</div>
+        <div id="history-content"></div>
+        <button class="btn-next" id="history-back-btn" style="display: block; margin-top: 30px;">Back to Menu</button>
     </div>
 </div>
 
@@ -348,21 +291,32 @@
     }
     function saveProgress() {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); }
-        catch (e) { /* storage unavailable (private mode, etc.) — app still works */ }
+        catch (e) { /* storage unavailable — app still works */ }
     }
     let progress = loadProgress();
-    progress.missed = progress.missed || {}; // question id -> times missed
-    progress.best = progress.best || {};     // mode label -> best percent
+    progress.best = progress.best || {};        // mode label -> best percent
+    progress.stats = progress.stats || {};      // question id -> { seen, correct, wrong, last }
+    progress.sessions = progress.sessions || []; // [{ t, mode, score, total, pct }]
+    // migrate older format (progress.missed) into stats
+    if (progress.missed) {
+        for (const id in progress.missed) {
+            if (!progress.stats[id]) progress.stats[id] = { seen: 0, correct: 0, wrong: 0, last: 0 };
+            progress.stats[id].wrong = Math.max(progress.stats[id].wrong, progress.missed[id]);
+        }
+        delete progress.missed;
+        saveProgress();
+    }
+    const stOf = (q) => progress.stats[q.id] || { seen: 0, correct: 0, wrong: 0, last: 0 };
+    const seen = (q) => stOf(q).seen;
+    const wrong = (q) => stOf(q).wrong;
 
-    function missCount(q) { return progress.missed[q.id] || 0; }
-
-    // ---- Tracking objects ----
+    // ---- Session tracking ----
     let activeQuizData = [];
     let currentQuestionIndex = 0;
-    let results = [];           // { q, chosen, correct } for every answered question
+    let results = [];           // { q, chosen, correct } for the current run
     let currentModeLabel = '';
 
-    // ---- DOM Elements ----
+    // ---- DOM ----
     const splashScreen = document.getElementById('splash-screen');
     const questionText = document.getElementById('question-text');
     const optionsContainer = document.getElementById('options-container');
@@ -378,9 +332,10 @@
     const statsContainer = document.getElementById('stats-container');
     const reviewSection = document.getElementById('review-section');
     const reviewContainer = document.getElementById('review-container');
-    const restartBtn = document.getElementById('restart-btn');
+    const historyScreen = document.getElementById('history-screen');
+    const historyContent = document.getElementById('history-content');
 
-    // ---- Array Shuffling (Fisher-Yates) ----
+    // ---- Utilities ----
     function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -388,8 +343,29 @@
         }
         return array;
     }
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
 
-    // ---- Confetti Effect (pure canvas, no dependencies) ----
+    // Coverage-biased selection: prefers least-seen questions, nudges toward
+    // starred (likely-on-test) and previously-missed ones, with randomness.
+    function pickQuestions(pool, n, opts) {
+        opts = opts || {};
+        const starBias = opts.starBias != null ? opts.starBias : 0.4;
+        const missBias = opts.missBias != null ? opts.missBias : 0.25;
+        if (n >= pool.length) return shuffleArray(pool.slice());
+        const scored = pool.map(q => {
+            let w = seen(q);                    // fewer times seen => lower => picked first
+            if (q.starred) w -= starBias;       // favor likely-on-test
+            w -= wrong(q) * missBias;           // favor previously missed
+            w += Math.random() * 0.5;           // keep it varied
+            return { q, w };
+        });
+        scored.sort((a, b) => a.w - b.w);
+        return scored.slice(0, n).map(s => s.q);
+    }
+
+    // ---- Confetti (pure canvas, no dependencies) ----
     function launchConfetti() {
         const canvas = document.createElement('canvas');
         canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
@@ -398,103 +374,70 @@
         const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
         resize();
         window.addEventListener('resize', resize);
-
         const colors = ['#4CAF50', '#0056b3', '#F44336', '#FFC107', '#9C27B0', '#00BCD4'];
         const pieces = [];
         for (let i = 0; i < 160; i++) {
             pieces.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * -canvas.height,
-                w: 6 + Math.random() * 6,
-                h: 8 + Math.random() * 8,
+                x: Math.random() * canvas.width, y: Math.random() * -canvas.height,
+                w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
                 color: colors[Math.floor(Math.random() * colors.length)],
-                rot: Math.random() * Math.PI * 2,
-                vr: (Math.random() - 0.5) * 0.2,
-                vy: 2 + Math.random() * 3,
-                vx: (Math.random() - 0.5) * 2,
-                sway: Math.random() * Math.PI * 2
+                rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 0.2,
+                vy: 2 + Math.random() * 3, vx: (Math.random() - 0.5) * 2, sway: Math.random() * Math.PI * 2
             });
         }
-
-        const duration = 4000;
-        const start = performance.now();
+        const duration = 4000, start = performance.now();
         function frame(now) {
             const elapsed = now - start;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             pieces.forEach(p => {
-                p.y += p.vy;
-                p.sway += 0.05;
-                p.x += p.vx + Math.sin(p.sway) * 1.2;
-                p.rot += p.vr;
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rot);
+                p.y += p.vy; p.sway += 0.05; p.x += p.vx + Math.sin(p.sway) * 1.2; p.rot += p.vr;
+                ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
                 ctx.globalAlpha = elapsed > duration - 1000 ? Math.max(0, (duration - elapsed) / 1000) : 1;
-                ctx.fillStyle = p.color;
-                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-                ctx.restore();
+                ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
             });
-            if (elapsed < duration) {
-                requestAnimationFrame(frame);
-            } else {
-                window.removeEventListener('resize', resize);
-                canvas.remove();
-            }
+            if (elapsed < duration) requestAnimationFrame(frame);
+            else { window.removeEventListener('resize', resize); canvas.remove(); }
         }
         requestAnimationFrame(frame);
     }
 
-    // ---- Shared setup for showing the quiz view ----
+    // ---- Screen helpers ----
+    function showOnly(el) {
+        [splashScreen, quizBlock, progressSection, scoreBoard, historyScreen].forEach(x => x.style.display = 'none');
+        finishEarlyBtn.style.display = 'none';
+        if (Array.isArray(el)) el.forEach(x => x.style.display = 'block');
+        else el.style.display = 'block';
+        window.scrollTo(0, 0);
+    }
+
     function beginSession(label) {
         currentQuestionIndex = 0;
         results = [];
         currentModeLabel = label;
-
-        splashScreen.style.display = 'none';
-        quizBlock.style.display = 'block';
-        progressSection.style.display = 'block';
-        scoreBoard.style.display = 'none';
-        finishEarlyBtn.style.display = 'none';
-        window.scrollTo(0, 0);
-
+        showOnly([quizBlock, progressSection]);
         loadQuestion();
     }
 
-    // ---- Standard Quiz Launch ----
+    // ---- Launchers ----
     function startQuiz(numQuestions, label) {
-        shuffleArray(masterQuizData);
-        activeQuizData = masterQuizData.slice(0, numQuestions);
+        activeQuizData = shuffleArray(pickQuestions(masterQuizData, numQuestions, { starBias: 0.4, missBias: 0.25 }));
         beginSession(label);
     }
-
-    // ---- Mock Test Launch (80 Qs; prioritizes starred + previously-missed) ----
     function startMockTest() {
-        const weighted = (q) => missCount(q) + Math.random();
-
-        let starredQs = masterQuizData.filter(q => q.starred).sort((a, b) => weighted(b) - weighted(a));
-        let regularQs = masterQuizData.filter(q => !q.starred).sort((a, b) => weighted(b) - weighted(a));
-
-        let mockData;
-        if (starredQs.length >= 80) {
-            mockData = starredQs.slice(0, 80);
-        } else {
-            mockData = starredQs.concat(regularQs.slice(0, 80 - starredQs.length));
-        }
-
-        shuffleArray(mockData);
-        activeQuizData = mockData;
+        const starred = masterQuizData.filter(q => q.starred);
+        const regular = masterQuizData.filter(q => !q.starred);
+        let mock = pickQuestions(starred, Math.min(80, starred.length), { starBias: 0, missBias: 0.25 });
+        if (mock.length < 80) mock = mock.concat(pickQuestions(regular, 80 - mock.length, { starBias: 0, missBias: 0.25 }));
+        activeQuizData = shuffleArray(mock);
         beginSession('SOS Mock Test');
     }
-
-    // ---- Targeted Category Mini-Test Launch ----
     function startCategoryQuiz(category) {
-        let categoryData = masterQuizData.filter(q => q.category === category);
-        shuffleArray(categoryData);
-        activeQuizData = categoryData.slice(0, 5);
+        const pool = masterQuizData.filter(q => q.category === category);
+        activeQuizData = shuffleArray(pickQuestions(pool, Math.min(5, pool.length), { starBias: 0.3, missBias: 0.3 }));
         beginSession('Review: ' + category);
     }
 
-    // ---- Render one question (with shuffled answer options) ----
+    // ---- Question rendering ----
     function loadQuestion() {
         nextBtn.style.display = 'none';
         finishEarlyBtn.style.display = 'none';
@@ -502,17 +445,12 @@
         explanationBox.innerHTML = '';
 
         const currentQ = activeQuizData[currentQuestionIndex];
-
         questionText.textContent = currentQ.question;
         progressText.textContent = `Question ${currentQuestionIndex + 1} of ${activeQuizData.length}`;
+        progressFill.style.width = `${(currentQuestionIndex / activeQuizData.length) * 100}%`;
 
-        const progressPercentage = (currentQuestionIndex / activeQuizData.length) * 100;
-        progressFill.style.width = `${progressPercentage}%`;
-
-        // Shuffle the display order of the options each time.
         const order = currentQ.options.map((_, i) => i);
         shuffleArray(order);
-
         optionsContainer.innerHTML = '';
         order.forEach(origIndex => {
             const div = document.createElement('div');
@@ -529,67 +467,54 @@
         for (let i = 0; i < allOptions.length; i++) {
             allOptions[i].onclick = null;
             allOptions[i].classList.add('answered');
-            if (Number(allOptions[i].dataset.orig) === q.answer) {
-                allOptions[i].classList.add('correct');
-            }
+            if (Number(allOptions[i].dataset.orig) === q.answer) allOptions[i].classList.add('correct');
         }
-
         const isCorrect = chosenIndex === q.answer;
-        if (!isCorrect) {
-            selectedDiv.classList.add('wrong');
-            progress.missed[q.id] = missCount(q) + 1;
-            saveProgress();
-        }
+        if (!isCorrect) selectedDiv.classList.add('wrong');
+
+        // record per-question stats
+        const st = progress.stats[q.id] || { seen: 0, correct: 0, wrong: 0, last: 0 };
+        st.seen++;
+        if (isCorrect) st.correct++; else st.wrong++;
+        st.last = Date.now();
+        progress.stats[q.id] = st;
+        saveProgress();
 
         results.push({ q: q, chosen: chosenIndex, correct: isCorrect });
 
-        // Show the explanation.
         if (q.explanation) {
-            explanationBox.innerHTML = `<strong>${isCorrect ? 'Correct! ' : 'Answer: '}</strong>${q.explanation}`;
+            explanationBox.innerHTML = `<strong>${isCorrect ? 'Correct! ' : 'Answer: '}</strong>${escapeHtml(q.explanation)}`;
             explanationBox.style.display = 'block';
         }
-
         nextBtn.style.display = 'block';
         finishEarlyBtn.style.display = 'block';
     }
 
     nextBtn.onclick = () => {
         currentQuestionIndex++;
-        if (currentQuestionIndex < activeQuizData.length) {
-            loadQuestion();
-            window.scrollTo(0, 0);
-        } else {
-            showScore();
-        }
+        if (currentQuestionIndex < activeQuizData.length) { loadQuestion(); window.scrollTo(0, 0); }
+        else showScore();
     };
-
-    finishEarlyBtn.onclick = () => {
-        showScore();
-    };
-
-    function escapeHtml(s) {
-        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    }
+    finishEarlyBtn.onclick = () => showScore();
 
     function showScore() {
+        showOnly(scoreBoard);
         progressFill.style.width = '100%';
-        quizBlock.style.display = 'none';
-        progressSection.style.display = 'none';
-        scoreBoard.style.display = 'block';
-        finishEarlyBtn.style.display = 'none';
-        window.scrollTo(0, 0);
 
-        // Derive everything from the results list.
         const totalAnswered = results.length;
         const score = results.filter(r => r.correct).length;
-
         document.getElementById('score').textContent = score;
         document.getElementById('total').textContent = totalAnswered;
-
         const percent = totalAnswered > 0 ? Math.round((score / totalAnswered) * 100) : 0;
         document.getElementById('score-percent').textContent = percent;
 
-        // Pass / fail message + confetti.
+        // record session (skip empty runs)
+        if (totalAnswered > 0) {
+            progress.sessions.push({ t: Date.now(), mode: currentModeLabel, score: score, total: totalAnswered, pct: percent });
+            if (progress.sessions.length > 200) progress.sessions.splice(0, progress.sessions.length - 200);
+            saveProgress();
+        }
+
         const resultMsg = document.getElementById('result-message');
         if (percent >= PASS_THRESHOLD) {
             resultMsg.textContent = `🎉 You Passed! (${PASS_THRESHOLD}% needed)`;
@@ -600,7 +525,6 @@
             resultMsg.style.color = '#F44336';
         }
 
-        // Best-score tracking (per mode).
         const bestMsg = document.getElementById('best-message');
         const prevBest = progress.best[currentModeLabel];
         if (prevBest == null || percent > prevBest) {
@@ -613,7 +537,7 @@
             bestMsg.textContent = `Best for "${currentModeLabel}": ${prevBest}%`;
         }
 
-        // ---- Likely-on-Test Focus summary ----
+        // Likely-on-Test Focus
         const starredResults = results.filter(r => r.q.starred);
         const totalStarredInBank = masterQuizData.filter(q => q.starred).length;
         focusBox.innerHTML = '';
@@ -624,18 +548,17 @@
             const sPercent = Math.round((sCorrect / starredResults.length) * 100);
             const badgeClass = sPercent >= PASS_THRESHOLD ? 'badge-good' : 'badge-review';
             const badgeText = sPercent >= PASS_THRESHOLD ? 'On Track' : 'Needs Review';
-
             let html = `<div class="focus-coverage">This round included <strong>${starredResults.length}</strong> of the <strong>${totalStarredInBank}</strong> questions flagged as likely on the official test.</div>`;
             html += `<div class="focus-score-row"><span class="focus-score">${sCorrect} / ${starredResults.length} correct (${sPercent}%)</span><span class="stat-badge ${badgeClass}">${badgeText}</span></div>`;
             starredResults.forEach(r => {
-                const mark = r.correct ? '<span class="focus-mark ok">✓</span>' : '<span class="focus-mark no">✗</span>';
+                const mark = r.correct ? '<span class="focus-mark ok">&#10003;</span>' : '<span class="focus-mark no">&#10007;</span>';
                 const wrongAns = r.correct ? '' : `<span class="focus-ans">You answered: ${escapeHtml(r.q.options[r.chosen])}</span>`;
                 html += `<div class="focus-item">${mark}<div class="focus-qtext">${escapeHtml(r.q.question)}<span class="focus-ans">Answer: ${escapeHtml(r.q.options[r.q.answer])}</span>${wrongAns}</div></div>`;
             });
             focusBox.innerHTML = html;
         }
 
-        // ---- Category breakdown ----
+        // Category breakdown (this run)
         const categoryStats = {};
         results.forEach(r => {
             const c = r.q.category;
@@ -643,34 +566,27 @@
             categoryStats[c].total++;
             if (r.correct) categoryStats[c].correct++;
         });
-
         statsContainer.innerHTML = '';
-        for (const [category, stats] of Object.entries(categoryStats)) {
-            const percentage = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
-            const badgeClass = percentage >= PASS_THRESHOLD ? 'badge-good' : 'badge-review';
-            const badgeText = percentage >= PASS_THRESHOLD ? 'Great Job' : 'Needs Review';
-
-            let reviewButtonHTML = '';
-            if (percentage < PASS_THRESHOLD) {
-                reviewButtonHTML = `<button class="btn-mini" onclick="startCategoryQuiz('${category.replace(/'/g, "\\'")}')">Practice 5 Qs</button>`;
-            }
-
-            const statRow = document.createElement('div');
-            statRow.className = 'stat-row';
-            statRow.innerHTML = `
+        for (const [category, s] of Object.entries(categoryStats)) {
+            const pct = s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0;
+            const badgeClass = pct >= PASS_THRESHOLD ? 'badge-good' : 'badge-review';
+            const badgeText = pct >= PASS_THRESHOLD ? 'Great Job' : 'Needs Review';
+            const reviewBtn = pct < PASS_THRESHOLD ? `<button class="btn-mini" onclick="startCategoryQuiz('${category.replace(/'/g, "\\'")}')">Practice 5 Qs</button>` : '';
+            const row = document.createElement('div');
+            row.className = 'stat-row';
+            row.innerHTML = `
                 <div>
                     <div class="stat-category">${category}</div>
-                    <div style="color: #666; font-size: 0.8rem;">${stats.correct} / ${stats.total} correct (${percentage}%)</div>
+                    <div style="color:#666;font-size:0.8rem;">${s.correct} / ${s.total} correct (${pct}%)</div>
                 </div>
-                <div style="display: flex; align-items: center;">
+                <div style="display:flex;align-items:center;">
                     <div class="stat-badge ${badgeClass}">${badgeText}</div>
-                    ${reviewButtonHTML}
-                </div>
-            `;
-            statsContainer.appendChild(statRow);
+                    ${reviewBtn}
+                </div>`;
+            statsContainer.appendChild(row);
         }
 
-        // ---- Missed-question review ----
+        // Missed review
         const missed = results.filter(r => !r.correct);
         reviewContainer.innerHTML = '';
         if (missed.length === 0) {
@@ -685,21 +601,15 @@
                     <div class="review-q">${q.starred ? '⭐ ' : ''}${escapeHtml(q.question)}</div>
                     <div class="review-line review-chosen">Your answer: ${escapeHtml(q.options[chosen])}</div>
                     <div class="review-line review-correct">Correct answer: ${escapeHtml(q.options[q.answer])}</div>
-                    ${expHTML}
-                `;
+                    ${expHTML}`;
                 reviewContainer.appendChild(item);
             });
         }
     }
 
-    restartBtn.onclick = () => {
-        scoreBoard.style.display = 'none';
-        splashScreen.style.display = 'block';
-        renderSplashBests();
-        window.scrollTo(0, 0);
-    };
+    document.getElementById('restart-btn').onclick = () => { showOnly(splashScreen); renderSplashBests(); };
 
-    // ---- Splash best-score labels ----
+    // ---- Splash best labels ----
     function renderSplashBests() {
         document.querySelectorAll('.best-label[data-mode]').forEach(el => {
             const b = progress.best[el.dataset.mode];
@@ -708,14 +618,135 @@
     }
 
     document.getElementById('reset-progress-btn').onclick = () => {
-        if (confirm('Clear saved best scores and missed-question history on this device?')) {
-            progress = { missed: {}, best: {} };
+        if (confirm('Clear all saved progress (best scores, question history, and stats) on this device?')) {
+            progress = { best: {}, stats: {}, sessions: [] };
             saveProgress();
             renderSplashBests();
         }
     };
 
-    // ---- Data validator (dev aid; logs to console, never blocks the app) ----
+    // ---- Progress / History screen ----
+    document.getElementById('progress-btn').onclick = () => { renderHistory(); showOnly(historyScreen); };
+    document.getElementById('history-back-btn').onclick = () => { showOnly(splashScreen); renderSplashBests(); };
+
+    function fmtDate(t) {
+        const d = new Date(t);
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' +
+               d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    }
+    function bar(pct, color) { return `<div class="hbar"><div class="hbar-fill" style="width:${pct}%;background:${color}"></div></div>`; }
+
+    function renderHistory() {
+        const total = masterQuizData.length;
+        const starredTotal = masterQuizData.filter(q => q.starred).length;
+        let seenCount = 0, starredSeen = 0, lifeSeen = 0, lifeCorrect = 0;
+        masterQuizData.forEach(q => {
+            const s = stOf(q);
+            if (s.seen > 0) { seenCount++; if (q.starred) starredSeen++; }
+            lifeSeen += s.seen; lifeCorrect += s.correct;
+        });
+        const quizzes = progress.sessions.length;
+
+        if (quizzes === 0 && lifeSeen === 0) {
+            historyContent.innerHTML = `<div class="empty-note">No practice history yet.<br>Take a quiz and your progress, strong areas, and coverage will show up here.</div>`;
+            return;
+        }
+
+        const lifeAcc = lifeSeen > 0 ? Math.round((lifeCorrect / lifeSeen) * 100) : 0;
+        const coverPct = Math.round((seenCount / total) * 100);
+        const starCoverPct = Math.round((starredSeen / starredTotal) * 100);
+
+        // per-category lifetime performance
+        const cat = {};
+        masterQuizData.forEach(q => {
+            const s = stOf(q);
+            if (!cat[q.category]) cat[q.category] = { seen: 0, correct: 0, total: 0, qSeen: 0 };
+            cat[q.category].total++;
+            cat[q.category].seen += s.seen;
+            cat[q.category].correct += s.correct;
+            if (s.seen > 0) cat[q.category].qSeen++;
+        });
+        const catRows = Object.entries(cat).map(([name, c]) => {
+            const acc = c.seen > 0 ? Math.round((c.correct / c.seen) * 100) : null;
+            return { name, acc, cover: Math.round((c.qSeen / c.total) * 100), answered: c.seen };
+        });
+        // weakest (that have data) first, then unattempted
+        catRows.sort((a, b) => {
+            if (a.acc == null && b.acc == null) return b.cover - a.cover;
+            if (a.acc == null) return 1;
+            if (b.acc == null) return -1;
+            return a.acc - b.acc;
+        });
+
+        let html = '';
+        html += `<div class="hstat-grid">
+            <div class="hstat"><div class="hstat-num">${quizzes}</div><div class="hstat-label">Quizzes taken</div></div>
+            <div class="hstat"><div class="hstat-num">${lifeAcc}%</div><div class="hstat-label">Overall accuracy</div></div>
+            <div class="hstat"><div class="hstat-num">${lifeSeen}</div><div class="hstat-label">Questions answered</div></div>
+        </div>`;
+
+        html += `<div class="cover-row">
+            <div class="cover-label"><span>Question coverage</span><span>${seenCount} / ${total} (${coverPct}%)</span></div>
+            ${bar(coverPct, '#0056b3')}
+        </div>`;
+        html += `<div class="cover-row">
+            <div class="cover-label"><span>&#11088; Likely-on-test seen</span><span>${starredSeen} / ${starredTotal} (${starCoverPct}%)</span></div>
+            ${bar(starCoverPct, '#FFC107')}
+        </div>`;
+
+        // Focus / strong areas
+        const attempted = catRows.filter(c => c.acc != null);
+        if (attempted.length) {
+            const weak = attempted.filter(c => c.acc < PASS_THRESHOLD).slice(0, 3).map(c => c.name);
+            const strong = attempted.filter(c => c.acc >= PASS_THRESHOLD).slice(-2).map(c => c.name);
+            html += `<h3 class="section-heading">Focus Areas</h3>`;
+            html += `<div style="margin-top:10px;font-size:0.92rem;line-height:1.5;">`;
+            html += weak.length
+                ? `<div><strong style="color:#c62828;">Needs focus:</strong> ${weak.map(escapeHtml).join(', ')}</div>`
+                : `<div><strong style="color:#2e7d32;">Great work — no weak areas yet!</strong></div>`;
+            if (strong.length) html += `<div><strong style="color:#2e7d32;">Strong:</strong> ${strong.map(escapeHtml).join(', ')}</div>`;
+            html += `</div>`;
+        }
+
+        // Per-category table
+        html += `<h3 class="section-heading">By Category</h3><div class="stats-container">`;
+        catRows.forEach(c => {
+            let badgeClass, badgeText;
+            if (c.acc == null) { badgeClass = 'badge-neutral'; badgeText = 'Not started'; }
+            else if (c.acc >= PASS_THRESHOLD) { badgeClass = 'badge-good'; badgeText = 'Strong'; }
+            else { badgeClass = 'badge-review'; badgeText = 'Needs Review'; }
+            const detail = c.acc == null ? `0 answered` : `${c.acc}% over ${c.answered} answered`;
+            const reviewBtn = (c.acc != null && c.acc < PASS_THRESHOLD)
+                ? `<button class="btn-mini" onclick="startCategoryQuiz('${c.name.replace(/'/g, "\\'")}')">Practice 5 Qs</button>` : '';
+            html += `<div class="stat-row">
+                <div>
+                    <div class="stat-category">${escapeHtml(c.name)}</div>
+                    <div style="color:#666;font-size:0.8rem;">${detail} &middot; ${c.cover}% seen</div>
+                </div>
+                <div style="display:flex;align-items:center;">
+                    <div class="stat-badge ${badgeClass}">${badgeText}</div>${reviewBtn}
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
+
+        // Recent sessions
+        if (progress.sessions.length) {
+            html += `<h3 class="section-heading">Recent Quizzes</h3><div class="stats-container">`;
+            progress.sessions.slice(-8).reverse().forEach(s => {
+                const color = s.pct >= PASS_THRESHOLD ? '#2e7d32' : '#c62828';
+                html += `<div class="hsession">
+                    <div><div style="font-weight:bold;">${escapeHtml(s.mode)}</div><div class="hsession-meta">${fmtDate(s.t)}</div></div>
+                    <div style="font-weight:bold;color:${color};">${s.pct}% <span style="color:#999;font-weight:normal;font-size:0.8rem;">(${s.score}/${s.total})</span></div>
+                </div>`;
+            });
+            html += `</div>`;
+        }
+
+        historyContent.innerHTML = html;
+    }
+
+    // ---- Validator (dev aid) ----
     function validateQuestions() {
         const issues = [];
         const seenIds = new Set();
@@ -729,17 +760,23 @@
             if (typeof q.answer !== 'number' || q.answer < 0 || q.answer > 3) issues.push(`${where}: answer out of range`);
             if (!q.explanation) issues.push(`${where}: missing explanation`);
         });
-        if (issues.length) {
-            console.warn(`[SOS quiz] ${issues.length} data issue(s):\n` + issues.join('\n'));
-        } else {
-            console.info(`[SOS quiz] ${masterQuizData.length} questions loaded, all valid.`);
-        }
+        if (issues.length) console.warn(`[SOS quiz] ${issues.length} data issue(s):\n` + issues.join('\n'));
+        else console.info(`[SOS quiz] ${masterQuizData.length} questions loaded, all valid.`);
     }
 
     // ---- Init ----
     validateQuestions();
-    document.getElementById('btn-full').textContent = `Full Simulation (All ${masterQuizData.length} Questions)`;
+    document.getElementById('btn-full').textContent = `All Questions (${masterQuizData.length})`;
     renderSplashBests();
+</script>
+
+<!-- Register the service worker so the app works offline / in low-signal mode -->
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(() => { /* offline caching just won't be available */ });
+        });
+    }
 </script>
 </body>
 </html>
