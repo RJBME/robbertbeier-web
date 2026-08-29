@@ -21,6 +21,7 @@ const SHELL_URLS = [
   '/charging-history/',
   '/charging-analytics/',
   '/practice.html',
+  '/practice-dashboard.html',
   '/questions.js',
   '/manifest.json',
   '/icons/icon-192.png',

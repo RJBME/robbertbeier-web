@@ -225,6 +225,9 @@
         <div class="splash-tools">
             <button class="link-btn" id="progress-btn">View progress</button>
             <span style="color:#ccc">&middot;</span>
+            <button class="link-btn" id="export-btn">Export progress</button>
+        </div>
+        <div class="splash-tools" style="margin-top:4px;">
             <button class="link-btn muted" id="reset-progress-btn">Reset saved progress</button>
         </div>
     </div>
@@ -547,7 +550,7 @@
         // record session (skip empty runs)
         if (totalAnswered > 0) {
             progress.sessions.push({ t: Date.now(), mode: currentModeLabel, score: score, total: totalAnswered, pct: percent });
-            if (progress.sessions.length > 200) progress.sessions.splice(0, progress.sessions.length - 200);
+            if (progress.sessions.length > 500) progress.sessions.splice(0, progress.sessions.length - 500);
             saveProgress();
         }
 
@@ -652,6 +655,17 @@
             el.textContent = (b != null) ? `Best: ${b}%` : '';
         });
     }
+
+    // Export progress as a code the parent can paste into the dashboard on another device.
+    document.getElementById('export-btn').onclick = () => {
+        let code = '';
+        try { code = btoa(unescape(encodeURIComponent(JSON.stringify(progress)))); }
+        catch (e) { alert('Could not export progress.'); return; }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).catch(() => {});
+        }
+        window.prompt('Progress code (copied to clipboard). Send it to your parent to load into the Practice Dashboard:', code);
+    };
 
     document.getElementById('reset-progress-btn').onclick = () => {
         if (confirm('Clear all saved progress (best scores, question history, and stats) on this device?')) {

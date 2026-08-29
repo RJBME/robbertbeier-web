@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Practice Dashboard">
+    <meta name="theme-color" content="#0056b3">
+    <title>Practice Dashboard</title>
+    <style>
+        html { -webkit-text-size-adjust: 100%; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #eef1f5; color: #1f2733; margin: 0;
+            padding: 24px 16px max(24px, env(safe-area-inset-bottom));
+        }
+        .wrap { max-width: 780px; margin: 0 auto; }
+        .card {
+            background: #fff; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            padding: 20px; margin-bottom: 16px;
+        }
+        h1 { font-size: 1.5rem; margin: 0 0 4px; text-align: center; }
+        .subtitle { text-align: center; color: #667; font-size: 0.9rem; margin-bottom: 0; }
+
+        /* Countdown / goal banner */
+        .banner { display: flex; gap: 12px; flex-wrap: wrap; }
+        .banner .big {
+            flex: 1 1 0; min-width: 0; text-align: center; background: linear-gradient(135deg,#0056b3,#1e88e5);
+            color: #fff; border-radius: 12px; padding: 18px 12px;
+        }
+        .banner .big.goal { background: linear-gradient(135deg,#2e7d32,#43a047); }
+        .banner .big .num { font-size: 2.1rem; font-weight: 800; line-height: 1; }
+        .banner .big .lab { font-size: 0.82rem; opacity: 0.92; margin-top: 6px; }
+
+        .section-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 12px; }
+
+        /* KPI tiles */
+        .kpis { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+        .kpi { background: #f7f9fc; border: 1px solid #e6ecf5; border-radius: 10px; padding: 12px 8px; text-align: center; }
+        .kpi .n { font-size: 1.4rem; font-weight: 800; color: #0056b3; line-height: 1.05; }
+        .kpi .l { font-size: 0.72rem; color: #667; margin-top: 4px; }
+        .kpi.warn .n { color: #e08600; }
+        .kpi.bad .n { color: #c62828; }
+        .kpi.good .n { color: #2e7d32; }
+
+        /* Daily bar chart */
+        .chart { display: flex; align-items: flex-end; gap: 5px; height: 160px; position: relative; margin-top: 8px; padding-top: 6px; }
+        .goal-line { position: absolute; left: 0; right: 0; border-top: 2px dashed #f0a020; }
+        .goal-tag { position: absolute; right: 0; font-size: 0.7rem; color: #d98600; background: #fff8e8; padding: 0 4px; transform: translateY(-100%); }
+        .bar-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+        .bar { width: 78%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .3s; position: relative; }
+        .bar .v { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 0.68rem; color: #445; font-weight: 700; white-space: nowrap; }
+        .bar.met { background: #43a047; }
+        .bar.some { background: #f0a020; }
+        .bar.none { background: #d6dbe3; }
+        .bar-lab { font-size: 0.62rem; color: #889; margin-top: 5px; text-align: center; line-height: 1.1; }
+        .bar-lab .dow { display: block; font-weight: 700; color: #556; }
+
+        /* progress bar */
+        .pbar { width: 100%; height: 12px; background: #e6ecf5; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+        .pbar > div { height: 100%; border-radius: 6px; }
+        .row-between { display: flex; justify-content: space-between; align-items: baseline; }
+
+        /* category table */
+        .catrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #eef1f5; font-size: 0.92rem; }
+        .catrow:last-child { border-bottom: none; }
+        .catname { font-weight: 600; }
+        .catsub { color: #778; font-size: 0.78rem; }
+        .badge { padding: 3px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 700; color: #fff; white-space: nowrap; }
+        .b-good { background: #43a047; } .b-review { background: #e53935; } .b-none { background: #9aa4b2; }
+
+        .focus-pill { display: inline-block; background: #ffe9e9; color: #c62828; border: 1px solid #f4b8b8; border-radius: 14px; padding: 4px 10px; font-size: 0.82rem; font-weight: 600; margin: 3px 4px 3px 0; }
+        .focus-pill.ok { background: #e8f5e9; color: #2e7d32; border-color: #b6dbb9; }
+
+        .sess { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eef1f5; font-size: 0.9rem; }
+        .sess:last-child { border-bottom: none; }
+        .sess .meta { color: #778; font-size: 0.78rem; }
+
+        textarea { width: 100%; min-height: 70px; border: 1px solid #cdd5e0; border-radius: 8px; padding: 10px; font-size: 0.9rem; font-family: inherit; resize: vertical; }
+        .btn { background: #0056b3; color: #fff; border: none; border-radius: 8px; padding: 11px 16px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+        .btn:active { background: #004494; }
+        .btn.secondary { background: #fff; color: #0056b3; border: 2px solid #0056b3; }
+        .muted { color: #778; font-size: 0.85rem; line-height: 1.5; }
+        .src-note { text-align: center; font-size: 0.82rem; color: #778; margin-top: 4px; }
+        details summary { cursor: pointer; color: #0056b3; font-weight: 600; font-size: 0.9rem; }
+        .empty { text-align: center; color: #556; padding: 10px 0; line-height: 1.6; }
+        a { color: #0056b3; }
+
+        @media (max-width: 560px) {
+            .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+            .banner .big .num { font-size: 1.8rem; }
+            .bar .v { display: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1>Practice Dashboard</h1>
+        <p class="subtitle">Michigan SOS road test prep</p>
+        <div class="banner" id="banner" style="margin-top:16px;"></div>
+    </div>
+
+    <div id="dash"></div>
+
+    <div class="card">
+        <details id="import-details">
+            <summary>Load data from another device</summary>
+            <p class="muted" style="margin-top:10px;">On the practice device, open the quiz, tap <strong>&ldquo;Export progress&rdquo;</strong>, and send yourself the code. Paste it below and press Load.</p>
+            <textarea id="import-box" placeholder="Paste the exported progress code here..."></textarea>
+            <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="btn" id="import-btn">Load pasted data</button>
+                <button class="btn secondary" id="clear-import-btn">Use this device's data</button>
+            </div>
+            <div class="src-note" id="import-status"></div>
+        </details>
+    </div>
+
+    <p class="src-note" style="margin-bottom:24px;">
+        <a href="practice.html">&larr; Open the practice quiz</a>
+    </p>
+</div>
+
+<script src="questions.js"></script>
+<script>
+    const TEST_DATE = new Date(2026, 8, 9);   // Sep 9, 2026 (month is 0-indexed)
+    const DAILY_GOAL = 80;
+    const PASS = 70;
+
+    const LIVE_KEY = 'sosPracticeProgress';   // written by the practice app on this device
+    const IMPORT_KEY = 'sosParentData';       // pasted from another device
+
+    function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+    function normalize(d) {
+        d = d || {};
+        return { best: d.best || {}, stats: d.stats || {}, sessions: Array.isArray(d.sessions) ? d.sessions : [] };
+    }
+    function loadData() {
+        const imp = readJSON(IMPORT_KEY);
+        if (imp) return { data: normalize(imp), source: 'imported' };
+        const live = readJSON(LIVE_KEY);
+        if (live) return { data: normalize(live), source: 'device' };
+        return { data: null, source: null };
+    }
+
+    const dayKey = (t) => { const d = new Date(t); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+    const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function daysUntilTest() {
+        const t = new Date(); t.setHours(0, 0, 0, 0);
+        return Math.max(0, Math.round((TEST_DATE - t) / 86400000));
+    }
+
+    function render() {
+        const bank = (typeof masterQuizData !== 'undefined') ? masterQuizData : [];
+        const totalQ = bank.length;
+        const starredTotal = bank.filter(q => q.starred).length;
+        const { data, source } = loadData();
+        const banner = document.getElementById('banner');
+        const dash = document.getElementById('dash');
+
+        const dUntil = daysUntilTest();
+        banner.innerHTML =
+            `<div class="big"><div class="num">${dUntil}</div><div class="lab">day${dUntil === 1 ? '' : 's'} until the test (Sep 9)</div></div>` +
+            `<div class="big goal"><div class="num">${DAILY_GOAL}</div><div class="lab">questions / day goal</div></div>`;
+
+        if (!data || data.sessions.length === 0) {
+            dash.innerHTML = `<div class="card"><div class="empty">
+                <strong>No practice data ${source === 'device' ? 'recorded yet' : 'on this device'}.</strong><br>
+                ${source === 'device'
+                    ? 'Take a quiz in the practice app and stats will appear here.'
+                    : 'Open &ldquo;Load data from another device&rdquo; below and paste the export code from the practice device.'}
+            </div></div>`;
+            renderImportStatus(source);
+            return;
+        }
+
+        const sessions = data.sessions.slice().sort((a, b) => a.t - b.t);
+        const stats = data.stats;
+
+        // per-day totals from sessions
+        const perDay = {};
+        sessions.forEach(s => {
+            const k = dayKey(s.t);
+            if (!perDay[k]) perDay[k] = { q: 0, correct: 0 };
+            perDay[k].q += s.total; perDay[k].correct += s.score;
+        });
+
+        // lifetime stats from per-question record
+        let lifeSeen = 0, lifeCorrect = 0, seenCount = 0, starredSeen = 0;
+        bank.forEach(q => {
+            const st = stats[q.id]; if (!st) return;
+            lifeSeen += st.seen; lifeCorrect += st.correct;
+            if (st.seen > 0) { seenCount++; if (q.starred) starredSeen++; }
+        });
+        const overallAcc = lifeSeen ? Math.round(lifeCorrect / lifeSeen * 100) : 0;
+        const starAcc = (() => {
+            let s = 0, c = 0; bank.forEach(q => { if (q.starred && stats[q.id]) { s += stats[q.id].seen; c += stats[q.id].correct; } });
+            return s ? Math.round(c / s * 100) : 0;
+        })();
+        const coverage = totalQ ? Math.round(seenCount / totalQ * 100) : 0;
+        const starCoverage = starredTotal ? Math.round(starredSeen / starredTotal * 100) : 0;
+
+        // today / streak / activity
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const todayQ = (perDay[dayKey(today)] || {}).q || 0;
+        const activeDays = Object.keys(perDay).length;
+        const totalAnswered = Object.values(perDay).reduce((a, d) => a + d.q, 0);
+        const avgPerActiveDay = activeDays ? Math.round(totalAnswered / activeDays) : 0;
+        const bestDay = Object.values(perDay).reduce((m, d) => Math.max(m, d.q), 0);
+
+        // current goal streak (consecutive days meeting the goal, ending today or yesterday)
+        let streak = 0; let d = new Date(today);
+        if (((perDay[dayKey(d)] || {}).q || 0) < DAILY_GOAL) d.setDate(d.getDate() - 1);
+        while (((perDay[dayKey(d)] || {}).q || 0) >= DAILY_GOAL) { streak++; d.setDate(d.getDate() - 1); }
+        // days on goal within the run-up
+        const daysMetGoal = Object.values(perDay).filter(x => x.q >= DAILY_GOAL).length;
+
+        // last 14 days for the chart
+        const days = [];
+        for (let i = 13; i >= 0; i--) { const x = new Date(today); x.setDate(x.getDate() - i); days.push(x); }
+        const chartMax = Math.max(DAILY_GOAL, ...days.map(x => (perDay[dayKey(x)] || {}).q || 0)) * 1.15;
+
+        let html = '';
+
+        // KPI row
+        const todayClass = todayQ >= DAILY_GOAL ? 'good' : (todayQ > 0 ? 'warn' : 'bad');
+        html += `<div class="card"><div class="kpis">
+            <div class="kpi ${todayClass}"><div class="n">${todayQ}</div><div class="l">answered today (goal ${DAILY_GOAL})</div></div>
+            <div class="kpi ${streak > 0 ? 'good' : ''}"><div class="n">${streak}</div><div class="l">day goal streak</div></div>
+            <div class="kpi"><div class="n">${totalAnswered}</div><div class="l">total answered</div></div>
+            <div class="kpi ${overallAcc >= PASS ? 'good' : 'warn'}"><div class="n">${overallAcc}%</div><div class="l">overall accuracy</div></div>
+            <div class="kpi ${starAcc >= PASS ? 'good' : 'warn'}"><div class="n">${starAcc}%</div><div class="l">likely-on-test accuracy</div></div>
+            <div class="kpi"><div class="n">${coverage}%</div><div class="l">of ${totalQ} questions seen</div></div>
+        </div></div>`;
+
+        // Today vs goal
+        const todayPct = Math.min(100, Math.round(todayQ / DAILY_GOAL * 100));
+        html += `<div class="card">
+            <div class="row-between"><span class="section-title" style="margin:0;">Today&rsquo;s goal</span><span class="muted">${todayQ} / ${DAILY_GOAL}</span></div>
+            <div class="pbar"><div style="width:${todayPct}%;background:${todayQ >= DAILY_GOAL ? '#43a047' : '#0056b3'};"></div></div>
+            <div class="muted" style="margin-top:8px;">${todayQ >= DAILY_GOAL ? '✅ Daily goal met!' : (todayQ > 0 ? `${DAILY_GOAL - todayQ} more to hit today&rsquo;s goal.` : 'No practice yet today.')}</div>
+        </div>`;
+
+        // Daily chart
+        html += `<div class="card"><div class="section-title">Daily Practice &mdash; last 14 days</div><div class="chart" id="chart">`;
+        const goalTopPct = 100 - (DAILY_GOAL / chartMax * 100);
+        html += `<div class="goal-line" style="top:${goalTopPct}%;"></div><div class="goal-tag" style="top:${goalTopPct}%;">goal ${DAILY_GOAL}</div>`;
+        days.forEach(x => {
+            const q = (perDay[dayKey(x)] || {}).q || 0;
+            const h = Math.max(q > 0 ? 3 : 1, Math.round(q / chartMax * 100));
+            const cls = q >= DAILY_GOAL ? 'met' : (q > 0 ? 'some' : 'none');
+            const dow = x.toLocaleDateString(undefined, { weekday: 'narrow' });
+            html += `<div class="bar-col" title="${x.toLocaleDateString()}: ${q} questions">
+                <div class="bar ${cls}" style="height:${h}%;">${q > 0 ? `<span class="v">${q}</span>` : ''}</div>
+                <div class="bar-lab"><span class="dow">${dow}</span>${x.getMonth() + 1}/${x.getDate()}</div>
+            </div>`;
+        });
+        html += `</div></div>`;
+
+        // Focus areas + category table
+        const cat = {};
+        bank.forEach(q => {
+            if (!cat[q.category]) cat[q.category] = { total: 0, qSeen: 0, seen: 0, correct: 0 };
+            cat[q.category].total++;
+            const st = stats[q.id];
+            if (st && st.seen > 0) { cat[q.category].qSeen++; cat[q.category].seen += st.seen; cat[q.category].correct += st.correct; }
+        });
+        const rows = Object.entries(cat).map(([name, c]) => ({
+            name, acc: c.seen ? Math.round(c.correct / c.seen * 100) : null,
+            cover: Math.round(c.qSeen / c.total * 100), answered: c.seen
+        }));
+        rows.sort((a, b) => {
+            if (a.acc == null && b.acc == null) return b.cover - a.cover;
+            if (a.acc == null) return 1; if (b.acc == null) return -1; return a.acc - b.acc;
+        });
+        const weak = rows.filter(r => r.acc != null && r.acc < PASS).slice(0, 4);
+        const strong = rows.filter(r => r.acc != null && r.acc >= PASS).slice(-3).reverse();
+
+        html += `<div class="card"><div class="section-title">Focus Areas</div>`;
+        if (weak.length) html += `<div>${weak.map(r => `<span class="focus-pill">${esc(r.name)} &middot; ${r.acc}%</span>`).join('')}</div>`;
+        else html += `<div class="muted">No weak areas yet — everything practiced is at ${PASS}%+ 👍</div>`;
+        if (strong.length) html += `<div style="margin-top:8px;">${strong.map(r => `<span class="focus-pill ok">${esc(r.name)} &middot; ${r.acc}%</span>`).join('')}</div>`;
+
+        html += `<div style="margin-top:14px;">`;
+        rows.forEach(r => {
+            let bc, bt;
+            if (r.acc == null) { bc = 'b-none'; bt = 'Not started'; }
+            else if (r.acc >= PASS) { bc = 'b-good'; bt = 'Strong'; }
+            else { bc = 'b-review'; bt = 'Needs Review'; }
+            const detail = r.acc == null ? 'not practiced' : `${r.acc}% over ${r.answered} answered`;
+            html += `<div class="catrow">
+                <div><div class="catname">${esc(r.name)}</div><div class="catsub">${detail} &middot; ${r.cover}% seen</div></div>
+                <div class="badge ${bc}">${bt}</div>
+            </div>`;
+        });
+        html += `</div></div>`;
+
+        // Interesting stats
+        html += `<div class="card"><div class="section-title">Highlights</div><div class="kpis">
+            <div class="kpi"><div class="n">${activeDays}</div><div class="l">days practiced</div></div>
+            <div class="kpi"><div class="n">${daysMetGoal}</div><div class="l">days hit ${DAILY_GOAL}+</div></div>
+            <div class="kpi"><div class="n">${avgPerActiveDay}</div><div class="l">avg / active day</div></div>
+            <div class="kpi"><div class="n">${bestDay}</div><div class="l">best day</div></div>
+            <div class="kpi"><div class="n">${sessions.length}</div><div class="l">quizzes taken</div></div>
+            <div class="kpi"><div class="n">${starCoverage}%</div><div class="l">likely-on-test seen</div></div>
+        </div></div>`;
+
+        // Recent sessions
+        html += `<div class="card"><div class="section-title">Recent Quizzes</div>`;
+        sessions.slice(-10).reverse().forEach(s => {
+            const color = s.pct >= PASS ? '#2e7d32' : '#c62828';
+            const when = new Date(s.t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' +
+                         new Date(s.t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+            html += `<div class="sess"><div><div style="font-weight:600;">${esc(s.mode)}</div><div class="meta">${when}</div></div>
+                <div style="font-weight:700;color:${color};">${s.pct}% <span class="meta">(${s.score}/${s.total})</span></div></div>`;
+        });
+        html += `</div>`;
+
+        dash.innerHTML = html;
+        renderImportStatus(source);
+    }
+
+    function renderImportStatus(source) {
+        const el = document.getElementById('import-status');
+        if (source === 'imported') el.innerHTML = 'Showing <strong>imported</strong> data from another device.';
+        else if (source === 'device') el.innerHTML = 'Showing data saved on <strong>this device</strong>.';
+        else el.textContent = '';
+    }
+
+    document.getElementById('import-btn').onclick = () => {
+        const raw = document.getElementById('import-box').value.trim();
+        if (!raw) return;
+        let parsed = null;
+        try { parsed = JSON.parse(decodeURIComponent(escape(atob(raw)))); }  // code format
+        catch (e) { try { parsed = JSON.parse(raw); } catch (e2) { parsed = null; } }  // raw JSON fallback
+        if (!parsed || (!parsed.sessions && !parsed.stats)) { alert('That code could not be read. Make sure you pasted the whole thing.'); return; }
+        localStorage.setItem(IMPORT_KEY, JSON.stringify(parsed));
+        document.getElementById('import-box').value = '';
+        document.getElementById('import-details').open = false;
+        render();
+    };
+    document.getElementById('clear-import-btn').onclick = () => {
+        localStorage.removeItem(IMPORT_KEY);
+        render();
+    };
+
+    render();
+</script>
+</body>
+</html>
