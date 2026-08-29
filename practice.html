@@ -371,20 +371,30 @@
     // keeping the screen covered for the full duration on phones AND big desktops.
     function launchConfetti() {
         const canvas = document.createElement('canvas');
-        canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2147483647;';
-        document.body.appendChild(canvas);
+        canvas.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;margin:0;padding:0;pointer-events:none;z-index:2147483647;display:block;';
+        (document.documentElement || document.body).appendChild(canvas);
         const ctx = canvas.getContext('2d');
-        const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+        if (!ctx) { canvas.remove(); return; }
+
+        // Work in CSS pixels but back the canvas at device resolution (crisp on Retina/Safari).
+        let W = 0, H = 0;
+        const resize = () => {
+            const dpr = window.devicePixelRatio || 1;
+            W = window.innerWidth; H = window.innerHeight;
+            canvas.width = Math.floor(W * dpr);
+            canvas.height = Math.floor(H * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
         resize();
         window.addEventListener('resize', resize);
 
         const colors = ['#4CAF50', '#0056b3', '#F44336', '#FFC107', '#9C27B0', '#00BCD4', '#FF9800'];
-        // scale piece count to the screen area so big windows still look full
-        const count = Math.max(180, Math.min(420, Math.round((canvas.width * canvas.height) / 6000)));
+        // scale piece count to the window area so big windows still look full
+        const count = Math.max(180, Math.min(420, Math.round((W * H) / 6000)));
         function reset(p, initial) {
-            p.x = Math.random() * canvas.width;
+            p.x = Math.random() * W;
             // initial pieces spread across the whole height (instant fill); recycled ones start just above the top
-            p.y = initial ? Math.random() * canvas.height : -20 - Math.random() * 60;
+            p.y = initial ? Math.random() * H : -20 - Math.random() * 60;
             p.w = 7 + Math.random() * 7;
             p.h = 9 + Math.random() * 9;
             p.color = colors[Math.floor(Math.random() * colors.length)];
@@ -401,16 +411,18 @@
         const duration = 5000;
         const stopRecycleAt = duration - 1400; // let it thin out at the very end
         const start = performance.now();
+        // rAF where available, setTimeout fallback so it still animates in edge cases
+        const raf = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : (cb) => setTimeout(() => cb(performance.now()), 16);
         function frame(now) {
             const elapsed = now - start;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, W, H);
             const fade = elapsed > duration - 1000 ? Math.max(0, (duration - elapsed) / 1000) : 1;
             for (const p of pieces) {
                 p.y += p.vy;
                 p.sway += 0.05;
                 p.x += p.vx + Math.sin(p.sway) * 1.2;
                 p.rot += p.vr;
-                if (p.y > canvas.height + 20 && elapsed < stopRecycleAt) reset(p, false);
+                if (p.y > H + 20 && elapsed < stopRecycleAt) reset(p, false);
                 ctx.save();
                 ctx.translate(p.x, p.y);
                 ctx.rotate(p.rot);
@@ -419,10 +431,10 @@
                 ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
                 ctx.restore();
             }
-            if (elapsed < duration) requestAnimationFrame(frame);
+            if (elapsed < duration) raf(frame);
             else { window.removeEventListener('resize', resize); canvas.remove(); }
         }
-        requestAnimationFrame(frame);
+        raf(frame);
     }
 
     // ---- Screen helpers ----
