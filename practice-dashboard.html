@@ -54,8 +54,11 @@
         .bar.met { background: #43a047; }
         .bar.some { background: #f0a020; }
         .bar.none { background: #d6dbe3; }
-        .bar-lab { font-size: 0.62rem; color: #889; margin-top: 5px; text-align: center; line-height: 1.1; }
+        .bar-lab { font-size: 0.62rem; color: #889; margin-top: 5px; text-align: center; line-height: 1.15; }
         .bar-lab .dow { display: block; font-weight: 700; color: #556; }
+        .bar-lab .uni { display: block; color: #8a93a3; font-size: 0.58rem; }
+        .bar .v { line-height: 1.05; }
+        .bar .v .vu { display: block; font-size: 0.56rem; font-weight: 600; color: #7a828f; }
 
         /* progress bar */
         .pbar { width: 100%; height: 12px; background: #e6ecf5; border-radius: 6px; overflow: hidden; margin-top: 8px; }
@@ -90,7 +93,7 @@
         @media (max-width: 560px) {
             .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
             .banner .big .num { font-size: 1.8rem; }
-            .bar .v { display: none; }
+            .bar .v, .bar-lab .uni { display: none; }
         }
     </style>
 </head>
@@ -201,18 +204,22 @@
         const stats = data.stats;
         const daily = data.daily || {};
 
-        // Daily counts. Goal is 80 UNIQUE questions/day, so prefer the daily
-        // unique-question log; fall back to session totals only for older data
-        // that predates that log.
-        const useUnique = Object.keys(daily).length > 0;
-        const unitLabel = useUnique ? 'unique questions' : 'questions';
-        const perDay = {};   // dayKey -> count
-        if (useUnique) {
-            Object.entries(daily).forEach(([k, ids]) => { perDay[k] = Object.keys(ids).length; });
-        } else {
-            sessions.forEach(s => { const k = dayKey(s.t); perDay[k] = (perDay[k] || 0) + s.total; });
-        }
-        const dayCount = (k) => perDay[k] || 0;
+        // Daily counts — track BOTH total answered and unique questions per day.
+        // The 80/day goal is measured by TOTAL answered (do 80 regardless);
+        // unique is reported alongside so you can see he's covering new material.
+        const perDayTotal = {};   // dayKey -> total questions answered that day (repeats included)
+        const perDayUnique = {};  // dayKey -> distinct questions answered that day
+        Object.entries(daily).forEach(([k, ids]) => {
+            perDayUnique[k] = Object.keys(ids).length;
+            perDayTotal[k] = Object.values(ids).reduce((a, b) => a + b, 0);
+        });
+        // legacy days (sessions predating the daily log): total only, unique unknown
+        sessions.forEach(s => {
+            const k = dayKey(s.t);
+            if (!(k in daily)) perDayTotal[k] = (perDayTotal[k] || 0) + s.total;
+        });
+        const totalOf = (k) => perDayTotal[k] || 0;
+        const uniqueOf = (k) => (k in perDayUnique ? perDayUnique[k] : null);
 
         // lifetime stats from per-question record
         let lifeSeen = 0, lifeCorrect = 0, seenCount = 0, starredSeen = 0;
@@ -229,59 +236,66 @@
         const coverage = totalQ ? Math.round(seenCount / totalQ * 100) : 0;
         const starCoverage = starredTotal ? Math.round(starredSeen / starredTotal * 100) : 0;
 
-        // today / streak / activity
+        // today / streak / activity (goal is measured by TOTAL answered)
         const today = new Date(); today.setHours(0, 0, 0, 0);
-        const todayQ = dayCount(dayKey(today));
-        const activeDays = Object.keys(perDay).length;
+        const tk = dayKey(today);
+        const todayTotal = totalOf(tk);
+        const todayUnique = uniqueOf(tk);
+        const activeDays = Object.keys(perDayTotal).length;
         const totalAnswered = lifeSeen;                        // lifetime answers (includes repeats)
-        const sumDaily = Object.values(perDay).reduce((a, n) => a + n, 0);
-        const avgPerActiveDay = activeDays ? Math.round(sumDaily / activeDays) : 0;
-        const bestDay = activeDays ? Math.max(...Object.values(perDay)) : 0;
+        const sumDailyTotal = Object.values(perDayTotal).reduce((a, n) => a + n, 0);
+        const avgPerActiveDay = activeDays ? Math.round(sumDailyTotal / activeDays) : 0;
+        const bestDay = activeDays ? Math.max(...Object.values(perDayTotal)) : 0;
 
-        // current goal streak (consecutive days meeting the goal, ending today or yesterday)
+        // current goal streak (consecutive days with >= 80 TOTAL, ending today or yesterday)
         let streak = 0; let d = new Date(today);
-        if (dayCount(dayKey(d)) < DAILY_GOAL) d.setDate(d.getDate() - 1);
-        while (dayCount(dayKey(d)) >= DAILY_GOAL) { streak++; d.setDate(d.getDate() - 1); }
-        const daysMetGoal = Object.values(perDay).filter(n => n >= DAILY_GOAL).length;
+        if (totalOf(dayKey(d)) < DAILY_GOAL) d.setDate(d.getDate() - 1);
+        while (totalOf(dayKey(d)) >= DAILY_GOAL) { streak++; d.setDate(d.getDate() - 1); }
+        const daysMetGoal = Object.values(perDayTotal).filter(n => n >= DAILY_GOAL).length;
 
         // last 14 days for the chart
         const days = [];
         for (let i = 13; i >= 0; i--) { const x = new Date(today); x.setDate(x.getDate() - i); days.push(x); }
-        const chartMax = Math.max(DAILY_GOAL, ...days.map(x => dayCount(dayKey(x)))) * 1.15;
+        const chartMax = Math.max(DAILY_GOAL, ...days.map(x => totalOf(dayKey(x)))) * 1.15;
 
         let html = '';
 
         // KPI row
-        const todayClass = todayQ >= DAILY_GOAL ? 'good' : (todayQ > 0 ? 'warn' : 'bad');
+        const todayClass = todayTotal >= DAILY_GOAL ? 'good' : (todayTotal > 0 ? 'warn' : 'bad');
         html += `<div class="card"><div class="kpis">
-            <div class="kpi ${todayClass}"><div class="n">${todayQ}</div><div class="l">${useUnique ? 'unique' : 'answered'} today (goal ${DAILY_GOAL})</div></div>
+            <div class="kpi ${todayClass}"><div class="n">${todayTotal}</div><div class="l">answered today (goal ${DAILY_GOAL})</div></div>
+            <div class="kpi"><div class="n">${todayUnique != null ? todayUnique : '&mdash;'}</div><div class="l">unique today</div></div>
             <div class="kpi ${streak > 0 ? 'good' : ''}"><div class="n">${streak}</div><div class="l">day goal streak</div></div>
-            <div class="kpi"><div class="n">${totalAnswered}</div><div class="l">total answered</div></div>
             <div class="kpi ${overallAcc >= PASS ? 'good' : 'warn'}"><div class="n">${overallAcc}%</div><div class="l">overall accuracy</div></div>
             <div class="kpi ${starAcc >= PASS ? 'good' : 'warn'}"><div class="n">${starAcc}%</div><div class="l">likely-on-test accuracy</div></div>
             <div class="kpi"><div class="n">${coverage}%</div><div class="l">of ${totalQ} questions seen</div></div>
         </div></div>`;
 
-        // Today vs goal
-        const todayPct = Math.min(100, Math.round(todayQ / DAILY_GOAL * 100));
+        // Today vs goal (total)
+        const todayPct = Math.min(100, Math.round(todayTotal / DAILY_GOAL * 100));
+        const uniqNote = todayUnique != null ? ` &middot; ${todayUnique} unique` : '';
         html += `<div class="card">
-            <div class="row-between"><span class="section-title" style="margin:0;">Today&rsquo;s goal <span class="muted" style="font-weight:400;">(${DAILY_GOAL} ${unitLabel})</span></span><span class="muted">${todayQ} / ${DAILY_GOAL}</span></div>
-            <div class="pbar"><div style="width:${todayPct}%;background:${todayQ >= DAILY_GOAL ? '#43a047' : '#0056b3'};"></div></div>
-            <div class="muted" style="margin-top:8px;">${todayQ >= DAILY_GOAL ? '✅ Daily goal met!' : (todayQ > 0 ? `${DAILY_GOAL - todayQ} more to hit today&rsquo;s goal.` : 'No practice yet today.')}</div>
+            <div class="row-between"><span class="section-title" style="margin:0;">Today&rsquo;s goal <span class="muted" style="font-weight:400;">(${DAILY_GOAL} questions)</span></span><span class="muted">${todayTotal} / ${DAILY_GOAL}</span></div>
+            <div class="pbar"><div style="width:${todayPct}%;background:${todayTotal >= DAILY_GOAL ? '#43a047' : '#0056b3'};"></div></div>
+            <div class="muted" style="margin-top:8px;">${todayTotal >= DAILY_GOAL ? '✅ Daily goal met!' : (todayTotal > 0 ? `${DAILY_GOAL - todayTotal} more to hit today&rsquo;s goal.` : 'No practice yet today.')}${uniqNote}</div>
         </div>`;
 
-        // Daily chart
-        html += `<div class="card"><div class="section-title">Daily Practice &mdash; last 14 days</div><div class="muted" style="margin:-6px 0 4px;">${useUnique ? 'Unique questions' : 'Questions'} answered each day &middot; goal ${DAILY_GOAL}</div><div class="chart" id="chart">`;
+        // Daily chart — bar height = TOTAL answered; small number under the date = UNIQUE
+        html += `<div class="card"><div class="section-title">Daily Practice &mdash; last 14 days</div><div class="muted" style="margin:-6px 0 4px;">Bars = total answered each day (goal ${DAILY_GOAL}) &middot; small &ldquo;u&rdquo; number = unique questions</div><div class="chart" id="chart">`;
         const goalTopPct = 100 - (DAILY_GOAL / chartMax * 100);
         html += `<div class="goal-line" style="top:${goalTopPct}%;"></div><div class="goal-tag" style="top:${goalTopPct}%;">goal ${DAILY_GOAL}</div>`;
         days.forEach(x => {
-            const q = dayCount(dayKey(x));
-            const h = Math.max(q > 0 ? 3 : 1, Math.round(q / chartMax * 100));
-            const cls = q >= DAILY_GOAL ? 'met' : (q > 0 ? 'some' : 'none');
+            const k = dayKey(x);
+            const tot = totalOf(k);
+            const uni = uniqueOf(k);
+            const h = Math.max(tot > 0 ? 3 : 1, Math.round(tot / chartMax * 100));
+            const cls = tot >= DAILY_GOAL ? 'met' : (tot > 0 ? 'some' : 'none');
             const dow = x.toLocaleDateString(undefined, { weekday: 'narrow' });
-            html += `<div class="bar-col" title="${x.toLocaleDateString()}: ${q} questions">
-                <div class="bar ${cls}" style="height:${h}%;">${q > 0 ? `<span class="v">${q}</span>` : ''}</div>
-                <div class="bar-lab"><span class="dow">${dow}</span>${x.getMonth() + 1}/${x.getDate()}</div>
+            const vLabel = tot > 0 ? `<span class="v">${tot}</span>` : '';
+            const uLabel = (uni != null && tot > 0) ? `<span class="uni">${uni}u</span>` : '';
+            html += `<div class="bar-col" title="${x.toLocaleDateString()}: ${tot} total${uni != null ? ', ' + uni + ' unique' : ''}">
+                <div class="bar ${cls}" style="height:${h}%;">${vLabel}</div>
+                <div class="bar-lab"><span class="dow">${dow}</span>${x.getMonth() + 1}/${x.getDate()}${uLabel}</div>
             </div>`;
         });
         html += `</div></div>`;
@@ -327,11 +341,11 @@
         // Interesting stats
         html += `<div class="card"><div class="section-title">Highlights</div><div class="kpis">
             <div class="kpi"><div class="n">${activeDays}</div><div class="l">days practiced</div></div>
-            <div class="kpi"><div class="n">${daysMetGoal}</div><div class="l">days hit ${DAILY_GOAL}+</div></div>
-            <div class="kpi"><div class="n">${avgPerActiveDay}</div><div class="l">avg / active day</div></div>
-            <div class="kpi"><div class="n">${bestDay}</div><div class="l">best day</div></div>
+            <div class="kpi"><div class="n">${daysMetGoal}</div><div class="l">days hit ${DAILY_GOAL}+ total</div></div>
+            <div class="kpi"><div class="n">${avgPerActiveDay}</div><div class="l">avg total / active day</div></div>
+            <div class="kpi"><div class="n">${bestDay}</div><div class="l">best day (total)</div></div>
+            <div class="kpi"><div class="n">${totalAnswered}</div><div class="l">total answered (all time)</div></div>
             <div class="kpi"><div class="n">${sessions.length}</div><div class="l">quizzes taken</div></div>
-            <div class="kpi"><div class="n">${starCoverage}%</div><div class="l">likely-on-test seen</div></div>
         </div></div>`;
 
         // Recent sessions
