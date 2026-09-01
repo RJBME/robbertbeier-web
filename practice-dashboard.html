@@ -51,14 +51,15 @@
         .bar-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
         .bar { width: 78%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .3s; position: relative; }
         .bar .v { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 0.68rem; color: #445; font-weight: 700; white-space: nowrap; }
-        .bar.met { background: #43a047; }
-        .bar.some { background: #f0a020; }
+        /* bar-within-bar: outer height = total, darker inner fill = unique (new) */
         .bar.none { background: #d6dbe3; }
+        .bar.met { background: #bfe3c0; }   .bar.met .bar-uni { background: #2e9e4f; }
+        .bar.some { background: #ffd8a1; }  .bar.some .bar-uni { background: #ef8c00; }
+        .bar-uni { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 0 0 3px 3px; }
         .bar-lab { font-size: 0.62rem; color: #889; margin-top: 5px; text-align: center; line-height: 1.15; }
         .bar-lab .dow { display: block; font-weight: 700; color: #556; }
-        .bar-lab .uni { display: block; color: #8a93a3; font-size: 0.58rem; }
-        .bar .v { line-height: 1.05; }
-        .bar .v .vu { display: block; font-size: 0.56rem; font-weight: 600; color: #7a828f; }
+        .legend { display: flex; gap: 14px; align-items: center; margin: 2px 0 6px; font-size: 0.78rem; color: #667; flex-wrap: wrap; }
+        .legend i { width: 11px; height: 11px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: -1px; }
 
         /* progress bar */
         .pbar { width: 100%; height: 12px; background: #e6ecf5; border-radius: 6px; overflow: hidden; margin-top: 8px; }
@@ -93,7 +94,7 @@
         @media (max-width: 560px) {
             .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
             .banner .big .num { font-size: 1.8rem; }
-            .bar .v, .bar-lab .uni { display: none; }
+            .bar .v { display: none; }
         }
     </style>
 </head>
@@ -280,8 +281,10 @@
             <div class="muted" style="margin-top:8px;">${todayTotal >= DAILY_GOAL ? '✅ Daily goal met!' : (todayTotal > 0 ? `${DAILY_GOAL - todayTotal} more to hit today&rsquo;s goal.` : 'No practice yet today.')}${uniqNote}</div>
         </div>`;
 
-        // Daily chart — bar height = TOTAL answered; small number under the date = UNIQUE
-        html += `<div class="card"><div class="section-title">Daily Practice &mdash; last 14 days</div><div class="muted" style="margin:-6px 0 4px;">Bars = total answered each day (goal ${DAILY_GOAL}) &middot; small &ldquo;u&rdquo; number = unique questions</div><div class="chart" id="chart">`;
+        // Daily chart — bar height = TOTAL answered; darker inner fill = UNIQUE (new) questions
+        html += `<div class="card"><div class="section-title">Daily Practice &mdash; last 14 days</div>
+            <div class="legend"><span><i style="background:#2e9e4f;"></i>new (unique)</span><span><i style="background:#bfe3c0;"></i>repeat</span><span>bar height = total answered &middot; goal ${DAILY_GOAL}</span></div>
+            <div class="chart" id="chart">`;
         const goalTopPct = 100 - (DAILY_GOAL / chartMax * 100);
         html += `<div class="goal-line" style="top:${goalTopPct}%;"></div><div class="goal-tag" style="top:${goalTopPct}%;">goal ${DAILY_GOAL}</div>`;
         days.forEach(x => {
@@ -291,11 +294,13 @@
             const h = Math.max(tot > 0 ? 3 : 1, Math.round(tot / chartMax * 100));
             const cls = tot >= DAILY_GOAL ? 'met' : (tot > 0 ? 'some' : 'none');
             const dow = x.toLocaleDateString(undefined, { weekday: 'narrow' });
+            // inner fill height = unique as a fraction of total (full bar when no repeats yet)
+            const uniFrac = (uni != null && tot > 0) ? Math.round(uni / tot * 100) : (tot > 0 ? 100 : 0);
+            const inner = tot > 0 ? `<div class="bar-uni" style="height:${uniFrac}%;"></div>` : '';
             const vLabel = tot > 0 ? `<span class="v">${tot}</span>` : '';
-            const uLabel = (uni != null && tot > 0) ? `<span class="uni">${uni}u</span>` : '';
-            html += `<div class="bar-col" title="${x.toLocaleDateString()}: ${tot} total${uni != null ? ', ' + uni + ' unique' : ''}">
-                <div class="bar ${cls}" style="height:${h}%;">${vLabel}</div>
-                <div class="bar-lab"><span class="dow">${dow}</span>${x.getMonth() + 1}/${x.getDate()}${uLabel}</div>
+            html += `<div class="bar-col" title="${x.toLocaleDateString()}: ${tot} total${uni != null ? ', ' + uni + ' new' : ''}">
+                <div class="bar ${cls}" style="height:${h}%;">${inner}${vLabel}</div>
+                <div class="bar-lab"><span class="dow">${dow}</span>${x.getMonth() + 1}/${x.getDate()}</div>
             </div>`;
         });
         html += `</div></div>`;
