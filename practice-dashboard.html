@@ -281,6 +281,17 @@
             <div class="muted" style="margin-top:8px;">${todayTotal >= DAILY_GOAL ? '✅ Daily goal met!' : (todayTotal > 0 ? `${DAILY_GOAL - todayTotal} more to hit today&rsquo;s goal.` : 'No practice yet today.')}${uniqNote}</div>
         </div>`;
 
+        // Question coverage — "has he seen them all?" (climbs toward 100% over time)
+        const remaining = totalQ - seenCount;
+        html += `<div class="card">
+            <div class="section-title">Question coverage <span class="muted" style="font-weight:400;">(has he seen them all yet?)</span></div>
+            <div class="row-between" style="margin-top:6px;"><span class="muted">All questions seen</span><span class="muted">${seenCount} / ${totalQ} (${coverage}%)</span></div>
+            <div class="pbar"><div style="width:${coverage}%;background:#0056b3;"></div></div>
+            <div class="row-between" style="margin-top:12px;"><span class="muted">&#11088; Likely-on-test seen</span><span class="muted">${starredSeen} / ${starredTotal} (${starCoverage}%)</span></div>
+            <div class="pbar"><div style="width:${starCoverage}%;background:#f0a020;"></div></div>
+            <div class="muted" style="margin-top:10px;">${remaining > 0 ? `${remaining} question${remaining === 1 ? '' : 's'} he hasn&rsquo;t seen yet.` : '🎉 He has now seen every question at least once!'}</div>
+        </div>`;
+
         // Daily chart — bar height = TOTAL answered; darker inner fill = UNIQUE (new) questions
         html += `<div class="card"><div class="section-title">Daily Practice &mdash; last 14 days</div>
             <div class="legend"><span><i style="background:#2e9e4f;"></i>new (unique)</span><span><i style="background:#bfe3c0;"></i>repeat</span><span>bar height = total answered &middot; goal ${DAILY_GOAL}</span></div>
