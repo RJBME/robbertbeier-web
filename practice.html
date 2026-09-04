@@ -380,20 +380,26 @@
 
     // Coverage-biased selection: prefers least-seen questions, nudges toward
     // starred (likely-on-test) and previously-missed ones, with randomness.
-    function pickQuestions(pool, n, opts) {
-        opts = opts || {};
-        const starBias = opts.starBias != null ? opts.starBias : 0.4;
-        const missBias = opts.missBias != null ? opts.missBias : 0.25;
+    // Adaptive selection: reinforce weak/missed areas, guarantee coverage of unseen
+    // questions, and fill the rest at random (starred nudged up). Composition ~
+    // 40% weak + 35% unseen + remainder random; shortfalls spill into the fill.
+    const missRate = (q) => { const s = seen(q); return s ? wrong(q) / s : 0; };
+    function pickAdaptive(pool, n) {
         if (n >= pool.length) return shuffleArray(pool.slice());
-        const scored = pool.map(q => {
-            let w = seen(q);                    // fewer times seen => lower => picked first
-            if (q.starred) w -= starBias;       // favor likely-on-test
-            w -= wrong(q) * missBias;           // favor previously missed
-            w += Math.random() * 0.5;           // keep it varied
-            return { q, w };
-        });
-        scored.sort((a, b) => a.w - b.w);
-        return scored.slice(0, n).map(s => s.q);
+        const chosen = [], used = new Set();
+        const take = (arr, k) => { for (const q of arr) { if (k <= 0) break; if (!used.has(q.id)) { used.add(q.id); chosen.push(q); k--; } } };
+
+        // weakest first: highest miss rate, then most total wrongs, with a little randomness
+        const weak = pool.filter(q => seen(q) > 0 && wrong(q) > 0)
+            .sort((a, b) => (missRate(b) - missRate(a)) || (wrong(b) - wrong(a)) || (Math.random() - 0.5));
+        const unseen = shuffleArray(pool.filter(q => seen(q) === 0));
+        // random fill, with starred nudged toward the front
+        const rest = shuffleArray(pool.slice()).sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
+
+        take(weak, Math.round(n * 0.40));
+        take(unseen, Math.round(n * 0.35));
+        take(rest, n - chosen.length);
+        return shuffleArray(chosen.slice(0, n));
     }
 
     // ---- Confetti (pure canvas, no dependencies) ----
@@ -487,20 +493,23 @@
 
     // ---- Launchers ----
     function startQuiz(numQuestions, label) {
-        activeQuizData = shuffleArray(pickQuestions(masterQuizData, numQuestions, { starBias: 0.4, missBias: 0.25 }));
+        activeQuizData = pickAdaptive(masterQuizData, numQuestions);
         beginSession(label);
     }
     function startMockTest() {
         const starred = masterQuizData.filter(q => q.starred);
         const regular = masterQuizData.filter(q => !q.starred);
-        let mock = pickQuestions(starred, Math.min(80, starred.length), { starBias: 0, missBias: 0.25 });
-        if (mock.length < 80) mock = mock.concat(pickQuestions(regular, 80 - mock.length, { starBias: 0, missBias: 0.25 }));
+        let mock = pickAdaptive(starred, Math.min(80, starred.length));
+        if (mock.length < 80) {
+            const used = new Set(mock.map(q => q.id));
+            mock = mock.concat(pickAdaptive(regular.filter(q => !used.has(q.id)), 80 - mock.length));
+        }
         activeQuizData = shuffleArray(mock);
         beginSession('SOS Mock Test');
     }
     function startCategoryQuiz(category) {
         const pool = masterQuizData.filter(q => q.category === category);
-        activeQuizData = shuffleArray(pickQuestions(pool, Math.min(5, pool.length), { starBias: 0.3, missBias: 0.3 }));
+        activeQuizData = pickAdaptive(pool, Math.min(5, pool.length));
         beginSession('Review: ' + category);
     }
 
@@ -516,27 +525,29 @@
         progressText.textContent = `Question ${currentQuestionIndex + 1} of ${activeQuizData.length}`;
         progressFill.style.width = `${(currentQuestionIndex / activeQuizData.length) * 100}%`;
 
-        const order = currentQ.options.map((_, i) => i);
-        shuffleArray(order);
+        // 4 choices: the correct answer + 3 distractors drawn at random from the pool, then shuffled
+        const pool = (currentQ.distractors || []).slice();
+        shuffleArray(pool);
+        const opts = [currentQ.answer, ...pool.slice(0, 3)];
+        shuffleArray(opts);
         optionsContainer.innerHTML = '';
-        order.forEach(origIndex => {
+        opts.forEach(text => {
             const div = document.createElement('div');
             div.className = 'option';
-            div.dataset.orig = origIndex;
-            div.textContent = currentQ.options[origIndex];
-            div.onclick = () => selectOption(div, origIndex, currentQ);
+            div.textContent = text;
+            div.onclick = () => selectOption(div, text, currentQ);
             optionsContainer.appendChild(div);
         });
     }
 
-    function selectOption(selectedDiv, chosenIndex, q) {
+    function selectOption(selectedDiv, chosenText, q) {
         const allOptions = optionsContainer.children;
         for (let i = 0; i < allOptions.length; i++) {
             allOptions[i].onclick = null;
             allOptions[i].classList.add('answered');
-            if (Number(allOptions[i].dataset.orig) === q.answer) allOptions[i].classList.add('correct');
+            if (allOptions[i].textContent === q.answer) allOptions[i].classList.add('correct');
         }
-        const isCorrect = chosenIndex === q.answer;
+        const isCorrect = chosenText === q.answer;
         if (!isCorrect) selectedDiv.classList.add('wrong');
 
         // record per-question stats
@@ -551,7 +562,7 @@
         progress.daily[dk][q.id] = (progress.daily[dk][q.id] || 0) + 1;
         saveProgress();
 
-        results.push({ q: q, chosen: chosenIndex, correct: isCorrect });
+        results.push({ q: q, chosenText: chosenText, correct: isCorrect });
 
         if (q.explanation) {
             explanationBox.innerHTML = `<strong>${isCorrect ? 'Correct! ' : 'Answer: '}</strong>${escapeHtml(q.explanation)}`;
@@ -624,8 +635,8 @@
             html += `<div class="focus-score-row"><span class="focus-score">${sCorrect} / ${starredResults.length} correct (${sPercent}%)</span><span class="stat-badge ${badgeClass}">${badgeText}</span></div>`;
             starredResults.forEach(r => {
                 const mark = r.correct ? '<span class="focus-mark ok">&#10003;</span>' : '<span class="focus-mark no">&#10007;</span>';
-                const wrongAns = r.correct ? '' : `<span class="focus-ans">You answered: ${escapeHtml(r.q.options[r.chosen])}</span>`;
-                html += `<div class="focus-item">${mark}<div class="focus-qtext">${escapeHtml(r.q.question)}<span class="focus-ans">Answer: ${escapeHtml(r.q.options[r.q.answer])}</span>${wrongAns}</div></div>`;
+                const wrongAns = r.correct ? '' : `<span class="focus-ans">You answered: ${escapeHtml(r.chosenText)}</span>`;
+                html += `<div class="focus-item">${mark}<div class="focus-qtext">${escapeHtml(r.q.question)}<span class="focus-ans">Answer: ${escapeHtml(r.q.answer)}</span>${wrongAns}</div></div>`;
             });
             focusBox.innerHTML = html;
         }
@@ -665,14 +676,14 @@
             reviewSection.style.display = 'none';
         } else {
             reviewSection.style.display = 'block';
-            missed.forEach(({ q, chosen }) => {
+            missed.forEach(({ q, chosenText }) => {
                 const item = document.createElement('div');
                 item.className = 'review-item';
                 const expHTML = q.explanation ? `<div class="review-exp">${escapeHtml(q.explanation)}</div>` : '';
                 item.innerHTML = `
                     <div class="review-q">${q.starred ? '⭐ ' : ''}${escapeHtml(q.question)}</div>
-                    <div class="review-line review-chosen">Your answer: ${escapeHtml(q.options[chosen])}</div>
-                    <div class="review-line review-correct">Correct answer: ${escapeHtml(q.options[q.answer])}</div>
+                    <div class="review-line review-chosen">Your answer: ${escapeHtml(chosenText)}</div>
+                    <div class="review-line review-correct">Correct answer: ${escapeHtml(q.answer)}</div>
                     ${expHTML}`;
                 reviewContainer.appendChild(item);
             });
@@ -833,18 +844,24 @@
     function validateQuestions() {
         const issues = [];
         const seenIds = new Set();
+        let pool5 = 0;
         masterQuizData.forEach((q, i) => {
             const where = `#${i} (${q.id || 'no-id'})`;
             if (!q.id) issues.push(`${where}: missing id`);
             else if (seenIds.has(q.id)) issues.push(`${where}: duplicate id`);
             else seenIds.add(q.id);
             if (!q.question) issues.push(`${where}: missing question text`);
-            if (!Array.isArray(q.options) || q.options.length !== 4) issues.push(`${where}: expected 4 options`);
-            if (typeof q.answer !== 'number' || q.answer < 0 || q.answer > 3) issues.push(`${where}: answer out of range`);
+            if (typeof q.answer !== 'string' || !q.answer) issues.push(`${where}: missing answer text`);
+            if (!Array.isArray(q.distractors) || q.distractors.length < 3) issues.push(`${where}: needs at least 3 distractors`);
+            else {
+                if (q.distractors.length >= 5) pool5++;
+                if (q.distractors.includes(q.answer)) issues.push(`${where}: answer appears in distractors`);
+                if (new Set(q.distractors).size !== q.distractors.length) issues.push(`${where}: duplicate distractors`);
+            }
             if (!q.explanation) issues.push(`${where}: missing explanation`);
         });
         if (issues.length) console.warn(`[SOS quiz] ${issues.length} data issue(s):\n` + issues.join('\n'));
-        else console.info(`[SOS quiz] ${masterQuizData.length} questions loaded, all valid.`);
+        else console.info(`[SOS quiz] ${masterQuizData.length} questions valid. ${pool5} have a full 5-distractor pool; ${masterQuizData.length - pool5} still have 3 (to expand).`);
     }
 
     // ---- Init ----
