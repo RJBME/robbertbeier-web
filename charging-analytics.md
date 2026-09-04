@@ -223,6 +223,28 @@ permalink: /charging-analytics/
   .dcfc-filter input { accent-color: var(--link); width: 15px; height: 15px; cursor: pointer; margin: 0; }
   .dcfc-filter small { color: #aaa; font-weight: 500; }
   .dcfc-filter label.dcfc-active small { color: var(--link); opacity: 0.8; }
+
+  /* ── Date-range filter ── */
+  .date-filter { margin: 0 0 16px; }
+  .date-filter-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .date-filter-label { font-size: 0.76rem; font-weight: 700; color: #888; margin-right: 2px; }
+  .dr-preset {
+    background: var(--dash-card); border: 1px solid var(--dash-border); color: #888;
+    border-radius: 20px; padding: 5px 12px; font-size: 0.72rem; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .dr-preset:hover { border-color: var(--link); color: var(--link); }
+  .dr-preset.active { background: rgba(93,63,211,0.12); border-color: var(--link); color: var(--link); }
+  .date-filter-custom { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; }
+  .date-filter-custom input[type="date"] {
+    background: var(--dash-card); border: 1px solid var(--dash-border); color: var(--text);
+    border-radius: 8px; padding: 4px 8px; font-size: 0.72rem; font-family: inherit; color-scheme: light dark;
+  }
+  .date-filter-custom input[type="date"]:hover { border-color: var(--link); }
+  .dr-dash { color: #999; font-size: 0.8rem; }
+  .date-filter-status { font-size: 0.72rem; color: var(--link); font-weight: 600; margin-top: 7px; }
+  .date-filter-status:empty { display: none; }
+  .date-filter-status.dr-warn { color: #e8850c; }
   .vf-btn {
     background: var(--dash-card); border: 1px solid var(--dash-border);
     padding: 5px 14px; border-radius: 20px; font-size: 0.76rem;
@@ -786,6 +808,24 @@ permalink: /charging-analytics/
       <input type="checkbox" id="dcfcOnlyToggle" onchange="toggleDcfcFilter(this.checked)">
       <span>⚡ DC fast charging only <small>≥ 25 kW</small></span>
     </label>
+  </div>
+
+  <!-- Date-range filter — scopes every session-driven chart/stat to a period -->
+  <div class="date-filter">
+    <div class="date-filter-presets">
+      <span class="date-filter-label">📅 Range</span>
+      <button type="button" class="dr-preset active" data-preset="all"   onclick="dateRangePreset('all')">All time</button>
+      <button type="button" class="dr-preset"        data-preset="month" onclick="dateRangePreset('month')">This month</button>
+      <button type="button" class="dr-preset"        data-preset="30"    onclick="dateRangePreset('30')">Last 30d</button>
+      <button type="button" class="dr-preset"        data-preset="90"    onclick="dateRangePreset('90')">Last 90d</button>
+      <button type="button" class="dr-preset"        data-preset="ytd"   onclick="dateRangePreset('ytd')">YTD</button>
+      <span class="date-filter-custom">
+        <input type="date" id="drFrom" onchange="dateRangeCustom()" aria-label="From date">
+        <span class="dr-dash">→</span>
+        <input type="date" id="drTo" onchange="dateRangeCustom()" aria-label="To date">
+      </span>
+    </div>
+    <div class="date-filter-status" id="dateFilterStatus"></div>
   </div>
 
   <div style="margin:0 0 16px;display:flex;gap:8px;flex-wrap:wrap">
@@ -2368,6 +2408,7 @@ function isVehicleActive(v) {
 // ── DCFC-only filter (avg charge power ≥ 25 kW; falls back to a DCFC-network
 //    heuristic for sessions that have no start/end timing data) ──
 let dcfcOnly = false;
+let rangeFrom = null, rangeTo = null;   // date-range filter ('YYYY-MM-DD' or null = unbounded)
 const DCFC_KW = 25;
 const DCFC_NETS = ['Tesla SC','ChargePoint','Rivian','Blink','Electrify America','WeCharge','BP Pulse','Shell Recharge','Red E','GM Energy/EVgo'];
 function isDcfcSession(s){
@@ -2384,6 +2425,55 @@ function toggleDcfcFilter(on){
   const lbl = document.querySelector('.dcfc-filter label');
   if (lbl) lbl.classList.toggle('dcfc-active', dcfcOnly);
   toggleVehicle(); // undefined arg → re-apply filters only
+}
+
+/* ── Date-range filter — scopes the session list feeding rebuild() ──────────
+   Sits in the same pipeline as the vehicle + DCFC filters (toggleVehicle re-
+   applies all three and rebuilds). Presets compute from the browser's local
+   "today"; custom uses the two date inputs. */
+function _isoLocal(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function dateRangePreset(preset){
+  const today = new Date();
+  const to = _isoLocal(today);
+  let from = null, t = null;
+  switch (preset){
+    case 'all':   from = null; t = null; break;
+    case 'month': from = _isoLocal(new Date(today.getFullYear(), today.getMonth(), 1)); t = to; break;
+    case '30':    { const d = new Date(today); d.setDate(d.getDate() - 29); from = _isoLocal(d); t = to; break; }
+    case '90':    { const d = new Date(today); d.setDate(d.getDate() - 89); from = _isoLocal(d); t = to; break; }
+    case 'ytd':   from = _isoLocal(new Date(today.getFullYear(), 0, 1)); t = to; break;
+  }
+  _applyDateRange(from, t, preset);
+}
+function dateRangeCustom(){
+  const f = document.getElementById('drFrom').value || null;
+  const t = document.getElementById('drTo').value || null;
+  _applyDateRange(f, t, 'custom');
+}
+function _applyDateRange(from, to, preset){
+  if (from && to && from > to){ const x = from; from = to; to = x; }   // swap if entered reversed
+  rangeFrom = from; rangeTo = to;
+  const fEl = document.getElementById('drFrom'), tEl = document.getElementById('drTo');
+  if (fEl) fEl.value = from || '';
+  if (tEl) tEl.value = to || '';
+  document.querySelectorAll('.dr-preset').forEach(b => b.classList.toggle('active', b.dataset.preset === preset));
+  toggleVehicle();   // undefined arg → re-apply all filters + rebuild
+}
+function _updateDateFilterStatus(){
+  const el = document.getElementById('dateFilterStatus'); if (!el) return;
+  if (!rangeFrom && !rangeTo){ el.textContent = ''; el.classList.remove('dr-warn'); return; }
+  const fmt = d => d ? new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '…';
+  if (_lastSl.length === 0){
+    // rebuild() skips empty data, so the charts keep their last view — warn clearly
+    // that this range has nothing so the stale numbers aren't mistaken for the range.
+    el.textContent = `⚠ No sessions between ${fmt(rangeFrom)} and ${fmt(rangeTo)} — nothing to analyze here. Widen the range (charts below still show the last view).`;
+    el.classList.add('dr-warn');
+  } else {
+    el.textContent = `Showing ${_lastSl.length} of ${sessions.length} sessions · ${fmt(rangeFrom)} → ${fmt(rangeTo)}`;
+    el.classList.remove('dr-warn');
+  }
 }
 
 function toggleVehicle(v) {
@@ -2417,6 +2507,9 @@ function toggleVehicle(v) {
     ? sessions
     : sessions.filter(s => activeVehicles.has(s.vehicle));
   if (dcfcOnly) _lastSl = _lastSl.filter(isDcfcSession);
+  if (rangeFrom) _lastSl = _lastSl.filter(s => s.date >= rangeFrom);
+  if (rangeTo)   _lastSl = _lastSl.filter(s => s.date <= rangeTo);
+  _updateDateFilterStatus();
 
   // ── Scroll preservation across rebuild ──
   // Strategy: find the section-header currently closest to (but below) the sticky
