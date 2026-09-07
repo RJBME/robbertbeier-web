@@ -3036,17 +3036,20 @@ mkChart('chartMonthlySourceSplit', {
         datasets: [{
           label: '$/gal assumed for savings calc',
           data: gasSavingsRates.map(r => r.gas_price),
-          borderColor: '#f39c12', backgroundColor: 'rgba(243,156,18,0.1)',
-          borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#f39c12',
-          fill: true, stepped: true
+          borderColor: '#f39c12', backgroundColor: 'rgba(243,156,18,0.10)',
+          borderWidth: 2, tension: 0.3, fill: true,
+          pointRadius: ctx => ctx.dataIndex === ctx.dataset.data.length - 1 ? 5 : 2.5,
+          pointHoverRadius: 6, pointBackgroundColor: '#f39c12', pointBorderWidth: 0
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
+        layout: { padding: { top: 16, right: 26 } },
         plugins: {
           legend: { display: false },
-          datalabels: { display: true, anchor: 'top', align: 'top', color: tc(), font: { size: 10 },
-                        formatter: v => '$' + v.toFixed(2) },
+          datalabels: { display: ctx => ctx.dataIndex === ctx.dataset.data.length - 1,
+                        anchor: 'end', align: 'top', offset: 6, color: '#f39c12',
+                        font: { size: 12, weight: 'bold' }, formatter: v => '$' + v.toFixed(2) },
           tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.y.toFixed(2)}/gal` } }
         },
         scales: {
@@ -3147,19 +3150,21 @@ mkChart('chartGasPrice', {
       label: '$/gal',
       data: gasSavingsRates.map(r => r.gas_price),
       borderColor: '#f39c12',
-      backgroundColor: 'rgba(243,156,18,0.12)',
-      borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#f39c12',
-      fill: true, stepped: true
+      backgroundColor: 'rgba(243,156,18,0.10)',
+      borderWidth: 2, tension: 0.3, fill: true,
+      pointRadius: ctx => ctx.dataIndex === ctx.dataset.data.length - 1 ? 5 : 2.5,
+      pointHoverRadius: 6, pointBackgroundColor: '#f39c12', pointBorderWidth: 0
     }]
   },
   options: {
     responsive: true, maintainAspectRatio: false,
-    layout: { padding: { top: 18, right: 36 } },
+    layout: { padding: { top: 18, right: 40 } },
     plugins: {
       legend: { display: false },
       datalabels: {
-        display: true, anchor: 'top', align: 'top',
-        color: tc(), font: { size: 10 },
+        display: ctx => ctx.dataIndex === ctx.dataset.data.length - 1,   // only the current value
+        anchor: 'end', align: 'top', offset: 6,
+        color: '#f39c12', font: { size: 12, weight: 'bold' },
         formatter: v => '$' + v.toFixed(2)
       },
       tooltip: { callbacks: { label: ctx => ` $${ctx.parsed.y.toFixed(2)}/gal` } }
@@ -3183,19 +3188,21 @@ mkChart('chartElecRate', {
       label: '¢/kWh',
       data: homeRates.map(r => +(r.rate * 100).toFixed(1)),
       borderColor: '#0288d1',
-      backgroundColor: 'rgba(2,136,209,0.15)',
-      borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#0288d1',
-      fill: true, stepped: true
+      backgroundColor: 'rgba(2,136,209,0.12)',
+      borderWidth: 2, tension: 0.3, fill: true,
+      pointRadius: ctx => ctx.dataIndex === ctx.dataset.data.length - 1 ? 5 : 2.5,
+      pointHoverRadius: 6, pointBackgroundColor: '#0288d1', pointBorderWidth: 0
     }]
   },
   options: {
     responsive: true, maintainAspectRatio: false,
-    layout: { padding: { top: 18, right: 36 } },
+    layout: { padding: { top: 18, right: 40 } },
     plugins: {
       legend: { display: false },
       datalabels: {
-        display: true, anchor: 'top', align: 'top',
-        color: tc(), font: { size: 10 },
+        display: ctx => ctx.dataIndex === ctx.dataset.data.length - 1,   // only the current value
+        anchor: 'end', align: 'top', offset: 6,
+        color: '#0288d1', font: { size: 12, weight: 'bold' },
         formatter: v => v + '¢'
       },
       tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(1)} ¢/kWh` } }
