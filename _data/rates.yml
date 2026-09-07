@@ -28,6 +28,8 @@ home_electricity:
     rate: 0.215
   - date: "2026-07-22"
     rate: 0.198   # DTE TOD bill Jun 20–Jul 22 2026: OFF-PEAK all-in rate. All home charging happens overnight/early-AM (off-peak), never in the 11am–7pm on-peak window ($0.305 all-in). Off-peak = peak-specific charges + per-kWh share of common supply/delivery/surcharges/service/tax; reproduces the $263.10 TOD-meter total.
+  - date: "2026-08-20"
+    rate: 0.198   # DTE TOD bill Jul 23–Aug 20 2026: OFF-PEAK all-in held steady at $0.198 (on-peak $0.305). TOD meter $276.96 / 1301.4 kWh (184.4 on-peak + 1117.0 off-peak); same allocation method reproduces the $276.96 total.
 
 gas_savings:
   - date: "2025-08-22"
