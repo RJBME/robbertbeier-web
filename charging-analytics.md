@@ -816,6 +816,7 @@ permalink: /charging-analytics/
       <span class="date-filter-label">📅 Range</span>
       <button type="button" class="dr-preset active" data-preset="all"   onclick="dateRangePreset('all')">All time</button>
       <button type="button" class="dr-preset"        data-preset="month" onclick="dateRangePreset('month')">This month</button>
+      <button type="button" class="dr-preset"        data-preset="lastmonth" onclick="dateRangePreset('lastmonth')">Last month</button>
       <button type="button" class="dr-preset"        data-preset="30"    onclick="dateRangePreset('30')">Last 30d</button>
       <button type="button" class="dr-preset"        data-preset="90"    onclick="dateRangePreset('90')">Last 90d</button>
       <button type="button" class="dr-preset"        data-preset="ytd"   onclick="dateRangePreset('ytd')">YTD</button>
@@ -2441,6 +2442,12 @@ function dateRangePreset(preset){
   switch (preset){
     case 'all':   from = null; t = null; break;
     case 'month': from = _isoLocal(new Date(today.getFullYear(), today.getMonth(), 1)); t = to; break;
+    case 'lastmonth': {   // prior full calendar month (Date handles year rollover)
+      const y = today.getFullYear(), m = today.getMonth();
+      from = _isoLocal(new Date(y, m - 1, 1));   // 1st of last month
+      t    = _isoLocal(new Date(y, m, 0));       // day 0 of this month = last day of last month
+      break;
+    }
     case '30':    { const d = new Date(today); d.setDate(d.getDate() - 29); from = _isoLocal(d); t = to; break; }
     case '90':    { const d = new Date(today); d.setDate(d.getDate() - 89); from = _isoLocal(d); t = to; break; }
     case 'ytd':   from = _isoLocal(new Date(today.getFullYear(), 0, 1)); t = to; break;
