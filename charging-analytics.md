@@ -7598,17 +7598,17 @@ function _updateCollapseBtns() {
 function initSectionColors() {
   // Defined inside the function so it's not in the temporal dead zone when the
   // init block calls this before this point in the file is reached.
-  const SECTION_PALETTE = ['#e05656','#e0883c','#d6a636','#3fb56f','#2fa6a1','#3f7fd6','#7a5cd0'];
-  const map = {};
-  document.querySelectorAll('.section-header[id]').forEach((h, i) => {
+  const SECTION_PALETTE = ['#7a5cd0','#e05656','#e0883c','#d6a636','#3fb56f','#2fa6a1','#3f7fd6'];
+  // Drive the colour cycle from the STICKY-NAV ORDER (not section-header DOM
+  // order) so the pill dots read as a smooth left-to-right rainbow. Each
+  // section header is then tinted to match its own nav pill. (These two orders
+  // differ near the end — e.g. Vehicles sits after Road Trips in the DOM but
+  // after Efficiency in the nav — so keying off the DOM broke the sequence.)
+  document.querySelectorAll('#stickyNavRow a[href^="#"]').forEach((a, i) => {
     const c = SECTION_PALETTE[i % SECTION_PALETTE.length];
-    h.style.setProperty('--sec-color', c);
-    map[h.id] = c;
-  });
-  // Colour dot on each sticky-nav pill so the nav reads as a section legend.
-  document.querySelectorAll('#stickyNavRow a[href^="#"]').forEach(a => {
-    const c = map[a.getAttribute('href').slice(1)];
-    if (c) a.style.setProperty('--sec-color', c);
+    a.style.setProperty('--sec-color', c);
+    const sec = document.getElementById(a.getAttribute('href').slice(1));
+    if (sec) sec.style.setProperty('--sec-color', c);
   });
 }
 function initCollapsible() {
