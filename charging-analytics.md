@@ -310,6 +310,26 @@ permalink: /charging-analytics/
     font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em;
     color: #888; margin-right: 4px; white-space: nowrap;
   }
+  /* ── Sticky range row (mirrors the inline date-range filter) ── */
+  #stickyRangeRow {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 6px 20px 7px;
+    border-top: 1px solid var(--dash-border);
+    max-width: 1060px; margin: 0 auto; box-sizing: border-box; width: 100%;
+  }
+  #stickyRangeRow .date-filter-status {
+    margin-top: 0; margin-left: 4px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  @media (max-width: 767px) {
+    #stickyRangeRow {
+      flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; padding: 6px 12px 7px; gap: 5px;
+    }
+    #stickyRangeRow::-webkit-scrollbar { display: none; }
+    /* Status can wrap under the presets on tiny screens rather than being clipped */
+    #stickyRangeRow .date-filter-status { display: none; }
+  }
 
   /* ── Back-to-top pill ── */
   .back-top-pill {
@@ -797,6 +817,21 @@ permalink: /charging-analytics/
     </div>
     <div id="stickyVehicleRow">
       <span class="vf-sticky-label">Vehicle</span>
+    </div>
+    <div id="stickyRangeRow">
+      <span class="vf-sticky-label">📅 Range</span>
+      <button type="button" class="dr-preset active" data-preset="all"   onclick="dateRangePreset('all')">All time</button>
+      <button type="button" class="dr-preset"        data-preset="month" onclick="dateRangePreset('month')">This month</button>
+      <button type="button" class="dr-preset"        data-preset="lastmonth" onclick="dateRangePreset('lastmonth')">Last month</button>
+      <button type="button" class="dr-preset"        data-preset="30"    onclick="dateRangePreset('30')">Last 30d</button>
+      <button type="button" class="dr-preset"        data-preset="90"    onclick="dateRangePreset('90')">Last 90d</button>
+      <button type="button" class="dr-preset"        data-preset="ytd"   onclick="dateRangePreset('ytd')">YTD</button>
+      <span class="date-filter-custom">
+        <input type="date" id="drFromSticky" onchange="dateRangeCustom('sticky')" aria-label="From date">
+        <span class="dr-dash">→</span>
+        <input type="date" id="drToSticky" onchange="dateRangeCustom('sticky')" aria-label="To date">
+      </span>
+      <span class="date-filter-status" id="dateFilterStatusSticky"></span>
     </div>
   </div>
 
@@ -2454,33 +2489,38 @@ function dateRangePreset(preset){
   }
   _applyDateRange(from, t, preset);
 }
-function dateRangeCustom(){
-  const f = document.getElementById('drFrom').value || null;
-  const t = document.getElementById('drTo').value || null;
+function dateRangeCustom(src){
+  const ids = src === 'sticky' ? ['drFromSticky','drToSticky'] : ['drFrom','drTo'];
+  const f = (document.getElementById(ids[0]) || {}).value || null;
+  const t = (document.getElementById(ids[1]) || {}).value || null;
   _applyDateRange(f, t, 'custom');
 }
 function _applyDateRange(from, to, preset){
   if (from && to && from > to){ const x = from; from = to; to = x; }   // swap if entered reversed
   rangeFrom = from; rangeTo = to;
-  const fEl = document.getElementById('drFrom'), tEl = document.getElementById('drTo');
-  if (fEl) fEl.value = from || '';
-  if (tEl) tEl.value = to || '';
+  // Keep both the inline and sticky date inputs in sync
+  ['drFrom','drFromSticky'].forEach(id => { const e = document.getElementById(id); if (e) e.value = from || ''; });
+  ['drTo','drToSticky'].forEach(id => { const e = document.getElementById(id); if (e) e.value = to || ''; });
   document.querySelectorAll('.dr-preset').forEach(b => b.classList.toggle('active', b.dataset.preset === preset));
   toggleVehicle();   // undefined arg → re-apply all filters + rebuild
 }
 function _updateDateFilterStatus(){
-  const el = document.getElementById('dateFilterStatus'); if (!el) return;
-  if (!rangeFrom && !rangeTo){ el.textContent = ''; el.classList.remove('dr-warn'); return; }
+  const els = [document.getElementById('dateFilterStatus'),
+               document.getElementById('dateFilterStatusSticky')].filter(Boolean);
+  if (!els.length) return;
   const fmt = d => d ? new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '…';
-  if (_lastSl.length === 0){
-    // rebuild() skips empty data, so the charts keep their last view — warn clearly
-    // that this range has nothing so the stale numbers aren't mistaken for the range.
-    el.textContent = `⚠ No sessions between ${fmt(rangeFrom)} and ${fmt(rangeTo)} — nothing to analyze here. Widen the range (charts below still show the last view).`;
-    el.classList.add('dr-warn');
-  } else {
-    el.textContent = `Showing ${_lastSl.length} of ${sessions.length} sessions · ${fmt(rangeFrom)} → ${fmt(rangeTo)}`;
-    el.classList.remove('dr-warn');
+  let text = '', warn = false;
+  if (rangeFrom || rangeTo){
+    if (_lastSl.length === 0){
+      // rebuild() skips empty data, so the charts keep their last view — warn clearly
+      // that this range has nothing so the stale numbers aren't mistaken for the range.
+      text = `⚠ No sessions between ${fmt(rangeFrom)} and ${fmt(rangeTo)} — nothing to analyze here. Widen the range (charts below still show the last view).`;
+      warn = true;
+    } else {
+      text = `Showing ${_lastSl.length} of ${sessions.length} sessions · ${fmt(rangeFrom)} → ${fmt(rangeTo)}`;
+    }
   }
+  els.forEach(el => { el.textContent = text; el.classList.toggle('dr-warn', warn); });
 }
 
 function toggleVehicle(v) {
