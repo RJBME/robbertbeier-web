@@ -5,7 +5,7 @@
 const SYNC_URL = 'https://script.google.com/macros/s/AKfycbx81DU5oNSU6yOO4Svm2EZIfXOJCv4HQwwjtXB5tmEqg4-IjSv71RJ7T9QjENk-II5I/exec';
 const SYNC_SECRET = 'Daphnis_Tulip_Bronco';
 const SYNC_USER = 'rowan-driving';
-const VEHICLES = ['Family car', 'Second car'];   // edit to your vehicles
+const VEHICLES = ['2026 Mach-E SR', "LRB's 2026 Mach-E SR"];   // current cars (match the charging log)
 const SUPERVISORS = ['Mom', 'Dad'];              // edit to your supervisors
 
 // ---- Michigan Level 1 goals ----
