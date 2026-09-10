@@ -23,9 +23,42 @@ const TRAFFIC_OPTS = ['Light', 'Moderate', 'Heavy'];
 const MANEUVER_OPTS = ['Turns', 'Lane changes', 'Parallel parking', 'Perpendicular parking',
                        'Backing up', 'Freeway merging', 'Roundabouts', 'Hills', 'Intersections & stops'];
 
+// ---- Entry schema (backward/forward compatible) ----
+// RULES for future changes so OLD logged drives keep working:
+//   1. Only ADD new fields (with a default in ENTRY_DEFAULTS). Never rename or
+//      repurpose an existing key — old drives store data under the old key.
+//   2. If a field's MEANING must change, bump SCHEMA_VERSION and add a case in
+//      migrateEntry() to upgrade older entries deterministically.
+//   3. Every entry is run through normalizeEntry() on load/add/sync, so all
+//      code can assume every field exists. Unknown (newer) fields are preserved,
+//      so a device running older code won't wipe data written by newer code.
+const SCHEMA_VERSION = 1;
+const ENTRY_DEFAULTS = {
+  v: SCHEMA_VERSION, id: '', date: '', start: '', end: '', minutes: 0, nightMinutes: 0,
+  miles: null, vehicle: '', supervisor: '', traffic: '', weather: [], roads: [],
+  maneuvers: [], notes: '', t: 0, synced: false
+};
+function migrateEntry(e) {
+  e = e || {};
+  // Upgrade older entries here as SCHEMA_VERSION grows, e.g.:
+  //   if ((e.v || 1) < 2) { e.someNewField = deriveFrom(e); e.v = 2; }
+  return e;
+}
+function normalizeEntry(e) {
+  e = migrateEntry(e || {});
+  const out = {};
+  for (const k in ENTRY_DEFAULTS) {
+    const d = ENTRY_DEFAULTS[k];
+    out[k] = (e[k] !== undefined && e[k] !== null) ? e[k] : (Array.isArray(d) ? d.slice() : d);
+  }
+  for (const k in e) if (!(k in out)) out[k] = e[k]; // preserve unknown/newer fields
+  out.v = SCHEMA_VERSION;
+  return out;
+}
+
 // ---- Storage ----
 const LKEY = 'drivingLogEntries', MKEY = 'drivingLogMeta';
-function loadLocalEntries() { try { return JSON.parse(localStorage.getItem(LKEY)) || []; } catch (e) { return []; } }
+function loadLocalEntries() { try { return (JSON.parse(localStorage.getItem(LKEY)) || []).map(normalizeEntry); } catch (e) { return []; } }
 function saveLocalEntries(a) { try { localStorage.setItem(LKEY, JSON.stringify(a)); } catch (e) {} }
 function getMeta() { try { return JSON.parse(localStorage.getItem(MKEY)) || {}; } catch (e) { return {}; } }
 function setMeta(m) { try { localStorage.setItem(MKEY, JSON.stringify(m)); } catch (e) {} }
@@ -71,15 +104,16 @@ async function syncEntries() {
         try { if (await cloudAdd(e)) { e.synced = true; cloudIds.add(e.id); } } catch (err) {}
       }
     }
-    const merged = cloud.map(e => Object.assign({}, e, { synced: true }));
+    const merged = cloud.map(e => Object.assign(normalizeEntry(e), { synced: true }));
     for (const e of local) if (!cloudIds.has(e.id)) merged.push(e);
-    local = merged;
+    local = merged.map(normalizeEntry);
     saveLocalEntries(local);
   }
-  return { entries: sortEntries(local), online };
+  return { entries: sortEntries(local.map(normalizeEntry)), online };
 }
 
 async function addEntry(entry) {
+  entry = normalizeEntry(entry);
   entry.id = entry.id || (Date.now() + '-' + Math.random().toString(36).slice(2, 7));
   entry.synced = false;
   const local = loadLocalEntries(); local.push(entry); saveLocalEntries(local);
