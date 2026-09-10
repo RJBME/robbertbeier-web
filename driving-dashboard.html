@@ -79,6 +79,7 @@
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
     function addMonths(d,n){ const x=new Date(d); x.setMonth(x.getMonth()+n); return x; }
+    function addYears(d,n){ const x=new Date(d); x.setFullYear(x.getFullYear()+n); return x; }
     function fmtDate(d){ return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
 
     let entries = [];
@@ -119,10 +120,14 @@
         // 50/10 finish
         const finishok = t.hours>=GOAL_HOURS && t.nightHours>=GOAL_NIGHT_HOURS;
         html += milestoneRow('50 hours / 10 night complete', `${t.hours.toFixed(1)}/${GOAL_HOURS} · ${t.nightHours.toFixed(1)}/${GOAL_NIGHT_HOURS}`, finishok, Math.min(1,t.hours/GOAL_HOURS));
-        // L1 date-based
-        html += `<div class="milestone"><div class="row-between"><strong>Level 1 issue date</strong></div>
-            <div style="margin-top:6px"><input type="date" id="l1date" value="${meta.l1||''}"> <span class="muted" id="l1dates"></span></div>
-            <div class="muted" style="margin-top:4px">Set this to see your Segment 2 (90-day) and Level 2 (6-month) eligibility dates.</div></div>`;
+        // L1 date-based (Level 2 is the LATER of the 6-month rule and turning 16)
+        html += `<div class="milestone">
+            <div style="display:flex;gap:16px;flex-wrap:wrap">
+              <div><strong>Level 1 issue date</strong><br><input type="date" id="l1date" value="${meta.l1||''}"></div>
+              <div><strong>Date of birth</strong><br><input type="date" id="dob" value="${meta.dob||''}"></div>
+            </div>
+            <div class="muted" id="l1dates" style="margin-top:8px"></div>
+            <div class="muted" style="margin-top:4px">Level 2 requires holding Level 1 for 6 months AND being at least 16 — whichever comes later.</div></div>`;
         html += `</div>`;
 
         // Pace
@@ -145,14 +150,22 @@
     }
 
     function wireMilestone(){
-        const inp = $('l1date'); if(!inp) return;
+        const l1 = $('l1date'), dob = $('dob'); if(!l1) return;
         const show = () => {
-            const v = inp.value; const lab = $('l1dates');
-            if(!v){ lab.textContent=''; return; }
-            const d = new Date(v+'T00:00:00');
-            lab.innerHTML = `Segment 2 eligible <strong>${fmtDate(addDays(d,SEG2_DAYS))}</strong> · Level 2 eligible <strong>${fmtDate(addMonths(d,LEVEL2_MONTHS))}</strong>`;
+            const lab = $('l1dates');
+            if(!l1.value){ lab.innerHTML = dob && dob.value ? 'Set the Level 1 issue date to see eligibility dates.' : ''; return; }
+            const d = new Date(l1.value+'T00:00:00');
+            const seg2 = addDays(d, SEG2_DAYS);
+            let level2 = addMonths(d, LEVEL2_MONTHS), gate = '6-month rule';
+            if (dob.value) {
+                const age16 = addYears(new Date(dob.value+'T00:00:00'), 16);
+                if (age16 > level2) { level2 = age16; gate = 'turning 16'; }
+            }
+            const gateNote = dob.value ? ` <span style="color:#889">(the later date: ${esc(gate)})</span>` : ' <span style="color:#889">(add date of birth — Level 2 also needs age 16)</span>';
+            lab.innerHTML = `Segment 2 eligible <strong>${fmtDate(seg2)}</strong> · Level 2 eligible <strong>${fmtDate(level2)}</strong>${gateNote}`;
         };
-        inp.onchange = () => { const m=getMeta(); m.l1=inp.value; setMeta(m); show(); };
+        l1.onchange = () => { const m=getMeta(); m.l1=l1.value; setMeta(m); show(); };
+        dob.onchange = () => { const m=getMeta(); m.dob=dob.value; setMeta(m); show(); };
         show();
     }
 
