@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Driving Progress">
+    <meta name="theme-color" content="#0056b3">
+    <title>Driving Progress</title>
+    <style>
+        html { -webkit-text-size-adjust: 100%; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #eef1f5; color: #1f2733; margin: 0; padding: 22px 14px max(24px, env(safe-area-inset-bottom)); }
+        .wrap { max-width: 720px; margin: 0 auto; }
+        .card { background: #fff; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); padding: 20px; margin-bottom: 14px; }
+        h1 { font-size: 1.5rem; margin: 0 0 2px; text-align: center; }
+        .sub { text-align: center; color: #667; font-size: 0.9rem; margin: 0; }
+        a { color: #0056b3; }
+        .section-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 10px; }
+
+        .hero { display: flex; gap: 12px; }
+        .hero .h { flex: 1; text-align: center; border-radius: 12px; padding: 16px 10px; color: #fff; }
+        .hero .h.total { background: linear-gradient(135deg,#0056b3,#1e88e5); }
+        .hero .h.night { background: linear-gradient(135deg,#e08600,#f0a020); }
+        .hero .big { font-size: 1.9rem; font-weight: 800; line-height: 1.05; }
+        .hero .small { font-size: 0.82rem; opacity: 0.95; margin-top: 4px; }
+        .hbar { height: 9px; background: rgba(255,255,255,.35); border-radius: 5px; overflow: hidden; margin-top: 8px; }
+        .hbar > div { height: 100%; background: #fff; border-radius: 5px; }
+        .remain { text-align: center; color: #556; font-size: 0.9rem; margin-top: 12px; }
+
+        .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+        .kpi { background: #f7f9fc; border: 1px solid #e6ecf5; border-radius: 10px; padding: 12px 6px; text-align: center; }
+        .kpi .n { font-size: 1.3rem; font-weight: 800; color: #0056b3; }
+        .kpi .l { font-size: 0.7rem; color: #667; margin-top: 3px; }
+
+        .row-between { display: flex; justify-content: space-between; align-items: baseline; }
+        .pbar { height: 10px; background: #e6ecf5; border-radius: 6px; overflow: hidden; margin-top: 6px; }
+        .pbar > div { height: 100%; border-radius: 6px; }
+        .muted { color: #778; font-size: 0.85rem; }
+        .milestone { padding: 10px 0; border-bottom: 1px solid #eef1f5; }
+        .milestone:last-child { border-bottom: none; }
+        .badge { padding: 3px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 700; color: #fff; white-space: nowrap; }
+        .b-done { background: #43a047; } .b-todo { background: #9aa4b2; }
+
+        .vgrid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+        .vcell { background: #f7f9fc; border: 1px solid #e6ecf5; border-radius: 9px; padding: 9px 6px; text-align: center; }
+        .vcell .vn { font-weight: 800; color: #0056b3; }
+        .vcell .vl { font-size: 0.72rem; color: #667; }
+
+        .entry { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eef1f5; font-size: 0.9rem; }
+        .entry:last-child { border-bottom: none; }
+        .entry .tags { color: #556; font-size: 0.76rem; margin-top: 3px; }
+        .entry .meta { color: #778; font-size: 0.76rem; margin-top: 2px; }
+        .del { background: none; border: none; color: #c62828; cursor: pointer; font-size: 0.8rem; }
+        .empty { color: #778; text-align: center; padding: 12px 0; }
+        input[type=date] { padding: 9px 10px; border: 1px solid #cdd5e0; border-radius: 8px; font-size: 0.95rem; font-family: inherit; }
+        .btn { background: #0056b3; color: #fff; border: none; border-radius: 9px; padding: 12px 16px; font-weight: 700; cursor: pointer; }
+        .status { text-align: center; font-size: 0.82rem; color: #778; margin-top: 8px; }
+        svg { width: 100%; height: auto; display: block; }
+        @media (max-width: 520px){ .kpis{ grid-template-columns: repeat(2,minmax(0,1fr)); } .hero .big{ font-size:1.6rem; } }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1>Driving Progress</h1>
+        <p class="sub">Michigan Level 1 &mdash; 50 hours (10 at night)</p>
+        <div class="status" id="sync-status"></div>
+    </div>
+
+    <div id="dash"></div>
+
+    <p style="text-align:center;margin-bottom:24px;"><a href="driving-log.html">&larr; Log a drive</a></p>
+</div>
+
+<script src="driving-sync.js"></script>
+<script>
+    const $ = id => document.getElementById(id);
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+    function addMonths(d,n){ const x=new Date(d); x.setMonth(x.getMonth()+n); return x; }
+    function fmtDate(d){ return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+
+    let entries = [];
+
+    function render(){
+        const t = totals(entries);
+        const dash = $('dash');
+        const meta = getMeta();
+        const remHrs = Math.max(0, GOAL_HOURS - t.hours);
+        const remNight = Math.max(0, GOAL_NIGHT_HOURS - t.nightHours);
+
+        let html = '';
+
+        // Hero
+        html += `<div class="card"><div class="hero">
+            <div class="h total"><div class="big">${t.hours.toFixed(1)}<span style="font-size:1rem"> / ${GOAL_HOURS}</span></div><div class="small">total hours</div><div class="hbar"><div style="width:${Math.min(100,t.hours/GOAL_HOURS*100)}%"></div></div></div>
+            <div class="h night"><div class="big">${t.nightHours.toFixed(1)}<span style="font-size:1rem"> / ${GOAL_NIGHT_HOURS}</span></div><div class="small">night hours</div><div class="hbar"><div style="width:${Math.min(100,t.nightHours/GOAL_NIGHT_HOURS*100)}%"></div></div></div>
+        </div>
+        <div class="remain">${remHrs<=0&&remNight<=0 ? '🎉 All 50 hours (and 10 night) complete!' : `${remHrs.toFixed(1)} hrs and ${remNight.toFixed(1)} night hrs to go`}</div></div>`;
+
+        // KPIs
+        const avg = t.drives ? t.minutes/t.drives : 0;
+        html += `<div class="card"><div class="kpis">
+            <div class="kpi"><div class="n">${t.drives}</div><div class="l">drives logged</div></div>
+            <div class="kpi"><div class="n">${Math.round(t.miles)}</div><div class="l">total miles</div></div>
+            <div class="kpi"><div class="n">${fmtHM(avg)}</div><div class="l">avg drive</div></div>
+            <div class="kpi"><div class="n">${Math.round(t.hours/GOAL_HOURS*100)}%</div><div class="l">to 50 hrs</div></div>
+        </div></div>`;
+
+        // Cumulative chart
+        html += `<div class="card"><div class="section-title">Hours over time</div>${cumulativeChart()}</div>`;
+
+        // Milestones
+        html += `<div class="card"><div class="section-title">Milestones</div>`;
+        // Segment 2 interim (hours)
+        const seg2ok = t.hours>=SEG2_HOURS && t.nightHours>=SEG2_NIGHT_HOURS;
+        html += milestoneRow('Segment 2 driving hours', `${Math.min(t.hours,SEG2_HOURS).toFixed(1)}/${SEG2_HOURS} hrs · ${Math.min(t.nightHours,SEG2_NIGHT_HOURS).toFixed(1)}/${SEG2_NIGHT_HOURS} night`, seg2ok, Math.min(1,t.hours/SEG2_HOURS));
+        // 50/10 finish
+        const finishok = t.hours>=GOAL_HOURS && t.nightHours>=GOAL_NIGHT_HOURS;
+        html += milestoneRow('50 hours / 10 night complete', `${t.hours.toFixed(1)}/${GOAL_HOURS} · ${t.nightHours.toFixed(1)}/${GOAL_NIGHT_HOURS}`, finishok, Math.min(1,t.hours/GOAL_HOURS));
+        // L1 date-based
+        html += `<div class="milestone"><div class="row-between"><strong>Level 1 issue date</strong></div>
+            <div style="margin-top:6px"><input type="date" id="l1date" value="${meta.l1||''}"> <span class="muted" id="l1dates"></span></div>
+            <div class="muted" style="margin-top:4px">Set this to see your Segment 2 (90-day) and Level 2 (6-month) eligibility dates.</div></div>`;
+        html += `</div>`;
+
+        // Pace
+        html += `<div class="card"><div class="section-title">Pace</div>${paceHtml(t)}</div>`;
+
+        // Variety
+        html += `<div class="card"><div class="section-title">Experience variety</div>${varietyHtml()}<div class="muted" style="margin-top:8px">A mix of conditions makes for a well-rounded driver — aim to get some of each.</div></div>`;
+
+        // Recent
+        html += `<div class="card"><div class="section-title">Recent drives</div><div id="recent">${recentHtml()}</div></div>`;
+
+        dash.innerHTML = html;
+        wireMilestone();
+    }
+
+    function milestoneRow(title, detail, done, frac){
+        return `<div class="milestone"><div class="row-between"><strong>${esc(title)}</strong><span class="badge ${done?'b-done':'b-todo'}">${done?'Done':'In progress'}</span></div>
+            <div class="muted" style="margin-top:4px">${esc(detail)}</div>
+            <div class="pbar"><div style="width:${Math.round(frac*100)}%;background:${done?'#43a047':'#0056b3'}"></div></div></div>`;
+    }
+
+    function wireMilestone(){
+        const inp = $('l1date'); if(!inp) return;
+        const show = () => {
+            const v = inp.value; const lab = $('l1dates');
+            if(!v){ lab.textContent=''; return; }
+            const d = new Date(v+'T00:00:00');
+            lab.innerHTML = `Segment 2 eligible <strong>${fmtDate(addDays(d,SEG2_DAYS))}</strong> · Level 2 eligible <strong>${fmtDate(addMonths(d,LEVEL2_MONTHS))}</strong>`;
+        };
+        inp.onchange = () => { const m=getMeta(); m.l1=inp.value; setMeta(m); show(); };
+        show();
+    }
+
+    function paceHtml(t){
+        // hours in the last 14 days
+        const now = new Date(); const cut = addDays(now,-14);
+        let recentMin=0;
+        entries.forEach(e=>{ const d=new Date(e.date+'T00:00:00'); if(d>=cut) recentMin+=e.minutes||0; });
+        const perWeek = (recentMin/60)/2;
+        const rem = Math.max(0, GOAL_HOURS - t.hours);
+        if (rem<=0) return `<div class="muted">🎉 You've reached 50 hours — nice work!</div>`;
+        if (perWeek < 0.1) return `<div class="muted">Log a few drives and a projected finish date will show here.</div>`;
+        const weeks = rem/perWeek;
+        const finish = addDays(now, Math.ceil(weeks*7));
+        return `<div>Recent pace: <strong>${perWeek.toFixed(1)} hrs/week</strong>.<br>At this rate you'll reach 50 hours around <strong>${fmtDate(finish)}</strong> (${rem.toFixed(1)} hrs left).</div>`;
+    }
+
+    function varietyHtml(){
+        const has = (fn)=>entries.filter(fn).length;
+        const cells = [
+            ['🌙 Night', has(e=>(e.nightMinutes||0)>0)],
+            ['☔ Rain', has(e=>(e.weather||[]).includes('Rain'))],
+            ['❄️ Snow', has(e=>(e.weather||[]).includes('Snow'))],
+            ['🌫️ Fog', has(e=>(e.weather||[]).includes('Fog'))],
+            ['🛣️ Highway', has(e=>(e.roads||[]).includes('Highway/Freeway'))],
+            ['🏙️ City', has(e=>(e.roads||[]).includes('City'))],
+            ['🏡 Residential', has(e=>(e.roads||[]).includes('Residential'))],
+            ['🌾 Rural', has(e=>(e.roads||[]).includes('Rural'))],
+            ['🅿️ Parking lot', has(e=>(e.roads||[]).includes('Parking lot'))],
+        ];
+        return `<div class="vgrid">${cells.map(([l,n])=>`<div class="vcell"><div class="vn">${n}</div><div class="vl">${l}</div></div>`).join('')}</div>`;
+    }
+
+    function cumulativeChart(){
+        if (!entries.length) return `<div class="empty">No drives yet.</div>`;
+        const sorted = entries.slice().sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+        const pts = []; let cum=0;
+        sorted.forEach(e=>{ cum += (e.minutes||0)/60; pts.push({ t:new Date(e.date+'T00:00:00').getTime(), y:cum }); });
+        const W=680,H=180,padL=34,padB=22,padT=10,padR=10;
+        const t0 = pts[0].t, t1 = Math.max(pts[pts.length-1].t, Date.now());
+        const yMax = Math.max(GOAL_HOURS, cum);
+        const xs = t => padL + (t1===t0?0:(t-t0)/(t1-t0))*(W-padL-padR);
+        const ys = y => (H-padB) - (y/yMax)*(H-padB-padT);
+        const line = pts.map((p,i)=>(i?'L':'M')+xs(p.t).toFixed(1)+' '+ys(p.y).toFixed(1)).join(' ');
+        const area = `M${xs(pts[0].t).toFixed(1)} ${(H-padB)} ` + pts.map(p=>'L'+xs(p.t).toFixed(1)+' '+ys(p.y).toFixed(1)).join(' ') + ` L${xs(pts[pts.length-1].t).toFixed(1)} ${(H-padB)} Z`;
+        const goalY = ys(GOAL_HOURS);
+        return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Cumulative hours">
+            <line x1="${padL}" y1="${goalY}" x2="${W-padR}" y2="${goalY}" stroke="#e08600" stroke-dasharray="5 4" stroke-width="1.5"/>
+            <text x="${W-padR}" y="${goalY-4}" text-anchor="end" font-size="11" fill="#d98600">goal 50</text>
+            <path d="${area}" fill="#0056b322"/>
+            <path d="${line}" fill="none" stroke="#0056b3" stroke-width="2.5"/>
+            <text x="2" y="${ys(0)}" font-size="10" fill="#889">0</text>
+            <text x="2" y="${ys(yMax)+8}" font-size="10" fill="#889">${Math.round(yMax)}h</text>
+        </svg>`;
+    }
+
+    function recentHtml(){
+        const list = entries.slice().reverse().slice(0,10);
+        if (!list.length) return '<div class="empty">No drives logged yet.</div>';
+        return list.map(e=>{
+            const tags=[e.vehicle, e.supervisor&&('with '+e.supervisor), e.traffic&&e.traffic+' traffic', ...(e.weather||[]), ...(e.roads||[])].filter(Boolean).join(' · ');
+            const man = (e.maneuvers||[]).join(', ');
+            const night = e.nightMinutes?` · ${fmtHM(e.nightMinutes)} night`:'';
+            return `<div class="entry"><div>
+                <div><strong>${esc(e.date)}</strong> · ${fmtHM(e.minutes)}${night}${e.miles?` · ${e.miles} mi`:''}</div>
+                ${tags?`<div class="tags">${esc(tags)}</div>`:''}
+                ${man?`<div class="meta">Practiced: ${esc(man)}</div>`:''}
+                ${e.notes?`<div class="meta">“${esc(e.notes)}”</div>`:''}
+            </div><button class="del" data-id="${esc(e.id)}">✕</button></div>`;
+        }).join('');
+    }
+    document.addEventListener('click', async ev=>{
+        const b = ev.target.closest('.del'); if(!b) return;
+        if(!confirm('Delete this drive?')) return;
+        await removeEntry(b.dataset.id);
+        entries = entries.filter(e=>e.id!==b.dataset.id);
+        render();
+    });
+
+    (async function init(){
+        entries = loadLocalEntries(); render();
+        $('sync-status').textContent = 'Syncing…';
+        const { entries: merged, online } = await syncEntries();
+        entries = merged; render();
+        $('sync-status').innerHTML = online ? '☁︎ Live-synced · <a href="#" id="refresh">refresh</a>' : '⚠︎ Offline — showing last synced data';
+        const rf = $('refresh'); if(rf) rf.onclick = async (e)=>{ e.preventDefault(); const r=await syncEntries(); entries=r.entries; render(); $('sync-status').innerHTML='☁︎ Live-synced · <a href="#" id="refresh">refresh</a>'; };
+    })();
+</script>
+<script>
+    if ('serviceWorker' in navigator) window.addEventListener('load', ()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+</script>
+</body>
+</html>

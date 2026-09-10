@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Drive Log">
+    <meta name="theme-color" content="#0056b3">
+    <title>Log a Drive</title>
+    <style>
+        html { -webkit-text-size-adjust: 100%; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #eef1f5; color: #1f2733; margin: 0;
+            padding: 20px 14px max(24px, env(safe-area-inset-bottom));
+            -webkit-tap-highlight-color: transparent;
+        }
+        .wrap { max-width: 560px; margin: 0 auto; }
+        .card { background: #fff; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); padding: 18px; margin-bottom: 14px; }
+        h1 { font-size: 1.4rem; margin: 0 0 2px; text-align: center; }
+        .sub { text-align: center; color: #667; font-size: 0.88rem; margin: 0 0 14px; }
+        a { color: #0056b3; }
+
+        /* progress strip */
+        .prog { display: flex; gap: 10px; }
+        .prog .p { flex: 1; text-align: center; }
+        .prog .num { font-size: 1.35rem; font-weight: 800; color: #0056b3; }
+        .prog .num.night { color: #e08600; }
+        .prog .lab { font-size: 0.72rem; color: #667; }
+        .pbar { height: 8px; background: #e6ecf5; border-radius: 5px; overflow: hidden; margin-top: 6px; }
+        .pbar > div { height: 100%; border-radius: 5px; }
+
+        label { display: block; font-weight: 600; font-size: 0.9rem; margin: 14px 0 5px; }
+        .req { color: #c62828; }
+        input[type=date], input[type=time], input[type=number], select, textarea {
+            width: 100%; padding: 11px 12px; border: 1px solid #cdd5e0; border-radius: 9px;
+            font-size: 1rem; font-family: inherit; background: #fff; color: #1f2733;
+        }
+        textarea { min-height: 64px; resize: vertical; }
+        .row { display: flex; gap: 10px; }
+        .row > div { flex: 1; }
+        .hint { font-size: 0.76rem; color: #889; margin-top: 4px; }
+        .dur { font-weight: 700; color: #0056b3; }
+
+        /* segmented + chips */
+        .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+        .seg button, .chip {
+            border: 1.5px solid #cdd5e0; background: #fff; color: #33404f; border-radius: 20px;
+            padding: 8px 14px; font-size: 0.9rem; cursor: pointer; font-family: inherit;
+        }
+        .seg button.on, .chip.on { background: #0056b3; border-color: #0056b3; color: #fff; }
+        .chip.on.amber { background: #e08600; border-color: #e08600; }
+        .chips { display: flex; gap: 7px; flex-wrap: wrap; }
+        .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .checkitem { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #e6ecf5; border-radius: 9px; font-size: 0.9rem; }
+        .checkitem input { width: 18px; height: 18px; }
+        .nightmin { margin-top: 8px; }
+
+        .btn { width: 100%; background: #0056b3; color: #fff; border: none; border-radius: 10px; padding: 14px; font-size: 1.05rem; font-weight: 700; cursor: pointer; margin-top: 18px; }
+        .btn:active { background: #004494; }
+        .btn.secondary { background: #fff; color: #0056b3; border: 2px solid #0056b3; }
+
+        .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px); background: #2e7d32; color: #fff; padding: 12px 18px; border-radius: 24px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 50; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .entry { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eef1f5; font-size: 0.9rem; }
+        .entry:last-child { border-bottom: none; }
+        .entry .meta { color: #778; font-size: 0.78rem; margin-top: 2px; }
+        .entry .tags { color: #556; font-size: 0.76rem; margin-top: 3px; }
+        .del { background: none; border: none; color: #c62828; cursor: pointer; font-size: 0.82rem; padding: 4px 6px; }
+        .pending { color: #e08600; font-size: 0.72rem; }
+        .empty { color: #778; text-align: center; padding: 8px 0; }
+        .section-title { font-weight: 700; margin: 0 0 8px; }
+        .status { text-align: center; font-size: 0.8rem; color: #778; margin-top: 6px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1>Log a Drive</h1>
+        <p class="sub">Michigan Level 1 supervised driving</p>
+        <div class="prog">
+            <div class="p"><div class="num" id="p-total">0.0</div><div class="lab">of 50 hrs</div><div class="pbar"><div id="bar-total" style="width:0%;background:#0056b3"></div></div></div>
+            <div class="p"><div class="num night" id="p-night">0.0</div><div class="lab">of 10 night hrs</div><div class="pbar"><div id="bar-night" style="width:0%;background:#e08600"></div></div></div>
+        </div>
+        <div class="status" id="sync-status"></div>
+    </div>
+
+    <div class="card">
+        <form id="form" autocomplete="off">
+            <label>Date <span class="req">*</span></label>
+            <input type="date" id="date" required>
+
+            <div class="row">
+                <div><label>Start time</label><input type="time" id="start"></div>
+                <div><label>End time</label><input type="time" id="end"></div>
+            </div>
+
+            <label>Minutes driven <span class="req">*</span> <span class="dur" id="dur"></span></label>
+            <input type="number" id="minutes" min="1" max="1440" inputmode="numeric" placeholder="e.g. 45" required>
+            <div class="hint">Auto-fills from start/end time, or type it in.</div>
+
+            <label>How much of this drive was at night?</label>
+            <div class="seg" id="nightseg">
+                <button type="button" data-night="none" class="on">None</button>
+                <button type="button" data-night="some">Some</button>
+                <button type="button" data-night="all">All</button>
+            </div>
+            <div class="nightmin" id="nightminwrap" hidden>
+                <input type="number" id="nightmin" min="0" max="1440" inputmode="numeric" placeholder="minutes at night">
+                <div class="hint">Night = 30 min after sunset to 30 min before sunrise (Michigan definition).</div>
+            </div>
+
+            <div class="row">
+                <div><label>Miles</label><input type="number" id="miles" min="0" step="0.1" inputmode="decimal" placeholder="optional"></div>
+                <div><label>Vehicle</label><select id="vehicle"></select></div>
+            </div>
+
+            <label>Supervising adult</label>
+            <select id="supervisor"></select>
+
+            <label>Traffic level</label>
+            <div class="seg" id="trafficseg"></div>
+
+            <label>Weather</label>
+            <div class="chips" id="weather"></div>
+
+            <label>Roads driven</label>
+            <div class="chips" id="roads"></div>
+
+            <label>Maneuvers practiced</label>
+            <div class="checks" id="maneuvers"></div>
+
+            <label>Notes</label>
+            <textarea id="notes" placeholder="How did it go? What to work on next time?"></textarea>
+
+            <button type="submit" class="btn">Save drive</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="section-title">Recent drives</div>
+        <div id="recent"></div>
+    </div>
+
+    <p style="text-align:center;margin-bottom:24px;"><a href="driving-dashboard.html">View progress dashboard &rarr;</a></p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="driving-sync.js"></script>
+<script>
+    let entries = [];
+    let nightMode = 'none';
+
+    const $ = id => document.getElementById(id);
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    // Populate option controls
+    $('date').value = new Date().toISOString().slice(0,10);
+    $('vehicle').innerHTML = VEHICLES.map(v=>`<option>${esc(v)}</option>`).join('') + '<option>Other</option>';
+    $('supervisor').innerHTML = '<option value="">—</option>' + SUPERVISORS.map(v=>`<option>${esc(v)}</option>`).join('') + '<option>Other</option>';
+    $('trafficseg').innerHTML = TRAFFIC_OPTS.map((t,i)=>`<button type="button" data-traffic="${esc(t)}"${i===0?' class="on"':''}>${esc(t)}</button>`).join('');
+    let traffic = TRAFFIC_OPTS[0];
+    $('weather').innerHTML = WEATHER_OPTS.map(w=>`<button type="button" class="chip amber-opt" data-weather="${esc(w)}">${esc(w)}</button>`).join('');
+    $('roads').innerHTML = ROAD_OPTS.map(r=>`<button type="button" class="chip" data-road="${esc(r)}">${esc(r)}</button>`).join('');
+    $('maneuvers').innerHTML = MANEUVER_OPTS.map(m=>`<label class="checkitem"><input type="checkbox" value="${esc(m)}">${esc(m)}</label>`).join('');
+
+    // Duration auto-calc from start/end
+    function calcDuration() {
+        const s = $('start').value, e = $('end').value;
+        if (s && e) {
+            const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
+            let mins = (eh*60+em) - (sh*60+sm);
+            if (mins < 0) mins += 1440; // crossed midnight
+            $('minutes').value = mins;
+        }
+        updateDur();
+    }
+    function updateDur(){ const m=+$('minutes').value||0; $('dur').textContent = m ? '('+fmtHM(m)+')' : ''; if(nightMode==='all') $('nightmin').value = m; }
+    $('start').onchange = calcDuration; $('end').onchange = calcDuration; $('minutes').oninput = updateDur;
+
+    // Night segmented
+    $('nightseg').addEventListener('click', ev => {
+        const b = ev.target.closest('button'); if(!b) return;
+        nightMode = b.dataset.night;
+        [...$('nightseg').children].forEach(x=>x.classList.toggle('on', x===b));
+        $('nightminwrap').hidden = nightMode!=='some';
+        if (nightMode==='all') $('nightmin').value = +$('minutes').value||0;
+        if (nightMode==='none') $('nightmin').value = 0;
+    });
+    // Traffic segmented
+    $('trafficseg').addEventListener('click', ev => {
+        const b = ev.target.closest('button'); if(!b) return;
+        traffic = b.dataset.traffic;
+        [...$('trafficseg').children].forEach(x=>x.classList.toggle('on', x===b));
+    });
+    // Chips (weather amber, roads blue)
+    function chipToggle(container){ $(container).addEventListener('click', ev=>{ const c=ev.target.closest('.chip'); if(!c)return; c.classList.toggle('on'); if(c.classList.contains('amber-opt')) c.classList.toggle('amber', c.classList.contains('on')); }); }
+    chipToggle('weather'); chipToggle('roads');
+    const chipVals = (container, attr) => [...$(container).querySelectorAll('.chip.on')].map(c=>c.dataset[attr]);
+
+    function nightMinutesValue(total){
+        if (nightMode==='none') return 0;
+        if (nightMode==='all') return total;
+        return Math.min(total, Math.max(0, +$('nightmin').value||0));
+    }
+
+    function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+
+    function refreshProgress(){
+        const t = totals(entries);
+        $('p-total').textContent = t.hours.toFixed(1);
+        $('p-night').textContent = t.nightHours.toFixed(1);
+        $('bar-total').style.width = Math.min(100, t.hours/GOAL_HOURS*100)+'%';
+        $('bar-night').style.width = Math.min(100, t.nightHours/GOAL_NIGHT_HOURS*100)+'%';
+    }
+
+    function renderRecent(){
+        const box = $('recent');
+        const list = entries.slice().reverse().slice(0,8);
+        if (!list.length){ box.innerHTML = '<div class="empty">No drives logged yet. Add your first above!</div>'; return; }
+        box.innerHTML = list.map(e=>{
+            const tags = [e.vehicle, e.traffic&&e.traffic+' traffic', ...(e.weather||[]), ...(e.roads||[])].filter(Boolean).join(' · ');
+            const night = e.nightMinutes ? ` · ${fmtHM(e.nightMinutes)} night` : '';
+            return `<div class="entry"><div>
+                <div><strong>${esc(e.date)}</strong> · ${fmtHM(e.minutes)}${night}${e.miles?` · ${e.miles} mi`:''}${e.synced?'':' <span class="pending">⏳ syncing</span>'}</div>
+                ${tags?`<div class="tags">${esc(tags)}</div>`:''}
+                ${e.notes?`<div class="meta">${esc(e.notes)}</div>`:''}
+            </div><button class="del" data-id="${esc(e.id)}">Delete</button></div>`;
+        }).join('');
+    }
+    $('recent').addEventListener('click', async ev=>{
+        const b = ev.target.closest('.del'); if(!b) return;
+        if (!confirm('Delete this drive?')) return;
+        await removeEntry(b.dataset.id);
+        entries = entries.filter(e=>e.id!==b.dataset.id);
+        renderRecent(); refreshProgress();
+    });
+
+    $('form').addEventListener('submit', async ev=>{
+        ev.preventDefault();
+        const minutes = +$('minutes').value||0;
+        if (minutes <= 0){ toast('Enter minutes driven'); return; }
+        const entry = {
+            date: $('date').value,
+            start: $('start').value || '', end: $('end').value || '',
+            minutes,
+            nightMinutes: nightMinutesValue(minutes),
+            miles: $('miles').value ? +$('miles').value : null,
+            vehicle: $('vehicle').value,
+            supervisor: $('supervisor').value,
+            traffic,
+            weather: chipVals('weather','weather'),
+            roads: chipVals('roads','road'),
+            maneuvers: [...$('maneuvers').querySelectorAll('input:checked')].map(i=>i.value),
+            notes: $('notes').value.trim(),
+            t: Date.now()
+        };
+        const saved = await addEntry(entry);
+        entries.push(saved);
+        refreshProgress(); renderRecent();
+        toast('Drive logged ✓');
+        // reset the drive-specific fields, keep date/vehicle/supervisor
+        $('start').value=''; $('end').value=''; $('minutes').value=''; $('dur').textContent='';
+        $('miles').value=''; $('notes').value='';
+        nightMode='none'; [...$('nightseg').children].forEach((x,i)=>x.classList.toggle('on',i===0)); $('nightminwrap').hidden=true; $('nightmin').value=0;
+        $('weather').querySelectorAll('.chip').forEach(c=>c.classList.remove('on','amber'));
+        $('roads').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+        $('maneuvers').querySelectorAll('input').forEach(i=>i.checked=false);
+        window.scrollTo({top:0,behavior:'smooth'});
+    });
+
+    // initial load: local first, then cloud sync
+    (async function init(){
+        entries = loadLocalEntries(); refreshProgress(); renderRecent();
+        $('sync-status').textContent = 'Syncing…';
+        const { entries: merged, online } = await syncEntries();
+        entries = merged; refreshProgress(); renderRecent();
+        $('sync-status').textContent = online ? '☁︎ Synced to the cloud' : '⚠︎ Offline — saved on this device, will sync later';
+    })();
+</script>
+<script>
+    if ('serviceWorker' in navigator) window.addEventListener('load', ()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
