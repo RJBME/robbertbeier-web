@@ -42,6 +42,17 @@
         .badge { padding: 3px 8px; border-radius: 5px; font-size: 0.72rem; font-weight: 700; color: #fff; white-space: nowrap; }
         .b-done { background: #43a047; } .b-todo { background: #9aa4b2; }
 
+        .ck { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #eef1f5; font-size: 0.92rem; }
+        .ck:last-child { border-bottom: none; }
+        .ckicon { width: 20px; text-align: center; flex-shrink: 0; }
+        .cklabel { flex: 1; }
+        .ck.done .cklabel { color: #2e7d32; font-weight: 600; }
+        .ckdetail { color: #889; font-size: 0.78rem; white-space: nowrap; }
+        .ckbox { width: 20px; height: 20px; flex-shrink: 0; }
+        .ready-banner { margin-top: 14px; padding: 12px; border-radius: 10px; text-align: center; font-weight: 700; background: #f1f3f7; color: #556; }
+        .ready-banner.go { background: #e8f5e9; color: #2e7d32; }
+        .ck-note { color: #889; font-size: 0.78rem; margin-top: 8px; }
+
         .vgrid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
         .vcell { background: #f7f9fc; border: 1px solid #e6ecf5; border-radius: 9px; padding: 9px 6px; text-align: center; }
         .vcell .vn { font-weight: 800; color: #0056b3; }
@@ -130,6 +141,9 @@
             <div class="muted" style="margin-top:4px">Level 2 requires holding Level 1 for 6 months AND being at least 16 — whichever comes later.</div></div>`;
         html += `</div>`;
 
+        // Road test readiness
+        html += `<div class="card"><div class="section-title">Road test readiness</div>${readinessHtml(t)}</div>`;
+
         // Pace
         html += `<div class="card"><div class="section-title">Pace</div>${paceHtml(t)}</div>`;
 
@@ -181,6 +195,47 @@
         const weeks = rem/perWeek;
         const finish = addDays(now, Math.ceil(weeks*7));
         return `<div>Recent pace: <strong>${perWeek.toFixed(1)} hrs/week</strong>.<br>At this rate you'll reach 50 hours around <strong>${fmtDate(finish)}</strong> (${rem.toFixed(1)} hrs left).</div>`;
+    }
+
+    function readinessHtml(t){
+        const meta = getMeta();
+        const now = new Date(); now.setHours(0,0,0,0);
+        const l1 = meta.l1 ? new Date(meta.l1+'T00:00:00') : null;
+        const dob = meta.dob ? new Date(meta.dob+'T00:00:00') : null;
+        const hours50 = t.hours >= GOAL_HOURS;
+        const night10 = t.nightHours >= GOAL_NIGHT_HOURS;
+        const held6 = l1 ? (now >= addMonths(l1, LEVEL2_MONTHS)) : null;
+        const is16 = dob ? (now >= addYears(dob, 16)) : null;
+
+        // auto-computed items (from logged data + dates)
+        const auto = [
+            ['50 hours logged', hours50, `${t.hours.toFixed(1)} / ${GOAL_HOURS}`],
+            ['10 night hours logged', night10, `${t.nightHours.toFixed(1)} / ${GOAL_NIGHT_HOURS}`],
+            ['Held Level 1 for 6 months', held6, l1 ? (held6 ? '✓ met' : 'on ' + fmtDate(addMonths(l1, LEVEL2_MONTHS))) : 'set L1 date'],
+            ['At least 16 years old', is16, dob ? (is16 ? '✓ met' : 'on ' + fmtDate(addYears(dob, 16))) : 'set date of birth'],
+        ];
+        // manual items (tap to check; saved on this device)
+        const manual = [
+            ['seg2done', 'Segment 2 completed'],
+            ['skillsTest', 'Driving skills test passed'],
+            ['clean90', 'Clean record for 90 days (no tickets or at-fault crashes)'],
+        ];
+
+        let html = '<div class="checklist">';
+        auto.forEach(([label, ok, detail]) => {
+            const icon = ok === true ? '✅' : (ok === false ? '⬜️' : '▫️');
+            html += `<div class="ck ${ok === true ? 'done' : ''}"><span class="ckicon">${icon}</span><span class="cklabel">${esc(label)}</span><span class="ckdetail">${esc(detail)}</span></div>`;
+        });
+        manual.forEach(([key, label]) => {
+            const on = !!meta[key];
+            html += `<div class="ck ${on ? 'done' : ''}"><input type="checkbox" class="ckbox" data-key="${key}" ${on ? 'checked' : ''}><span class="cklabel">${esc(label)}</span></div>`;
+        });
+        html += '</div>';
+
+        const ready = hours50 && night10 && held6 === true && is16 === true && manual.every(([k]) => meta[k]);
+        html += `<div class="ready-banner ${ready ? 'go' : ''}">${ready ? '🎉 Ready for the Level 2 license!' : 'Not ready yet — finish the unchecked items above.'}</div>`;
+        html += `<div class="ck-note">Green ✅ items update automatically from the log and dates. Tap the checkboxes for the manual items. (Manual checks are saved on this device.)</div>`;
+        return html;
     }
 
     function varietyHtml(){
@@ -237,6 +292,10 @@
             </div><button class="del" data-id="${esc(e.id)}">✕</button></div>`;
         }).join('');
     }
+    document.addEventListener('change', ev=>{
+        const cb = ev.target.closest('.ckbox'); if(!cb) return;
+        const m = getMeta(); m[cb.dataset.key] = cb.checked; setMeta(m); render();
+    });
     document.addEventListener('click', async ev=>{
         const b = ev.target.closest('.del'); if(!b) return;
         if(!confirm('Delete this drive?')) return;
