@@ -20,8 +20,8 @@
 
         .hero { display: flex; gap: 12px; }
         .hero .h { flex: 1; text-align: center; border-radius: 12px; padding: 16px 10px; color: #fff; }
-        .hero .h.total { background: linear-gradient(135deg,#0056b3,#1e88e5); }
-        .hero .h.night { background: linear-gradient(135deg,#e08600,#f0a020); }
+        .hero .h.total { background: linear-gradient(135deg,#0369a1,#38bdf8); }   /* day: sky blue */
+        .hero .h.night { background: linear-gradient(135deg,#4338ca,#7c3aed); }   /* night: indigo→violet */
         .hero .big { font-size: 1.9rem; font-weight: 800; line-height: 1.05; }
         .hero .small { font-size: 0.82rem; opacity: 0.95; margin-top: 4px; }
         .hbar { height: 9px; background: rgba(255,255,255,.35); border-radius: 5px; overflow: hidden; margin-top: 8px; }
@@ -268,10 +268,10 @@
         const area = `M${xs(pts[0].t).toFixed(1)} ${(H-padB)} ` + pts.map(p=>'L'+xs(p.t).toFixed(1)+' '+ys(p.y).toFixed(1)).join(' ') + ` L${xs(pts[pts.length-1].t).toFixed(1)} ${(H-padB)} Z`;
         const goalY = ys(GOAL_HOURS);
         return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Cumulative hours">
-            <line x1="${padL}" y1="${goalY}" x2="${W-padR}" y2="${goalY}" stroke="#e08600" stroke-dasharray="5 4" stroke-width="1.5"/>
-            <text x="${W-padR}" y="${goalY-4}" text-anchor="end" font-size="11" fill="#d98600">goal 50</text>
-            <path d="${area}" fill="#0056b322"/>
-            <path d="${line}" fill="none" stroke="#0056b3" stroke-width="2.5"/>
+            <line x1="${padL}" y1="${goalY}" x2="${W-padR}" y2="${goalY}" stroke="#94a3b8" stroke-dasharray="5 4" stroke-width="1.5"/>
+            <text x="${W-padR}" y="${goalY-4}" text-anchor="end" font-size="11" fill="#64748b">goal 50</text>
+            <path d="${area}" fill="#0369a122"/>
+            <path d="${line}" fill="none" stroke="#0369a1" stroke-width="2.5"/>
             <text x="2" y="${ys(0)}" font-size="10" fill="#889">0</text>
             <text x="2" y="${ys(yMax)+8}" font-size="10" fill="#889">${Math.round(yMax)}h</text>
         </svg>`;

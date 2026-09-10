@@ -25,8 +25,8 @@
         /* progress strip */
         .prog { display: flex; gap: 10px; }
         .prog .p { flex: 1; text-align: center; }
-        .prog .num { font-size: 1.35rem; font-weight: 800; color: #0056b3; }
-        .prog .num.night { color: #e08600; }
+        .prog .num { font-size: 1.35rem; font-weight: 800; color: #0284c7; }   /* day: sky blue */
+        .prog .num.night { color: #6d28d9; }   /* night: violet */
         .prog .lab { font-size: 0.72rem; color: #667; }
         .pbar { height: 8px; background: #e6ecf5; border-radius: 5px; overflow: hidden; margin-top: 6px; }
         .pbar > div { height: 100%; border-radius: 5px; }
@@ -81,8 +81,8 @@
         <h1>Log a Drive</h1>
         <p class="sub">Michigan Level 1 supervised driving</p>
         <div class="prog">
-            <div class="p"><div class="num" id="p-total">0.0</div><div class="lab">of 50 hrs</div><div class="pbar"><div id="bar-total" style="width:0%;background:#0056b3"></div></div></div>
-            <div class="p"><div class="num night" id="p-night">0.0</div><div class="lab">of 10 night hrs</div><div class="pbar"><div id="bar-night" style="width:0%;background:#e08600"></div></div></div>
+            <div class="p"><div class="num" id="p-total">0.0</div><div class="lab">of 50 hrs</div><div class="pbar"><div id="bar-total" style="width:0%;background:#0284c7"></div></div></div>
+            <div class="p"><div class="num night" id="p-night">0.0</div><div class="lab">of 10 night hrs</div><div class="pbar"><div id="bar-night" style="width:0%;background:#6d28d9"></div></div></div>
         </div>
         <div class="status" id="sync-status"></div>
     </div>
