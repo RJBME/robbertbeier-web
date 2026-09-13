@@ -52,6 +52,35 @@
         .ready-banner { margin-top: 14px; padding: 12px; border-radius: 10px; text-align: center; font-weight: 700; background: #f1f3f7; color: #556; }
         .ready-banner.go { background: #e8f5e9; color: #2e7d32; }
         .ck-note { color: #889; font-size: 0.78rem; margin-top: 8px; }
+        input[type=text] { padding: 9px 10px; border: 1px solid #cdd5e0; border-radius: 8px; font-size: 0.95rem; font-family: inherit; }
+
+        /* ── Printable log (Export → Save as PDF) ── */
+        #print-area { display: none; }
+        .pl-title { font-size: 20px; font-weight: 800; text-align: center; margin: 0; }
+        .pl-sub { text-align: center; font-size: 12px; color: #333; margin: 2px 0 10px; }
+        .pl-meta { width: 100%; font-size: 11px; border-collapse: collapse; margin: 6px 0; }
+        .pl-meta td { padding: 3px 4px; }
+        .pl-note { font-size: 10px; font-style: italic; margin: 6px 0 10px; }
+        .pl-summary { font-size: 11.5px; font-weight: bold; margin: 8px 0; }
+        .pl-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .pl-table th, .pl-table td { border: 1px solid #888; padding: 3px 5px; text-align: left; vertical-align: top; }
+        .pl-table th { background: #eee; }
+        .pl-table .num { text-align: right; white-space: nowrap; }
+        .pl-table .pl-total td { font-weight: bold; background: #f4f4f4; }
+        .pl-cert { margin-top: 16px; font-size: 10.5px; }
+        .pl-cert h3 { font-size: 12px; margin: 12px 0 4px; }
+        .pl-cert p { margin: 4px 0; }
+        .pl-fill { font-weight: bold; }
+        .pl-sign { margin-top: 22px; display: flex; gap: 30px; flex-wrap: wrap; }
+        .pl-sigcol { flex: 1; min-width: 200px; }
+        .pl-sigline { border-top: 1px solid #000; margin-top: 30px; padding-top: 3px; font-size: 10px; }
+        @media print {
+            body { background: #fff !important; padding: 0 !important; max-width: none; }
+            body > .wrap { display: none !important; }
+            #print-area { display: block !important; color: #000; }
+            @page { size: portrait; margin: 0.5in; }
+            .pl-table tr, .pl-cert, .pl-sign { page-break-inside: avoid; }
+        }
 
         .vgrid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
         .vcell { background: #f7f9fc; border: 1px solid #e6ecf5; border-radius: 9px; padding: 9px 6px; text-align: center; }
@@ -77,12 +106,15 @@
         <h1>Driving Progress</h1>
         <p class="sub">Michigan Level 1 &mdash; 50 hours (10 at night)</p>
         <div class="status" id="sync-status"></div>
+        <div style="text-align:center;margin-top:12px"><button class="btn" id="export-btn">🖨️ Export log (PDF)</button></div>
     </div>
 
     <div id="dash"></div>
 
     <p style="text-align:center;margin-bottom:24px;"><a href="driving-log.html">&larr; Log a drive</a></p>
 </div>
+
+<div id="print-area"></div>
 
 <script src="driving-sync.js"></script>
 <script>
@@ -134,6 +166,8 @@
         // L1 date-based (Level 2 is the LATER of the 6-month rule and turning 16)
         html += `<div class="milestone">
             <div style="display:flex;gap:16px;flex-wrap:wrap">
+              <div><strong>Driver name</strong><br><input type="text" id="drivername" value="${esc(meta.driverName||'')}" placeholder="e.g. Rowan Beier"></div>
+              <div><strong>Level 1 license #</strong><br><input type="text" id="l1num" value="${esc(meta.l1num||'')}" placeholder="optional"></div>
               <div><strong>Level 1 issue date</strong><br><input type="date" id="l1date" value="${meta.l1||''}"></div>
               <div><strong>Date of birth</strong><br><input type="date" id="dob" value="${meta.dob||''}"></div>
             </div>
@@ -180,6 +214,9 @@
         };
         l1.onchange = () => { const m=getMeta(); m.l1=l1.value; setMeta(m); show(); };
         dob.onchange = () => { const m=getMeta(); m.dob=dob.value; setMeta(m); show(); };
+        const dn = $('drivername'), ln = $('l1num');
+        if (dn) dn.onchange = () => { const m=getMeta(); m.driverName=dn.value; setMeta(m); };
+        if (ln) ln.onchange = () => { const m=getMeta(); m.l1num=ln.value; setMeta(m); };
         show();
     }
 
@@ -277,6 +314,57 @@
         </svg>`;
     }
 
+    // ── Printable log (Export → Save as PDF) ──
+    function buildPrintHTML(list, t){
+        const meta = getMeta();
+        const sorted = sortEntries(list);
+        const dayH = (t.minutes - t.nightMinutes) / 60;
+        const nightH = t.nightMinutes / 60;
+        const hr2 = min => (min / 60).toFixed(2);
+        const range = sorted.length ? `${esc(sorted[0].date)} – ${esc(sorted[sorted.length-1].date)}` : '—';
+        const today = new Date().toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' });
+        const rows = sorted.map(e => {
+            const dMin = (e.minutes||0) - (e.nightMinutes||0);
+            const cond = [ (e.weather||[]).join(', '), (e.roads||[]).join('/'), e.traffic?e.traffic+' traffic':'',
+                           (e.maneuvers||[]).length?('practiced: '+(e.maneuvers||[]).join(', ')):'', e.notes||'' ].filter(Boolean).join(' · ');
+            return `<tr><td>${esc(e.date)}</td><td class="num">${hr2(dMin)}</td><td class="num">${hr2(e.nightMinutes||0)}</td><td>${esc(e.vehicle||'')}</td><td>${esc(e.supervisor||'')}</td><td>${esc(cond)}</td></tr>`;
+        }).join('');
+        const nm = meta.driverName ? esc(meta.driverName) : '_______________________';
+        const ln = meta.l1num ? esc(meta.l1num) : '________________';
+        const l1d = meta.l1 ? esc(fmtDate(new Date(meta.l1+'T00:00:00'))) : '____________';
+        return `
+          <div class="pl-title">Supervised Driving Log</div>
+          <div class="pl-sub">Michigan Graduated Driver Licensing &mdash; Level 1</div>
+          <table class="pl-meta">
+            <tr><td><strong>Name of driver:</strong> ${nm}</td><td><strong>Level 1 license #:</strong> ${ln}</td></tr>
+            <tr><td><strong>Level 1 issue date:</strong> ${l1d}</td><td><strong>Report generated:</strong> ${esc(today)}</td></tr>
+          </table>
+          <div class="pl-note">Nighttime hours = driving time from 30 minutes after sunset to 30 minutes before sunrise.</div>
+          <div class="pl-summary">Total: ${t.hours.toFixed(1)} hrs &nbsp;·&nbsp; Daytime: ${dayH.toFixed(1)} hrs &nbsp;·&nbsp; Night: ${nightH.toFixed(1)} hrs &nbsp;·&nbsp; Drives: ${sorted.length} &nbsp;·&nbsp; Dates: ${range}</div>
+          <table class="pl-table">
+            <thead><tr><th>Date</th><th class="num">Day hrs</th><th class="num">Night hrs</th><th>Vehicle</th><th>Supervisor</th><th>Conditions &amp; notes</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="6" style="text-align:center">No drives logged.</td></tr>'}
+              <tr class="pl-total"><td>Totals</td><td class="num">${dayH.toFixed(2)}</td><td class="num">${nightH.toFixed(2)}</td><td colspan="3">${sorted.length} drives · ${t.hours.toFixed(1)} total hours</td></tr>
+            </tbody>
+          </table>
+          <div class="pl-cert">
+            <h3>Segment 2 eligibility</h3>
+            <p>I certify that the driver named above has held a valid Level 1 license for at least 3 continuous months and has completed at least 30 hours of supervised driving, including at least 2 hours at night — supervised by a parent/legal guardian or, with the parent's/guardian's permission, a licensed driver 21 or older.</p>
+            <p>Daytime hours completed (30 min): <span class="pl-fill">${dayH.toFixed(1)}</span> &nbsp;&nbsp; Nighttime hours completed (2 min): <span class="pl-fill">${nightH.toFixed(1)}</span></p>
+            <h3>Driving Skills Test / Level 2</h3>
+            <p>I certify that the driver named above has accumulated at least 50 hours of behind-the-wheel experience, including at least 10 hours at night, supervised as described above.</p>
+            <p>Grand total daytime hours (40 min): <span class="pl-fill">${dayH.toFixed(1)}</span> &nbsp;&nbsp; Grand total night hours (10 min): <span class="pl-fill">${nightH.toFixed(1)}</span></p>
+            <div class="pl-sign">
+              <div class="pl-sigcol"><div class="pl-sigline">Student driver signature &nbsp;&nbsp;&nbsp; Date</div></div>
+              <div class="pl-sigcol"><div class="pl-sigline">Parent / legal guardian signature &nbsp;&nbsp;&nbsp; Date</div></div>
+            </div>
+          </div>`;
+    }
+    function exportLogPDF(){
+        document.getElementById('print-area').innerHTML = buildPrintHTML(entries, totals(entries));
+        window.print();
+    }
+
     function recentHtml(){
         const list = entries.slice().reverse().slice(0,10);
         if (!list.length) return '<div class="empty">No drives logged yet.</div>';
@@ -303,6 +391,8 @@
         entries = entries.filter(e=>e.id!==b.dataset.id);
         render();
     });
+
+    document.getElementById('export-btn').onclick = exportLogPDF;
 
     (async function init(){
         entries = loadLocalEntries(); render();
