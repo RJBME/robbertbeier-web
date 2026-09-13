@@ -89,6 +89,8 @@
 
         .entry { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eef1f5; font-size: 0.9rem; }
         .entry:last-child { border-bottom: none; }
+        .entry .tap { flex: 1; cursor: pointer; border-radius: 8px; margin: -6px; padding: 6px; }
+        .entry .tap:active { background: #f2f6fc; }
         .entry .tags { color: #556; font-size: 0.76rem; margin-top: 3px; }
         .entry .meta { color: #778; font-size: 0.76rem; margin-top: 2px; }
         .del { background: none; border: none; color: #c62828; cursor: pointer; font-size: 0.8rem; }
@@ -185,7 +187,7 @@
         html += `<div class="card"><div class="section-title">Experience variety</div>${varietyHtml()}<div class="muted" style="margin-top:8px">A mix of conditions makes for a well-rounded driver — aim to get some of each.</div></div>`;
 
         // Recent
-        html += `<div class="card"><div class="section-title">Recent drives</div><div id="recent">${recentHtml()}</div></div>`;
+        html += `<div class="card"><div class="section-title">Recent drives <span style="font-weight:400;color:#889;font-size:0.8rem;">— tap to edit</span></div><div id="recent">${recentHtml()}</div></div>`;
 
         dash.innerHTML = html;
         wireMilestone();
@@ -372,7 +374,7 @@
             const tags=[e.vehicle, e.supervisor&&('with '+e.supervisor), e.traffic&&e.traffic+' traffic', ...(e.weather||[]), ...(e.roads||[])].filter(Boolean).join(' · ');
             const man = (e.maneuvers||[]).join(', ');
             const night = e.nightMinutes?` · ${fmtHM(e.nightMinutes)} night`:'';
-            return `<div class="entry"><div>
+            return `<div class="entry"><div class="tap" data-id="${esc(e.id)}">
                 <div><strong>${esc(e.date)}</strong> · ${fmtHM(e.minutes)}${night}${e.miles?` · ${e.miles} mi`:''}</div>
                 ${tags?`<div class="tags">${esc(tags)}</div>`:''}
                 ${man?`<div class="meta">Practiced: ${esc(man)}</div>`:''}
@@ -385,11 +387,16 @@
         const m = getMeta(); m[cb.dataset.key] = cb.checked; setMeta(m); render();
     });
     document.addEventListener('click', async ev=>{
-        const b = ev.target.closest('.del'); if(!b) return;
-        if(!confirm('Delete this drive?')) return;
-        await removeEntry(b.dataset.id);
-        entries = entries.filter(e=>e.id!==b.dataset.id);
-        render();
+        const b = ev.target.closest('.del');
+        if (b){
+            if(!confirm('Delete this drive?')) return;
+            await removeEntry(b.dataset.id);
+            entries = entries.filter(e=>e.id!==b.dataset.id);
+            render();
+            return;
+        }
+        const tap = ev.target.closest('.tap[data-id]');
+        if (tap) location.href = 'driving-log.html?edit=' + encodeURIComponent(tap.dataset.id);
     });
 
     document.getElementById('export-btn').onclick = exportLogPDF;

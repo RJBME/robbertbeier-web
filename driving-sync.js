@@ -126,6 +126,26 @@ async function addEntry(entry) {
   return entry;
 }
 
+// Edit an existing entry in place. Keeps the same id. The backend has no
+// dedicated update action, so cloud-side we delete the old row and re-add the
+// updated one under the same id (no Apps Script redeploy needed).
+async function updateEntry(entry) {
+  entry = normalizeEntry(entry);
+  entry.synced = false;
+  const local = loadLocalEntries();
+  const i = local.findIndex(x => x.id === entry.id);
+  if (i >= 0) local[i] = entry; else local.push(entry);
+  saveLocalEntries(local);
+  try {
+    await cloudDelete(entry.id);
+    if (await cloudAdd(entry)) {
+      const a = loadLocalEntries(); const j = a.findIndex(x => x.id === entry.id);
+      if (j >= 0) { a[j].synced = true; saveLocalEntries(a); }
+    }
+  } catch (e) {}
+  return entry;
+}
+
 async function removeEntry(id) {
   saveLocalEntries(loadLocalEntries().filter(e => e.id !== id));
   try { await cloudDelete(id); } catch (e) {}

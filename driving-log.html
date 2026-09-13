@@ -66,6 +66,9 @@
 
         .entry { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eef1f5; font-size: 0.9rem; }
         .entry:last-child { border-bottom: none; }
+        .entry .tap { flex: 1; cursor: pointer; border-radius: 8px; margin: -6px; padding: 6px; }
+        .entry .tap:active { background: #f2f6fc; }
+        .entry.editing { background: #eef6ff; border-radius: 8px; }
         .entry .meta { color: #778; font-size: 0.78rem; margin-top: 2px; }
         .entry .tags { color: #556; font-size: 0.76rem; margin-top: 3px; }
         .del { background: none; border: none; color: #c62828; cursor: pointer; font-size: 0.82rem; padding: 4px 6px; }
@@ -78,7 +81,7 @@
 <body>
 <div class="wrap">
     <div class="card">
-        <h1>Log a Drive</h1>
+        <h1 id="form-title">Log a Drive</h1>
         <p class="sub">Michigan Level 1 supervised driving</p>
         <div class="prog">
             <div class="p"><div class="num" id="p-total">0.0</div><div class="lab">of 50 hrs</div><div class="pbar"><div id="bar-total" style="width:0%;background:#0284c7"></div></div></div>
@@ -135,12 +138,13 @@
             <label>Notes</label>
             <textarea id="notes" placeholder="How did it go? What to work on next time?"></textarea>
 
-            <button type="submit" class="btn">Save drive</button>
+            <button type="submit" class="btn" id="submit-btn">Save drive</button>
+            <button type="button" class="btn secondary" id="cancel-btn" hidden>Cancel edit</button>
         </form>
     </div>
 
     <div class="card">
-        <div class="section-title">Recent drives</div>
+        <div class="section-title">Recent drives <span style="font-weight:400;color:#889;font-size:0.8rem;">— tap to edit</span></div>
         <div id="recent"></div>
     </div>
 
@@ -153,6 +157,7 @@
 <script>
     let entries = [];
     let nightMode = 'none';
+    let editingId = null;
 
     const $ = id => document.getElementById(id);
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -181,25 +186,40 @@
     function updateDur(){ const m=+$('minutes').value||0; $('dur').textContent = m ? '('+fmtHM(m)+')' : ''; if(nightMode==='all') $('nightmin').value = m; }
     $('start').onchange = calcDuration; $('end').onchange = calcDuration; $('minutes').oninput = updateDur;
 
-    // Night segmented
+    // Night segmented — set programmatically or from a click
+    function setNightMode(mode, mins){
+        nightMode = mode;
+        [...$('nightseg').children].forEach(x=>x.classList.toggle('on', x.dataset.night===mode));
+        $('nightminwrap').hidden = mode!=='some';
+        if (mode==='all') $('nightmin').value = +$('minutes').value||0;
+        else if (mode==='none') $('nightmin').value = 0;
+        else if (mins!=null) $('nightmin').value = mins;
+    }
     $('nightseg').addEventListener('click', ev => {
         const b = ev.target.closest('button'); if(!b) return;
-        nightMode = b.dataset.night;
-        [...$('nightseg').children].forEach(x=>x.classList.toggle('on', x===b));
-        $('nightminwrap').hidden = nightMode!=='some';
-        if (nightMode==='all') $('nightmin').value = +$('minutes').value||0;
-        if (nightMode==='none') $('nightmin').value = 0;
+        setNightMode(b.dataset.night);
     });
     // Traffic segmented
+    function setTraffic(val){
+        traffic = val || TRAFFIC_OPTS[0];
+        [...$('trafficseg').children].forEach(x=>x.classList.toggle('on', x.dataset.traffic===traffic));
+    }
     $('trafficseg').addEventListener('click', ev => {
         const b = ev.target.closest('button'); if(!b) return;
-        traffic = b.dataset.traffic;
-        [...$('trafficseg').children].forEach(x=>x.classList.toggle('on', x===b));
+        setTraffic(b.dataset.traffic);
     });
     // Chips (weather amber, roads blue)
     function chipToggle(container){ $(container).addEventListener('click', ev=>{ const c=ev.target.closest('.chip'); if(!c)return; c.classList.toggle('on'); if(c.classList.contains('amber-opt')) c.classList.toggle('amber', c.classList.contains('on')); }); }
     chipToggle('weather'); chipToggle('roads');
     const chipVals = (container, attr) => [...$(container).querySelectorAll('.chip.on')].map(c=>c.dataset[attr]);
+    function setChips(container, attr, values){
+        const set = new Set(values||[]);
+        $(container).querySelectorAll('.chip').forEach(c=>{
+            const on = set.has(c.dataset[attr]);
+            c.classList.toggle('on', on);
+            if (c.classList.contains('amber-opt')) c.classList.toggle('amber', on);
+        });
+    }
 
     function nightMinutesValue(total){
         if (nightMode==='none') return 0;
@@ -208,6 +228,56 @@
     }
 
     function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+
+    // ---- Edit an existing drive ----
+    function populateForm(e){
+        $('date').value = e.date || '';
+        $('start').value = e.start || '';
+        $('end').value = e.end || '';
+        $('minutes').value = e.minutes || '';
+        updateDur();
+        const nm = e.nightMinutes||0, mins = e.minutes||0;
+        setNightMode(nm<=0 ? 'none' : (nm>=mins ? 'all' : 'some'), nm);
+        $('miles').value = (e.miles!=null ? e.miles : '');
+        if (e.vehicle && ![...$('vehicle').options].some(o=>o.value===e.vehicle)) $('vehicle').add(new Option(e.vehicle, e.vehicle));
+        $('vehicle').value = e.vehicle || VEHICLES[0];
+        if (e.supervisor && ![...$('supervisor').options].some(o=>o.value===e.supervisor)) $('supervisor').add(new Option(e.supervisor, e.supervisor));
+        $('supervisor').value = e.supervisor || '';
+        setTraffic(e.traffic);
+        setChips('weather','weather', e.weather);
+        setChips('roads','road', e.roads);
+        const mset = new Set(e.maneuvers||[]);
+        $('maneuvers').querySelectorAll('input').forEach(i=>i.checked = mset.has(i.value));
+        $('notes').value = e.notes || '';
+    }
+    function resetForm(keepContext){
+        if (!keepContext){ $('date').value = new Date().toISOString().slice(0,10); $('vehicle').value = VEHICLES[0]; $('supervisor').value = ''; }
+        $('start').value=''; $('end').value=''; $('minutes').value=''; $('dur').textContent='';
+        $('miles').value=''; $('notes').value='';
+        setNightMode('none');
+        setTraffic(TRAFFIC_OPTS[0]);
+        setChips('weather','weather', []); setChips('roads','road', []);
+        $('maneuvers').querySelectorAll('input').forEach(i=>i.checked=false);
+    }
+    function enterEditMode(id){
+        const e = entries.find(x=>x.id===id); if(!e) return;
+        editingId = id;
+        populateForm(e);
+        $('form-title').textContent = 'Edit drive';
+        $('submit-btn').textContent = 'Update drive';
+        $('cancel-btn').hidden = false;
+        renderRecent();
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
+    function exitEditMode(){
+        editingId = null;
+        $('form-title').textContent = 'Log a Drive';
+        $('submit-btn').textContent = 'Save drive';
+        $('cancel-btn').hidden = true;
+        resetForm(false);
+        renderRecent();
+    }
+    $('cancel-btn').addEventListener('click', exitEditMode);
 
     function refreshProgress(){
         const t = totals(entries);
@@ -222,9 +292,9 @@
         const list = entries.slice().reverse().slice(0,8);
         if (!list.length){ box.innerHTML = '<div class="empty">No drives logged yet. Add your first above!</div>'; return; }
         box.innerHTML = list.map(e=>{
-            const tags = [e.vehicle, e.traffic&&e.traffic+' traffic', ...(e.weather||[]), ...(e.roads||[])].filter(Boolean).join(' · ');
+            const tags = [e.vehicle, e.supervisor&&('with '+e.supervisor), e.traffic&&e.traffic+' traffic', ...(e.weather||[]), ...(e.roads||[])].filter(Boolean).join(' · ');
             const night = e.nightMinutes ? ` · ${fmtHM(e.nightMinutes)} night` : '';
-            return `<div class="entry"><div>
+            return `<div class="entry${e.id===editingId?' editing':''}"><div class="tap" data-id="${esc(e.id)}">
                 <div><strong>${esc(e.date)}</strong> · ${fmtHM(e.minutes)}${night}${e.miles?` · ${e.miles} mi`:''}${e.synced?'':' <span class="pending">⏳ syncing</span>'}</div>
                 ${tags?`<div class="tags">${esc(tags)}</div>`:''}
                 ${e.notes?`<div class="meta">${esc(e.notes)}</div>`:''}
@@ -232,11 +302,17 @@
         }).join('');
     }
     $('recent').addEventListener('click', async ev=>{
-        const b = ev.target.closest('.del'); if(!b) return;
-        if (!confirm('Delete this drive?')) return;
-        await removeEntry(b.dataset.id);
-        entries = entries.filter(e=>e.id!==b.dataset.id);
-        renderRecent(); refreshProgress();
+        const del = ev.target.closest('.del');
+        if (del){
+            if (!confirm('Delete this drive?')) return;
+            await removeEntry(del.dataset.id);
+            entries = entries.filter(e=>e.id!==del.dataset.id);
+            if (editingId===del.dataset.id) exitEditMode();
+            renderRecent(); refreshProgress();
+            return;
+        }
+        const tap = ev.target.closest('.tap[data-id]');
+        if (tap) enterEditMode(tap.dataset.id);
     });
 
     $('form').addEventListener('submit', async ev=>{
@@ -255,20 +331,26 @@
             weather: chipVals('weather','weather'),
             roads: chipVals('roads','road'),
             maneuvers: [...$('maneuvers').querySelectorAll('input:checked')].map(i=>i.value),
-            notes: $('notes').value.trim(),
-            t: Date.now()
+            notes: $('notes').value.trim()
         };
-        const saved = await addEntry(entry);
-        entries.push(saved);
-        refreshProgress(); renderRecent();
-        toast('Drive logged ✓');
-        // reset the drive-specific fields, keep date/vehicle/supervisor
-        $('start').value=''; $('end').value=''; $('minutes').value=''; $('dur').textContent='';
-        $('miles').value=''; $('notes').value='';
-        nightMode='none'; [...$('nightseg').children].forEach((x,i)=>x.classList.toggle('on',i===0)); $('nightminwrap').hidden=true; $('nightmin').value=0;
-        $('weather').querySelectorAll('.chip').forEach(c=>c.classList.remove('on','amber'));
-        $('roads').querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
-        $('maneuvers').querySelectorAll('input').forEach(i=>i.checked=false);
+        if (editingId){
+            const prev = entries.find(x=>x.id===editingId);
+            entry.id = editingId;
+            entry.t = prev ? prev.t : Date.now();
+            const saved = await updateEntry(entry);
+            const i = entries.findIndex(x=>x.id===editingId);
+            if (i>=0) entries[i] = saved; else entries.push(saved);
+            exitEditMode();
+            refreshProgress(); renderRecent();
+            toast('Drive updated ✓');
+        } else {
+            entry.t = Date.now();
+            const saved = await addEntry(entry);
+            entries.push(saved);
+            refreshProgress(); renderRecent();
+            toast('Drive logged ✓');
+            resetForm(true); // keep date/vehicle/supervisor for the next drive
+        }
         window.scrollTo({top:0,behavior:'smooth'});
     });
 
@@ -279,6 +361,8 @@
         const { entries: merged, online } = await syncEntries();
         entries = merged; refreshProgress(); renderRecent();
         $('sync-status').textContent = online ? '☁︎ Synced to the cloud' : '⚠︎ Offline — saved on this device, will sync later';
+        const editId = new URLSearchParams(location.search).get('edit');
+        if (editId && entries.some(e=>e.id===editId)) enterEditMode(editId);
     })();
 </script>
 <script>
