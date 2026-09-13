@@ -76,6 +76,26 @@
         .empty { color: #778; text-align: center; padding: 8px 0; }
         .section-title { font-weight: 700; margin: 0 0 8px; }
         .status { text-align: center; font-size: 0.8rem; color: #778; margin-top: 6px; }
+
+        /* confirmation screen */
+        #confirm-card { text-align: center; }
+        .confirm-icon { width: 66px; height: 66px; margin: 6px auto 12px; border-radius: 50%;
+            background: #e8f5e9; color: #2e7d32; font-size: 2.1rem; line-height: 66px; font-weight: 800;
+            animation: pop .3s ease; }
+        #confirm-card.updated .confirm-icon { background: #e7f0ff; color: #0056b3; }
+        @keyframes pop { 0% { transform: scale(.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .confirm-title { font-size: 1.35rem; margin: 0 0 4px; }
+        .confirm-sub { color: #667; font-size: 0.85rem; margin: 0 0 16px; }
+        .confirm-summary { text-align: left; background: #f6f8fb; border: 1px solid #e6ecf5; border-radius: 12px;
+            padding: 12px 14px; font-size: 0.92rem; }
+        .confirm-summary .sh { font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }
+        .confirm-summary .sd { color: #556; font-size: 0.82rem; margin-top: 4px; line-height: 1.5; }
+        .confirm-goals { display: flex; gap: 10px; margin: 16px 0 4px; }
+        .confirm-goals .cg { flex: 1; text-align: center; }
+        .confirm-goals .cg-num { font-size: 1.25rem; font-weight: 800; color: #0284c7; }
+        .confirm-goals .cg-num.night { color: #6d28d9; }
+        .confirm-goals .cg-lab { font-size: 0.7rem; color: #667; }
+        .confirm-link { display: block; text-align: center; text-decoration: none; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -90,7 +110,20 @@
         <div class="status" id="sync-status"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="confirm-card" hidden>
+        <div class="confirm-icon" id="confirm-icon">✓</div>
+        <h2 class="confirm-title" id="confirm-title">Drive logged</h2>
+        <p class="confirm-sub" id="confirm-sub"></p>
+        <div class="confirm-summary" id="confirm-summary"></div>
+        <div class="confirm-goals">
+            <div class="cg"><div class="cg-num" id="cg-total">0.0</div><div class="cg-lab">of 50 hrs</div><div class="pbar"><div id="cg-bar-total" style="width:0%;background:#0284c7"></div></div></div>
+            <div class="cg"><div class="cg-num night" id="cg-night">0.0</div><div class="cg-lab">of 10 night hrs</div><div class="pbar"><div id="cg-bar-night" style="width:0%;background:#6d28d9"></div></div></div>
+        </div>
+        <button type="button" class="btn" id="confirm-again">Log another drive</button>
+        <a class="btn secondary confirm-link" href="driving-dashboard.html">View progress dashboard &rarr;</a>
+    </div>
+
+    <div class="card" id="form-card">
         <form id="form" autocomplete="off">
             <label>Date <span class="req">*</span></label>
             <input type="date" id="date" required>
@@ -143,7 +176,7 @@
         </form>
     </div>
 
-    <div class="card">
+    <div class="card" id="recent-card">
         <div class="section-title">Recent drives <span style="font-weight:400;color:#889;font-size:0.8rem;">— tap to edit</span></div>
         <div id="recent"></div>
     </div>
@@ -279,6 +312,41 @@
     }
     $('cancel-btn').addEventListener('click', exitEditMode);
 
+    // ---- Confirmation screen ----
+    function isSynced(id){ const e = loadLocalEntries().find(x=>x.id===id); return e ? !!e.synced : false; }
+    function showConfirmation(saved, isUpdate){
+        const synced = isSynced(saved.id);
+        $('confirm-card').classList.toggle('updated', isUpdate);
+        $('confirm-title').textContent = isUpdate ? 'Drive updated' : 'Drive logged';
+        $('confirm-sub').innerHTML = synced
+            ? '☁︎ Saved and synced to the cloud.'
+            : '✓ Saved on this device — will sync when you’re back online.';
+        const night = saved.nightMinutes ? ` · ${fmtHM(saved.nightMinutes)} at night` : '';
+        const line2 = [saved.vehicle, saved.supervisor&&('with '+saved.supervisor), saved.traffic&&saved.traffic+' traffic', ...(saved.weather||[]), ...(saved.roads||[])].filter(Boolean).join(' · ');
+        const man = (saved.maneuvers||[]).join(', ');
+        $('confirm-summary').innerHTML =
+            `<div class="sh">${esc(saved.date)} · ${fmtHM(saved.minutes)}${night}${saved.miles?` · ${saved.miles} mi`:''}</div>`
+            + (line2?`<div class="sd">${esc(line2)}</div>`:'')
+            + (man?`<div class="sd">Practiced: ${esc(man)}</div>`:'')
+            + (saved.notes?`<div class="sd">“${esc(saved.notes)}”</div>`:'');
+        const t = totals(entries);
+        $('cg-total').textContent = t.hours.toFixed(1);
+        $('cg-night').textContent = t.nightHours.toFixed(1);
+        $('cg-bar-total').style.width = Math.min(100, t.hours/GOAL_HOURS*100)+'%';
+        $('cg-bar-night').style.width = Math.min(100, t.nightHours/GOAL_NIGHT_HOURS*100)+'%';
+        $('form-card').hidden = true;
+        $('recent-card').hidden = true;
+        $('confirm-card').hidden = false;
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
+    function showForm(){
+        $('confirm-card').hidden = true;
+        $('form-card').hidden = false;
+        $('recent-card').hidden = false;
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
+    $('confirm-again').addEventListener('click', showForm);
+
     function refreshProgress(){
         const t = totals(entries);
         $('p-total').textContent = t.hours.toFixed(1);
@@ -333,25 +401,31 @@
             maneuvers: [...$('maneuvers').querySelectorAll('input:checked')].map(i=>i.value),
             notes: $('notes').value.trim()
         };
-        if (editingId){
-            const prev = entries.find(x=>x.id===editingId);
-            entry.id = editingId;
-            entry.t = prev ? prev.t : Date.now();
-            const saved = await updateEntry(entry);
-            const i = entries.findIndex(x=>x.id===editingId);
-            if (i>=0) entries[i] = saved; else entries.push(saved);
-            exitEditMode();
-            refreshProgress(); renderRecent();
-            toast('Drive updated ✓');
-        } else {
-            entry.t = Date.now();
-            const saved = await addEntry(entry);
-            entries.push(saved);
-            refreshProgress(); renderRecent();
-            toast('Drive logged ✓');
-            resetForm(true); // keep date/vehicle/supervisor for the next drive
+        const btn = $('submit-btn');
+        btn.disabled = true; btn.textContent = 'Saving…';
+        try {
+            if (editingId){
+                const prev = entries.find(x=>x.id===editingId);
+                entry.id = editingId;
+                entry.t = prev ? prev.t : Date.now();
+                const saved = await updateEntry(entry);
+                const i = entries.findIndex(x=>x.id===editingId);
+                if (i>=0) entries[i] = saved; else entries.push(saved);
+                exitEditMode();          // back to add mode + re-render recent list
+                refreshProgress();
+                showConfirmation(saved, true);
+            } else {
+                entry.t = Date.now();
+                const saved = await addEntry(entry);
+                entries.push(saved);
+                refreshProgress(); renderRecent();
+                resetForm(true);         // keep date/vehicle/supervisor for the next drive
+                showConfirmation(saved, false);
+            }
+        } finally {
+            btn.disabled = false;
+            btn.textContent = editingId ? 'Update drive' : 'Save drive';
         }
-        window.scrollTo({top:0,behavior:'smooth'});
     });
 
     // initial load: local first, then cloud sync
