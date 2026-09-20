@@ -90,7 +90,29 @@
         .ratio-field { }
         .fraction { display: inline-flex; flex-direction: column; align-items: center; }
         .fraction .num-input { width: 84px; }
-        .frac-bar { width: 96px; height: 3px; background: var(--ink); margin: 6px 0; }
+        .frac-bar { width: 132px; height: 3px; background: var(--ink); margin: 6px 0; }
+        .input-with-pencil { display: inline-flex; align-items: center; gap: 6px; }
+
+        /* Apple Pencil / handwriting */
+        .pencil-btn { flex-shrink: 0; border: 2px solid var(--accent); background: #fff; color: var(--accent); border-radius: 10px; width: 46px; height: 46px; font-size: 1.2rem; cursor: pointer; padding: 0; }
+        .pencil-btn:active, .pencil-btn.on { background: var(--accent); color: #fff; }
+        #writepad { display: none; margin-top: 16px; border: 2px solid var(--accent); border-radius: 14px; padding: 14px; background: #fff; }
+        #writepad.open { display: block; }
+        .writepad-title { font-weight: 600; color: var(--accent-dark); margin-bottom: 4px; font-size: calc(1rem * var(--font-scale)); }
+        .writepad-sub { color: #7a7264; font-size: 0.85rem; margin-bottom: 10px; }
+        .writepad-sub b { color: var(--accent-dark); }
+        .ink-canvas { width: 100%; max-width: 320px; height: 200px; border: 2px dashed var(--accent); border-radius: 10px; background: #fffdf7; touch-action: none; display: block; margin: 0 auto 10px; cursor: crosshair; }
+        .guess-row { display: flex; gap: 8px; align-items: center; justify-content: center; min-height: 56px; flex-wrap: wrap; margin-bottom: 6px; }
+        .guess-label { font-size: 0.9rem; color: #7a7264; }
+        .guess-btn { min-width: 52px; height: 52px; font-size: 1.5rem; font-weight: 700; border: 2px solid var(--accent); background: #fff; color: var(--accent-dark); border-radius: 10px; cursor: pointer; }
+        .guess-btn.top { background: var(--accent); color: #fff; }
+        .pad-controls { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+        .pad-btn { min-width: 54px; height: 50px; font-size: 1.2rem; font-weight: 700; font-family: inherit; border: 2px solid var(--gold); background: #fff; color: var(--accent-dark); border-radius: 10px; cursor: pointer; }
+        .pad-preview { text-align: center; font-size: calc(1.7rem * var(--font-scale)); font-weight: 700; color: var(--accent-dark); min-height: 2.2rem; letter-spacing: 0.08em; margin-bottom: 10px; background: #f4efe3; border-radius: 8px; padding: 6px; }
+        .pad-actions { display: flex; gap: 10px; }
+        .pad-actions button { flex: 1; height: 52px; border-radius: 10px; font-family: inherit; font-weight: 600; font-size: 1rem; cursor: pointer; border: none; }
+        .pad-done { background: var(--good); color: #fff; }
+        .pad-close { background: #eee; color: #555; }
 
         .explanation-box { display: none; margin-top: 16px; padding: 16px 18px; background: #f0f6ff; border-left: 6px solid var(--accent); border-radius: 10px; font-size: calc(1.05rem * var(--font-scale)); line-height: 1.6; }
         .explanation-box .exp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
@@ -191,14 +213,42 @@
             <div class="ratio-field">
                 <div class="field-label">Ratio <span class="field-sub">(new ÷ original)</span></div>
                 <div class="fraction">
-                    <input class="num-input" id="ratio-new" inputmode="decimal" aria-label="new length" placeholder="new">
+                    <div class="input-with-pencil">
+                        <input class="num-input" id="ratio-new" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="new length" placeholder="new">
+                        <button class="pencil-btn" data-target="ratio-new" title="Write with Apple Pencil">✏️</button>
+                    </div>
                     <div class="frac-bar"></div>
-                    <input class="num-input" id="ratio-orig" inputmode="decimal" aria-label="original length" placeholder="orig">
+                    <div class="input-with-pencil">
+                        <input class="num-input" id="ratio-orig" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="original length" placeholder="orig">
+                        <button class="pencil-btn" data-target="ratio-orig" title="Write with Apple Pencil">✏️</button>
+                    </div>
                 </div>
             </div>
             <div>
                 <div class="field-label">Scale factor</div>
-                <input class="num-input" id="sf-input" inputmode="text" aria-label="scale factor" placeholder="?">
+                <div class="input-with-pencil">
+                    <input class="num-input" id="sf-input" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="scale factor" placeholder="?">
+                    <button class="pencil-btn" data-target="sf-input" title="Write with Apple Pencil">✏️</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apple Pencil handwriting panel (optional — typing always works) -->
+        <div id="writepad">
+            <div class="writepad-title">✏️ Write one number at a time</div>
+            <div class="writepad-sub">Writing into: <b id="pad-target-name">Scale factor</b>. Draw a digit, then tap the guess that matches. Use the buttons for a dot or a slash.</div>
+            <canvas class="ink-canvas" id="ink" width="320" height="200"></canvas>
+            <div class="guess-row" id="guess-row"><span class="guess-label">Draw a digit above…</span></div>
+            <div class="pad-controls">
+                <button class="pad-btn" data-ch=".">•</button>
+                <button class="pad-btn" data-ch="/">/</button>
+                <button class="pad-btn" id="pad-back">⌫</button>
+                <button class="pad-btn" id="pad-clear">Erase drawing</button>
+            </div>
+            <div class="pad-preview" id="pad-preview">&nbsp;</div>
+            <div class="pad-actions">
+                <button class="pad-done" id="pad-done">Put in box ✓</button>
+                <button class="pad-close" id="pad-close">Close</button>
             </div>
         </div>
 
@@ -222,6 +272,7 @@
 </div>
 
 <script src="scale-questions.js"></script>
+<script src="digit-recognizer.js"></script>
 <script>
     const PASS = 70;
     const STORAGE_KEY = 'scalePracticeProgress';
@@ -399,6 +450,7 @@
 
     function loadProblem() {
         answeredNow = false;
+        if (typeof closePad === 'function') closePad();
         const p = scaleProblems[idx];
         showOnly([problemScreen, progressSection]);
         sectionTag.textContent = p.section;
@@ -524,6 +576,81 @@
 
     // Enter key on the scale-factor box checks the answer
     sfInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !answeredNow) checkBtn.click(); });
+
+    // ---------- Apple Pencil handwriting panel (optional) ----------
+    const writepad = document.getElementById('writepad');
+    const ink = document.getElementById('ink');
+    const inkCtx = ink.getContext('2d');
+    const guessRow = document.getElementById('guess-row');
+    const padPreview = document.getElementById('pad-preview');
+    const padTargetName = document.getElementById('pad-target-name');
+    const TARGET_NAMES = { 'ratio-new': 'Ratio — new (top)', 'ratio-orig': 'Ratio — original (bottom)', 'sf-input': 'Scale factor' };
+    let padTarget = null, padValue = '', drawing = false, recTimer = null;
+
+    inkCtx.lineWidth = 16; inkCtx.lineCap = 'round'; inkCtx.lineJoin = 'round'; inkCtx.strokeStyle = '#21545f';
+
+    function openPad(id) {
+        padTarget = document.getElementById(id);
+        if (!padTarget || padTarget.disabled) return;
+        padValue = (padTarget.value || '').trim();
+        padTargetName.textContent = TARGET_NAMES[id] || 'Answer';
+        updatePreview(); clearCanvas(); resetGuessRow();
+        writepad.classList.add('open');
+        document.querySelectorAll('.pencil-btn').forEach(b => b.classList.toggle('on', b.dataset.target === id));
+        writepad.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    function closePad() {
+        writepad.classList.remove('open');
+        document.querySelectorAll('.pencil-btn').forEach(b => b.classList.remove('on'));
+        padTarget = null; clearTimeout(recTimer);
+    }
+    document.querySelectorAll('.pencil-btn').forEach(b => b.onclick = () => openPad(b.dataset.target));
+
+    function updatePreview() { padPreview.textContent = padValue || ' '; }
+    function clearCanvas() { inkCtx.clearRect(0, 0, ink.width, ink.height); }
+    function resetGuessRow() { guessRow.innerHTML = '<span class="guess-label">Draw a digit above…</span>'; }
+
+    function canvasXY(e) {
+        const r = ink.getBoundingClientRect();
+        return { x: (e.clientX - r.left) * (ink.width / r.width), y: (e.clientY - r.top) * (ink.height / r.height) };
+    }
+    ink.addEventListener('pointerdown', e => {
+        e.preventDefault(); drawing = true; clearTimeout(recTimer);
+        const p = canvasXY(e); inkCtx.beginPath(); inkCtx.moveTo(p.x, p.y);
+        try { ink.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    ink.addEventListener('pointermove', e => {
+        if (!drawing) return; e.preventDefault();
+        const p = canvasXY(e); inkCtx.lineTo(p.x, p.y); inkCtx.stroke();
+    });
+    function endStroke() {
+        if (!drawing) return; drawing = false;
+        clearTimeout(recTimer);
+        recTimer = setTimeout(recognizeNow, 650); // wait in case the digit needs another stroke
+    }
+    ink.addEventListener('pointerup', endStroke);
+    ink.addEventListener('pointerleave', endStroke);
+    ink.addEventListener('pointercancel', endStroke);
+
+    function recognizeNow() {
+        const ranked = DigitRecognizer.recognize(ink);
+        if (!ranked.length) { resetGuessRow(); return; }
+        const top = ranked.slice(0, 3);
+        guessRow.innerHTML = '<span class="guess-label">Tap the match:</span>';
+        top.forEach((g, i) => {
+            const b = document.createElement('button');
+            b.className = 'guess-btn' + (i === 0 ? ' top' : '');
+            b.textContent = g.digit;
+            b.onclick = () => { padValue += String(g.digit); updatePreview(); clearCanvas(); resetGuessRow(); };
+            guessRow.appendChild(b);
+        });
+    }
+
+    document.querySelectorAll('.pad-btn[data-ch]').forEach(b => b.onclick = () => { padValue += b.dataset.ch; updatePreview(); });
+    document.getElementById('pad-back').onclick = () => { padValue = padValue.slice(0, -1); updatePreview(); };
+    document.getElementById('pad-clear').onclick = () => { clearCanvas(); resetGuessRow(); };
+    document.getElementById('pad-done').onclick = () => { if (padTarget) padTarget.value = padValue; closePad(); };
+    document.getElementById('pad-close').onclick = closePad;
 
     // ---------- Init ----------
     applyScale(progress.settings.scale || 1.2);
