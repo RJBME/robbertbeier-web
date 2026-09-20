@@ -3,36 +3,6 @@ layout: default
 title: Home
 ---
 
-<a href="/history-practice.html" class="study-callout">
-  <span class="study-callout-icon">📜</span>
-  <span class="study-callout-text">
-    <strong>Ancient History Practice</strong>
-    <span class="study-callout-sub">Unit 1 study-guide quiz — read-aloud &amp; large-text friendly</span>
-  </span>
-  <span class="study-callout-arrow">→</span>
-</a>
-
-<style>
-  .study-callout {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 18px;
-    margin-bottom: 40px;
-    border: 1px solid var(--dash-border);
-    border-radius: 12px;
-    background: var(--dash-card);
-    text-decoration: none;
-    transition: border-color 0.15s, transform 0.15s;
-  }
-  .study-callout:hover { border-color: var(--link); transform: translateY(-1px); }
-  .study-callout-icon { font-size: 1.8rem; flex-shrink: 0; }
-  .study-callout-text { flex: 1; display: flex; flex-direction: column; }
-  .study-callout-text strong { color: var(--text); font-size: 1.05rem; }
-  .study-callout-sub { color: var(--post-meta); font-size: 0.85rem; font-weight: 400; margin-top: 2px; }
-  .study-callout-arrow { color: var(--link); font-size: 1.3rem; font-weight: bold; flex-shrink: 0; }
-</style>
-
 <div class="posts-timeline">
   {% for post in site.posts limit: 5 %}
     <article class="post-card">

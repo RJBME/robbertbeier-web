@@ -323,8 +323,44 @@
       </a>
     {% endfor %}
 
+    <div class="nav-dropdown" id="learning-dropdown">
+      <button class="nav-dropdown-trigger" onclick="toggleDropdown(event, 'learning-dropdown')" aria-haspopup="true" aria-expanded="false">
+        Learning
+      </button>
+      <div class="nav-dropdown-menu" role="menu">
+        <a href="/history-practice.html" role="menuitem">
+          <span class="menu-icon">📜</span>
+          <span class="menu-label">
+            Ancient History Practice
+            <span class="menu-sub">Unit 1 study-guide quiz</span>
+          </span>
+        </a>
+        <a href="/driving-dashboard.html" role="menuitem">
+          <span class="menu-icon">🚗</span>
+          <span class="menu-label">
+            Driving Dashboard
+            <span class="menu-sub">Supervised-driving hours</span>
+          </span>
+        </a>
+        <a href="/driving-log.html" role="menuitem">
+          <span class="menu-icon">📝</span>
+          <span class="menu-label">
+            Driving Log
+            <span class="menu-sub">Log a drive</span>
+          </span>
+        </a>
+        <a href="/practice.html" role="menuitem">
+          <span class="menu-icon">🚦</span>
+          <span class="menu-label">
+            SOS Practice Test
+            <span class="menu-sub">Michigan permit practice</span>
+          </span>
+        </a>
+      </div>
+    </div>
+
     <div class="nav-dropdown" id="ref-dropdown">
-      <button class="nav-dropdown-trigger" onclick="toggleRefDropdown(event)" aria-haspopup="true" aria-expanded="false">
+      <button class="nav-dropdown-trigger" onclick="toggleDropdown(event, 'ref-dropdown')" aria-haspopup="true" aria-expanded="false">
         References
       </button>
       <div class="nav-dropdown-menu" role="menu">
@@ -371,6 +407,36 @@
         {{ item.name }}
       </a>
     {% endfor %}
+    <div class="mobile-section-label">Learning</div>
+    <a href="/history-practice.html" class="mobile-ref-link" onclick="closeMobileMenu()">
+      <span class="mobile-ref-icon">📜</span>
+      <span class="mobile-ref-text">
+        Ancient History Practice
+        <span class="mobile-ref-sub">Unit 1 study-guide quiz</span>
+      </span>
+    </a>
+    <a href="/driving-dashboard.html" class="mobile-ref-link" onclick="closeMobileMenu()">
+      <span class="mobile-ref-icon">🚗</span>
+      <span class="mobile-ref-text">
+        Driving Dashboard
+        <span class="mobile-ref-sub">Supervised-driving hours</span>
+      </span>
+    </a>
+    <a href="/driving-log.html" class="mobile-ref-link" onclick="closeMobileMenu()">
+      <span class="mobile-ref-icon">📝</span>
+      <span class="mobile-ref-text">
+        Driving Log
+        <span class="mobile-ref-sub">Log a drive</span>
+      </span>
+    </a>
+    <a href="/practice.html" class="mobile-ref-link" onclick="closeMobileMenu()">
+      <span class="mobile-ref-icon">🚦</span>
+      <span class="mobile-ref-text">
+        SOS Practice Test
+        <span class="mobile-ref-sub">Michigan permit practice</span>
+      </span>
+    </a>
+
     <div class="mobile-section-label">References</div>
     <a href="/charging-site-guide.html" target="_blank" class="mobile-ref-link" onclick="closeMobileMenu()">
       <span class="mobile-ref-icon">📋</span>
@@ -449,10 +515,10 @@
     if (e.key === 'Escape') closeMobileMenu();
   });
 
-  /* ── References Dropdown ── */
-  function toggleRefDropdown(e) {
+  /* ── Nav Dropdowns (Learning, References) ── */
+  function toggleDropdown(e, id) {
     e.stopPropagation();
-    const dd = document.getElementById('ref-dropdown');
+    const dd = document.getElementById(id);
     const isOpen = dd.classList.contains('open');
     closeAllDropdowns();
     if (!isOpen) {

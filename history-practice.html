@@ -155,6 +155,42 @@
         /* Emphasized keyword inside a question (bold + color instead of ALL CAPS, which is harder to read) */
         .kw { color: var(--accent-dark); font-weight: 700; border-bottom: 3px solid var(--gold); }
 
+        /* ----- Fill-in-the-blank questions ----- */
+        .blank-hint { font-size: calc(1rem * var(--font-scale)); color: #7a7264; margin: 0 0 14px; }
+        .blank-sentence {
+            font-size: calc(1.3rem * var(--font-scale)); font-weight: 600; line-height: 1.9; margin-bottom: 8px;
+        }
+        .blank-slot {
+            display: inline-block; min-width: 130px; padding: 2px 12px; margin: 0 2px;
+            border-bottom: 4px dashed var(--accent); border-radius: 6px 6px 0 0;
+            text-align: center; color: var(--accent-dark); font-weight: 700; vertical-align: middle;
+            background: #eef5f6; min-height: 1.6em;
+        }
+        .blank-slot.drop-hover { background: #fdeecb; border-bottom-color: var(--gold); }
+        .blank-slot.correct { background: var(--good-bg); border-bottom-style: solid; border-bottom-color: var(--good); color: #2e7d4f; }
+        .blank-slot.wrong { background: var(--bad-bg); border-bottom-style: solid; border-bottom-color: var(--bad); color: #b84a40; }
+
+        .chips { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+        .chip {
+            padding: 14px 20px; min-height: 52px; display: inline-flex; align-items: center;
+            border: 2px solid var(--accent); border-radius: 12px; background: #fff; color: var(--accent-dark);
+            font-family: inherit; font-size: calc(1.15rem * var(--font-scale)); font-weight: 600;
+            cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none;
+            transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+        }
+        .chip:active { background: #eef5f6; }
+        .chip.chip-dragging { opacity: 0.35; }
+        .chip.used { opacity: 0.35; cursor: default; }
+        .chip.correct { border-color: var(--good); background: var(--good-bg); color: #2e7d4f; }
+        .chip.wrong { border-color: var(--bad); background: var(--bad-bg); color: #b84a40; }
+        .chip-drag {
+            position: fixed; z-index: 99998; pointer-events: none; margin: 0;
+            transform: translate(-50%, -50%); box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .chip:not(.used):not(.answered-chip):hover { background: #eef5f6; border-color: var(--accent-dark); }
+        }
+
         .btn-next {
             background: var(--accent); color: #fff; border: none; padding: 18px 20px;
             border-radius: 12px; font-family: inherit; font-size: calc(1.15rem * var(--font-scale));
@@ -378,16 +414,25 @@
 
     // ---------- Question rendering ----------
     const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+    let answered = false; // locks a question once it has been answered
+
     function loadQuestion() {
         nextBtn.style.display = 'none';
         explanationBox.style.display = 'none';
         explanationBox.innerHTML = '';
+        answered = false;
 
         const q = activeData[idx];
-        questionText.innerHTML = fmt(q.question);
         progressText.textContent = `Question ${idx + 1} of ${activeData.length}`;
         progressFill.style.width = `${(idx / activeData.length) * 100}%`;
 
+        if (q.type === 'blank') renderBlank(q);
+        else renderMC(q);
+    }
+
+    // ----- Multiple choice -----
+    function renderMC(q) {
+        questionText.innerHTML = fmt(q.question);
         const opts = shuffle([q.answer, ...q.distractors]);
         optionsContainer.innerHTML = '';
         opts.forEach((text, i) => {
@@ -395,25 +440,110 @@
             div.className = 'option';
             div.innerHTML = `<span class="opt-letter">${LETTERS[i]}</span><span class="opt-text"></span>`;
             div.querySelector('.opt-text').textContent = text;
-            div.onclick = () => selectOption(div, text, q);
+            div.onclick = () => {
+                if (answered) return;
+                const all = optionsContainer.children;
+                for (let j = 0; j < all.length; j++) {
+                    all[j].classList.add('answered');
+                    if (all[j].querySelector('.opt-text').textContent === q.answer) all[j].classList.add('correct');
+                }
+                if (text !== q.answer) div.classList.add('wrong');
+                reveal(text === q.answer, q, text);
+            };
             optionsContainer.appendChild(div);
         });
-
         speakQBtn.onclick = () => speak(plain(q.question) + '. ' + opts.map((o, i) => LETTERS[i] + ': ' + o).join('. '), speakQBtn);
         if (progress.settings.autoread) setTimeout(() => speakQBtn.onclick(), 250);
     }
 
-    function selectOption(div, chosen, q) {
-        stopSpeaking();
-        const all = optionsContainer.children;
-        for (let i = 0; i < all.length; i++) {
-            all[i].onclick = null;
-            all[i].classList.add('answered');
-            if (all[i].querySelector('.opt-text').textContent === q.answer) all[i].classList.add('correct');
-        }
-        const correct = chosen === q.answer;
-        if (!correct) div.classList.add('wrong');
+    // ----- Fill in the blank (drag a chip into the blank, or just tap a chip) -----
+    function renderBlank(q) {
+        // Build the sentence, putting a drop-target where {blank} is.
+        const parts = q.question.split('{blank}');
+        questionText.innerHTML =
+            `<div class="blank-hint">Drag a word into the blank — or just tap it.</div>` +
+            `<div class="blank-sentence">${fmt(parts[0])}<span class="blank-slot" id="blank-slot">?</span>${fmt(parts[1] || '')}</div>`;
+        const slot = document.getElementById('blank-slot');
 
+        const opts = shuffle([q.answer, ...q.distractors]);
+        optionsContainer.innerHTML = '<div class="chips" id="chips"></div>';
+        const chipWrap = document.getElementById('chips');
+        opts.forEach(text => {
+            const chip = document.createElement('button');
+            chip.className = 'chip';
+            chip.type = 'button';
+            chip.textContent = text;
+            chip.dataset.val = text;
+            makeChipInteractive(chip, slot, q);
+            chipWrap.appendChild(chip);
+        });
+
+        speakQBtn.onclick = () => speak(plain(q.question).replace('{blank}', 'blank') + '. Choices: ' + opts.join(', '), speakQBtn);
+        if (progress.settings.autoread) setTimeout(() => speakQBtn.onclick(), 250);
+    }
+
+    function overSlot(slot, x, y) {
+        const r = slot.getBoundingClientRect();
+        return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    }
+
+    // Pointer-based so it works with both mouse and touch: a small move = drag, a tap = fill.
+    function makeChipInteractive(chip, slot, q) {
+        chip.addEventListener('pointerdown', e => {
+            if (answered) return;
+            e.preventDefault();
+            const sx = e.clientX, sy = e.clientY;
+            let moved = false, clone = null;
+            const move = ev => {
+                if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 6) {
+                    moved = true;
+                    clone = chip.cloneNode(true);
+                    clone.classList.add('chip-drag');
+                    clone.style.width = chip.offsetWidth + 'px';
+                    document.body.appendChild(clone);
+                    chip.classList.add('chip-dragging');
+                }
+                if (clone) {
+                    clone.style.left = ev.clientX + 'px';
+                    clone.style.top = ev.clientY + 'px';
+                    slot.classList.toggle('drop-hover', overSlot(slot, ev.clientX, ev.clientY));
+                }
+            };
+            const up = ev => {
+                document.removeEventListener('pointermove', move);
+                document.removeEventListener('pointerup', up);
+                if (clone) clone.remove();
+                chip.classList.remove('chip-dragging');
+                slot.classList.remove('drop-hover');
+                if (!moved || overSlot(slot, ev.clientX, ev.clientY)) fillBlank(chip, slot, q);
+            };
+            document.addEventListener('pointermove', move);
+            document.addEventListener('pointerup', up);
+        });
+    }
+
+    function fillBlank(chip, slot, q) {
+        if (answered) return;
+        const chosen = chip.dataset.val;
+        const correct = chosen === q.answer;
+
+        slot.textContent = chosen;
+        slot.classList.add(correct ? 'correct' : 'wrong');
+
+        // lock every chip; mark the right one, and the wrong pick if any
+        document.querySelectorAll('#chips .chip').forEach(c => {
+            c.classList.add('used', 'answered-chip');
+            if (c.dataset.val === q.answer) c.classList.add('correct');
+        });
+        if (!correct) chip.classList.add('wrong');
+
+        reveal(correct, q, chosen);
+    }
+
+    // ----- Shared: show the answer explanation + Next button -----
+    function reveal(correct, q, chosen) {
+        answered = true;
+        stopSpeaking();
         results.push({ q, chosen, correct });
 
         const head = correct ? '✅ Correct!' : '💡 The answer is: ' + q.answer;
@@ -500,7 +630,10 @@
             missed.forEach(({ q, chosen }) => {
                 const item = document.createElement('div'); item.className = 'review-item';
                 item.innerHTML = `<div class="review-q"></div><div class="review-line review-chosen">You picked: <span class="c"></span></div><div class="review-line review-correct">Answer: <span class="a"></span></div><div class="review-exp"></div>`;
-                item.querySelector('.review-q').innerHTML = fmt(q.question);
+                // for fill-in-the-blank, show the sentence with the blank marked
+                item.querySelector('.review-q').innerHTML = (q.type === 'blank')
+                    ? fmt(q.question.replace('{blank}', ' ______ '))
+                    : fmt(q.question);
                 item.querySelector('.c').textContent = chosen;
                 item.querySelector('.a').textContent = q.answer;
                 item.querySelector('.review-exp').textContent = q.explanation;

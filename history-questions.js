@@ -1,9 +1,13 @@
 // Unit 1 Ancient History — Study Guide Practice Questions
 // 7th grade History. Built from the Unit 1 Summative Assessment Study Guide.
 //
-// Schema per item: { id, topic, question, answer (correct text), distractors[], explanation }
-//   The app shows all choices: the correct answer + its distractors, shuffled.
-//   Keep distractors to 3 so there are 4 short choices (easier to read).
+// Two kinds of questions:
+//   Multiple choice: { id, topic, question, answer, distractors[], explanation }
+//       The app shows all choices (answer + distractors), shuffled. Keep 3 distractors = 4 short choices.
+//   Fill in the blank: add  "type": "blank"  and put {blank} in the sentence where the word goes.
+//       She drags a word chip into the blank (or just taps it). answer + distractors become the chips.
+//       Example: { id, topic, type: "blank", question: "A {blank} source is firsthand.", answer: "primary", distractors: ["secondary"], explanation }
+//   In any question text, wrap a word in *asterisks* to highlight it (e.g. *primary*).
 //
 // To edit: change the text right here. No build step, no dependencies.
 // Loaded by history-practice.html via <script src="history-questions.js">.
@@ -251,6 +255,85 @@ const historyQuizData = [
     "answer": "To look at it closely and think about what it means",
     "distractors": ["To copy it word for word", "To ignore it", "To color it in"],
     "explanation": "To analyze means to look closely and think carefully about what a source means, using evidence."
+  },
+
+  // ================= Fill-in-the-blank (drag or tap) =================
+  {
+    "id": "b01", "topic": "Timeline & Dates", "type": "blank",
+    "question": "The years before year one are labeled {blank}.",
+    "answer": "BCE",
+    "distractors": ["CE", "zero"],
+    "explanation": "BCE (Before Common Era) is all the years before year one, on the left of the timeline."
+  },
+  {
+    "id": "b02", "topic": "Timeline & Dates", "type": "blank",
+    "question": "On a timeline, BCE years go to the {blank} of zero.",
+    "answer": "left",
+    "distractors": ["right", "top"],
+    "explanation": "BCE years go to the left of zero. CE years go to the right."
+  },
+  {
+    "id": "b03", "topic": "Sources", "type": "blank",
+    "question": "A {blank} source is a firsthand account from someone who was there.",
+    "answer": "primary",
+    "distractors": ["secondary", "made-up"],
+    "explanation": "A primary source is firsthand — it comes from someone who was actually there."
+  },
+  {
+    "id": "b04", "topic": "Sources", "type": "blank",
+    "question": "A {blank} source is made by someone who was NOT there.",
+    "answer": "secondary",
+    "distractors": ["primary", "firsthand"],
+    "explanation": "A secondary source is secondhand — made by people who were not there, like a textbook."
+  },
+  {
+    "id": "b05", "topic": "Sources", "type": "blank",
+    "question": "A photograph taken at an event is a {blank} source.",
+    "answer": "primary",
+    "distractors": ["secondary", "fake"],
+    "explanation": "A photo taken at the event is firsthand, so it is a primary source."
+  },
+  {
+    "id": "b06", "topic": "Perspectives", "type": "blank",
+    "question": "A person's point of view is called their {blank}.",
+    "answer": "perspective",
+    "distractors": ["evidence", "timeline"],
+    "explanation": "A perspective is a person's point of view — the way they see something."
+  },
+  {
+    "id": "b07", "topic": "Geography", "type": "blank",
+    "question": "A mountain is a {blank} feature.",
+    "answer": "physical",
+    "distractors": ["human", "made"],
+    "explanation": "A mountain is natural, so it is a physical feature."
+  },
+  {
+    "id": "b08", "topic": "Geography", "type": "blank",
+    "question": "Physical features are the natural {blank} of an area.",
+    "answer": "landscape",
+    "distractors": ["buildings", "rules"],
+    "explanation": "Physical features are the natural landscape of an area, like mountains and rivers."
+  },
+  {
+    "id": "b09", "topic": "Maps", "type": "blank",
+    "question": "The {blank} of a map explains what the symbols and colors mean.",
+    "answer": "legend",
+    "distractors": ["title", "border"],
+    "explanation": "The legend (also called the key) explains the map's symbols and colors."
+  },
+  {
+    "id": "b10", "topic": "Maps", "type": "blank",
+    "question": "The {blank} tells you what a map is about.",
+    "answer": "title",
+    "distractors": ["legend", "scale"],
+    "explanation": "The title tells you the subject of the map — what it is about."
+  },
+  {
+    "id": "b11", "topic": "Evidence", "type": "blank",
+    "question": "Facts and details that support an idea are called {blank}.",
+    "answer": "evidence",
+    "distractors": ["perspective", "opinions"],
+    "explanation": "Evidence is the facts and details you use to support and prove an idea."
   }
 
 ];
