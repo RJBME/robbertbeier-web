@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Scale Factor Practice">
+    <meta name="theme-color" content="#2c6e7f">
+    <title>Scale Factor Practice</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        html { -webkit-text-size-adjust: 100%; }
+        * { box-sizing: border-box; }
+        :root {
+            --font-scale: 1;
+            --ink: #33312e; --cream: #f6efe0; --card: #fffdf7;
+            --accent: #2c6e7f; --accent-dark: #21545f; --gold: #d29a2b;
+            --good: #3a915f; --good-bg: #e6f3ea; --bad: #d1655a; --bad-bg: #fbeae7;
+            --line: #e6ddc9;
+        }
+        body {
+            font-family: 'Lexend', 'Comic Sans MS', 'Segoe UI', -apple-system, sans-serif;
+            background: var(--cream); color: var(--ink);
+            display: flex; justify-content: center; margin: 0; padding: 20px;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            line-height: 1.6; letter-spacing: 0.02em; word-spacing: 0.06em;
+            -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+        }
+        .quiz-container { background: var(--card); padding: 28px; border-radius: 16px; box-shadow: 0 6px 22px rgba(80,60,20,0.12); max-width: 640px; width: 100%; }
+        h1 { font-size: calc(1.6rem * var(--font-scale)); text-align: center; margin: 0 0 4px; color: var(--accent-dark); font-weight: 700; }
+        .subtitle { text-align: center; color: #6b6459; margin: 0 0 18px; font-size: calc(0.95rem * var(--font-scale)); }
+
+        .toolbar { display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 2px solid var(--line); }
+        .tool-label { font-size: 0.85rem; color: #7a7264; }
+        .size-btn, .toggle-btn { border: 2px solid var(--accent); background: #fff; color: var(--accent); border-radius: 10px; cursor: pointer; font-family: inherit; font-weight: 600; padding: 8px 12px; min-height: 44px; }
+        .size-btn.active, .toggle-btn.on { background: var(--accent); color: #fff; }
+        .size-a1 { font-size: 0.85rem; } .size-a2 { font-size: 1.05rem; } .size-a3 { font-size: 1.3rem; }
+
+        #splash-screen { text-align: center; }
+        .splash-desc { color: #6b6459; margin-bottom: 22px; font-size: calc(1.1rem * var(--font-scale)); line-height: 1.7; }
+        .btn-large { display: block; width: 100%; margin-bottom: 6px; padding: 18px; font-family: inherit; font-size: calc(1.15rem * var(--font-scale)); font-weight: 600; background: #fff; color: var(--accent); border: 2px solid var(--accent); border-radius: 12px; cursor: pointer; transition: all 0.15s; min-height: 56px; }
+        .btn-large:active { transform: scale(0.99); background: #eef5f6; }
+        .btn-highlight { background: var(--accent); color: #fff; }
+        .btn-highlight:active { background: var(--accent-dark); }
+        .best-label { font-size: 0.9rem; color: var(--good); font-weight: 600; margin-bottom: 14px; min-height: 1em; }
+        .link-btn { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; font-family: inherit; font-size: 0.95rem; padding: 10px 6px; min-height: 44px; }
+        .link-btn.muted { color: #9a917f; }
+
+        #modeled-screen, #problem-screen, #progress-section, #score-board { display: none; }
+        .progress-text { text-align: center; color: #7a7264; margin-bottom: 8px; font-size: calc(0.95rem * var(--font-scale)); }
+        .progress-bar-container { width: 100%; height: 14px; background: #eadfc7; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: var(--gold); width: 0%; transition: width 0.3s ease; }
+
+        .section-tag { display: inline-block; background: var(--accent); color: #fff; font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 0.04em; }
+        .prompt-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+        .prompt { font-size: calc(1.25rem * var(--font-scale)); font-weight: 600; line-height: 1.5; flex: 1; }
+        .speak-btn { flex-shrink: 0; border: 2px solid var(--accent); background: #fff; color: var(--accent); border-radius: 12px; cursor: pointer; width: 52px; height: 52px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .speak-btn:active, .speak-btn.speaking { background: var(--gold); border-color: var(--gold); color: #fff; }
+
+        /* shapes side-by-side "table" */
+        .shape-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 18px; }
+        .shape-cell { padding: 10px 6px; text-align: center; min-width: 0; }
+        .shape-cell.orig { background: #f4efe3; }
+        .shape-cell.copy { background: #eef5f6; }
+        .shape-head { font-size: calc(0.9rem * var(--font-scale)); font-weight: 700; color: var(--accent-dark); margin-bottom: 6px; }
+        .shape-cell svg { width: 100%; max-width: 190px; height: auto; display: block; margin: 0 auto; }
+
+        .formula-card { background: #fef7e6; border-left: 6px solid var(--gold); border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; font-size: calc(1.02rem * var(--font-scale)); display: flex; align-items: center; gap: 10px; }
+        .formula-card b { color: var(--accent-dark); }
+
+        .answer-area { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; margin-bottom: 8px; }
+        .field-label { font-size: calc(0.95rem * var(--font-scale)); font-weight: 600; color: var(--accent-dark); margin-bottom: 6px; }
+        .field-sub { font-size: 0.8rem; color: #8a8271; font-weight: 400; }
+        .num-input {
+            font-family: inherit; font-size: calc(1.4rem * var(--font-scale)); font-weight: 700; text-align: center;
+            width: 96px; padding: 10px 8px; border: 2px solid var(--accent); border-radius: 10px; background: #fff; color: var(--ink);
+        }
+        .num-input:focus { outline: 3px solid rgba(44,110,127,0.35); }
+        .num-input.correct { border-color: var(--good); background: var(--good-bg); }
+        .num-input.wrong { border-color: var(--bad); background: var(--bad-bg); }
+        .num-input:disabled { opacity: 1; }
+
+        /* fraction stack for the ratio */
+        .ratio-field { }
+        .fraction { display: inline-flex; flex-direction: column; align-items: center; }
+        .fraction .num-input { width: 84px; }
+        .frac-bar { width: 96px; height: 3px; background: var(--ink); margin: 6px 0; }
+
+        .explanation-box { display: none; margin-top: 16px; padding: 16px 18px; background: #f0f6ff; border-left: 6px solid var(--accent); border-radius: 10px; font-size: calc(1.05rem * var(--font-scale)); line-height: 1.6; }
+        .explanation-box .exp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+        .explanation-box strong { color: var(--accent-dark); }
+
+        .btn-next, .btn-check { width: 100%; border: none; padding: 18px 20px; border-radius: 12px; font-family: inherit; font-size: calc(1.15rem * var(--font-scale)); font-weight: 600; cursor: pointer; margin-top: 20px; min-height: 56px; }
+        .btn-check { background: var(--gold); color: #fff; }
+        .btn-check:active { background: #b7842093; }
+        .btn-next { background: var(--accent); color: #fff; display: none; }
+        .btn-next:active { background: var(--accent-dark); }
+
+        .score-header { text-align: center; font-size: calc(1.7rem * var(--font-scale)); margin-bottom: 14px; font-weight: 700; color: var(--accent-dark); }
+        .big-score { text-align: center; font-size: calc(1.3rem * var(--font-scale)); margin-bottom: 8px; }
+        #result-message { text-align: center; font-size: calc(1.2rem * var(--font-scale)); font-weight: 700; margin-bottom: 8px; }
+        #best-message { text-align: center; font-size: 0.95rem; color: #7a7264; margin-bottom: 6px; }
+        .section-heading { margin-top: 26px; margin-bottom: 4px; border-bottom: 2px solid var(--line); padding-bottom: 6px; font-size: calc(1.15rem * var(--font-scale)); color: var(--accent-dark); }
+        .review-item { padding: 14px 0; border-bottom: 1px solid var(--line); }
+        .review-item .shape-grid { margin-bottom: 10px; }
+        .review-line { font-size: calc(1rem * var(--font-scale)); margin: 4px 0; }
+        .review-correct { color: #2e7d4f; font-weight: 600; }
+        .review-chosen { color: #b84a40; }
+        .review-exp { color: #6b6459; margin-top: 6px; font-style: italic; }
+
+        /* modeled example */
+        .modeled-note { font-size: calc(1.02rem * var(--font-scale)); line-height: 1.6; margin: 6px 0 0; }
+        .modeled-answer { font-size: calc(1.15rem * var(--font-scale)); font-weight: 700; color: var(--accent-dark); margin-top: 12px; }
+
+        @media (hover: hover) and (pointer: fine) {
+            .btn-large:hover { background: var(--accent); color: #fff; }
+            .btn-check:hover { filter: brightness(0.95); }
+            .btn-next:hover { background: var(--accent-dark); }
+            .speak-btn:hover { background: var(--accent); color: #fff; }
+        }
+        @media (max-width: 640px) {
+            body { padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+            .quiz-container { padding: 20px 16px; border-radius: 14px; }
+            .answer-area { gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="quiz-container">
+    <h1>Scale Factor Practice</h1>
+    <p class="subtitle">ML 1.04 &middot; Connecting Scale Factors to Scaled Copies</p>
+
+    <div class="toolbar">
+        <span class="tool-label">Text size:</span>
+        <button class="size-btn size-a1" data-scale="1">A</button>
+        <button class="size-btn size-a2" data-scale="1.2">A</button>
+        <button class="size-btn size-a3" data-scale="1.45">A</button>
+        <button class="toggle-btn" id="autoread-btn">🔊 Auto-read: Off</button>
+    </div>
+
+    <!-- Splash -->
+    <div id="splash-screen">
+        <p class="splash-desc">Find the <b>scale factor</b> that turns the original shape into its scaled copy. Type your answer as a fraction (like 5/2) or a decimal (like 2.5).</p>
+        <button class="btn-large" onclick="showModeled()">See a Worked Example</button>
+        <button class="btn-large btn-highlight" onclick="startPractice()">Start Practice</button>
+        <div class="best-label" data-mode="Scale Factor Practice"></div>
+        <div style="margin-top:16px;"><button class="link-btn muted" id="reset-btn">Clear my saved score</button></div>
+    </div>
+
+    <!-- Modeled example -->
+    <div id="modeled-screen">
+        <span class="section-tag">Modeled Review</span>
+        <div class="prompt-row">
+            <div class="prompt">What scale factor takes the original rectangle to its scaled copy?</div>
+            <button class="speak-btn" id="modeled-speak">🔊</button>
+        </div>
+        <div class="shape-grid" id="modeled-shapes"></div>
+        <div class="explanation-box" style="display:block;">
+            <div class="modeled-note"><b>new length ÷ original length</b> = 5/2 or 10/4</div>
+            <div class="modeled-note">Both equal the same amount.</div>
+            <div class="modeled-answer">The scale factor is 5/2 (which is 2.5).</div>
+        </div>
+        <button class="btn-next" id="modeled-next" style="display:block;">Start Practice →</button>
+    </div>
+
+    <!-- Progress -->
+    <div id="progress-section">
+        <div class="progress-text" id="progress-text">Problem 1 of X</div>
+        <div class="progress-bar-container"><div class="progress-bar-fill" id="progress-fill"></div></div>
+    </div>
+
+    <!-- Problem -->
+    <div id="problem-screen">
+        <span class="section-tag" id="section-tag">Guided Practice</span>
+        <div class="prompt-row">
+            <div class="prompt">What scale factor takes the original to the scaled copy?</div>
+            <button class="speak-btn" id="prob-speak">🔊</button>
+        </div>
+        <div class="shape-grid" id="prob-shapes"></div>
+        <div class="formula-card">
+            <span><b>Scale factor</b> = new length ÷ original length</span>
+        </div>
+
+        <div class="answer-area">
+            <div class="ratio-field">
+                <div class="field-label">Ratio <span class="field-sub">(new ÷ original)</span></div>
+                <div class="fraction">
+                    <input class="num-input" id="ratio-new" inputmode="decimal" aria-label="new length" placeholder="new">
+                    <div class="frac-bar"></div>
+                    <input class="num-input" id="ratio-orig" inputmode="decimal" aria-label="original length" placeholder="orig">
+                </div>
+            </div>
+            <div>
+                <div class="field-label">Scale factor</div>
+                <input class="num-input" id="sf-input" inputmode="text" aria-label="scale factor" placeholder="?">
+            </div>
+        </div>
+
+        <div class="explanation-box" id="explanation-box"></div>
+        <button class="btn-check" id="check-btn">Check Answer</button>
+        <button class="btn-next" id="next-btn">Next →</button>
+    </div>
+
+    <!-- Results -->
+    <div id="score-board">
+        <div class="score-header">All Done!</div>
+        <div class="big-score">You got <span id="score">0</span> out of <span id="total">0</span> (<span id="score-percent">0</span>%)</div>
+        <div id="result-message"></div>
+        <div id="best-message"></div>
+        <div id="review-section">
+            <h3 class="section-heading">Let's Review These</h3>
+            <div id="review-container"></div>
+        </div>
+        <button class="btn-next" id="restart-btn" style="display:block; margin-top:28px;">Back to Menu</button>
+    </div>
+</div>
+
+<script src="scale-questions.js"></script>
+<script>
+    const PASS = 70;
+    const STORAGE_KEY = 'scalePracticeProgress';
+    function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch (e) { return {}; } }
+    function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); } catch (e) {} }
+    let progress = load();
+    progress.best = progress.best || {};
+    progress.settings = progress.settings || { scale: 1.2, autoread: false };
+
+    // ---------- Read-aloud ----------
+    const canSpeak = 'speechSynthesis' in window;
+    function speak(text, btn) {
+        if (!canSpeak) return;
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 0.9;
+        if (btn) { btn.classList.add('speaking'); u.onend = u.onerror = () => btn.classList.remove('speaking'); }
+        window.speechSynthesis.speak(u);
+    }
+    function stopSpeaking() { if (canSpeak) window.speechSynthesis.cancel(); }
+
+    // ---------- DOM ----------
+    const splash = document.getElementById('splash-screen');
+    const modeledScreen = document.getElementById('modeled-screen');
+    const problemScreen = document.getElementById('problem-screen');
+    const progressSection = document.getElementById('progress-section');
+    const scoreBoard = document.getElementById('score-board');
+    const sectionTag = document.getElementById('section-tag');
+    const probShapes = document.getElementById('prob-shapes');
+    const ratioNew = document.getElementById('ratio-new');
+    const ratioOrig = document.getElementById('ratio-orig');
+    const sfInput = document.getElementById('sf-input');
+    const explanationBox = document.getElementById('explanation-box');
+    const checkBtn = document.getElementById('check-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const progressText = document.getElementById('progress-text');
+    const progressFill = document.getElementById('progress-fill');
+    const probSpeak = document.getElementById('prob-speak');
+
+    // ---------- State ----------
+    let idx = 0, results = [], answeredNow = false;
+
+    function showOnly(el) {
+        [splash, modeledScreen, problemScreen, progressSection, scoreBoard].forEach(x => x.style.display = 'none');
+        (Array.isArray(el) ? el : [el]).forEach(x => x.style.display = 'block');
+        window.scrollTo(0, 0);
+    }
+
+    // ---------- Settings ----------
+    function applyScale(s) {
+        document.documentElement.style.setProperty('--font-scale', s);
+        document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', parseFloat(b.dataset.scale) === s));
+        progress.settings.scale = s; save();
+    }
+    document.querySelectorAll('.size-btn').forEach(b => b.onclick = () => applyScale(parseFloat(b.dataset.scale)));
+    const autoreadBtn = document.getElementById('autoread-btn');
+    function applyAutoread() { const on = progress.settings.autoread; autoreadBtn.classList.toggle('on', on); autoreadBtn.textContent = on ? '🔊 Auto-read: On' : '🔊 Auto-read: Off'; }
+    autoreadBtn.onclick = () => { progress.settings.autoread = !progress.settings.autoread; save(); applyAutoread(); if (!progress.settings.autoread) stopSpeaking(); };
+    if (!canSpeak) autoreadBtn.style.display = 'none';
+
+    // ---------- Number parsing / checking ----------
+    function parseNum(s) {
+        s = String(s).trim();
+        if (!s) return NaN;
+        if (s.includes('/')) { const p = s.split('/'); return parseFloat(p[0]) / parseFloat(p[1]); }
+        return parseFloat(s);
+    }
+    const near = (a, b) => Math.abs(a - b) < 1e-6;
+
+    // ---------- Shape drawing (inline SVG) ----------
+    const S = { ink: '#33312e', teal: '#8fb7c2', tealDk: '#21545f', gray: '#9aa3a8', grayDk: '#5f676c', sand: '#cda86a', line: '#c9bfa6' };
+
+    function widthBracket(x0, y, pw, val) {
+        return `<g stroke="${S.ink}" stroke-width="1.6">
+            <line x1="${x0}" y1="${y}" x2="${x0 + pw}" y2="${y}"/>
+            <line x1="${x0}" y1="${y - 5}" x2="${x0}" y2="${y + 5}"/>
+            <line x1="${x0 + pw}" y1="${y - 5}" x2="${x0 + pw}" y2="${y + 5}"/>
+        </g><text x="${x0 + pw / 2}" y="${y - 8}" text-anchor="middle" font-size="16" font-weight="700" fill="${S.ink}">${val}</text>`;
+    }
+    function heightBracket(x, y0, ph, val) {
+        return `<g stroke="${S.ink}" stroke-width="1.6">
+            <line x1="${x}" y1="${y0}" x2="${x}" y2="${y0 + ph}"/>
+            <line x1="${x - 5}" y1="${y0}" x2="${x + 5}" y2="${y0}"/>
+            <line x1="${x - 5}" y1="${y0 + ph}" x2="${x + 5}" y2="${y0 + ph}"/>
+        </g><text x="${x - 8}" y="${y0 + ph / 2 + 5}" text-anchor="end" font-size="16" font-weight="700" fill="${S.ink}">${val}</text>`;
+    }
+
+    function shapeBody(kind, x, y, pw, ph) {
+        if (kind === 'rect')
+            return `<rect x="${x}" y="${y}" width="${pw}" height="${ph}" rx="3" fill="${S.teal}" stroke="${S.tealDk}" stroke-width="2"/>`;
+        if (kind === 'triangle')
+            return `<polygon points="${x},${y} ${x},${y + ph} ${x + pw},${y + ph}" fill="${S.teal}" stroke="${S.tealDk}" stroke-width="2"/>` +
+                   `<rect x="${x}" y="${y + ph - 10}" width="10" height="10" fill="none" stroke="${S.tealDk}" stroke-width="1.4"/>`;
+        if (kind === 'robot') {
+            const cx = x + pw / 2;
+            const headW = pw * 0.5, headH = ph * 0.2, headX = cx - headW / 2, headY = y + ph * 0.06;
+            const bodyW = pw * 0.68, bodyH = ph * 0.42, bodyX = cx - bodyW / 2, bodyY = headY + headH + ph * 0.03;
+            const legH = ph * 0.2, legW = pw * 0.16;
+            return `
+                <line x1="${cx}" y1="${headY}" x2="${cx}" y2="${y}" stroke="${S.grayDk}" stroke-width="2"/><circle cx="${cx}" cy="${y}" r="3" fill="${S.grayDk}"/>
+                <rect x="${headX}" y="${headY}" width="${headW}" height="${headH}" rx="4" fill="${S.gray}" stroke="${S.grayDk}" stroke-width="2"/>
+                <circle cx="${cx - headW * 0.18}" cy="${headY + headH / 2}" r="${Math.max(2, headH * 0.16)}" fill="${S.grayDk}"/>
+                <circle cx="${cx + headW * 0.18}" cy="${headY + headH / 2}" r="${Math.max(2, headH * 0.16)}" fill="${S.grayDk}"/>
+                <rect x="${bodyX}" y="${bodyY}" width="${bodyW}" height="${bodyH}" rx="4" fill="${S.gray}" stroke="${S.grayDk}" stroke-width="2"/>
+                <rect x="${bodyX - pw * 0.12}" y="${bodyY + bodyH * 0.1}" width="${pw * 0.12}" height="${bodyH * 0.6}" rx="3" fill="${S.gray}" stroke="${S.grayDk}" stroke-width="1.6"/>
+                <rect x="${bodyX + bodyW}" y="${bodyY + bodyH * 0.1}" width="${pw * 0.12}" height="${bodyH * 0.6}" rx="3" fill="${S.gray}" stroke="${S.grayDk}" stroke-width="1.6"/>
+                <rect x="${cx - bodyW * 0.32}" y="${bodyY + bodyH}" width="${legW}" height="${legH}" fill="${S.gray}" stroke="${S.grayDk}" stroke-width="1.6"/>
+                <rect x="${cx + bodyW * 0.32 - legW}" y="${bodyY + bodyH}" width="${legW}" height="${legH}" fill="${S.gray}" stroke="${S.grayDk}" stroke-width="1.6"/>`;
+        }
+        if (kind === 'balloon') {
+            const cx = x + pw / 2, rx = pw * 0.48, ry = ph * 0.38, ecy = y + ry + ph * 0.02;
+            const bW = pw * 0.16, bH = ph * 0.1, bX = cx - bW / 2, bY = y + ph * 0.86;
+            return `
+                <ellipse cx="${cx}" cy="${ecy}" rx="${rx}" ry="${ry}" fill="${S.teal}" stroke="${S.tealDk}" stroke-width="2"/>
+                <path d="M ${cx} ${ecy - ry} Q ${cx - rx} ${ecy}, ${cx} ${ecy + ry}" fill="none" stroke="${S.tealDk}" stroke-width="1.2" opacity="0.6"/>
+                <path d="M ${cx} ${ecy - ry} Q ${cx + rx} ${ecy}, ${cx} ${ecy + ry}" fill="none" stroke="${S.tealDk}" stroke-width="1.2" opacity="0.6"/>
+                <line x1="${cx - rx * 0.55}" y1="${ecy + ry * 0.75}" x2="${bX}" y2="${bY}" stroke="${S.grayDk}" stroke-width="1.4"/>
+                <line x1="${cx + rx * 0.55}" y1="${ecy + ry * 0.75}" x2="${bX + bW}" y2="${bY}" stroke="${S.grayDk}" stroke-width="1.4"/>
+                <rect x="${bX}" y="${bY}" width="${bW}" height="${bH}" rx="2" fill="${S.sand}" stroke="${S.grayDk}" stroke-width="1.4"/>`;
+        }
+        if (kind === 'truck') {
+            const boxW = pw * 0.6, boxH = ph * 0.72, boxX = x, boxY = y;
+            const cabX = x + boxW, cabW = pw * 0.4, cabH = ph * 0.5, cabY = y + boxH - cabH;
+            const wheelR = Math.max(5, ph * 0.14), wy = y + ph - wheelR;
+            return `
+                <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" rx="2" fill="${S.gray}" stroke="${S.grayDk}" stroke-width="2"/>
+                <line x1="${boxX + boxW * 0.5}" y1="${boxY}" x2="${boxX + boxW * 0.5}" y2="${boxY + boxH}" stroke="${S.grayDk}" stroke-width="1"/>
+                <path d="M ${cabX} ${cabY} L ${cabX + cabW} ${cabY} L ${cabX + cabW} ${y + boxH} L ${cabX} ${y + boxH} Z" fill="${S.gray}" stroke="${S.grayDk}" stroke-width="2"/>
+                <rect x="${cabX + cabW * 0.5}" y="${cabY + cabH * 0.15}" width="${cabW * 0.42}" height="${cabH * 0.4}" fill="#dfe6e9" stroke="${S.grayDk}" stroke-width="1.2"/>
+                <circle cx="${boxX + boxW * 0.4}" cy="${wy}" r="${wheelR}" fill="#40474b" stroke="${S.ink}" stroke-width="1.5"/>
+                <circle cx="${cabX + cabW * 0.55}" cy="${wy}" r="${wheelR}" fill="#40474b" stroke="${S.ink}" stroke-width="1.5"/>`;
+        }
+        return '';
+    }
+
+    // Draw one shape with dimension labels. ppu = pixels per unit (shared across a pair).
+    function shapeSVG(kind, w, h, ppu) {
+        const pw = w * ppu, ph = h * ppu;
+        const padL = 48, padT = 34, padR = 18, padB = 22;
+        const W = pw + padL + padR, H = ph + padT + padB;
+        const x0 = padL, y0 = padT;
+        return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">
+            ${shapeBody(kind, x0, y0, pw, ph)}
+            ${widthBracket(x0, y0 - 14, pw, w)}
+            ${heightBracket(x0 - 16, y0, ph, h)}
+        </svg>`;
+    }
+
+    // Build the Original | Scaled-copy grid for a problem (shared pixel scale).
+    function renderShapes(container, orig, scaled) {
+        const maxDim = Math.max(orig.w, orig.h, scaled.w, scaled.h);
+        const ppu = 108 / maxDim;
+        container.innerHTML =
+            `<div class="shape-cell orig"><div class="shape-head">Original</div>${shapeSVG(orig.kind, orig.w, orig.h, ppu)}</div>` +
+            `<div class="shape-cell copy"><div class="shape-head">Scaled copy</div>${shapeSVG(scaled.kind, scaled.w, scaled.h, ppu)}</div>`;
+    }
+
+    // ---------- Flow ----------
+    function showModeled() {
+        renderShapes(document.getElementById('modeled-shapes'), modeledExample.original, modeledExample.scaled);
+        showOnly(modeledScreen);
+    }
+    document.getElementById('modeled-next').onclick = () => startPractice();
+    document.getElementById('modeled-speak').onclick = function () {
+        speak('What scale factor takes the original rectangle to its scaled copy? Original width 2, height 4. Scaled copy width 5, height 10. New over original is 5 halves, or 10 fourths. The scale factor is 5 halves, which is 2.5.', this);
+    };
+
+    function startPractice() { idx = 0; results = []; loadProblem(); }
+
+    function speakText(p) {
+        return `${p.section === 'Check' ? 'Check. ' : ''}What scale factor takes the original to the scaled copy? ` +
+               `Original: width ${p.original.w}, height ${p.original.h}. Scaled copy: width ${p.scaled.w}, height ${p.scaled.h}. ` +
+               `Scale factor equals new length divided by original length.`;
+    }
+
+    function loadProblem() {
+        answeredNow = false;
+        const p = scaleProblems[idx];
+        showOnly([problemScreen, progressSection]);
+        sectionTag.textContent = p.section;
+        progressText.textContent = `Problem ${idx + 1} of ${scaleProblems.length}`;
+        progressFill.style.width = `${(idx / scaleProblems.length) * 100}%`;
+
+        renderShapes(probShapes, p.original, p.scaled);
+
+        [ratioNew, ratioOrig, sfInput].forEach(el => { el.value = ''; el.disabled = false; el.classList.remove('correct', 'wrong'); });
+        explanationBox.style.display = 'none'; explanationBox.innerHTML = '';
+        checkBtn.style.display = 'block'; nextBtn.style.display = 'none';
+        nextBtn.textContent = (idx + 1 < scaleProblems.length) ? 'Next →' : 'See My Score →';
+
+        probSpeak.onclick = function () { speak(speakText(p), this); };
+        if (progress.settings.autoread) setTimeout(() => probSpeak.onclick(), 300);
+    }
+
+    checkBtn.onclick = () => {
+        if (answeredNow) return;
+        const p = scaleProblems[idx];
+
+        // scale factor (graded)
+        const sfVal = parseNum(sfInput.value);
+        const sfOK = !isNaN(sfVal) && near(sfVal, p.sf);
+        sfInput.classList.add(sfOK ? 'correct' : 'wrong');
+
+        // ratio boxes (helper — only judged if both filled)
+        const rn = ratioNew.value.trim(), ro = ratioOrig.value.trim();
+        if (rn && ro) {
+            const ok = p.ratioPairs.some(pair => near(parseFloat(rn), pair[0]) && near(parseFloat(ro), pair[1]));
+            ratioNew.classList.add(ok ? 'correct' : 'wrong');
+            ratioOrig.classList.add(ok ? 'correct' : 'wrong');
+        }
+
+        [ratioNew, ratioOrig, sfInput].forEach(el => el.disabled = true);
+        answeredNow = true;
+        results.push({ p, chosen: sfInput.value.trim() || '(blank)', correct: sfOK });
+
+        const head = sfOK ? '✅ Correct!' : '💡 The scale factor is: ' + p.sfText;
+        explanationBox.innerHTML =
+            `<div class="exp-head"><strong>${head}</strong><button class="speak-btn" style="width:44px;height:44px;font-size:1.2rem;">🔊</button></div><div class="exp-body"></div>`;
+        explanationBox.querySelector('.exp-body').textContent = p.explanation;
+        const expText = (sfOK ? 'Correct. ' : 'The scale factor is ' + p.sfText + '. ') + p.explanation;
+        const eb = explanationBox.querySelector('.speak-btn');
+        eb.onclick = function () { speak(expText, this); };
+        explanationBox.style.display = 'block';
+        if (progress.settings.autoread) setTimeout(() => eb.onclick(), 200);
+
+        checkBtn.style.display = 'none';
+        nextBtn.style.display = 'block';
+    };
+
+    nextBtn.onclick = () => {
+        stopSpeaking();
+        idx++;
+        if (idx < scaleProblems.length) loadProblem();
+        else showScore();
+    };
+
+    // ---------- Confetti ----------
+    function launchConfetti() {
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;';
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext('2d'); if (!ctx) { canvas.remove(); return; }
+        let W, H; const dpr = window.devicePixelRatio || 1;
+        const resize = () => { W = innerWidth; H = innerHeight; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+        resize(); addEventListener('resize', resize);
+        const colors = ['#3a915f', '#2c6e7f', '#d29a2b', '#d1655a', '#7b5ea7'];
+        const pieces = Array.from({ length: 200 }, () => ({ x: Math.random() * W, y: Math.random() * H, w: 8 + Math.random() * 6, h: 10 + Math.random() * 8, c: colors[Math.floor(Math.random() * colors.length)], r: Math.random() * 6.28, vr: (Math.random() - .5) * .3, vy: 2.5 + Math.random() * 3, vx: (Math.random() - .5) * 2, s: Math.random() * 6.28 }));
+        const start = performance.now(), dur = 4500;
+        (function frame(now) {
+            const e = now - start; ctx.clearRect(0, 0, W, H);
+            const fade = e > dur - 900 ? Math.max(0, (dur - e) / 900) : 1;
+            for (const pc of pieces) { pc.y += pc.vy; pc.s += .05; pc.x += pc.vx + Math.sin(pc.s) * 1.2; pc.r += pc.vr; if (pc.y > H + 20 && e < dur - 1200) { pc.y = -20; pc.x = Math.random() * W; } ctx.save(); ctx.translate(pc.x, pc.y); ctx.rotate(pc.r); ctx.globalAlpha = fade; ctx.fillStyle = pc.c; ctx.fillRect(-pc.w / 2, -pc.h / 2, pc.w, pc.h); ctx.restore(); }
+            if (e < dur) requestAnimationFrame(frame); else { removeEventListener('resize', resize); canvas.remove(); }
+        })(start);
+    }
+
+    // ---------- Score ----------
+    function showScore() {
+        showOnly(scoreBoard);
+        const total = results.length;
+        const score = results.filter(r => r.correct).length;
+        const pct = total ? Math.round(score / total * 100) : 0;
+        document.getElementById('score').textContent = score;
+        document.getElementById('total').textContent = total;
+        document.getElementById('score-percent').textContent = pct;
+
+        const msg = document.getElementById('result-message');
+        if (pct >= PASS) { msg.textContent = '🎉 Great job — you passed!'; msg.style.color = 'var(--good)'; launchConfetti(); }
+        else { msg.textContent = 'Nice try! Review below and go again. 💪'; msg.style.color = 'var(--bad)'; }
+
+        const bestMsg = document.getElementById('best-message');
+        const prev = progress.best['Scale Factor Practice'];
+        if (prev == null || pct > prev) { progress.best['Scale Factor Practice'] = pct; save(); bestMsg.textContent = (prev == null) ? `Best: ${pct}%` : `⭐ New best! (was ${prev}%)`; }
+        else { bestMsg.textContent = `Best: ${prev}%`; }
+
+        const missed = results.filter(r => !r.correct);
+        const rSec = document.getElementById('review-section'), rc = document.getElementById('review-container'); rc.innerHTML = '';
+        if (!missed.length) { rSec.style.display = 'none'; }
+        else {
+            rSec.style.display = 'block';
+            missed.forEach(({ p, chosen }) => {
+                const item = document.createElement('div'); item.className = 'review-item';
+                const grid = document.createElement('div'); grid.className = 'shape-grid';
+                renderShapes(grid, p.original, p.scaled);
+                item.appendChild(grid);
+                const lines = document.createElement('div');
+                lines.innerHTML = `<div class="review-line review-chosen">You typed: <b></b></div><div class="review-line review-correct">Scale factor: <b></b></div><div class="review-exp"></div>`;
+                lines.querySelector('.review-chosen b').textContent = chosen;
+                lines.querySelector('.review-correct b').textContent = p.sfText;
+                lines.querySelector('.review-exp').textContent = p.explanation;
+                item.appendChild(lines);
+                rc.appendChild(item);
+            });
+        }
+    }
+
+    document.getElementById('restart-btn').onclick = () => { stopSpeaking(); showOnly(splash); renderBest(); };
+    function renderBest() { document.querySelectorAll('.best-label[data-mode]').forEach(el => { const b = progress.best[el.dataset.mode]; el.textContent = (b != null) ? `Best: ${b}%` : ''; }); }
+    document.getElementById('reset-btn').onclick = () => { if (confirm('Clear your saved best score on this device?')) { progress.best = {}; save(); renderBest(); } };
+
+    // Enter key on the scale-factor box checks the answer
+    sfInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !answeredNow) checkBtn.click(); });
+
+    // ---------- Init ----------
+    applyScale(progress.settings.scale || 1.2);
+    applyAutoread();
+    renderBest();
+</script>
+</body>
+</html>
