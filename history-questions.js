@@ -59,10 +59,17 @@ const historyQuizData = [
   },
   {
     "id": "h07", "topic": "Timeline & Dates",
-    "question": "What number is at the center of the timeline, where BCE meets CE?",
-    "answer": "Zero",
-    "distractors": ["One hundred", "One thousand", "There is no center"],
-    "explanation": "The center of the timeline is labeled zero. BCE is on the left, CE is on the right."
+    "question": "Is there a year called 'zero' on the BCE/CE timeline?",
+    "answer": "No — it goes from 1 BCE straight to 1 CE",
+    "distractors": ["Yes, zero is in the middle", "Yes, but only on the CE side"],
+    "explanation": "There is no year zero. The timeline jumps from 1 BCE straight to 1 CE."
+  },
+  {
+    "id": "h07b", "topic": "Timeline & Dates",
+    "question": "On the timeline, what year comes right after 1 BCE?",
+    "answer": "1 CE",
+    "distractors": ["Year 0", "2 BCE"],
+    "explanation": "There is no year zero, so 1 BCE is followed right away by 1 CE."
   },
 
   // ================= Primary & Secondary Sources =================
@@ -334,6 +341,69 @@ const historyQuizData = [
     "answer": "evidence",
     "distractors": ["perspective", "opinions"],
     "explanation": "Evidence is the facts and details you use to support and prove an idea."
+  },
+
+  // ================= Graphic / diagram questions =================
+  // type: "graphic" shows a labeled diagram with ONE part highlighted (the pulsing ? ring),
+  // then A/B/C/D choices. graphic.kind is "timeline" or "map"; graphic.highlight is the part.
+  //   timeline highlights: "left" | "center" | "right"
+  //   map highlights:      "title" | "legend" | "compass" | "symbol"
+  // The question text also describes what is highlighted, so it works even without seeing the picture.
+  {
+    "id": "g01", "topic": "Maps", "type": "graphic",
+    "graphic": { "kind": "map", "highlight": "legend" },
+    "question": "Look at the highlighted box on this map. What is this part called?",
+    "answer": "The legend (key)",
+    "distractors": ["The title", "The compass"],
+    "explanation": "The highlighted box is the legend, or key. It explains what the map's symbols mean."
+  },
+  {
+    "id": "g02", "topic": "Maps", "type": "graphic",
+    "graphic": { "kind": "map", "highlight": "title" },
+    "question": "The highlighted part at the top of the map is highlighted. What is it?",
+    "answer": "The title",
+    "distractors": ["The legend (key)", "A symbol"],
+    "explanation": "The highlighted part at the top is the title. It tells you what the map is about."
+  },
+  {
+    "id": "g03", "topic": "Maps", "type": "graphic",
+    "graphic": { "kind": "map", "highlight": "legend" },
+    "question": "The highlighted part explains what the star and triangle mean. What is it called?",
+    "answer": "The legend (key)",
+    "distractors": ["The title", "The scale"],
+    "explanation": "A legend (key) explains what each symbol and color on the map stands for."
+  },
+  {
+    "id": "g04", "topic": "Maps", "type": "graphic",
+    "graphic": { "kind": "map", "highlight": "title" },
+    "question": "Which map part is highlighted, the one that names what the whole map shows?",
+    "answer": "The title",
+    "distractors": ["The legend (key)", "The compass"],
+    "explanation": "The title names what the map shows. Here it says 'Ancient Egypt'."
+  },
+  {
+    "id": "g05", "topic": "Timeline & Dates", "type": "graphic",
+    "graphic": { "kind": "timeline", "highlight": "right" },
+    "question": "What do we call the highlighted (right) side of this timeline?",
+    "answer": "CE (Common Era)",
+    "distractors": ["BCE (Before Common Era)", "Year zero"],
+    "explanation": "The right side of the timeline is CE, the Common Era. It comes after 1 CE."
+  },
+  {
+    "id": "g06", "topic": "Timeline & Dates", "type": "graphic",
+    "graphic": { "kind": "timeline", "highlight": "left" },
+    "question": "What do we call the highlighted (left) side of this timeline?",
+    "answer": "BCE (Before Common Era)",
+    "distractors": ["CE (Common Era)", "The legend"],
+    "explanation": "The left side of the timeline is BCE, Before Common Era. Bigger numbers there are longer ago."
+  },
+  {
+    "id": "g07", "topic": "Timeline & Dates", "type": "graphic",
+    "graphic": { "kind": "timeline", "highlight": "center" },
+    "question": "The highlighted center is where the two eras meet. What years are there?",
+    "answer": "1 BCE and 1 CE",
+    "distractors": ["Year zero", "100 BCE and 100 CE"],
+    "explanation": "The eras meet at 1 BCE and 1 CE. There is no year zero in between."
   }
 
 ];
