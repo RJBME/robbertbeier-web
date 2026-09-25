@@ -129,9 +129,10 @@
             <input type="date" id="date" required>
 
             <div class="row">
-                <div><label>Start time</label><input type="time" id="start"></div>
-                <div><label>End time</label><input type="time" id="end"></div>
+                <div><label>Start time</label><input type="text" id="start" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off"></div>
+                <div><label>End time</label><input type="text" id="end" inputmode="numeric" maxlength="5" placeholder="HH:MM" autocomplete="off"></div>
             </div>
+            <div class="hint">24-hour time, e.g. 20:10 for 8:10 PM.</div>
 
             <label>Minutes driven <span class="req">*</span> <span class="dur" id="dur"></span></label>
             <input type="number" id="minutes" min="1" max="1440" inputmode="numeric" placeholder="e.g. 45" required>
@@ -195,8 +196,14 @@
     const $ = id => document.getElementById(id);
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+    // Local (not UTC) YYYY-MM-DD — so an evening drive doesn't default to tomorrow
+    function todayLocal(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+    // 24-hour time helpers
+    function normTime(v){ const m=/^(\d{1,2}):?(\d{2})$/.exec(String(v||'').trim()); if(!m) return ''; const h=+m[1], mi=+m[2]; if(h>23||mi>59) return ''; return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0'); }
+    function autoTime(el){ let v=el.value.replace(/[^\d]/g,'').slice(0,4); if(v.length===4) v=v.slice(0,2)+':'+v.slice(2); el.value=v; }
+
     // Populate option controls
-    $('date').value = new Date().toISOString().slice(0,10);
+    $('date').value = todayLocal();
     $('vehicle').innerHTML = VEHICLES.map(v=>`<option>${esc(v)}</option>`).join('') + '<option>Other</option>';
     $('supervisor').innerHTML = '<option value="">—</option>' + SUPERVISORS.map(v=>`<option>${esc(v)}</option>`).join('') + '<option>Other</option>';
     $('trafficseg').innerHTML = TRAFFIC_OPTS.map((t,i)=>`<button type="button" data-traffic="${esc(t)}"${i===0?' class="on"':''}>${esc(t)}</button>`).join('');
@@ -207,7 +214,7 @@
 
     // Duration auto-calc from start/end
     function calcDuration() {
-        const s = $('start').value, e = $('end').value;
+        const s = normTime($('start').value), e = normTime($('end').value);
         if (s && e) {
             const [sh,sm]=s.split(':').map(Number), [eh,em]=e.split(':').map(Number);
             let mins = (eh*60+em) - (sh*60+sm);
@@ -217,7 +224,13 @@
         updateDur();
     }
     function updateDur(){ const m=+$('minutes').value||0; $('dur').textContent = m ? '('+fmtHM(m)+')' : ''; if(nightMode==='all') $('nightmin').value = m; }
-    $('start').onchange = calcDuration; $('end').onchange = calcDuration; $('minutes').oninput = updateDur;
+    // auto-insert the colon as they type; normalize + recompute on blur
+    $('start').oninput = () => autoTime($('start'));
+    $('end').oninput = () => autoTime($('end'));
+    function finishTime(el){ const n=normTime(el.value); if(n) el.value=n; calcDuration(); }
+    $('start').onchange = () => finishTime($('start'));
+    $('end').onchange = () => finishTime($('end'));
+    $('minutes').oninput = updateDur;
 
     // Night segmented — set programmatically or from a click
     function setNightMode(mode, mins){
@@ -284,7 +297,7 @@
         $('notes').value = e.notes || '';
     }
     function resetForm(keepContext){
-        if (!keepContext){ $('date').value = new Date().toISOString().slice(0,10); $('vehicle').value = VEHICLES[0]; $('supervisor').value = ''; }
+        if (!keepContext){ $('date').value = todayLocal(); $('vehicle').value = VEHICLES[0]; $('supervisor').value = ''; }
         $('start').value=''; $('end').value=''; $('minutes').value=''; $('dur').textContent='';
         $('miles').value=''; $('notes').value='';
         setNightMode('none');
@@ -389,7 +402,7 @@
         if (minutes <= 0){ toast('Enter minutes driven'); return; }
         const entry = {
             date: $('date').value,
-            start: $('start').value || '', end: $('end').value || '',
+            start: normTime($('start').value), end: normTime($('end').value),
             minutes,
             nightMinutes: nightMinutesValue(minutes),
             miles: $('miles').value ? +$('miles').value : null,
