@@ -224,9 +224,10 @@
         updateDur();
     }
     function updateDur(){ const m=+$('minutes').value||0; $('dur').textContent = m ? '('+fmtHM(m)+')' : ''; if(nightMode==='all') $('nightmin').value = m; }
-    // auto-insert the colon as they type; normalize + recompute on blur
-    $('start').oninput = () => autoTime($('start'));
-    $('end').oninput = () => autoTime($('end'));
+    // auto-insert the colon as they type and recompute duration live (normTime
+    // handles partial forms like 810 -> 08:10, so no blur is needed)
+    $('start').oninput = () => { autoTime($('start')); calcDuration(); };
+    $('end').oninput = () => { autoTime($('end')); calcDuration(); };
     function finishTime(el){ const n=normTime(el.value); if(n) el.value=n; calcDuration(); }
     $('start').onchange = () => finishTime($('start'));
     $('end').onchange = () => finishTime($('end'));
