@@ -1,0 +1,231 @@
+{% comment %}
+  fuel-common.html — shared styles + data + MPG engine for the Fuel (gas) pages.
+  Included by fuel.md (dashboard), fuel-history.md, fuel-analytics.md.
+  Mirrors the EV charging stack but for gasoline vehicles. Data source:
+  site.fuelups (one markdown file per fill-up). Branding: Ford Blue.
+{% endcomment %}
+
+<!-- Chart.js + datalabels (same pinned versions / SRI as the EV analytics page) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" integrity="sha384-JUh163oCRItcbPme8pYnROHQMC6fNKTBWtRG3I3I0erJkzNgL7uxKlNwcrcFKeqF" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" integrity="sha384-y49Zu59jZHJL/PLKgZPv3k2WI9c0Yp3pWB76V8OBVCb0QBKS8l4Ff3YslzHVX76Y" crossorigin="anonymous"></script>
+
+<style>
+  /* ── Fuel pages — Ford Blue accent over the site's shared theme vars ── */
+  .fuel-wrap {
+    --ford: #066FEF;          /* Ford brand blue */
+    --ford-dark: #0a3d7a;
+    --ford-soft: rgba(6,111,239,0.12);
+    --good: #2ecc71; --warn: #f39c12; --bad: #e74c3c;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    max-width: 1060px; width: 100%; margin: 0 auto; color: var(--text);
+    box-sizing: border-box;
+  }
+  :root[data-theme="dark"] .fuel-wrap { --ford: #4f9dff; --ford-soft: rgba(79,157,255,0.15); }
+
+  .fuel-header h1 { font-size: 1.7rem; margin: 0 0 4px; display:flex; align-items:center; gap:10px; }
+  .fuel-header .sub { color: #888; font-size: 0.95rem; margin: 0 0 18px; }
+  .fuel-header .gas-badge {
+    display:inline-block; font-size:0.6rem; font-weight:800; letter-spacing:0.08em;
+    text-transform:uppercase; color:#fff; background:var(--ford); padding:3px 8px;
+    border-radius:20px; vertical-align:middle;
+  }
+
+  /* KPI tiles */
+  .fuel-kpis { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; margin:0 0 22px; }
+  .fuel-kpi {
+    background: var(--dash-card); border:1px solid var(--dash-border); border-radius:14px;
+    padding:14px 16px; min-width:0;
+  }
+  .fuel-kpi .v { font-size:1.5rem; font-weight:800; color:var(--ford); line-height:1.1; }
+  .fuel-kpi .l { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.08em; color:#888; margin-top:4px; font-weight:700; }
+  .fuel-kpi .d { font-size:0.68rem; color:#999; margin-top:3px; }
+
+  .fuel-card {
+    background: var(--dash-card); border:1px solid var(--dash-border); border-radius:16px;
+    padding:18px 20px; margin:0 0 20px;
+  }
+  .fuel-card .chart-title { font-weight:700; font-size:1rem; margin:0 0 2px; color:var(--text); }
+  .fuel-card .chart-sub { font-size:0.78rem; color:#888; margin:0 0 12px; }
+  .chart-box { position:relative; height:300px; }
+  .chart-box.short { height:240px; }
+
+  .fuel-sec-head {
+    display:flex; align-items:center; gap:10px; margin:30px 0 14px;
+    border-left:5px solid var(--ford); padding-left:12px;
+  }
+  .fuel-sec-head h2 { font-size:1.15rem; margin:0; }
+  .fuel-sec-head .hint { font-size:0.78rem; color:#888; }
+
+  /* Vehicle filter pills */
+  .fuel-vfilter { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:0 0 18px; }
+  .fuel-vfilter .lbl { font-size:0.6rem; text-transform:uppercase; letter-spacing:0.1em; color:#888; font-weight:700; margin-right:2px; }
+  .vf-pill {
+    font-size:0.8rem; font-weight:600; padding:6px 14px; border-radius:20px;
+    border:1px solid var(--dash-border); background:var(--dash-card); color:var(--text);
+    cursor:pointer; font-family:inherit; transition:all .12s; white-space:nowrap;
+  }
+  .vf-pill:hover { border-color:var(--ford); color:var(--ford); }
+  .vf-pill.active { background:var(--ford); border-color:var(--ford); color:#fff; }
+
+  /* Fill-up table */
+  .fuel-table-wrap { overflow-x:auto; border:1px solid var(--dash-border); border-radius:14px; }
+  table.fuel-table { border-collapse:collapse; width:100%; font-size:0.84rem; }
+  table.fuel-table th, table.fuel-table td { padding:9px 12px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--dash-border); }
+  table.fuel-table th { background:var(--table-head); color:#888; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.06em; position:sticky; top:0; }
+  table.fuel-table td:first-child, table.fuel-table th:first-child { text-align:left; }
+  table.fuel-table tr:last-child td { border-bottom:none; }
+  table.fuel-table .mpg-cell { font-weight:800; color:var(--ford); }
+  table.fuel-table .tag { font-size:0.62rem; padding:1px 7px; border-radius:10px; background:var(--ford-soft); color:var(--ford); font-weight:700; }
+  table.fuel-table .tag.part { background:rgba(243,156,18,0.15); color:#d9850c; }
+
+  .fuel-pagenav { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 20px; }
+  .fuel-pagenav a {
+    font-size:0.78rem; font-weight:700; text-decoration:none; padding:6px 14px; border-radius:20px;
+    border:1px solid var(--dash-border); color:var(--text); background:var(--dash-card);
+  }
+  .fuel-pagenav a:hover { border-color:var(--ford); color:var(--ford); }
+  .fuel-pagenav a.here { background:var(--ford); border-color:var(--ford); color:#fff; }
+
+  .fuel-note { font-size:0.72rem; color:#999; margin:6px 0 0; }
+  .ev-guilt { border:1px dashed var(--ford); background:var(--ford-soft); border-radius:14px; padding:16px 18px; margin:0 0 20px; }
+  .ev-guilt .big { font-size:1.3rem; font-weight:800; color:var(--ford); }
+
+  .fuel-empty { text-align:center; color:#888; padding:40px 20px; border:1px dashed var(--dash-border); border-radius:14px; }
+
+  @media (max-width:767px) {
+    .fuel-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .chart-box { height:260px; }
+    .fuel-header h1 { font-size:1.4rem; }
+  }
+</style>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   FUEL ENGINE — shared across the three fuel pages.
+   Builds window.FUEL = { all, vehicles, aggregate(), evRatePerMile(), marketGas(), fmt… }
+   ════════════════════════════════════════════════════════════════════════ */
+(function () {
+  const CO2_KG_PER_GAL = 8.887;   // EPA: kg CO2 per gallon of gasoline burned
+
+  // ── Raw fill-ups from the collection (ascending by date) ──
+  const RAW = [
+  {% assign fs = site.fuelups | sort: "date" %}
+  {% for f in fs %}
+    { date: {{ f.date | date: "%Y-%m-%d" | jsonify }},
+      vehicle: {{ f.vehicle | default: "Unknown" | jsonify }},
+      odometer: {{ f.odometer | default: 0 }},
+      gallons: {{ f.gallons | default: 0 }},
+      totalCost: {{ f.total_cost | default: 0 }},
+      ppg: {{ f.price_per_gallon | default: 0 }},
+      partial: {{ f.partial | default: false }},
+      missed: {{ f.missed_fillup | default: false }},
+      fuelType: {{ f.fuel_type | default: "" | jsonify }},
+      octane: {{ f.octane | default: "" | jsonify }},
+      cityPct: {{ f.city_pct | default: -1 }},
+      station: {{ f.station | default: "" | jsonify }},
+      brand: {{ f.brand | default: "" | jsonify }},
+      payment: {{ f.payment | default: "" | jsonify }},
+      notes: {{ f.notes | default: "" | jsonify }} }{% unless forloop.last %},{% endunless %}
+  {% endfor %}
+  ];
+
+  // ── Rate tables (reused from the EV side for market-gas overlay + EV-cost comparison) ──
+  const HOME_RATES  = {{ site.data.rates.home_electricity | jsonify }};
+  const GAS_SAVINGS = {{ site.data.rates.gas_savings | jsonify }};
+  const HOME_UPLIFT = {{ site.data.rates.home_charge_uplift | default: 0.10 }};
+
+  // Most-recent entry with date <= target
+  function getStep(arr, date, field, fallback) {
+    let val = fallback, best = '';
+    for (const r of arr) { if (r.date <= date && r.date >= best) { best = r.date; val = r[field]; } }
+    return (val === undefined || val === null) ? fallback : val;
+  }
+  const marketGas     = d => getStep(GAS_SAVINGS, d, 'gas_price', 4.00);
+  const homeRate      = d => getStep(HOME_RATES, d, 'rate', 0.198);
+  const miPerKwh      = d => getStep(GAS_SAVINGS, d, 'mi_per_kwh', 3.0);
+  // What a mile would cost charged at home as an EV (energy only, incl. wall-loss uplift)
+  const evRatePerMile = d => (homeRate(d) / (miPerKwh(d) || 3.0)) * (1 + HOME_UPLIFT);
+
+  // ── Derive cost/ppg, then compute MPG per vehicle (full-to-full, accumulating partials) ──
+  RAW.forEach(e => {
+    e.gallons = +e.gallons || 0;
+    e.odometer = +e.odometer || 0;
+    e.totalCost = +e.totalCost || 0;
+    e.ppg = +e.ppg || 0;
+    if (!e.totalCost && e.ppg && e.gallons) e.totalCost = e.ppg * e.gallons;
+    if (!e.ppg && e.totalCost && e.gallons) e.ppg = e.totalCost / e.gallons;
+    e.month = (e.date || '').slice(0, 7);
+    e.co2 = e.gallons * CO2_KG_PER_GAL;
+    e.mpg = null; e.milesThisTank = null; e.gallonsThisTank = null;
+  });
+
+  // Group by vehicle, process ascending (date then odometer)
+  const byV = {};
+  RAW.forEach(e => (byV[e.vehicle] = byV[e.vehicle] || []).push(e));
+  Object.values(byV).forEach(list => {
+    list.sort((a, b) => (a.date + String(a.odometer).padStart(9,'0'))
+                        .localeCompare(b.date + String(b.odometer).padStart(9,'0')));
+    let lastFullOdo = null, gallonsSinceFull = 0, broken = false;
+    list.forEach(e => {
+      // A missed fill-up before THIS one invalidates the span leading into it
+      if (e.missed) { lastFullOdo = null; gallonsSinceFull = 0; broken = true; }
+      gallonsSinceFull += e.gallons;
+      if (!e.partial) {                 // a FULL fill-up closes a span
+        if (lastFullOdo !== null && !broken && e.odometer > lastFullOdo && gallonsSinceFull > 0) {
+          e.milesThisTank = e.odometer - lastFullOdo;
+          e.gallonsThisTank = gallonsSinceFull;
+          e.mpg = e.milesThisTank / gallonsSinceFull;
+          // sanity: ignore physically implausible tanks (bad odometer entry)
+          if (e.mpg < 3 || e.mpg > 120) { e.mpg = null; e.milesThisTank = null; e.gallonsThisTank = null; }
+        }
+        lastFullOdo = e.odometer; gallonsSinceFull = 0; broken = false;
+      }
+    });
+  });
+
+  const all = RAW.slice().sort((a, b) => a.date.localeCompare(b.date));
+  const vehicles = Object.keys(byV).sort();
+
+  // ── Aggregate a (filtered) list of fill-ups ──
+  function aggregate(list) {
+    const A = { n: list.length };
+    A.gallons = list.reduce((s, e) => s + e.gallons, 0);
+    A.cost    = list.reduce((s, e) => s + e.totalCost, 0);
+    A.co2     = list.reduce((s, e) => s + e.co2, 0);
+    // Tracked miles = odometer span per vehicle (summed)
+    const vg = {};
+    list.forEach(e => { if (e.odometer > 0) (vg[e.vehicle] = vg[e.vehicle] || []).push(e.odometer); });
+    A.miles = Object.values(vg).reduce((s, odos) => s + (Math.max(...odos) - Math.min(...odos)), 0);
+    const mpgs = list.filter(e => e.mpg != null).map(e => e.mpg);
+    A.avgMpg  = mpgs.length ? mpgs.reduce((s, m) => s + m, 0) / mpgs.length : null;
+    A.bestMpg = mpgs.length ? Math.max(...mpgs) : null;
+    A.worstMpg= mpgs.length ? Math.min(...mpgs) : null;
+    const withMpg = list.filter(e => e.mpg != null);
+    A.lastMpg = withMpg.length ? withMpg[withMpg.length - 1].mpg : null;
+    A.avgPpg  = A.gallons ? A.cost / A.gallons : null;
+    A.costPerMile = A.miles ? A.cost / A.miles : null;
+    A.avgFillCost = A.n ? A.cost / A.n : null;
+    // EV comparison (energy-only, home charging, date-aware per fill-up span)
+    let evCost = 0, evMiles = 0;
+    list.forEach(e => { if (e.milesThisTank) { evCost += e.milesThisTank * evRatePerMile(e.date); evMiles += e.milesThisTank; } });
+    // extend to all tracked miles using the latest rate (covers the baseline tank)
+    const latestD = list.length ? list[list.length - 1].date : '2026-01-01';
+    if (A.miles > evMiles) evCost += (A.miles - evMiles) * evRatePerMile(latestD);
+    A.evCost = evCost;
+    A.evPerMile = A.miles ? evCost / A.miles : null;
+    A.evSavingsForgone = A.cost - evCost;   // how much MORE gas cost vs an EV
+    return A;
+  }
+
+  window.FUEL = {
+    all, vehicles, aggregate, marketGas, evRatePerMile, homeRate, miPerKwh,
+    CO2_KG_PER_GAL,
+    fmtUSD: n => (n == null ? '—' : '$' + (+n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })),
+    fmtUSD0: n => (n == null ? '—' : '$' + Math.round(+n).toLocaleString()),
+    fmtNum: (n, d = 1) => (n == null ? '—' : (+n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d })),
+    isDark: () => document.documentElement.getAttribute('data-theme') === 'dark',
+    tc: () => (document.documentElement.getAttribute('data-theme') === 'dark' ? '#bbb' : '#666'),
+    gc: () => (document.documentElement.getAttribute('data-theme') === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+  };
+})();
+</script>

@@ -16,6 +16,108 @@ collections_config:
       - name: Add Charging Session
         schema: default
 
+  fuelups:
+    path: _fuelups
+    name: Fuel-ups
+    icon: local_gas_station
+    create:
+      extra_data:
+        filename: '{date|year}-{date|month}-{date|day}'
+      path: '[relative_base_path]/{filename}[count].md'
+    schemas:
+      default:
+        path: .cloudcannon/schemas/fuelup.md
+    _editables:
+      content: false
+    add_options:
+      - name: Add Fuel-up
+        schema: default
+    # Collection-scoped inputs — kept separate from the charging editor so the
+    # two logs never share a dropdown. (Uses `station`/`total_cost` rather than
+    # charging's `location`/`cost` keys to avoid any global-input collision.)
+    _inputs:
+      date:
+        type: date
+        required: true
+        comment: "Fill-up date. New entries pre-fill a placeholder date so a forgotten date can't break the build — ALWAYS change it to the real fill-up date. Never leave this blank."
+        options:
+          time_format: false
+          timezone: America/New_York
+      vehicle:
+        type: select
+        required: true
+        comment: "Which car this fill-up is for. The analytics page filters by vehicle, so pick the right one."
+        options:
+          values:
+            - "Bronco Sport"
+            - "2021 Ford Bronco Black Diamond"
+            - "2017 Fusion PHEV"
+            - "2016 Mustang"
+            - "2016 Explorer"
+            - "Escape"
+      odometer:
+        type: number
+        label: "Odometer (mi)"
+        required: true
+        comment: "REQUIRED. Total miles on the car at this fill-up. MPG is computed from the odometer change between full fill-ups, so enter it every time."
+      gallons:
+        type: number
+        required: true
+        comment: "REQUIRED. Gallons added this fill-up."
+      total_cost:
+        type: number
+        label: "Total Cost ($)"
+        comment: "Total paid in USD. Enter this OR price/gallon — whichever you have; the other is derived."
+      price_per_gallon:
+        type: number
+        label: "Price / Gallon ($)"
+        comment: "$/gal at the pump. Enter this OR total cost; the other is derived."
+      partial:
+        type: switch
+        label: "Partial fill-up"
+        comment: "ON = you did NOT fill the tank to full. Partial fill-ups don't get their own MPG; their gallons roll into the next FULL fill-up's MPG."
+      missed_fillup:
+        type: switch
+        label: "Missed previous fill-up"
+        comment: "ON = you skipped logging a fill-up before this one. Breaks the MPG chain so one bad tank isn't blamed on the next."
+      fuel_type:
+        type: select
+        label: "Fuel Type"
+        comment: "Grade of fuel."
+        options:
+          values:
+            - "Regular"
+            - "Mid-grade"
+            - "Premium"
+            - "Diesel"
+            - "E85"
+      octane:
+        type: text
+        comment: "Octane rating, e.g. 87, 89, 91, 93."
+      city_pct:
+        type: number
+        label: "City Driving %"
+        comment: "Roughly what % of this tank was city (vs highway) driving, 0–100. Powers the city/highway-vs-MPG chart. Optional."
+      station:
+        type: text
+        label: "Station / Location"
+        comment: "Where you filled up, e.g. 'Costco, Saginaw' or 'Shell, Main St'. Optional."
+      brand:
+        type: text
+        label: "Fuel Brand"
+        comment: "Gas brand, e.g. Shell, BP, Costco. Optional."
+      payment:
+        type: text
+        label: "Payment Method"
+        comment: "e.g. Debit, Credit, Cash. Optional."
+      tire_pressure:
+        type: text
+        label: "Tire Pressure"
+        comment: "Optional note, e.g. '35 psi'."
+      notes:
+        type: textarea
+        comment: "Anything else worth remembering about this fill-up."
+
 _inputs:
   date:
     type: date
