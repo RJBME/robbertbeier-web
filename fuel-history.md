@@ -49,7 +49,8 @@ permalink: /fuel-history/
   (function buildFilter() {
     const host = document.getElementById('fuelVFilter');
     const mk = (v, label) => { const b = document.createElement('button'); b.className = 'vf-pill' + (v === 'all' ? ' active' : ''); b.textContent = label; b.dataset.v = v;
-      b.onclick = () => { activeVehicle = v; host.querySelectorAll('.vf-pill').forEach(p => p.classList.toggle('active', p.dataset.v === v)); render(); }; host.appendChild(b); };
+      b.style.setProperty('--dot', F.vehicleColor(v === 'all' ? null : v));
+      b.onclick = () => { activeVehicle = v; document.querySelector('.fuel-wrap').style.setProperty('--ford', F.vehicleColor(v === 'all' ? null : v)); host.querySelectorAll('.vf-pill').forEach(p => p.classList.toggle('active', p.dataset.v === v)); render(); }; host.appendChild(b); };
     mk('all', 'All'); F.vehicles.forEach(v => mk(v, v)); if (F.vehicles.length < 2) host.hidden = true;
   })();
 

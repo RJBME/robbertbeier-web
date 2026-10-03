@@ -52,19 +52,21 @@ permalink: /fuel/
   Chart.register(ChartDataLabels);
   Chart.defaults.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
   Chart.defaults.plugins.datalabels = { display: false };
-  const FORD = () => (F.isDark() ? '#4f9dff' : '#066FEF');
   let chart = null, activeVehicle = 'all';
+  const FORD = () => F.vehicleColor(activeVehicle === 'all' ? null : activeVehicle);
   const filtered = () => activeVehicle === 'all' ? F.all : F.all.filter(e => e.vehicle === activeVehicle);
 
   (function buildFilter() {
     const host = document.getElementById('fuelVFilter');
     const mk = (v, label) => { const b = document.createElement('button'); b.className = 'vf-pill' + (v === 'all' ? ' active' : ''); b.textContent = label; b.dataset.v = v;
+      b.style.setProperty('--dot', F.vehicleColor(v === 'all' ? null : v));
       b.onclick = () => { activeVehicle = v; host.querySelectorAll('.vf-pill').forEach(p => p.classList.toggle('active', p.dataset.v === v)); render(); }; host.appendChild(b); };
     mk('all', 'All'); F.vehicles.forEach(v => mk(v, v)); if (F.vehicles.length < 2) host.hidden = true;
   })();
 
   function render() {
     const list = filtered(); const A = F.aggregate(list);
+    document.querySelector('.fuel-wrap').style.setProperty('--ford', FORD());
     // KPIs
     const tiles = [
       { v: A.avgMpg != null ? F.fmtNum(A.avgMpg, 1) : '—', l: 'Avg MPG' },

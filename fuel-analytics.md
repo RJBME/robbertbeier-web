@@ -102,9 +102,9 @@ permalink: /fuel-analytics/
   Chart.defaults.plugins.datalabels = { display: false };
   Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
-  const FORD = () => (F.isDark() ? '#4f9dff' : '#066FEF');
   const charts = {};
   let activeVehicle = 'all';
+  const FORD = () => F.vehicleColor(activeVehicle === 'all' ? null : activeVehicle);
 
   function filtered() {
     return activeVehicle === 'all' ? F.all : F.all.filter(e => e.vehicle === activeVehicle);
@@ -117,6 +117,7 @@ permalink: /fuel-analytics/
       const b = document.createElement('button');
       b.className = 'vf-pill' + (v === 'all' ? ' active' : '');
       b.textContent = label; b.dataset.v = v;
+      b.style.setProperty('--dot', F.vehicleColor(v === 'all' ? null : v));
       b.onclick = () => { activeVehicle = v; host.querySelectorAll('.vf-pill').forEach(p => p.classList.toggle('active', p.dataset.v === v)); render(); };
       host.appendChild(b);
     };
@@ -281,6 +282,7 @@ permalink: /fuel-analytics/
   function render() {
     const list = filtered();
     const A = F.aggregate(list);
+    document.querySelector('.fuel-wrap').style.setProperty('--ford', FORD());   // recolor KPIs/section bars to the active car
     renderEvGuilt(A);
     renderKpis(A);
     renderRecords(list);

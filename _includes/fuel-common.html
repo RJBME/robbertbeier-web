@@ -64,8 +64,10 @@
     border:1px solid var(--dash-border); background:var(--dash-card); color:var(--text);
     cursor:pointer; font-family:inherit; transition:all .12s; white-space:nowrap;
   }
-  .vf-pill:hover { border-color:var(--ford); color:var(--ford); }
-  .vf-pill.active { background:var(--ford); border-color:var(--ford); color:#fff; }
+  .vf-pill::before { content:''; display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--dot, var(--ford)); margin-right:7px; vertical-align:middle; position:relative; top:-1px; }
+  .vf-pill:hover { border-color:var(--dot, var(--ford)); color:var(--dot, var(--ford)); }
+  .vf-pill.active { background:var(--dot, var(--ford)); border-color:var(--dot, var(--ford)); color:#fff; }
+  .vf-pill.active::before { background:#fff; }
 
   /* Fill-up table */
   .fuel-table-wrap { overflow-x:auto; border:1px solid var(--dash-border); border-radius:14px; }
@@ -175,8 +177,10 @@
           e.milesThisTank = e.odometer - lastFullOdo;
           e.gallonsThisTank = gallonsSinceFull;
           e.mpg = e.milesThisTank / gallonsSinceFull;
-          // sanity: ignore physically implausible tanks (bad odometer entry)
-          if (e.mpg < 3 || e.mpg > 120) { e.mpg = null; e.milesThisTank = null; e.gallonsThisTank = null; }
+          // sanity: ignore physically implausible tanks (bad odometer entry). Upper
+          // bound is generous so plug-in hybrids (Fusion PHEV logged 100+ gas-MPG
+          // tanks when running mostly on battery) aren't discarded.
+          if (e.mpg < 3 || e.mpg > 200) { e.mpg = null; e.milesThisTank = null; e.gallonsThisTank = null; }
         }
         lastFullOdo = e.odometer; gallonsSinceFull = 0; broken = false;
       }
@@ -185,6 +189,21 @@
 
   const all = RAW.slice().sort((a, b) => a.date.localeCompare(b.date));
   const vehicles = Object.keys(byV).sort();
+
+  // Per-vehicle accent colours (paint colours of the actual cars)
+  const VEHICLE_COLORS = {
+    "Bronco Sport": "#066FEF",                     // Ford Blue (current family car)
+    "2021 Ford Bronco Black Diamond": "#6E8A93",   // Ford "Area 51" (slate blue-gray)
+    "2016 Explorer": "#2E8B57",                    // green
+    "2016 Mustang": "#E8710A",                     // orange
+    "2017 Fusion PHEV": "#6B6E70",                 // carbon gray
+    "My Escape": "#45484B",                        // carbon gray (darker)
+  };
+  const FORD_BLUE = "#066FEF", FORD_BLUE_DK = "#4f9dff";
+  function vehicleColor(v) {
+    if (v && VEHICLE_COLORS[v]) return VEHICLE_COLORS[v];
+    return (document.documentElement.getAttribute('data-theme') === 'dark') ? FORD_BLUE_DK : FORD_BLUE;
+  }
 
   // ── Aggregate a (filtered) list of fill-ups ──
   function aggregate(list) {
@@ -219,6 +238,7 @@
 
   window.FUEL = {
     all, vehicles, aggregate, marketGas, evRatePerMile, homeRate, miPerKwh,
+    vehicleColor, VEHICLE_COLORS, FORD_BLUE, FORD_BLUE_DK,
     CO2_KG_PER_GAL,
     fmtUSD: n => (n == null ? '—' : '$' + (+n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })),
     fmtUSD0: n => (n == null ? '—' : '$' + Math.round(+n).toLocaleString()),

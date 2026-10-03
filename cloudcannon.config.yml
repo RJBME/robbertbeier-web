@@ -46,15 +46,10 @@ collections_config:
       vehicle:
         type: select
         required: true
-        comment: "Which car this fill-up is for. The analytics page filters by vehicle, so pick the right one."
+        comment: "Which car this fill-up is for. Only the current car is selectable; the retired cars (imported from Fuelly) keep their vehicle value and still show on the analytics/history pages."
         options:
           values:
             - "Bronco Sport"
-            - "2021 Ford Bronco Black Diamond"
-            - "2017 Fusion PHEV"
-            - "2016 Mustang"
-            - "2016 Explorer"
-            - "Escape"
       odometer:
         type: number
         label: "Odometer (mi)"
