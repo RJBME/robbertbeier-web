@@ -740,10 +740,14 @@ permalink: /charging/
   const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
   const getThemeColor = () => isDark() ? '#eee' : '#333';
 
+  // Work / Home / Public — same buckets & colors as the ranked chart below, so the
+  // two graphs tell the same story (purple = Home = the same number in both). Public
+  // = everything that isn't Work or Home (Tesla, CP, EA, Blink, Rivian, WeCharge, Other).
   const donutData = [
-    { label: 'Work',       val: {{ work_kwh | divided_by: 1000.0 }}, color: '#0288d1' },
-    { label: 'Home/Other', val: {{ total_kwh | minus: work_kwh | divided_by: 1000.0 }}, color: '#7b1fa2' }
-  ];
+    { label: 'Work',   val: {{ work_kwh | divided_by: 1000.0 }}, color: '#0288d1' },
+    { label: 'Home',   val: {{ home_kwh | divided_by: 1000.0 }}, color: '#7b1fa2' },
+    { label: 'Public', val: {{ total_kwh | minus: work_kwh | minus: home_kwh | divided_by: 1000.0 }}, color: '#0097a7' }
+  ].filter(d => d.val > 0.0005);
   const donutTotal = donutData.reduce((s, d) => s + d.val, 0);
 
   const donutChart = new Chart(document.getElementById('energyChart'), {
