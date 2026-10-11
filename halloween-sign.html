@@ -180,12 +180,17 @@ svg .iron-tip{stroke:var(--d-line);stroke-width:3;stroke-linecap:round}
   .lede{font-size:11pt;color:#222;max-width:none}
   .facts{font-size:9pt;margin-top:8pt;color:#222}
   .print-meta{font-family:var(--mono);font-size:8.5pt;color:#444;margin-top:6pt}
-  h2.part{font-family:var(--display);font-weight:800;font-size:15pt;color:#000;letter-spacing:0;border-bottom:1pt solid #000;padding-bottom:2pt;margin:18pt 0 4pt;break-after:avoid}
+  h2.part{font-family:var(--display);font-weight:800;font-size:15pt;color:#000;letter-spacing:0;border-bottom:1pt solid #000;padding-bottom:2pt;margin:18pt 0 4pt;break-after:avoid;break-inside:avoid}
   .part-sub{font-size:10pt;color:#333;break-after:avoid}
-  h3{font-size:12.5pt;break-after:avoid}
+  h3{font-size:12.5pt;break-after:avoid;break-inside:avoid}
+  h3 + *{break-before:avoid}
   p,ol.sub,ul.sub{max-width:none}
-  .step{grid-template-columns:26pt minmax(0,1fr);gap:10pt;padding-block:9pt;border-top:.75pt solid #bbb}
-  .num{width:22pt;height:22pt;margin-top:0;border-radius:50%;background:none;border:1.5pt solid #000;color:#000;font-size:10pt;box-shadow:none}
+  /* grid layouts ignore page-break rules in Chrome, so print uses plain block flow */
+  .step{display:block;position:relative;padding:9pt 0 9pt 32pt;border-top:.75pt solid #bbb}
+  .step-body > h3,.step-body > h3 + *{break-inside:avoid}
+  .num{position:absolute;left:0;top:9pt;width:22pt;height:22pt;margin-top:0;border-radius:50%;background:none;border:1.5pt solid #000;color:#000;font-size:10pt;box-shadow:none}
+  ol.sub li,ul.sub li,.checks li{break-inside:avoid}
+  p{orphans:3;widows:3}
   .num.sm{font-size:8.5pt}
   .num::before,.num::after{display:none}
   figure{background:#fff;border:.75pt solid #999;border-radius:4pt;padding:6pt;margin:8pt 0;overflow:visible;break-inside:avoid}
@@ -194,14 +199,18 @@ svg .iron-tip{stroke:var(--d-line);stroke-width:3;stroke-linecap:round}
   figcaption{font-size:9pt;color:#333;max-width:none}
   .legend{font-size:9pt;color:#222}
   .note,.warn,.stop{background:#fff;border:1pt solid #000;border-left-width:4pt;border-radius:0;font-size:10pt;max-width:none;break-inside:avoid}
-  .cmds{gap:4pt}
-  .cmd{grid-template-columns:1fr;background:#fff;border:.75pt solid #999;padding:5pt 8pt;break-inside:avoid}
+  .cmds{display:block}
+  .cmd{display:block;background:#fff;border:.75pt solid #999;padding:5pt 8pt;margin-bottom:4pt;break-inside:avoid}
+  .cmd .why{margin-top:2pt}
   .cmd pre{font-size:9pt;color:#000}
   .cmd .why{font-size:9pt;color:#333}
   code,kbd{background:#fff;border:.5pt solid #999;color:#000}
   .tbl{overflow:visible}
   table{min-width:0;font-size:9.5pt}
   tr{break-inside:avoid}
+  thead{display:table-header-group}
+  #trouble + .tbl td:first-child{width:28%}
+  .tbl{break-before:avoid;break-inside:avoid}
   th{color:#000}
   a{color:#000;text-decoration:none}
   a[href^="http"]::after{content:" (" attr(href) ")";font-family:var(--mono);font-size:8.5pt}
