@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#d9650f">
+<title>Halloween Sign Retrofit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column of numbered build steps; each step pairs instructions with a drawn figure on a "bench" panel. */
+:root{
+  --bg:#f6f5f8; --surface:#ffffff; --ink:#221a2b; --muted:#5f5668; --line:#dcd6e2;
+  --accent:#d9650f; --accent-ink:#ffffff; --accent-soft:#fdeadb; --plum:#4a2a63;
+  --warn-bg:#fff4df; --warn-line:#d39a2a; --stop-bg:#fde9e9; --stop-line:#c43c3c;
+  --d-bg:#fbfafc; --d-line:#3b3245; --d-text:#2b2233; --d-muted:#7a7085;
+  --board:#f0eee8; --hole:#b5afa4; --channel:#dfdbd1;
+  --pcb:#1f5fa8; --pcb-text:#eef4ff; --can:#c9ced5; --can-text:#39404a; --pin:#caa43c; --metal:#9aa3ad;
+  --mdf:#d6b78d; --mdf-line:#a8875c; --bbox:#ece8ef; --slot:#dcd6e2;
+  --w-pos:#d23b2f; --w-gnd:#2a2a2a; --w-sig:#d99a00; --w-col:#2f7fd0;
+  --to92:#262626; --to92-text:#d9d9d9; --glow:#ffb347;
+  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#17121c; --surface:#211a28; --ink:#efe9f3; --muted:#b2a7bc; --line:#3a3044;
+  --accent:#f08a3a; --accent-ink:#1a1008; --accent-soft:#3a2516; --plum:#cfa9ec;
+  --warn-bg:#33270f; --warn-line:#c9932c; --stop-bg:#3a1a1c; --stop-line:#e06a6a;
+  --d-bg:#1d1724; --d-line:#cfc4da; --d-text:#ece5f2; --d-muted:#9d92a8;
+  --board:#2a2530; --hole:#5c5464; --channel:#221d28;
+  --pcb:#2c6cb8; --pcb-text:#eef4ff; --can:#9aa1aa; --can-text:#1f242b; --pin:#d4b24c; --metal:#8b939c;
+  --mdf:#7d6347; --mdf-line:#a8875c; --bbox:#2e2735; --slot:#3a3243;
+  --w-pos:#ff5a4d; --w-gnd:#b8b8c2; --w-sig:#f2b81f; --w-col:#5aa7ff;
+  --to92:#0e0e0e; --to92-text:#cfcfcf; --glow:#ffb347; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#17121c; --surface:#211a28; --ink:#efe9f3; --muted:#b2a7bc; --line:#3a3044;
+  --accent:#f08a3a; --accent-ink:#1a1008; --accent-soft:#3a2516; --plum:#cfa9ec;
+  --warn-bg:#33270f; --warn-line:#c9932c; --stop-bg:#3a1a1c; --stop-line:#e06a6a;
+  --d-bg:#1d1724; --d-line:#cfc4da; --d-text:#ece5f2; --d-muted:#9d92a8;
+  --board:#2a2530; --hole:#5c5464; --channel:#221d28;
+  --pcb:#2c6cb8; --pcb-text:#eef4ff; --can:#9aa1aa; --can-text:#1f242b; --pin:#d4b24c; --metal:#8b939c;
+  --mdf:#7d6347; --mdf-line:#a8875c; --bbox:#2e2735; --slot:#3a3243;
+  --w-pos:#ff5a4d; --w-gnd:#b8b8c2; --w-sig:#f2b81f; --w-col:#5aa7ff;
+  --to92:#0e0e0e; --to92-text:#cfcfcf; --glow:#ffb347; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6;padding-inline:16px;padding-block:0 64px}
+.wrap{max-width:820px;margin:0 auto}
+header.hero{padding-block:28px 28px;border-bottom:2px solid var(--line)}
+.home{display:inline-block;margin-bottom:18px;font-family:var(--mono);font-size:13px;text-decoration:none}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,6vw,54px);line-height:1.05;margin:8px 0 14px;text-wrap:balance;color:var(--ink)}
+.lede{font-size:19px;color:var(--muted);max-width:62ch;margin:0}
+.facts{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:20px;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.facts b{color:var(--ink);font-weight:600}
+h2.part{font-family:var(--display);font-weight:800;font-size:28px;margin:56px 0 4px;text-wrap:balance}
+.part-sub{color:var(--muted);margin:0 0 8px}
+h3{font-family:var(--display);font-weight:600;font-size:22px;line-height:1.2;margin:0 0 8px;text-wrap:balance}
+p{margin:0 0 12px;max-width:68ch}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.step{display:grid;grid-template-columns:44px minmax(0,1fr);gap:16px;padding-block:28px;border-top:1px solid var(--line)}
+.num{width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-family:var(--display);font-weight:800;font-size:20px;display:grid;place-items:center}
+.step-body{min-width:0}
+ol.sub,ul.sub{margin:0 0 14px;padding-left:22px;max-width:68ch}
+ol.sub li,ul.sub li{margin-bottom:6px}
+figure{margin:16px 0 18px;background:var(--d-bg);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto}
+figure svg{display:block;width:100%;height:auto;min-width:520px}
+figure.small svg{min-width:0;max-width:440px;margin:0 auto}
+figcaption{font-size:14px;color:var(--muted);margin-top:10px;max-width:70ch}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;margin-top:10px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:22px;height:4px;border-radius:2px;display:inline-block}
+.note,.warn,.stop{border-left:4px solid var(--warn-line);background:var(--warn-bg);padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;max-width:72ch;font-size:16px}
+.note{border-left-color:var(--plum);background:var(--accent-soft)}
+.stop{border-left-color:var(--stop-line);background:var(--stop-bg)}
+.note b,.warn b,.stop b{font-weight:700}
+code,kbd{font-family:var(--mono);font-size:.88em;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.cmds{display:grid;gap:8px;margin:12px 0 16px}
+.cmd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.cmd pre{margin:0;font-family:var(--mono);font-size:13px;white-space:pre-wrap;word-break:break-all;color:var(--ink)}
+.cmd .why{grid-column:1 / -1;font-size:14px;color:var(--muted)}
+.cmd button{font-family:var(--mono);font-size:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
+.cmd button:hover{border-color:var(--accent);color:var(--accent)}
+.tbl{overflow-x:auto;margin:12px 0 16px}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:480px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td code{white-space:nowrap}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px;margin-top:8px}
+.checks h4{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;font-weight:600}
+.checks ul{list-style:none;margin:0;padding:0}
+.checks li{padding:5px 0;border-bottom:1px dashed var(--line)}
+.checks label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.checks input{margin-top:5px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.checks input:checked + span{color:var(--muted);text-decoration:line-through}
+
+/* SVG drawing classes */
+svg text{font-family:var(--mono);fill:var(--d-text);font-size:12px}
+svg .t-display{font-family:var(--display);font-weight:600}
+svg .tm{fill:var(--d-muted)}
+svg .tpcb{fill:var(--pcb-text)}
+svg .tcan{fill:var(--can-text)}
+svg .t92{fill:var(--to92-text)}
+svg .box{fill:var(--surface);stroke:var(--d-line);stroke-width:1.5}
+svg .box-accent{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.8}
+svg .ln{fill:none;stroke:var(--d-line);stroke-width:1.6}
+svg .ln-thin{fill:none;stroke:var(--d-muted);stroke-width:1}
+svg .ln-dash{fill:none;stroke:var(--d-muted);stroke-width:1.2;stroke-dasharray:4 3}
+svg .fill-line{fill:var(--d-line)}
+svg .board{fill:var(--board);stroke:var(--hole);stroke-width:1}
+svg .hole{fill:var(--hole)}
+svg .channel{fill:var(--channel)}
+svg .pcb{fill:var(--pcb)}
+svg .can{fill:var(--can)}
+svg .pin{fill:var(--pin)}
+svg .metal{fill:var(--metal)}
+svg .metal-s{fill:none;stroke:var(--metal);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+svg .usb{fill:var(--metal)}
+svg .bbox{fill:var(--bbox);stroke:var(--d-line);stroke-width:1.5}
+svg .slot{fill:var(--slot)}
+svg .mdf{fill:var(--mdf);stroke:var(--mdf-line);stroke-width:1.5}
+svg .to92{fill:var(--to92)}
+svg .hl{fill:none;stroke:var(--accent);stroke-width:2.2}
+svg .w{fill:none;stroke-width:4;stroke-linecap:round}
+svg .w-pos{stroke:var(--w-pos)} svg .w-gnd{stroke:var(--w-gnd)} svg .w-sig{stroke:var(--w-sig)} svg .w-col{stroke:var(--w-col)}
+svg .d-pos{fill:var(--w-pos)} svg .d-gnd{fill:var(--w-gnd)} svg .d-sig{fill:var(--w-sig)} svg .d-col{fill:var(--w-col)}
+svg .leg{fill:none;stroke:var(--metal);stroke-width:2}
+svg .led{fill:var(--glow)}
+svg .ledhalo{fill:var(--glow);opacity:.28}
+svg .bar{fill:var(--accent)}
+svg .bar-t{fill:var(--accent-ink);font-size:11px;font-weight:600}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .notch{fill:var(--d-bg)}
+svg .ahead{fill:var(--d-line)}
+svg .ahead-acc{fill:var(--accent)}
+.sw-pos{background:var(--w-pos)} .sw-gnd{background:var(--w-gnd)} .sw-sig{background:var(--w-sig)} .sw-col{background:var(--w-col)}
+@media (max-width:560px){ .step{grid-template-columns:minmax(0,1fr);gap:8px} .num{width:36px;height:36px;font-size:17px} body{font-size:16px} }
+@media (prefers-reduced-motion:no-preference){ .cmd button{transition:color .15s,border-color .15s} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="hero">
+  <a class="home" href="/">← Home</a>
+  <div class="eyebrow">Maker's Halloween LED sign · ESP8266 retrofit</div>
+  <h1>Make the Halloween sign turn itself on at sunset</h1>
+  <p class="lede">Swap the two AA batteries for a D1 Mini Wi-Fi board and one transistor. The sign then lights up at local sunset every evening and switches off at midnight. Sunset moves with the season, and daylight saving time is handled for you.</p>
+  <div class="facts"><span><b>Time</b> about 2 hours</span><span><b>Skill</b> basic soldering</span><span><b>Cost</b> parts you already own + a USB charger</span></div>
+</header>
+
+<figure>
+<svg viewBox="0 0 760 185" role="img" aria-labelledby="ov-t">
+  <title id="ov-t">System overview: USB charger powers the D1 Mini, which drives a transistor that switches the sign's LEDs</title>
+  <defs><marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahead"/></marker>
+  <marker id="ah1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahead-acc"/></marker></defs>
+  <path d="M260,60 V30 H660 V60" class="w w-pos" style="stroke-width:3" marker-end="url(#ah1a)"/>
+  <text x="460" y="22" text-anchor="middle">3.3 V from the D1 Mini replaces the AAs</text>
+  <path d="M455,130 V158 H260 V130" class="w w-gnd" style="stroke-width:3"/>
+  <text x="357" y="176" text-anchor="middle" class="tm">shared ground (G)</text>
+  <rect x="20" y="60" width="120" height="70" rx="8" class="box"/>
+  <text x="80" y="91" text-anchor="middle" class="t-display" style="font-size:14px">USB charger</text>
+  <text x="80" y="111" text-anchor="middle" class="tm">5 V, 1 A</text>
+  <rect x="190" y="60" width="140" height="70" rx="8" class="box-accent"/>
+  <text x="260" y="91" text-anchor="middle" class="t-display" style="font-size:14px">D1 Mini</text>
+  <text x="260" y="111" text-anchor="middle" class="tm">Wi-Fi + clock</text>
+  <rect x="390" y="60" width="130" height="70" rx="8" class="box"/>
+  <text x="455" y="91" text-anchor="middle" class="t-display" style="font-size:14px">Transistor Q1</text>
+  <text x="455" y="111" text-anchor="middle" class="tm">electronic switch</text>
+  <rect x="580" y="60" width="160" height="70" rx="8" class="box"/>
+  <text x="660" y="91" text-anchor="middle" class="t-display" style="font-size:14px">Sign battery box</text>
+  <text x="660" y="111" text-anchor="middle" class="tm">switch ON → 10 LEDs</text>
+  <line x1="140" y1="95" x2="188" y2="95" class="ln" marker-end="url(#ah1)"/>
+  <text x="164" y="86" text-anchor="middle" class="tm" style="font-size:10px">USB</text>
+  <line x1="330" y1="95" x2="388" y2="95" class="ln" marker-end="url(#ah1)"/>
+  <text x="359" y="86" text-anchor="middle" class="tm" style="font-size:10px">GPIO5</text>
+  <line x1="578" y1="95" x2="522" y2="95" class="ln" marker-end="url(#ah1)"/>
+  <text x="550" y="86" text-anchor="middle" class="tm" style="font-size:10px">LED −</text>
+</svg>
+<figcaption>How it works. The D1 Mini runs off a phone charger, gets the time from the internet and calculates today's sunset. At sunset it turns on the transistor, which completes the LED circuit. At midnight it turns the transistor off.</figcaption>
+</figure>
+
+<!-- ============ PART A ============ -->
+<h2 class="part">A · Gather everything</h2>
+<p class="part-sub">Everything except the charger, a cable and the tools comes from your two Amazon orders.</p>
+<div class="checks">
+  <div>
+    <h4>Parts</h4>
+    <ul>
+      <li><label><input type="checkbox" id="p1"><span>1 × D1 Mini (ESP8266). You have 5; you'll use one.</span></label></li>
+      <li><label><input type="checkbox" id="p2"><span>1 × NPN transistor, <b>PN2222</b> or <b>S8050</b> (ELEGOO kit)</span></label></li>
+      <li><label><input type="checkbox" id="p3"><span>1 × <b>1 kΩ</b> resistor (ELEGOO kit)</span></label></li>
+      <li><label><input type="checkbox" id="p4"><span>Breadboard + about 6 jumper wires (ELEGOO kit). Pick red, blue, black and yellow if you can.</span></label></li>
+      <li><label><input type="checkbox" id="p5"><span>Micro-USB <b>data</b> cable, 1–2 m</span></label></li>
+      <li><label><input type="checkbox" id="p6"><span>USB wall charger, 5 V and at least 1 A (any old phone charger)</span></label></li>
+    </ul>
+  </div>
+  <div>
+    <h4>Tools</h4>
+    <ul>
+      <li><label><input type="checkbox" id="t1"><span>Soldering iron, solder, a little flux if you have it</span></label></li>
+      <li><label><input type="checkbox" id="t2"><span>Wire cutter / stripper</span></label></li>
+      <li><label><input type="checkbox" id="t3"><span>Small Phillips screwdriver</span></label></li>
+      <li><label><input type="checkbox" id="t4"><span>Electrical tape or heat-shrink tubing</span></label></li>
+      <li><label><input type="checkbox" id="t5"><span>Hot glue or double-sided foam tape</span></label></li>
+      <li><label><input type="checkbox" id="t6"><span>Drill with a ½ in. bit, or a file, for the cable exit</span></label></li>
+      <li><label><input type="checkbox" id="t7"><span>Chrome or Edge on your Mac (Safari can't flash boards)</span></label></li>
+    </ul>
+  </div>
+</div>
+
+<section class="step" id="step1"><div class="num">1</div><div class="step-body">
+  <h3>Solder header pins onto one D1 Mini</h3>
+  <p>The D1 Minis usually ship with their pin strips loose. You need pins on one board to plug it into the breadboard for testing.</p>
+  <ol class="sub">
+    <li>Push the two 8-pin strips, long ends first, into the breadboard, 9 holes apart (rows <b>b</b> and <b>i</b>). The breadboard holds them straight.</li>
+    <li>Lay the D1 Mini on top of the short ends, component side up, so you can read the pin names (3V3, G, D1…).</li>
+    <li>Solder all 16 pins. Each joint should be a shiny little cone, not a ball.</li>
+    <li>Leave it in the breadboard. Steps 8–11 use exactly this position.</li>
+  </ol>
+</div></section>
+
+<!-- ============ PART B ============ -->
+<h2 class="part">B · Load the software</h2>
+<p class="part-sub">Do this before touching the sign. Everything here happens on your Mac with the D1 Mini plugged in by USB.</p>
+
+<section class="step" id="step2"><div class="num">2</div><div class="step-body">
+  <h3>Install Tasmota on the D1 Mini</h3>
+  <p>Tasmota is free firmware for ESP8266 boards. It has built-in timers that run at sunset, so you don't have to write any code.</p>
+  <ol class="sub">
+    <li>Plug the D1 Mini into your Mac with the micro-USB cable.</li>
+    <li>In Chrome, open <a href="https://tasmota.github.io/install/" target="_blank" rel="noopener">tasmota.github.io/install</a>.</li>
+    <li>Choose <b>Tasmota (english)</b> and click <b>Connect</b>. Pick the port that appears, usually named <code>USB Serial</code> or <code>wchusbserial…</code>.</li>
+    <li>Tick <b>Erase device</b>, then click <b>Install</b>. It takes about a minute.</li>
+    <li>When it finishes, the installer offers <b>Configure Wi-Fi</b>. Choose your home network and type its password.</li>
+    <li>Click <b>Visit Device</b>. A Tasmota page opens at an address like <code>http://192.168.1.57</code>. Bookmark it.</li>
+  </ol>
+  <div class="warn"><b>No port in the list?</b> Your cable is probably charge-only. Try a different one; this is the most common snag. <b>Wi-Fi won't connect?</b> The ESP8266 only works on <b>2.4 GHz</b> networks, not 5 GHz.</div>
+  <div class="note">In your router's settings, reserve that IP address for the device so the bookmark keeps working.</div>
+</div></section>
+
+<section class="step" id="step3"><div class="num">3</div><div class="step-body">
+  <h3>Tell Tasmota which pin drives the lights</h3>
+  <ol class="sub">
+    <li>On the device page, click <b>Configuration → Module</b> (newer versions call it <b>Configure Module</b>).</li>
+    <li>Set <b>Module type</b> to <b>Generic (18)</b>, click <b>Save</b> and wait for it to restart.</li>
+    <li>Open <b>Module</b> again. Next to <b>D1 GPIO5</b>, choose <b>Relay</b> and number <b>1</b>. Click <b>Save</b>.</li>
+    <li>The main page now has a big <b>Toggle</b> button and shows <b>ON/OFF</b>. Nothing is wired to it yet, so nothing visible happens.</li>
+  </ol>
+  <p>GPIO5 (labelled <b>D1</b> on the board) is used because it stays off while the board starts up, so the sign won't flash on every reboot.</p>
+</div></section>
+
+<section class="step" id="step4"><div class="num">4</div><div class="step-body">
+  <h3>Set your location, clock and schedule</h3>
+  <p>On the main page click <b>Consoles → Console</b>. Paste each line below into the box at the bottom and press <kbd>Enter</kbd>, one line at a time.</p>
+  <div class="cmds">
+    <div class="cmd"><pre>DeviceName Halloween Sign</pre><button type="button">Copy</button><div class="why">The name shown on the device page.</div></div>
+    <div class="cmd"><pre>Latitude 42.33</pre><button type="button">Copy</button><div class="why">Your latitude. 42.33 is Detroit; replace it with your own (right-click your house in Google Maps to copy it).</div></div>
+    <div class="cmd"><pre>Longitude -83.05</pre><button type="button">Copy</button><div class="why">Your longitude. Keep the minus sign: west is negative.</div></div>
+    <div class="cmd"><pre>Timezone 99</pre><button type="button">Copy</button><div class="why">Use the daylight-saving rules from the next two lines.</div></div>
+    <div class="cmd"><pre>TimeDst 0,2,3,1,2,-240</pre><button type="button">Copy</button><div class="why">EDT starts the 2nd Sunday of March at 2 am (UTC−4).</div></div>
+    <div class="cmd"><pre>TimeStd 0,1,11,1,2,-300</pre><button type="button">Copy</button><div class="why">EST starts the 1st Sunday of November at 2 am (UTC−5).</div></div>
+    <div class="cmd"><pre>Timer1 {"Enable":1,"Mode":2,"Time":"00:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":1}</pre><button type="button">Copy</button><div class="why"><b>On at sunset</b>, every day. Mode 2 means sunset, and <code>Time</code> is an offset: use <code>"00:15"</code> for 15 minutes after sunset.</div></div>
+    <div class="cmd"><pre>Timer2 {"Enable":1,"Mode":0,"Time":"00:00","Window":0,"Days":"1111111","Repeat":1,"Output":1,"Action":0}</pre><button type="button">Copy</button><div class="why"><b>Off at midnight</b>, every day. Change <code>Time</code> for a different off time, for example <code>"22:30"</code>.</div></div>
+    <div class="cmd"><pre>Timers 1</pre><button type="button">Copy</button><div class="why">Turns on the timer system.</div></div>
+    <div class="cmd"><pre>Status 7</pre><button type="button">Copy</button><div class="why">Check: the reply should show the correct <b>Local</b> time and today's <b>Sunset</b>.</div></div>
+  </div>
+  <figure>
+  <svg viewBox="0 0 700 235" role="img" aria-labelledby="sch-t">
+    <title id="sch-t">Approximate on-times for Detroit through the season; lights go off at midnight each night</title>
+    <g>
+      <line x1="120" y1="28" x2="120" y2="200" class="grid"/><line x1="230" y1="28" x2="230" y2="200" class="grid"/>
+      <line x1="340" y1="28" x2="340" y2="200" class="grid"/><line x1="450" y1="28" x2="450" y2="200" class="grid"/>
+      <line x1="560" y1="28" x2="560" y2="200" class="grid"/><line x1="670" y1="28" x2="670" y2="200" class="grid"/>
+      <text x="120" y="220" text-anchor="middle" class="tm">3 pm</text><text x="230" y="220" text-anchor="middle" class="tm">5 pm</text>
+      <text x="340" y="220" text-anchor="middle" class="tm">7 pm</text><text x="450" y="220" text-anchor="middle" class="tm">9 pm</text>
+      <text x="560" y="220" text-anchor="middle" class="tm">11 pm</text><text x="670" y="220" text-anchor="middle" class="tm">1 am</text>
+    </g>
+    <line x1="615" y1="22" x2="615" y2="204" class="ln-dash"/>
+    <text x="615" y="16" text-anchor="middle">midnight: off</text>
+    <text x="110" y="49" text-anchor="end">Oct 1</text><rect x="345" y="36" width="270" height="20" rx="3" class="bar"/><text x="351" y="50" class="bar-t">on 7:17 pm</text>
+    <text x="110" y="84" text-anchor="end">Oct 15</text><rect x="324" y="71" width="291" height="20" rx="3" class="bar"/><text x="330" y="85" class="bar-t">on 6:54 pm</text>
+    <text x="110" y="119" text-anchor="end">Oct 31</text><rect x="304" y="106" width="311" height="20" rx="3" class="bar"/><text x="310" y="120" class="bar-t">on 6:31 pm</text>
+    <text x="110" y="154" text-anchor="end">Nov 1</text><rect x="248" y="141" width="367" height="20" rx="3" class="bar"/><text x="254" y="155" class="bar-t">on 5:30 pm · clocks fell back</text>
+    <text x="110" y="189" text-anchor="end">Nov 15</text><rect x="232" y="176" width="383" height="20" rx="3" class="bar"/><text x="238" y="190" class="bar-t">on 5:13 pm</text>
+  </svg>
+  <figcaption>What the schedule will do, using approximate Detroit sunset times. The on time moves earlier every day. When daylight saving ends on Sunday, November 1, it jumps an hour earlier on the clock, and Tasmota handles that by itself.</figcaption>
+  </figure>
+</div></section>
+
+<!-- ============ PART C ============ -->
+<h2 class="part">C · Prepare the sign</h2>
+<p class="part-sub">You'll run the sign's own LED circuit from the D1 Mini's 3.3 V supply instead of batteries.</p>
+
+<section class="step" id="step5"><div class="num">5</div><div class="step-body">
+  <h3>Open the sign and remove the batteries for good</h3>
+  <ol class="sub">
+    <li>Unscrew the back panel: the brown MDF board that holds the battery box and LED string.</li>
+    <li>Take out both AA batteries.</li>
+    <li>Slide the sign's switch to <b>ON</b> and leave it there. It's in series with the LEDs, so from now on it works as a manual master switch.</li>
+  </ol>
+  <div class="stop"><b>Never put AA batteries back in while the D1 Mini is connected.</b> They would push current backwards into the D1 Mini's 3.3 V supply. Put a strip of tape over the battery door as a reminder.</div>
+</div></section>
+
+<section class="step" id="step6"><div class="num">6</div><div class="step-body">
+  <h3>Find the box's + and − terminals</h3>
+  <p>Look into the empty battery compartment. At one end, a metal strip joins a spring to a flat plate: that's the bridge between the two cells, so leave it alone. At the other end are a spring and a flat plate that <b>aren't</b> joined. Those are the two terminals you'll solder to.</p>
+  <figure class="small">
+  <svg viewBox="0 0 560 300" role="img" aria-labelledby="bb-t">
+    <title id="bb-t">Two-AA battery box: bridged contacts at the top, the two terminals at the bottom</title>
+    <rect x="150" y="30" width="240" height="240" rx="10" class="bbox"/>
+    <rect x="175" y="60" width="85" height="180" rx="8" class="slot"/>
+    <rect x="280" y="60" width="85" height="180" rx="8" class="slot"/>
+    <rect x="190" y="80" width="55" height="143" rx="9" class="ln-dash"/><rect x="207" y="72" width="21" height="8" rx="2" class="ln-dash"/>
+    <text x="217" y="112" text-anchor="middle" class="tm">+</text><text x="217" y="208" text-anchor="middle" class="tm">−</text>
+    <rect x="295" y="74" width="55" height="143" rx="9" class="ln-dash"/><rect x="312" y="217" width="21" height="8" rx="2" class="ln-dash"/>
+    <text x="322" y="96" text-anchor="middle" class="tm">−</text><text x="322" y="200" text-anchor="middle" class="tm">+</text>
+    <text x="270" y="155" text-anchor="middle" class="tm" style="font-size:10px">(empty)</text>
+    <!-- bridge -->
+    <rect x="200" y="42" width="140" height="7" rx="2" class="metal"/>
+    <rect x="200" y="52" width="35" height="6" rx="1" class="metal"/>
+    <polyline points="305,52 340,56 305,60 340,64 305,68" class="metal-s" style="stroke-width:2.5"/>
+    <text x="270" y="20" text-anchor="middle" class="tm">bridge strip: leave alone</text>
+    <!-- terminals -->
+    <polyline points="200,232 235,236 200,240 235,244 200,248" class="metal-s" style="stroke-width:2.5"/>
+    <rect x="305" y="242" width="35" height="6" rx="1" class="metal"/>
+    <circle cx="217" cy="240" r="16" class="hl"/>
+    <circle cx="322" cy="245" r="16" class="hl"/>
+    <line x1="201" y1="248" x2="150" y2="262" class="ln-thin"/>
+    <text x="145" y="262" text-anchor="end" style="font-weight:600">− terminal</text>
+    <text x="145" y="280" text-anchor="end" class="tm">blue lead → Q1 C</text>
+    <line x1="338" y1="252" x2="396" y2="262" class="ln-thin"/>
+    <text x="400" y="262" style="font-weight:600">+ terminal</text>
+    <text x="400" y="280" class="tm">red lead → 3V3</text>
+  </svg>
+  <figcaption>Top view of a typical 2 × AA box, with the cell outlines drawn only to show orientation. Yours may be mirrored. Follow the <b>+ / −</b> marks molded into the plastic: the <b>flat plate is +</b> and the <b>spring is −</b>.</figcaption>
+  </figure>
+</div></section>
+
+<section class="step" id="step7"><div class="num">7</div><div class="step-body">
+  <h3>Solder a lead to each terminal</h3>
+  <ol class="sub">
+    <li>Take a <b>red</b> and a <b>blue</b> male-to-male jumper wire and cut each one in half. Keep the half with the pin end; each lead is about 10 cm.</li>
+    <li>Strip 5 mm from each cut end and twist the strands. Tin the ends: melt a little solder into them.</li>
+    <li>Scrape the solder spot on each contact with a knife or sandpaper until it's shiny. Battery contacts are plated steel and won't take solder otherwise. Flux helps a lot.</li>
+    <li>Solder <b>red → the + flat plate</b> and <b>blue → the − spring</b>. Solder to the back face of the contact, or to its tab if one pokes out behind the end wall, so the wire doesn't block the compartment.</li>
+    <li>Work quickly, 2–3 seconds per joint, so the plastic doesn't melt. Route both leads out of the box toward where the D1 Mini will sit.</li>
+  </ol>
+  <div class="note">Solder won't stick? Wrap the bare wire tightly around the contact's tab and hold it with a blob of hot glue. 3.3 V at these currents is very forgiving.</div>
+</div></section>
+
+<section class="step" id="step8"><div class="num">8</div><div class="step-body">
+  <h3>Do a quick polarity test, with no transistor yet</h3>
+  <ol class="sub">
+    <li>Push the <b>red</b> lead's pin into hole <code>a5</code>, directly above the D1 Mini's <b>3V3</b> pin.</li>
+    <li>Push the <b>blue</b> lead's pin into hole <code>j6</code>, directly below the D1 Mini's <b>G</b> pin.</li>
+    <li>Plug in USB. <b>All 10 LEDs should light at normal brightness.</b></li>
+    <li>Unplug USB and pull the blue lead back out.</li>
+  </ol>
+  <p>If nothing lights, check the sign's switch is ON, then swap the red and blue pins. A few seconds of reversed 3.3 V won't harm the LEDs. If they light only after swapping, you mixed up + and − in step 7: just keep the swap in mind for every step that follows.</p>
+</div></section>
+
+<!-- ============ PART D ============ -->
+<h2 class="part">D · Build and test on the breadboard</h2>
+<p class="part-sub">Prove the whole thing works before soldering anything permanent.</p>
+
+<section class="step" id="step9"><div class="num">9</div><div class="step-body">
+  <h3>Identify the transistor and the resistor</h3>
+  <p>The ELEGOO kit keeps transistors and resistors in labelled compartments. Read the printing on the transistor's flat face to be sure which one you have.</p>
+  <figure class="small">
+  <svg viewBox="0 0 420 230" role="img" aria-labelledby="to-t">
+    <title id="to-t">TO-92 transistor pinout: flat face toward you, legs down, Emitter Base Collector from left to right</title>
+    <path d="M150,122 V62 Q150,30 190,30 Q230,30 230,62 V122 Z" class="to92"/>
+    <text x="190" y="72" text-anchor="middle" class="t92" style="font-size:11px">PN2222A</text>
+    <text x="190" y="90" text-anchor="middle" class="t92" style="font-size:10px">or S8050</text>
+    <line x1="165" y1="122" x2="165" y2="192" class="metal-s"/>
+    <line x1="190" y1="122" x2="190" y2="192" class="metal-s"/>
+    <line x1="215" y1="122" x2="215" y2="192" class="metal-s"/>
+    <text x="165" y="214" text-anchor="middle" class="t-display" style="font-size:18px">E</text>
+    <text x="190" y="214" text-anchor="middle" class="t-display" style="font-size:18px">B</text>
+    <text x="215" y="214" text-anchor="middle" class="t-display" style="font-size:18px">C</text>
+    <line x1="232" y1="70" x2="248" y2="70" class="ln-thin"/>
+    <text x="252" y="66">flat face with the</text><text x="252" y="82">printing toward you</text>
+    <text x="252" y="150" class="tm">legs pointing down</text>
+    <text x="252" y="176" class="tm">E → ground (G)</text>
+    <text x="252" y="192" class="tm">B → 1 kΩ → D1</text>
+    <text x="252" y="208" class="tm">C → battery −</text>
+    <text x="40" y="150" class="tm">Emitter</text><text x="40" y="166" class="tm">Base</text><text x="40" y="182" class="tm">Collector</text>
+  </svg>
+  <figcaption>The PN2222A and S8050 are both <b>E-B-C</b> from left to right. A part printed <b>2N2222</b> from some brands is <b>C-B-E</b>, so if yours says that, flip it around.</figcaption>
+  </figure>
+  <figure>
+  <svg viewBox="0 0 560 110" role="img" aria-labelledby="rs-t">
+    <title id="rs-t">1 kilo-ohm resistor colour bands in 5-band and 4-band styles</title>
+    <line x1="40" y1="50" x2="240" y2="50" class="leg"/>
+    <rect x="95" y="38" width="90" height="24" rx="10" style="fill:#5b8fc9"/>
+    <rect x="106" y="38" width="7" height="24" style="fill:#7a4a2a"/><rect x="120" y="38" width="7" height="24" style="fill:#1b1b1b"/>
+    <rect x="134" y="38" width="7" height="24" style="fill:#1b1b1b"/><rect x="148" y="38" width="7" height="24" style="fill:#7a4a2a"/>
+    <rect x="168" y="38" width="7" height="24" style="fill:#7a4a2a"/>
+    <text x="140" y="88" text-anchor="middle">Kit style, 5 bands</text>
+    <text x="140" y="104" text-anchor="middle" class="tm">brown · black · black · brown · brown</text>
+    <line x1="320" y1="50" x2="520" y2="50" class="leg"/>
+    <rect x="375" y="38" width="90" height="24" rx="10" style="fill:#d9c39a"/>
+    <rect x="388" y="38" width="7" height="24" style="fill:#7a4a2a"/><rect x="402" y="38" width="7" height="24" style="fill:#1b1b1b"/>
+    <rect x="416" y="38" width="7" height="24" style="fill:#c62828"/><rect x="448" y="38" width="7" height="24" style="fill:#c9a227"/>
+    <text x="420" y="88" text-anchor="middle">4 bands</text>
+    <text x="420" y="104" text-anchor="middle" class="tm">brown · black · red · gold</text>
+    <text x="280" y="22" text-anchor="middle" class="t-display" style="font-size:14px">1 kΩ resistor (either direction is fine)</text>
+  </svg>
+  <figcaption>The kit's resistors are blue 5-band types and come in compartments labelled with their value. Look for <b>1KΩ</b>.</figcaption>
+  </figure>
+</div></section>
+
+<section class="step" id="step10"><div class="num">10</div><div class="step-body">
+  <h3>Build the circuit</h3>
+  <p>Unplug USB first. The D1 Mini stays where step 1 left it: USB end to the left, header pins in rows <b>b</b> and <b>i</b>, columns <b>5–12</b>. Only rows <b>a</b> and <b>j</b> stay free above and below it, and that's where you plug in.</p>
+  <figure>
+  <svg viewBox="0 0 780 345" role="img" aria-labelledby="bbd-t">
+    <title id="bbd-t">Breadboard layout: D1 Mini, transistor Q1, 1k resistor, and leads to the battery box</title>
+    <defs><pattern id="holes" x="30" y="50" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="3" class="hole"/></pattern></defs>
+    <rect x="10" y="25" width="475" height="300" rx="10" class="board"/>
+    <rect x="25" y="158" width="450" height="24" class="channel"/>
+    <rect x="30" y="50" width="440" height="100" fill="url(#holes)"/>
+    <rect x="30" y="190" width="440" height="100" fill="url(#holes)"/>
+    <g class="tm" style="font-size:9px" text-anchor="middle">
+      <text x="22" y="63" class="tm">a</text><text x="22" y="83" class="tm">b</text><text x="22" y="103" class="tm">c</text><text x="22" y="123" class="tm">d</text><text x="22" y="143" class="tm">e</text>
+      <text x="22" y="203" class="tm">f</text><text x="22" y="223" class="tm">g</text><text x="22" y="243" class="tm">h</text><text x="22" y="263" class="tm">i</text><text x="22" y="283" class="tm">j</text>
+      <text x="40" y="44" class="tm">1</text><text x="120" y="44" class="tm">5</text><text x="220" y="44" class="tm">10</text><text x="320" y="44" class="tm">15</text><text x="420" y="44" class="tm">20</text>
+    </g>
+    <!-- D1 Mini -->
+    <rect x="52" y="148" width="26" height="44" rx="3" class="usb"/>
+    <rect x="70" y="70" width="270" height="200" rx="6" class="pcb"/>
+    <rect x="236" y="106" width="96" height="128" rx="3" class="can"/>
+    <text x="284" y="174" text-anchor="middle" class="tcan" style="font-size:11px">ESP-12F</text>
+    <text x="150" y="168" text-anchor="middle" class="tpcb t-display" style="font-size:17px">D1 Mini</text>
+    <text x="150" y="186" text-anchor="middle" class="tpcb" style="font-size:9px">USB end ←</text>
+    <g class="pin">
+      <rect x="116" y="76" width="8" height="8"/><rect x="136" y="76" width="8" height="8"/><rect x="156" y="76" width="8" height="8"/><rect x="176" y="76" width="8" height="8"/>
+      <rect x="196" y="76" width="8" height="8"/><rect x="216" y="76" width="8" height="8"/><rect x="236" y="76" width="8" height="8"/><rect x="256" y="76" width="8" height="8"/>
+      <rect x="116" y="256" width="8" height="8"/><rect x="136" y="256" width="8" height="8"/><rect x="156" y="256" width="8" height="8"/><rect x="176" y="256" width="8" height="8"/>
+      <rect x="196" y="256" width="8" height="8"/><rect x="216" y="256" width="8" height="8"/><rect x="236" y="256" width="8" height="8"/><rect x="256" y="256" width="8" height="8"/>
+    </g>
+    <g text-anchor="middle" style="font-size:8.5px">
+      <text x="120" y="100" class="tpcb">3V3</text><text x="140" y="100" class="tpcb">D8</text><text x="160" y="100" class="tpcb">D7</text><text x="180" y="100" class="tpcb">D6</text>
+      <text x="200" y="100" class="tpcb">D5</text><text x="220" y="100" class="tpcb">D0</text><text x="240" y="100" class="tpcb">A0</text><text x="260" y="100" class="tpcb">RST</text>
+      <text x="120" y="249" class="tpcb">5V</text><text x="140" y="249" class="tpcb">G</text><text x="160" y="249" class="tpcb">D4</text><text x="180" y="249" class="tpcb">D3</text>
+      <text x="200" y="249" class="tpcb">D2</text><text x="220" y="249" class="tpcb">D1</text><text x="240" y="249" class="tpcb">RX</text><text x="260" y="249" class="tpcb">TX</text>
+    </g>
+    <circle cx="120" cy="80" r="8" class="hl"/><circle cx="140" cy="260" r="8" class="hl"/><circle cx="220" cy="260" r="8" class="hl"/>
+    <!-- Resistor R1: j10 to h19 -->
+    <line x1="220" y1="280" x2="400" y2="240" class="leg"/>
+    <g transform="rotate(-12.5 310 260)">
+      <rect x="285" y="252" width="50" height="16" rx="7" style="fill:#5b8fc9"/>
+      <rect x="291" y="252" width="4" height="16" style="fill:#7a4a2a"/><rect x="299" y="252" width="4" height="16" style="fill:#1b1b1b"/>
+      <rect x="307" y="252" width="4" height="16" style="fill:#1b1b1b"/><rect x="315" y="252" width="4" height="16" style="fill:#7a4a2a"/>
+      <rect x="326" y="252" width="4" height="16" style="fill:#7a4a2a"/>
+    </g>
+    <circle cx="220" cy="280" r="3.5" class="fill-line"/><circle cx="400" cy="240" r="3.5" class="fill-line"/>
+    <!-- Transistor Q1 at g18 g19 g20 -->
+    <path d="M376,226 L424,226 A24 22 0 0 0 376,226 Z" class="to92"/>
+    <text x="383" y="223" text-anchor="middle" class="t92" style="font-size:8px">E</text>
+    <text x="400" y="223" text-anchor="middle" class="t92" style="font-size:8px">B</text>
+    <text x="417" y="223" text-anchor="middle" class="t92" style="font-size:8px">C</text>
+    <text x="400" y="214" text-anchor="middle" class="t92" style="font-size:8px">Q1</text>
+    <!-- Wires -->
+    <path d="M140,280 C140,330 380,330 380,280" class="w w-gnd"/>
+    <circle cx="140" cy="280" r="4" class="d-gnd"/><circle cx="380" cy="280" r="4" class="d-gnd"/>
+    <path d="M120,60 C120,12 470,12 560,130" class="w w-pos"/>
+    <circle cx="120" cy="60" r="4" class="d-pos"/><circle cx="560" cy="130" r="5" class="d-pos"/>
+    <path d="M420,200 C470,200 500,210 560,210" class="w w-col"/>
+    <circle cx="420" cy="200" r="4" class="d-col"/><circle cx="560" cy="210" r="5" class="d-col"/>
+    <!-- Battery box -->
+    <rect x="560" y="90" width="200" height="160" rx="10" class="bbox"/>
+    <text x="660" y="160" text-anchor="middle" class="t-display" style="font-size:14px">Sign battery box</text>
+    <text x="660" y="180" text-anchor="middle" class="tm">switch ON · no batteries</text>
+    <text x="576" y="135" style="font-weight:600">+</text><text x="576" y="215" style="font-weight:600">−</text>
+    <text x="660" y="76" text-anchor="middle">red: a5 (3V3) → +</text>
+    <text x="660" y="272" text-anchor="middle">blue: f20 (Q1 C) → −</text>
+  </svg>
+  <div class="legend"><span><i class="sw sw-pos"></i>red lead, 3.3 V</span><span><i class="sw sw-gnd"></i>ground jumper</span><span><i class="sw sw-col"></i>blue lead, LED −</span><span>blue part: 1 kΩ resistor</span><span>orange rings: the 3 D1 Mini pins you use</span></div>
+  <figcaption>Each numbered column of 5 holes (a–e, and separately f–j) is connected inside the breadboard. That's why plugging into <code>a5</code> reaches the 3V3 pin sitting in <code>b5</code>.</figcaption>
+  </figure>
+  <div class="tbl"><table>
+    <thead><tr><th>Part</th><th>Goes in</th><th>Connects</th></tr></thead>
+    <tbody>
+      <tr><td>Transistor Q1</td><td><code>g18</code> E · <code>g19</code> B · <code>g20</code> C</td><td>Flat face toward row j (toward you)</td></tr>
+      <tr><td>Resistor R1 (1 kΩ)</td><td><code>j10</code> → <code>h19</code></td><td>D1 pin → transistor base</td></tr>
+      <tr><td>Black jumper</td><td><code>j6</code> → <code>j18</code></td><td>D1 Mini G → transistor emitter</td></tr>
+      <tr><td>Red lead (from step 7)</td><td><code>a5</code></td><td>D1 Mini 3V3 → battery box +</td></tr>
+      <tr><td>Blue lead (from step 7)</td><td><code>f20</code></td><td>Transistor collector → battery box −</td></tr>
+    </tbody>
+  </table></div>
+  <p>If your D1 Mini's printed pin names don't match the drawing, go by the <b>pin names</b>, not the hole numbers. The three that matter are <b>3V3</b>, <b>G</b> and <b>D1</b>.</p>
+</div></section>
+
+<section class="step" id="step11"><div class="num">11</div><div class="step-body">
+  <h3>Test it</h3>
+  <ol class="sub">
+    <li>Plug in USB and wait about 10 seconds for the board to join Wi-Fi.</li>
+    <li>Open the device page and click <b>Toggle</b>. The sign should light, and go dark when you click again.</li>
+    <li>Or type <code>Power1 1</code> and <code>Power1 0</code> in the Console.</li>
+  </ol>
+  <div class="note">You can leave it running on the breadboard for one evening to watch it come on at sunset by itself before you make it permanent.</div>
+  <p>Not working? See <a href="#trouble">Troubleshooting</a> at the end.</p>
+</div></section>
+
+<!-- ============ PART E ============ -->
+<h2 class="part">E · Make it permanent</h2>
+<p class="part-sub">Replace the breadboard with soldered wires so everything fits inside the sign.</p>
+
+<section class="step" id="step12"><div class="num">12</div><div class="step-body">
+  <h3>Solder the final circuit</h3>
+  <p>You can use the same D1 Mini and solder wires onto its header pins, trimmed short. Or take a fresh one without headers, repeat steps 2–4 to set it up, and solder the wires straight into its holes, which ends up smaller.</p>
+  <figure>
+  <svg viewBox="0 0 740 310" role="img" aria-labelledby="pm-t">
+    <title id="pm-t">Permanent wiring: D1 Mini pads wired to a transistor with a resistor soldered to its base, and leads to the battery box</title>
+    <rect x="16" y="118" width="18" height="44" rx="3" class="usb"/>
+    <rect x="30" y="60" width="250" height="160" rx="6" class="pcb"/>
+    <rect x="214" y="104" width="56" height="72" rx="3" class="can"/>
+    <text x="242" y="144" text-anchor="middle" class="tcan" style="font-size:9px">ESP</text>
+    <text x="115" y="146" text-anchor="middle" class="tpcb t-display" style="font-size:16px">D1 Mini</text>
+    <g class="pin">
+      <circle cx="60" cy="80" r="4"/><circle cx="80" cy="80" r="4"/><circle cx="100" cy="80" r="4"/><circle cx="120" cy="80" r="4"/><circle cx="140" cy="80" r="4"/><circle cx="160" cy="80" r="4"/><circle cx="180" cy="80" r="4"/><circle cx="200" cy="80" r="4"/>
+      <circle cx="60" cy="200" r="4"/><circle cx="80" cy="200" r="4"/><circle cx="100" cy="200" r="4"/><circle cx="120" cy="200" r="4"/><circle cx="140" cy="200" r="4"/><circle cx="160" cy="200" r="4"/><circle cx="180" cy="200" r="4"/><circle cx="200" cy="200" r="4"/>
+    </g>
+    <g text-anchor="middle" style="font-size:8.5px">
+      <text x="60" y="98" class="tpcb">3V3</text><text x="80" y="98" class="tpcb">D8</text><text x="100" y="98" class="tpcb">D7</text><text x="120" y="98" class="tpcb">D6</text>
+      <text x="140" y="98" class="tpcb">D5</text><text x="160" y="98" class="tpcb">D0</text><text x="180" y="98" class="tpcb">A0</text><text x="200" y="98" class="tpcb">RST</text>
+      <text x="60" y="189" class="tpcb">5V</text><text x="80" y="189" class="tpcb">G</text><text x="100" y="189" class="tpcb">D4</text><text x="120" y="189" class="tpcb">D3</text>
+      <text x="140" y="189" class="tpcb">D2</text><text x="160" y="189" class="tpcb">D1</text><text x="180" y="189" class="tpcb">RX</text><text x="200" y="189" class="tpcb">TX</text>
+    </g>
+    <circle cx="60" cy="80" r="8" class="hl"/><circle cx="80" cy="200" r="8" class="hl"/><circle cx="160" cy="200" r="8" class="hl"/>
+    <!-- transistor -->
+    <path d="M420,134 V106 Q420,90 440,90 Q460,90 460,106 V134 Z" class="to92"/>
+    <text x="440" y="118" text-anchor="middle" class="t92" style="font-size:10px">Q1</text>
+    <path d="M428,134 V160 L405,190" class="metal-s"/>
+    <path d="M440,134 V200" class="metal-s"/>
+    <path d="M452,134 V160 L475,190" class="metal-s"/>
+    <text x="440" y="80" text-anchor="middle" class="tm">bend E and C apart</text>
+    <text x="400" y="160" text-anchor="end" style="font-size:11px">E</text><text x="482" y="160" style="font-size:11px">C</text>
+    <!-- resistor -->
+    <line x1="440" y1="200" x2="440" y2="272" class="leg"/>
+    <rect x="433" y="214" width="14" height="42" rx="6" style="fill:#5b8fc9"/>
+    <rect x="433" y="219" width="14" height="4" style="fill:#7a4a2a"/><rect x="433" y="226" width="14" height="4" style="fill:#1b1b1b"/>
+    <rect x="433" y="233" width="14" height="4" style="fill:#1b1b1b"/><rect x="433" y="240" width="14" height="4" style="fill:#7a4a2a"/>
+    <rect x="433" y="249" width="14" height="4" style="fill:#7a4a2a"/>
+    <text x="456" y="232">R1 1 kΩ, soldered</text><text x="456" y="248">to the middle (B) leg</text>
+    <!-- wires -->
+    <path d="M60,80 C60,20 560,20 620,110" class="w w-pos"/>
+    <path d="M80,200 C80,290 380,280 405,190" class="w w-gnd"/>
+    <path d="M160,200 C160,255 340,295 440,272" class="w w-sig"/>
+    <path d="M475,190 C540,195 580,200 620,200" class="w w-col"/>
+    <!-- joints and sleeves -->
+    <g class="fill-line"><circle cx="405" cy="190" r="4"/><circle cx="475" cy="190" r="4"/><circle cx="440" cy="200" r="4"/><circle cx="440" cy="272" r="4"/></g>
+    <rect x="393" y="176" width="24" height="26" rx="4" class="ln-dash"/>
+    <rect x="463" y="176" width="24" height="26" rx="4" class="ln-dash"/>
+    <rect x="428" y="192" width="24" height="18" rx="4" class="ln-dash"/>
+    <rect x="428" y="262" width="24" height="20" rx="4" class="ln-dash"/>
+    <text x="560" y="300" text-anchor="middle" class="tm">dashed boxes: tape or heat-shrink each bare joint</text>
+    <!-- battery box -->
+    <rect x="620" y="80" width="100" height="150" rx="8" class="bbox"/>
+    <text x="670" y="150" text-anchor="middle" class="t-display" style="font-size:13px">battery</text>
+    <text x="670" y="167" text-anchor="middle" class="t-display" style="font-size:13px">box</text>
+    <text x="630" y="115" style="font-weight:600">+</text><text x="630" y="205" style="font-weight:600">−</text>
+    <circle cx="620" cy="110" r="5" class="d-pos"/><circle cx="620" cy="200" r="5" class="d-col"/>
+  </svg>
+  <div class="legend"><span><i class="sw sw-pos"></i>3V3 → battery +</span><span><i class="sw sw-gnd"></i>G → emitter</span><span><i class="sw sw-sig"></i>D1 → resistor → base</span><span><i class="sw sw-col"></i>collector → battery −</span></div>
+  </figure>
+  <ol class="sub">
+    <li><b>Prepare the transistor.</b> Bend the outer legs (E and C) outward so they can't touch the middle leg or each other.</li>
+    <li><b>Resistor to base.</b> Twist one leg of the 1 kΩ resistor around the tip of the middle (B) leg. Solder, trim the excess and cover the joint with tape or heat-shrink.</li>
+    <li><b>Ground.</b> Solder a black wire about 8 cm long from the D1 Mini's <b>G</b> pad to the <b>E</b> leg.</li>
+    <li><b>Signal.</b> Solder a yellow wire from the <b>D1</b> pad to the free end of the resistor.</li>
+    <li><b>3.3 V.</b> Cut the pin off the red battery lead, strip it and solder it to the <b>3V3</b> pad.</li>
+    <li><b>LED return.</b> Cut the pin off the blue battery lead, strip it and solder it to the <b>C</b> leg.</li>
+    <li><b>Insulate.</b> Cover every bare joint, then wrap the transistor and resistor together in a few turns of tape. Nothing bare should be able to touch anything else.</li>
+    <li><b>Re-test</b> before mounting: plug in USB and click Toggle, as in step 11.</li>
+  </ol>
+</div></section>
+
+<section class="step" id="step13"><div class="num">13</div><div class="step-body">
+  <h3>Mount it and bring the cable out</h3>
+  <figure class="small">
+  <svg viewBox="0 0 520 395" role="img" aria-labelledby="pl-t">
+    <title id="pl-t">Inside the back panel: battery box, LED string, D1 Mini glued nearby, USB cable leaving through a notch</title>
+    <rect x="30" y="20" width="460" height="330" rx="6" class="mdf"/>
+    <circle cx="44" cy="34" r="3" class="notch"/><circle cx="476" cy="34" r="3" class="notch"/><circle cx="44" cy="336" r="3" class="notch"/><circle cx="476" cy="336" r="3" class="notch"/>
+    <path d="M180,160 C120,150 100,80 160,70 S300,40 360,70 S420,120 330,150" class="ln" style="stroke-width:1.4"/>
+    <path d="M180,200 C110,220 90,300 170,300 S300,320 380,290" class="ln" style="stroke-width:1.4"/>
+    <g><circle cx="160" cy="70" r="9" class="ledhalo"/><circle cx="160" cy="70" r="4" class="led"/>
+    <circle cx="230" cy="55" r="9" class="ledhalo"/><circle cx="230" cy="55" r="4" class="led"/>
+    <circle cx="300" cy="52" r="9" class="ledhalo"/><circle cx="300" cy="52" r="4" class="led"/>
+    <circle cx="360" cy="70" r="9" class="ledhalo"/><circle cx="360" cy="70" r="4" class="led"/>
+    <circle cx="396" cy="108" r="9" class="ledhalo"/><circle cx="396" cy="108" r="4" class="led"/>
+    <circle cx="116" cy="262" r="9" class="ledhalo"/><circle cx="116" cy="262" r="4" class="led"/>
+    <circle cx="170" cy="300" r="9" class="ledhalo"/><circle cx="170" cy="300" r="4" class="led"/>
+    <circle cx="240" cy="309" r="9" class="ledhalo"/><circle cx="240" cy="309" r="4" class="led"/>
+    <circle cx="310" cy="304" r="9" class="ledhalo"/><circle cx="310" cy="304" r="4" class="led"/>
+    <circle cx="380" cy="290" r="9" class="ledhalo"/><circle cx="380" cy="290" r="4" class="led"/></g>
+    <rect x="180" y="140" width="150" height="80" rx="6" class="bbox"/>
+    <text x="255" y="184" text-anchor="middle" class="t-display" style="font-size:13px">battery box</text>
+    <path d="M330,165 C345,170 350,185 362,190" class="w w-pos" style="stroke-width:2.5"/>
+    <path d="M330,205 C340,215 345,232 350,238" class="w w-col" style="stroke-width:2.5"/>
+    <rect x="360" y="175" width="95" height="42" rx="4" class="pcb"/>
+    <text x="407" y="200" text-anchor="middle" class="tpcb t-display" style="font-size:12px">D1 Mini</text>
+    <rect x="344" y="236" width="18" height="16" rx="3" class="to92"/>
+    <path d="M362,196 C330,250 420,300 420,350 L420,385" class="w w-gnd" style="stroke-width:3.5"/>
+    <rect x="410" y="342" width="20" height="10" class="notch"/>
+    <line x1="455" y1="178" x2="470" y2="150" class="ln-thin"/>
+    <text x="474" y="140" text-anchor="end" style="font-size:11px">hot glue / foam tape</text>
+    <line x1="346" y1="252" x2="300" y2="268" class="ln-thin"/>
+    <text x="296" y="272" text-anchor="end" style="font-size:11px">Q1 + R1, taped</text>
+    <text x="436" y="372" style="font-size:11px">½ in. notch</text>
+    <text x="436" y="387" class="tm" style="font-size:11px">to charger</text>
+  </svg>
+  <figcaption>The inside of the back panel, roughly as in your photo. The D1 Mini sits next to the battery box, and the USB cable leaves through a notch in the bottom edge.</figcaption>
+  </figure>
+  <ol class="sub">
+    <li>Stick the D1 Mini to the MDF with hot glue or foam tape, close to the battery box. Keep the silver ESP-12F end clear of anything metal so Wi-Fi reception stays good.</li>
+    <li>Tuck the taped transistor bundle beside it and dab it in place with hot glue.</li>
+    <li>File a notch in the bottom edge of the panel, or drill a ½ in. hole. A micro-USB plug fits through ½ in.</li>
+    <li>Thread the cable through and plug it in. Leave a little slack, then hot-glue or zip-tie the cable to the panel. The D1 Mini's USB socket is fragile, and a tug on the cable could rip it off.</li>
+    <li>Screw the back panel on. Check the sign's switch is still <b>ON</b>.</li>
+  </ol>
+</div></section>
+
+<section class="step" id="step14"><div class="num">14</div><div class="step-body">
+  <h3>Plug it in and confirm the schedule</h3>
+  <ol class="sub">
+    <li>Plug the cable into the wall charger where the sign will live.</li>
+    <li>Open the device page and click <b>Toggle</b> once to confirm the sign still works, then set it back to <b>OFF</b>.</li>
+    <li>In the Console, run <code>Status 7</code> once more. The <b>Sunset</b> value is when the sign will light tonight.</li>
+    <li>Run <code>Timers</code> to confirm both timers are enabled.</li>
+  </ol>
+  <p>That's it. The sign now lights at sunset and goes dark at midnight every day, with no batteries to replace.</p>
+  <div class="warn"><b>Power cut in the evening?</b> If the power blinks after sunset, the sign stays off until the next sunset. Click <b>Toggle</b> to turn it back on for the night.</div>
+</div></section>
+
+<h2 class="part" id="trouble">Troubleshooting</h2>
+<div class="tbl"><table>
+  <thead><tr><th>What you see</th><th>Likely cause and fix</th></tr></thead>
+  <tbody>
+    <tr><td>Chrome shows no serial port</td><td>The cable is charge-only. Use a different micro-USB cable.</td></tr>
+    <tr><td>Can't find the device after setup</td><td>Wi-Fi didn't connect (2.4 GHz only). The board then opens its own <code>tasmota-xxxx</code> network: join it, browse to <code>192.168.4.1</code> and enter your Wi-Fi details again.</td></tr>
+    <tr><td>Toggle does nothing; LEDs stay off</td><td>Check the sign's switch is ON. Check that the red and blue leads aren't swapped (redo step 8). Check that the transistor's flat face points toward row j, and that the resistor goes to D1, not D4 or D2.</td></tr>
+    <tr><td>LEDs always on, even when OFF</td><td>Collector and emitter are swapped or touching, or the blue lead is plugged into a G column. Recheck the table in step 10.</td></tr>
+    <tr><td>LEDs very dim</td><td>The resistor isn't 1 kΩ (a 100 kΩ looks similar: brown-black-black-orange). Or the blue lead is in the base column.</td></tr>
+    <tr><td>Turns on at the wrong time</td><td>Run <code>Status 7</code>. If the time is off by hours, re-enter <code>Timezone 99</code> and the two <code>Time…</code> lines. If the sunset time is wrong, check the sign of <code>Longitude</code>: it should be negative.</td></tr>
+    <tr><td>Board restarts when the LEDs come on</td><td>The charger or cable is too weak. Use a charger rated 1 A or more and a shorter cable.</td></tr>
+  </tbody>
+</table></div>
+</div>
+
+<script>
+document.querySelectorAll('.cmd button').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var pre = btn.parentElement.querySelector('pre');
+    var text = pre.textContent;
+    var done = function(label){ btn.textContent = label; setTimeout(function(){ btn.textContent = 'Copy'; }, 1500); };
+    var select = function(){ try{ var r=document.createRange(); r.selectNodeContents(pre); var s=getSelection(); s.removeAllRanges(); s.addRange(r); done('Selected'); }catch(e){} };
+    try{
+      navigator.clipboard.writeText(text).then(function(){ done('Copied'); }, select);
+    }catch(e){ select(); }
+  });
+});
+(function(){
+  var KEY='sign-retrofit-checks';
+  var saved={};
+  try{ saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}; }catch(e){}
+  document.querySelectorAll('.checks input').forEach(function(cb){
+    if(saved[cb.id]) cb.checked=true;
+    cb.addEventListener('change', function(){
+      saved[cb.id]=cb.checked;
+      try{ localStorage.setItem(KEY, JSON.stringify(saved)); }catch(e){}
+    });
+  });
+})();
+</script>
+</body>
+</html>
