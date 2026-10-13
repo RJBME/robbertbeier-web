@@ -3024,10 +3024,15 @@ async function initCheatMap(geo, plan, round){
   if (CHEAT_MAP){ CHEAT_MAP.remove(); CHEAT_MAP = null; }
   const map = L.map(el, { scrollWheelZoom: false, preferCanvas: true });
   CHEAT_MAP = map;
-  // OpenFreeMap vector basemap (no API key, crisp on any display) via the MapLibre
-  // bridge — native light/dark cartography. Recreated fresh each call, so just pick
-  // the current theme's style.
-  L.maplibreGL({ style: ofmStyle(document.documentElement.getAttribute('data-theme') === 'dark'), attribution: OFM_ATTR }).addTo(map);
+  // RASTER tiles here (not the OpenFreeMap vector basemap the interactive maps use):
+  //   1. This sheet is printed to PDF — raster tiles are <img> elements that export
+  //      cleanly, whereas a MapLibre WebGL canvas renders blank/garbage in print.
+  //   2. The vector bridge mis-sizes its GL canvas inside this overlay container
+  //      (paints only half, leaving a garbage block). Raster sidesteps both issues.
+  // Dark mode via the same CSS invert+hue-rotate used before the vector switch.
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19 }).addTo(map);
+  { const _dk = document.documentElement.getAttribute('data-theme') === 'dark'; const _tp = el.querySelector('.leaflet-tile-pane'); if (_tp) _tp.style.filter = _dk ? 'invert(1) hue-rotate(180deg)' : ''; }
   const line = L.geoJSON(geo, { style: { color: '#5d3fd3', weight: 4, opacity: 0.9 } }).addTo(map);
   const A = STATE.A, B = STATE.B;
   L.marker([A.lat, A.lon]).addTo(map).bindPopup('Start');
