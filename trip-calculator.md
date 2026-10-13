@@ -1618,6 +1618,7 @@ async function tripTemp(lat, lon, dateStr){
 //  Main flow
 // ============================================================
 let MAP, ROUTE_LAYER, STATE = null, LAST_ETA = null, LAST_EST = null;
+let BASE_LAYER = null, BASE_DARK = null;   // OpenFreeMap vector basemap + its current light/dark state
 // Manual charge stops staged by a loaded/imported trip, applied once the route is
 // (re)planned (they reference charger coordinates, so they're route-independent).
 let PENDING_MANUAL = null;
@@ -3023,10 +3024,10 @@ async function initCheatMap(geo, plan, round){
   if (CHEAT_MAP){ CHEAT_MAP.remove(); CHEAT_MAP = null; }
   const map = L.map(el, { scrollWheelZoom: false, preferCanvas: true });
   CHEAT_MAP = map;
-  // OpenStreetMap tiles (no API key). CARTO basemap tiles now require an API key.
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19 }).addTo(map);
-  { const _dk = document.documentElement.getAttribute('data-theme') === 'dark'; const _tp = el.querySelector('.leaflet-tile-pane'); if (_tp) _tp.style.filter = _dk ? 'invert(1) hue-rotate(180deg)' : ''; }
+  // OpenFreeMap vector basemap (no API key, crisp on any display) via the MapLibre
+  // bridge — native light/dark cartography. Recreated fresh each call, so just pick
+  // the current theme's style.
+  L.maplibreGL({ style: ofmStyle(document.documentElement.getAttribute('data-theme') === 'dark'), attribution: OFM_ATTR }).addTo(map);
   const line = L.geoJSON(geo, { style: { color: '#5d3fd3', weight: 4, opacity: 0.9 } }).addTo(map);
   const A = STATE.A, B = STATE.B;
   L.marker([A.lat, A.lon]).addTo(map).bindPopup('Start');
@@ -4364,27 +4365,33 @@ function fmtDur(h){
 //  Map (Leaflet, lazy-loaded on first use)
 // ============================================================
 let _leafletPromise = null;
+// OpenFreeMap vector-tile style URLs (free, no API key, crisp at any pixel density).
+// positron = light, dark = native dark cartography (no CSS-invert hack needed).
+function ofmStyle(dark){ return dark ? 'https://tiles.openfreemap.org/styles/dark' : 'https://tiles.openfreemap.org/styles/positron'; }
+const OFM_ATTR = '&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
 function loadLeaflet(){
-  if (window.L) return Promise.resolve();
-  // Cache the in-flight promise so the concurrent callers on one refresh (drawMap,
-  // drawChargerMarkers, rerouteThroughStops) share a SINGLE script/CSS injection
-  // instead of each appending another copy of Leaflet while the first is loading.
+  if (window.L && window.maplibregl && window.L.maplibreGL) return Promise.resolve();
+  // Cache the in-flight promise so concurrent callers on one refresh (drawMap,
+  // drawChargerMarkers, rerouteThroughStops) share a SINGLE injection instead of
+  // each appending another copy while the first is loading.
   if (_leafletPromise) return _leafletPromise;
-  _leafletPromise = new Promise(res => {
-    // SRI NOTE: the integrity hashes below fingerprint these EXACT Leaflet 1.9.4 files.
-    // If you bump the version you MUST regenerate each hash or the browser blocks it:
-    //   curl -sSL "<url>" | openssl dgst -sha384 -binary | openssl base64 -A  → prefix "sha384-"
-    const css = document.createElement('link');
-    css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    css.integrity = 'sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H';
-    css.crossOrigin = 'anonymous';
-    document.head.appendChild(css);
-    const js = document.createElement('script');
-    js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    js.integrity = 'sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH';
-    js.crossOrigin = 'anonymous';
-    js.onload = res; document.body.appendChild(js);
-  });
+  // SRI NOTE: each integrity hash fingerprints that EXACT file version. If you bump a
+  // version you MUST regenerate its hash or the browser blocks it:
+  //   curl -sSL "<url>" | openssl dgst -sha384 -binary | openssl base64 -A  → prefix "sha384-"
+  const addCss = (href, integrity) => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.integrity = integrity; l.crossOrigin = 'anonymous'; document.head.appendChild(l); };
+  const addJs  = (src, integrity) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.integrity = integrity; s.crossOrigin = 'anonymous'; s.onload = res; s.onerror = rej; document.body.appendChild(s); });
+  _leafletPromise = (async () => {
+    // Leaflet (markers, route line, popups) + MapLibre GL (vector basemap) load in parallel…
+    addCss('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H');
+    addCss('https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.css', 'sha384-Nq6PQ+9vJPvw7U/VfDELyrWoGQMsy0gi6QShhaSrGzkpF5KkM40csg2leky+YMTd');
+    await Promise.all([
+      addJs('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', 'sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH'),
+      addJs('https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.js', 'sha384-/L1njH4bbgNt9Uk3HwJ272N9fxJzRBQCxhtwGkZiqgl+Nxpq2ETUNZhNMNV1RgyW'),
+    ]);
+    // …then the Leaflet↔MapLibre bridge, which needs BOTH globals present.
+    await addJs('https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/dist/leaflet-maplibre-gl.js', 'sha384-tXYNKOHx4T02jMP7YYCtBxPIv1B5gaA5mcVPBzqMp6d7VzWzxJgI2aWF/nJLrQdS');
+  })();
   return _leafletPromise;
 }
 async function drawMap(A, B, geometry){
@@ -4395,15 +4402,17 @@ async function drawMap(A, B, geometry){
     // instead of a separate SVG/DOM node each — fewer elements and less memory to
     // retain while the page sits open.
     MAP = L.map('map', { scrollWheelZoom: false, preferCanvas: true });
-    // OpenStreetMap tiles (no API key). CARTO basemap tiles now require an API key.
-    // updateWhenIdle: only fetch tiles once a pan settles (not continuously mid-drag);
-    // keepBuffer: 1 keeps fewer off-screen tiles in memory (Leaflet default is 2).
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19, updateWhenIdle: true, keepBuffer: 1 }).addTo(MAP);
+    // OpenFreeMap vector basemap (no API key, resolution-independent — crisp on any
+    // display) via the MapLibre GL ↔ Leaflet bridge. Route line & markers stay Leaflet
+    // overlays drawn on top. Native light/dark styles — no CSS-invert hack.
+    BASE_LAYER = L.maplibreGL({ style: ofmStyle(dark), attribution: OFM_ATTR }).addTo(MAP);
+    BASE_DARK = dark;
+  } else if (dark !== BASE_DARK) {
+    // Theme toggled since the map was built — swap the vector style.
+    if (BASE_LAYER) MAP.removeLayer(BASE_LAYER);
+    BASE_LAYER = L.maplibreGL({ style: ofmStyle(dark), attribution: OFM_ATTR }).addTo(MAP);
+    BASE_DARK = dark;
   }
-  // Dark mode = CSS invert+hue-rotate on the tile pane (same proven approach as the
-  // analytics map — CARTO dark tiles were unreliable and now need a key).
-  { const _tp = document.getElementById('map').querySelector('.leaflet-tile-pane'); if (_tp) _tp.style.filter = dark ? 'invert(1) hue-rotate(180deg)' : ''; }
   if (ROUTE_LAYER) ROUTE_LAYER.forEach(l => MAP.removeLayer(l));
   const line = L.geoJSON(geometry, { style: { color: '#5d3fd3', weight: 5, opacity: 0.85 } }).addTo(MAP);
   const mA = L.marker([A.lat, A.lon]).addTo(MAP).bindPopup('Start');
