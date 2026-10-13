@@ -1909,7 +1909,12 @@ permalink: /charging-analytics/
 {% assign has_geo = false %}
 {% for loc in site.data.locations %}{% if loc.lat and loc.lng %}{% assign has_geo = true %}{% break %}{% endif %}{% endfor %}
 {% if has_geo %}<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" integrity="sha384-b8ANgTJvdlAnWM5YGMpKn7Kodm+1k7NYNG9zdjTCcZcKatzYHwZ0RLdWarbJJVzU" crossorigin="anonymous" />
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js" integrity="sha384-u5N8qJeJOO2iqNjIKTdl6KeKsEikMAmCUBPc6sC6uGpgL34aPJ4VgNhuhumedpEk" crossorigin="anonymous"></script>{% endif %}
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js" integrity="sha384-u5N8qJeJOO2iqNjIKTdl6KeKsEikMAmCUBPc6sC6uGpgL34aPJ4VgNhuhumedpEk" crossorigin="anonymous"></script>
+<!-- MapLibre GL + Leaflet bridge → OpenFreeMap vector basemap (no API key, crisp at any DPI).
+     Bridge MUST load after both leaflet + maplibre-gl globals exist. SRI-pinned. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.css" integrity="sha384-Nq6PQ+9vJPvw7U/VfDELyrWoGQMsy0gi6QShhaSrGzkpF5KkM40csg2leky+YMTd" crossorigin="anonymous" />
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.js" integrity="sha384-/L1njH4bbgNt9Uk3HwJ272N9fxJzRBQCxhtwGkZiqgl+Nxpq2ETUNZhNMNV1RgyW" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.4/dist/leaflet-maplibre-gl.js" integrity="sha384-tXYNKOHx4T02jMP7YYCtBxPIv1B5gaA5mcVPBzqMp6d7VzWzxJgI2aWF/nJLrQdS" crossorigin="anonymous"></script>{% endif %}
 
 <script>
 /* ════════════════════════════════════════════════════════
@@ -6685,30 +6690,21 @@ function initStickyBar() {
    ════════════════════════════════════════════════════════ */
 let _leafletMap   = null;
 let _markerGroup  = null;
-let _tileLayer    = null; // tracked so we can swap light/dark tiles on theme change
+let _tileLayer    = null; // the OpenFreeMap vector base layer (swapped on theme change)
 let _lastSl       = sessions;
 let _mapBounds    = null; // latlngs of currently-shown markers — used by the Fit-all button
 
-// Tile layer — single OSM source, CSS filter for dark mode
-// CartoDB dark tiles caused blank map issues; CSS invert is simpler and more reliable
-const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+// OpenFreeMap vector basemap (free, no API key, resolution-independent — crisp at any
+// DPI). positron = light, dark = native dark cartography (no CSS-invert hack needed).
+// Rendered via the MapLibre GL ↔ Leaflet bridge; markers live in a separate layer group
+// so swapping the base layer on a theme toggle never disturbs them.
+function ofmStyle() { return isDark() ? 'https://tiles.openfreemap.org/styles/dark' : 'https://tiles.openfreemap.org/styles/positron'; }
+const OFM_ATTR = '&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
-// Dark mode = a CSS invert+hue-rotate on the whole tile pane (persists for tiles
-// loaded later, since it's on the container). This is all that changes on a theme
-// toggle — no need to touch the tile layer itself.
-function _applyTileFilter() {
-  const mapEl = document.getElementById('chargingMap');
-  if (!mapEl) return;
-  const tiles = mapEl.querySelector('.leaflet-tile-pane');
-  if (tiles) tiles.style.filter = isDark() ? 'invert(1) hue-rotate(180deg)' : '';
-}
 function _applyTiles() {
-  if (!_leafletMap) return;
-  if (_tileLayer) { _tileLayer.remove(); }
-  _tileLayer = L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 });
-  _tileLayer.addTo(_leafletMap);
-  _applyTileFilter();
+  if (!_leafletMap || !L.maplibreGL) return;
+  if (_tileLayer) { _leafletMap.removeLayer(_tileLayer); }
+  _tileLayer = L.maplibreGL({ style: ofmStyle(), attribution: OFM_ATTR }).addTo(_leafletMap);
 }
 
 buildVehicleFilter();
@@ -6752,9 +6748,6 @@ window.addEventListener('load', function() {
     // into map zoom; it's enabled once the user clicks the map (see below).
     _leafletMap = L.map('chargingMap', { preferCanvas: true, scrollWheelZoom: false });
     _applyTiles();
-    // Reapply the dark filter after tiles finish loading (filter only — don't
-    // recreate the layer, which throws Leaflet's _fadeAnimated error mid-load).
-    _tileLayer.on('load', () => _applyTileFilter());
     // Create marker group once — clearLayers() on rebuild keeps tile cache alive
     _markerGroup = L.layerGroup().addTo(_leafletMap);
 
@@ -7319,8 +7312,8 @@ function buildHeatmap(sl) {
    THEME REACTIVITY
    ════════════════════════════════════════════════════════ */
 window.addEventListener('themeChanged', () => {
-  // Re-tint map tiles light ↔ dark (filter only — no layer rebuild)
-  _applyTileFilter();
+  // Swap the vector basemap style light ↔ dark (markers are in a separate layer group)
+  _applyTiles();
   allCharts.forEach(chart => {
    try {
     if (!chart || !chart.data) return;   // skip any stale/destroyed instance
