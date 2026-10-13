@@ -3023,8 +3023,10 @@ async function initCheatMap(geo, plan, round){
   if (CHEAT_MAP){ CHEAT_MAP.remove(); CHEAT_MAP = null; }
   const map = L.map(el, { scrollWheelZoom: false, preferCanvas: true });
   CHEAT_MAP = map;
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    { attribution: '© OpenStreetMap, © CARTO', maxZoom: 19 }).addTo(map);
+  // OpenStreetMap tiles (no API key). CARTO basemap tiles now require an API key.
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19 }).addTo(map);
+  { const _dk = document.documentElement.getAttribute('data-theme') === 'dark'; const _tp = el.querySelector('.leaflet-tile-pane'); if (_tp) _tp.style.filter = _dk ? 'invert(1) hue-rotate(180deg)' : ''; }
   const line = L.geoJSON(geo, { style: { color: '#5d3fd3', weight: 4, opacity: 0.9 } }).addTo(map);
   const A = STATE.A, B = STATE.B;
   L.marker([A.lat, A.lon]).addTo(map).bindPopup('Start');
@@ -4393,13 +4395,15 @@ async function drawMap(A, B, geometry){
     // instead of a separate SVG/DOM node each — fewer elements and less memory to
     // retain while the page sits open.
     MAP = L.map('map', { scrollWheelZoom: false, preferCanvas: true });
-    L.tileLayer(dark
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      // updateWhenIdle: only fetch tiles once a pan settles (not continuously mid-drag);
-      // keepBuffer: 1 keeps fewer off-screen tiles in memory (Leaflet default is 2).
-      { attribution: '© OpenStreetMap, © CARTO', maxZoom: 19, updateWhenIdle: true, keepBuffer: 1 }).addTo(MAP);
+    // OpenStreetMap tiles (no API key). CARTO basemap tiles now require an API key.
+    // updateWhenIdle: only fetch tiles once a pan settles (not continuously mid-drag);
+    // keepBuffer: 1 keeps fewer off-screen tiles in memory (Leaflet default is 2).
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19, updateWhenIdle: true, keepBuffer: 1 }).addTo(MAP);
   }
+  // Dark mode = CSS invert+hue-rotate on the tile pane (same proven approach as the
+  // analytics map — CARTO dark tiles were unreliable and now need a key).
+  { const _tp = document.getElementById('map').querySelector('.leaflet-tile-pane'); if (_tp) _tp.style.filter = dark ? 'invert(1) hue-rotate(180deg)' : ''; }
   if (ROUTE_LAYER) ROUTE_LAYER.forEach(l => MAP.removeLayer(l));
   const line = L.geoJSON(geometry, { style: { color: '#5d3fd3', weight: 5, opacity: 0.85 } }).addTo(MAP);
   const mA = L.marker([A.lat, A.lon]).addTo(MAP).bindPopup('Start');
