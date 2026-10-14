@@ -633,13 +633,13 @@ permalink: /trip-calculator/
           <label>Departure</label>
           <div class="dep-row">
             <input id="depDate" type="date" class="dep-date" title="Departure date">
-            <input id="depTime" type="time" step="300" class="dep-time" title="Departure time (24-hour clock)">
+            <input id="depTime" type="time" step="300" lang="en-GB" class="dep-time" title="Departure time (24-hour clock)">
           </div>
           <span class="hint">When you'll leave → we estimate your arrival</span>
         </div>
         <div class="field">
           <label>Or arrive by <span class="opt-tag">(optional)</span></label>
-          <input id="arriveByTime" type="time" step="300" class="dep-time-wide" title="Target arrival (24h) — shows your latest departure time">
+          <input id="arriveByTime" type="time" step="300" lang="en-GB" class="dep-time-wide" title="Target arrival (24h) — shows your latest departure time">
           <span class="hint">Target arrival → we find your latest leave-by time</span>
         </div>
       </div>
@@ -647,7 +647,7 @@ permalink: /trip-calculator/
         <label>Depart destination (turnaround) <span class="opt-tag">(optional)</span></label>
         <div class="dep-row">
           <input id="turnDepDate" type="date" class="dep-date" title="Date you leave the destination to head back">
-          <input id="turnDepTime" type="time" step="300" class="dep-time" title="Time you leave the destination (24-hour clock)">
+          <input id="turnDepTime" type="time" step="300" lang="en-GB" class="dep-time" title="Time you leave the destination (24-hour clock)">
         </div>
         <span class="hint">When you'll head back — times the return drive &amp; your arrival home</span>
       </div>
@@ -1143,7 +1143,7 @@ function makeStopRow(addr, charge, cost, opts){
     +   `<div class="rs-sched">`
     +     `<span class="rs-sched-lbl">Leave this stop</span>`
     +     `<input class="rs-dep-date" type="date">`
-    +     `<input class="rs-dep-time" type="time">`
+    +     `<input class="rs-dep-time" type="time" lang="en-GB">`
     +     `<span class="rs-dwell"></span>`
     +   `</div>`
     +   `<div class="rs-chg">`
@@ -3115,7 +3115,7 @@ function printGuidanceSheet(){
   let depStr = '', arrStr = '', homeArrStr = '';
   const tl = walkTimeline(plan, rt, round, oneWay);
   if (tl){
-    const fmt = d => d.toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+    const fmt = d => d.toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
     depStr = fmt(new Date(tl.startMs)); arrStr = fmt(new Date(tl.destArriveMs));
     if (round && tl.endArriveMs) homeArrStr = fmt(new Date(tl.endArriveMs));
   }
@@ -3186,7 +3186,7 @@ function printGuidanceSheet(){
       ? `<div class="cs-links">${lk.apple ? `<a href="${lk.apple}" target="_blank" rel="noopener">📍 Open in Maps</a>` : ''}${lk.plug ? `<a href="${lk.plug}" target="_blank" rel="noopener">🔌 Check it on PlugShare</a>` : ''}</div>`
       : '';
     if (isAcStop(s)){
-      const fmtT = ms => new Date(ms).toLocaleString([], { weekday:'short', hour:'numeric', minute:'2-digit' });
+      const fmtT = ms => new Date(ms).toLocaleString([], { weekday:'short', hour:'2-digit', minute:'2-digit', hour12:false });
       const overnight = isOvernightStay(s);
       const badge = overnight ? `<span class="cheat-badge overnight">🌙 overnight</span>` : `<span class="cheat-badge slow">slow plug-in</span>`;
       const sched = (s._dwellH > 0 && s._arriveMs != null)
