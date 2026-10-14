@@ -3119,6 +3119,23 @@ function printGuidanceSheet(){
     depStr = fmt(new Date(tl.startMs)); arrStr = fmt(new Date(tl.destArriveMs));
     if (round && tl.endArriveMs) homeArrStr = fmt(new Date(tl.endArriveMs));
   }
+  // Arrival battery % at the destination (and, for round trips, back home) — from the
+  // same energy model the planner used, so it works even when NO charging is needed.
+  let destArrSoc = null, homeArrSoc = null;
+  if (startSoc != null && window._socNrg){
+    const nrg = window._socNrg;
+    const totalMi = round ? oneWay * 2 : oneWay;
+    const sstops = ((plan && plan.stops) || []).filter(s => s.alongMi != null).slice().sort((a, b) => a.alongMi - b.alongMi);
+    const socAt = mile => {
+      const at = sstops.find(s => Math.abs(s.alongMi - mile) < 0.5 && s.arriveSoc != null);
+      if (at) return Math.max(0, Math.round(at.arriveSoc));
+      const before = sstops.filter(s => s.alongMi <= mile - 0.5 && s.target != null);
+      const last = before[before.length - 1];
+      return Math.max(0, Math.round((last ? last.target : startSoc) - nrg.socDrop(last ? last.alongMi : 0, mile)));
+    };
+    destArrSoc = socAt(oneWay);
+    homeArrSoc = round ? ((plan && plan.arriveSoc != null) ? Math.max(0, Math.round(plan.arriveSoc)) : socAt(totalMi)) : destArrSoc;
+  }
   // Multi-day trips group the stop cards by day and call out the overnight stop.
   const multiDay = isMultiDayTimeline(tl);
   const spanDays = multiDay ? tripDayNum(tl.endArriveMs, tl.startMs) : 1;
@@ -3151,12 +3168,14 @@ function printGuidanceSheet(){
   const facts = [];
   if (startSoc != null) facts.push(['Charge to before leaving', `<b>${startSoc}%</b>`]);
   if (depStr) facts.push(['Plan to leave', `<b>${E(depStr)}</b>`]);
-  if (arrStr) facts.push([round ? 'Reach the destination' : "You'll arrive", `about <b>${E(arrStr)}</b>`]);
-  if (homeArrStr) facts.push(['Arrive home', `about <b>${E(homeArrStr)}</b>`]);
-  if (plan && plan.arriveSoc != null){
-    const rr = rangeMiFromSoc(plan.arriveSoc);
-    facts.push([round ? 'Arrive home with' : 'Arrive with', `about <b>${Math.round(plan.arriveSoc)}%</b>${rr != null ? ` (~${Math.round(rr)} mi range left)` : ''}`]);
-  }
+  // Battery % on arrival, appended to each arrival line (incl. range left).
+  const socNote = s => {
+    if (s == null || !isFinite(s)) return '';
+    const rr = rangeMiFromSoc(s);
+    return ` &middot; arrive at <b>~${Math.round(s)}%</b>${rr != null ? ` (~${Math.round(rr)} mi left)` : ''}`;
+  };
+  if (arrStr) facts.push([round ? 'Reach the destination' : "You'll arrive", `about <b>${E(arrStr)}</b>${socNote(destArrSoc)}`]);
+  if (homeArrStr) facts.push(['Arrive home', `about <b>${E(homeArrStr)}</b>${socNote(homeArrSoc)}`]);
   if (dist) facts.push(['Distance', `${E(dist)}${round ? ' (round trip)' : ''}`]);
   if (temp) facts.push(['Weather that day', E(temp)]);
   const factsHtml = facts.map(([k, v]) => `<div><span style="color:#555">${k}:</span> ${v}</div>`).join('');
@@ -3520,6 +3539,7 @@ async function updateChargingPlan(rt, e, temp){
   const oneWay = rt.miles;
   const planMi = round ? oneWay * 2 : oneWay;
   const planNrg = round ? buildEnergyModel(e.effEff, e.batt, mirrorForRoundTrip([], rt.elev, oneWay).elev) : nrg;
+  window._socNrg = planNrg;   // stash so the co-driver sheet can show arrival % at each destination (even with no charging)
   applyElevationToHero(e, planNrg, planMi);
   // Estimated battery % when you REACH the destination (mile oneWay). A stop sitting
   // exactly at the destination (a round-trip "charge at destination") reports its
