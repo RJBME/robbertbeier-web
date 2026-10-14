@@ -513,7 +513,10 @@ permalink: /trip-calculator/
   .tlog-sheet .cs-links { margin-top: 7px; font-size: 12px; }
   .tlog-sheet .cs-links a { color: #1a4fd6; text-decoration: none; margin-right: 16px; white-space: nowrap; }
   .tlog-sheet .cheat-map { border: 1px solid #999; border-radius: 8px; padding: 8px; margin-top: 12px; background: #eef1f5; }
-  .tlog-sheet .cheat-map svg { width: 100%; height: auto; display: block; }
+  /* Direct child only: this sizes the static inline-SVG fallback map. WITHOUT the ">"
+     it also matches Leaflet's nested attribution Ukraine-flag SVG and blows it up to a
+     giant blue/gold block over the map. Keep it scoped to the direct child. */
+  .tlog-sheet .cheat-map > svg { width: 100%; height: auto; display: block; }
   .tlog-sheet .cheat-leaflet { width: 100%; height: 240px; border-radius: 6px; overflow: hidden; background: #eef1f5; }
   .tlog-sheet .cheat-leaflet .leaflet-container { font: inherit; background: #eef1f5; }
   .tlog-sheet .cheat-pin span { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px;
