@@ -643,6 +643,14 @@ permalink: /trip-calculator/
           <span class="hint">Target arrival → we find your latest leave-by time</span>
         </div>
       </div>
+      <div class="field" id="turnaroundWrap" style="display:none;margin-top:12px">
+        <label>Depart destination (turnaround) <span class="opt-tag">(optional)</span></label>
+        <div class="dep-row">
+          <input id="turnDepDate" type="date" class="dep-date" title="Date you leave the destination to head back">
+          <input id="turnDepTime" type="time" step="300" class="dep-time" title="Time you leave the destination (24-hour clock)">
+        </div>
+        <span class="hint">When you'll head back — times the return drive &amp; your arrival home</span>
+      </div>
     </div>
 
     <!-- Route & terrain -->
@@ -1093,6 +1101,12 @@ function initUI(){
   // (pure local math — no re-plan / network call needed).
   const abEl = document.getElementById('arriveByTime');
   if (abEl) abEl.addEventListener('input', () => { if (LAST_ETA) renderETA(LAST_ETA.plan, LAST_ETA.rt, LAST_ETA.round, LAST_ETA.oneWay, LAST_ETA.destSoc); });
+  // The turnaround departure only shifts the schedule (not the charging plan), so
+  // re-render the timeline live — same lightweight path as "arrive by".
+  ['turnDepDate', 'turnDepTime'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => { if (LAST_ETA) renderETA(LAST_ETA.plan, LAST_ETA.rt, LAST_ETA.round, LAST_ETA.oneWay, LAST_ETA.destSoc); });
+  });
 }
 
 const HOME = { lat: 42.3714, lon: -83.4702, label: 'Home — Plymouth, MI' };
@@ -2557,6 +2571,18 @@ function walkTimeline(plan, rt, round, oneWay){
     if (dm == null || isNaN(dm)) return;
     events.push({ mile: w.alongMi, mins: 0, offMi: 0, depMs: dm, ref: { timeOnly: true, name: w.addr, alongMi: w.alongMi } });
   });
+  // Round-trip turnaround: a chosen departure time FROM the destination holds the clock
+  // there (a dwell at mile `oneWay`), which times the return leg and the arrival home.
+  // Flagged `turnaround` so its dwell counts toward the TOTAL trip but not the OUTBOUND
+  // leg (you've already reached the destination when this wait happens).
+  if (round && oneWay > 0 && !seen.has(Math.round(oneWay))){
+    const tdd = document.getElementById('turnDepDate'), tdt = document.getElementById('turnDepTime');
+    const tdm = (tdd && tdt && tdd.value && tdt.value) ? new Date(`${tdd.value}T${tdt.value}`).getTime() : null;
+    if (tdm != null && !isNaN(tdm)){
+      events.push({ mile: oneWay, mins: 0, offMi: 0, depMs: tdm, turnaround: true,
+        ref: { timeOnly: true, turnaround: true, name: (STATE && STATE.B && STATE.B.name) || 'Destination', alongMi: oneWay } });
+    }
+  }
   events.sort((a, b) => a.mile - b.mile);
 
   let clock = startMs, pos = 0;
@@ -2582,7 +2608,7 @@ function walkTimeline(plan, rt, round, oneWay){
     const leaveMs = clock;                       // done here, pulling away from the stall
     // Detour BACK to the highway before the next leg.
     if (detMin){ clock += detMin * 60000; if (outbound) outDetourMin += detMin; totalDetourMin += detMin; }
-    if (dwellH > 0){ totalDwellMin += dwellH * 60; if (outbound) outDwellMin += dwellH * 60; }
+    if (dwellH > 0){ totalDwellMin += dwellH * 60; if (outbound && !e.turnaround) outDwellMin += dwellH * 60; }
     if (e.mins){ totalChargeMin += e.mins; if (outbound) outChargeMin += e.mins; }
     stopTimes.set(e.mile, { arriveMs, depMs: leaveMs, dwellH, detourMin: detMin });
     if (e.ref){ e.ref._arriveMs = arriveMs; e.ref._depMs = leaveMs; e.ref._dwellH = dwellH; e.ref._detourMin = detMin * 2; }
@@ -2678,14 +2704,19 @@ function renderTiming(plan, rt, round, oneWay){
     : `<span class="tt-net ${NET_CLASS[s.net] || 'net-other'}">${esc(s.net === 'Other' ? 'other' : s.net)}</span>`;
   let rows = `<tr class="tt-start"><td class="tt-time">${dayCell(tl.startMs)}${clock(tl.startMs)}</td><td class="tt-time">—</td>`
     + `<td><div class="tt-name">Depart · ${esc(startName)}</div></td></tr>`;
+  // Turnaround row (round trips): arrive at the destination, and — if a turnaround
+  // departure was set — the time you leave it to head home.
+  const turnStop = tl.stopTimes && tl.stopTimes.get(oneWay);
+  const turnDepMs = (turnStop && turnStop.dwellH > 0.0001) ? turnStop.depMs : null;
+  const turnaroundRow = () =>
+    `<tr><td class="tt-time">${dayCell(tl.destArriveMs)}${clock(tl.destArriveMs)}</td>`
+    + `<td class="tt-time">${turnDepMs != null ? dayCell(turnDepMs) + clock(turnDepMs) : '—'}</td>`
+    + `<td><div class="tt-name">↩ Turnaround · ${esc(destName)}</div>`
+    + `${turnDepMs != null ? '<div class="tt-sub">leave for home</div>' : ''}</td></tr>`;
   let turned = false;
   stops.forEach(s => {
     const onReturn = round && oneWay && s.alongMi > oneWay;
-    if (onReturn && !turned){
-      rows += `<tr><td class="tt-time">${dayCell(tl.destArriveMs)}${clock(tl.destArriveMs)}</td><td class="tt-time">—</td>`
-        + `<td><div class="tt-name">↩ Turnaround · ${esc(destName)}</div></td></tr>`;
-      turned = true;
-    }
+    if (onReturn && !turned){ rows += turnaroundRow(); turned = true; }
     const mileLabel = onReturn ? `${Math.round(2 * oneWay - s.alongMi)} mi from home` : `mile ${Math.round(s.alongMi)}`;
     const detail = [];
     if (isDcStop(s)) detail.push(`${Math.round(s.arriveSoc)}% → ${Math.round(s.target)}% · +${Math.round(s.addedKWh)} kWh · ~${Math.round(s.mins)} min`);
@@ -2698,11 +2729,13 @@ function renderTiming(plan, rt, round, oneWay){
       + `<td><div class="tt-name">${esc(s.name)}${netBadge(s)}${manual}</div><div class="tt-sub">${mileLabel}${detail.length ? ' · ' + detail.join(' · ') : ''}</div></td>`
       + `</tr>`;
   });
+  // Round trip with no return-leg charging stops → still show the turnaround.
+  if (round && oneWay && !turned){ rows += turnaroundRow(); turned = true; }
   const finalMs = round ? tl.endArriveMs : tl.destArriveMs;
   const finalName = round ? `${startName} (home)` : destName;
   rows += `<tr class="tt-end"><td class="tt-time">${dayCell(finalMs)}${clock(finalMs)}</td><td class="tt-time">—</td>`
     + `<td><div class="tt-name">Arrive · ${esc(finalName)}</div></td></tr>`;
-  const anySched = stops.some(s => s._dwellH > 0);
+  const anySched = stops.some(s => s._dwellH > 0) || turnDepMs != null;
   const note = anySched
     ? `Times honor the leave time(s) you set; other legs run continuously — drive + charging + off-route detours.`
     : `Continuous timeline from your departure — drive + charging + off-route charger detours. Set a leave time on a stop to pin its departure.`;
@@ -3079,11 +3112,12 @@ function printGuidanceSheet(){
   // Departure / arrival via the trip timeline (drive + DC charging + any
   // scheduled stopovers — an overnight charge pushes arrival to the next day).
   // Also annotates each plan stop with _arriveMs/_depMs/_dwellH for the cards.
-  let depStr = '', arrStr = '';
+  let depStr = '', arrStr = '', homeArrStr = '';
   const tl = walkTimeline(plan, rt, round, oneWay);
   if (tl){
     const fmt = d => d.toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
     depStr = fmt(new Date(tl.startMs)); arrStr = fmt(new Date(tl.destArriveMs));
+    if (round && tl.endArriveMs) homeArrStr = fmt(new Date(tl.endArriveMs));
   }
   // Multi-day trips group the stop cards by day and call out the overnight stop.
   const multiDay = isMultiDayTimeline(tl);
@@ -3118,6 +3152,7 @@ function printGuidanceSheet(){
   if (startSoc != null) facts.push(['Charge to before leaving', `<b>${startSoc}%</b>`]);
   if (depStr) facts.push(['Plan to leave', `<b>${E(depStr)}</b>`]);
   if (arrStr) facts.push([round ? 'Reach the destination' : "You'll arrive", `about <b>${E(arrStr)}</b>`]);
+  if (homeArrStr) facts.push(['Arrive home', `about <b>${E(homeArrStr)}</b>`]);
   if (plan && plan.arriveSoc != null){
     const rr = rangeMiFromSoc(plan.arriveSoc);
     facts.push([round ? 'Arrive home with' : 'Arrive with', `about <b>${Math.round(plan.arriveSoc)}%</b>${rr != null ? ` (~${Math.round(rr)} mi range left)` : ''}`]);
@@ -4451,6 +4486,11 @@ function onRoundTripToggle(){
   const canDest = document.getElementById('canChargeDest').checked;
   document.getElementById('destChargeWrap').style.display = round ? 'flex' : 'none';
   document.getElementById('destRateWrap').style.display = (round && canDest) ? 'flex' : 'none';
+  const tw = document.getElementById('turnaroundWrap');
+  if (tw) tw.style.display = round ? 'block' : 'none';
+  // Prefill the turnaround date with the departure date so only the time needs entering.
+  const tdd = document.getElementById('turnDepDate'), dd = document.getElementById('depDate');
+  if (round && tdd && dd && dd.value && !tdd.value) tdd.value = dd.value;
 }
 
 // ============================================================
@@ -4473,6 +4513,7 @@ function collectTrip(){
     v: 1,
     stops: getRouteStops(),
     veh: val('vehSel'), depDate: val('depDate'), depTime: val('depTime'), arriveBy: val('arriveByTime'),
+    turnDepDate: val('turnDepDate'), turnDepTime: val('turnDepTime'),
     roadType: val('roadType'), effOverride: val('effOverride'), battOverride: val('battOverride'),
     startSoc: val('startSoc'), reserve: val('reserve'), destRate: val('destRate'),
     roundTrip: document.getElementById('roundTrip').checked,
@@ -4502,6 +4543,7 @@ function applyTrip(d){
   setV('depDate', d.depDate); setV('depTime', d.depTime); setV('arriveByTime', d.arriveBy); setV('roadType', d.roadType);
   setV('effOverride', d.effOverride); setV('battOverride', d.battOverride); setV('startSoc', d.startSoc);
   setV('reserve', d.reserve); setV('destRate', d.destRate);
+  setV('turnDepDate', d.turnDepDate); setV('turnDepTime', d.turnDepTime);
   document.getElementById('roundTrip').checked = !!d.roundTrip;
   document.getElementById('canChargeDest').checked = !!d.canChargeDest;
   // Stage manual charge stops to re-attach after the next plan (they reference
