@@ -3026,14 +3026,8 @@ async function initCheatMap(geo, plan, round){
   if (CHEAT_MAP){ CHEAT_MAP.remove(); CHEAT_MAP = null; }
   const map = L.map(el, { scrollWheelZoom: false, preferCanvas: true });
   CHEAT_MAP = map;
-  // RASTER tiles here (not the OpenFreeMap vector basemap the interactive maps use):
-  //   1. This sheet is printed to PDF — raster tiles are <img> elements that export
-  //      cleanly, whereas a MapLibre WebGL canvas renders blank/garbage in print.
-  //   2. The vector bridge mis-sizes its GL canvas inside this overlay container
-  //      (paints only half, leaving a garbage block). Raster sidesteps both issues.
-  // Dark mode via the same CSS invert+hue-rotate used before the vector switch.
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19 }).addTo(map);
+  // Clean muted raster basemap (matches the planner summary map). Raster so it prints.
+  addCleanBasemap(map);
   { const _dk = document.documentElement.getAttribute('data-theme') === 'dark'; const _tp = el.querySelector('.leaflet-tile-pane'); if (_tp) _tp.style.filter = _dk ? 'invert(1) hue-rotate(180deg)' : ''; }
   const line = L.geoJSON(geo, { style: { color: '#5d3fd3', weight: 4, opacity: 0.9 } }).addTo(map);
   const A = STATE.A, B = STATE.B;
@@ -4400,6 +4394,20 @@ function loadLeaflet(){
   });
   return _leafletPromise;
 }
+
+// Clean, muted raster basemap (Esri "Light Gray Canvas") — the minimalist look of
+// CARTO Positron, but free, no API key, and RASTER so it prints to PDF and never hits
+// the WebGL/attribution-flag problems the vector basemap did. Two layers: a label-free
+// land/water base, plus a reference overlay for city/road labels. maxNativeZoom 16 (the
+// service's limit) with maxZoom 19 so closer zooms upscale instead of 404-ing. Dark mode
+// is handled by the caller (CSS invert on the tile pane).
+function addCleanBasemap(map){
+  const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+  L.tileLayer(ESRI + 'World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    { attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a>', maxNativeZoom: 16, maxZoom: 19, zIndex: 1 }).addTo(map);
+  L.tileLayer(ESRI + 'World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+    { maxNativeZoom: 16, maxZoom: 19, zIndex: 2 }).addTo(map);
+}
 async function drawMap(A, B, geometry){
   await loadLeaflet();
   const dark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -4408,10 +4416,8 @@ async function drawMap(A, B, geometry){
     // instead of a separate SVG/DOM node each — fewer elements and less memory to
     // retain while the page sits open.
     MAP = L.map('map', { scrollWheelZoom: false, preferCanvas: true });
-    // Raster OSM tiles (no API key, no WebGL — see the note on loadLeaflet above).
-    // updateWhenIdle: fetch tiles once a pan settles; keepBuffer:1 retains fewer tiles.
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19, updateWhenIdle: true, keepBuffer: 1 }).addTo(MAP);
+    // Clean muted raster basemap (Esri Light Gray Canvas) — no API key, no WebGL.
+    addCleanBasemap(MAP);
   }
   // Dark mode = CSS invert+hue-rotate on the tile pane.
   { const _tp = document.getElementById('map').querySelector('.leaflet-tile-pane'); if (_tp) _tp.style.filter = dark ? 'invert(1) hue-rotate(180deg)' : ''; }
