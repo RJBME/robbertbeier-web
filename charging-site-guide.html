@@ -737,7 +737,7 @@
       <div class="slide-section-label">Gas Savings Calculation</div>
       <h2 class="slide-heading">Managing <span>gas savings</span> periods</h2>
 
-      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Gas savings use period-based rates from <span class="mono">_data/rates.yml</span> — each session is calculated with the rates that were current when it happened. The <strong style="color:var(--text);">mpg field is your baseline</strong> (27 mpg). LRB's sessions automatically use 23 mpg via a per-vehicle override in the code — you don't need a separate rates.yml entry for this.</p>
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">Gas savings use period-based rates from <span class="mono">_data/rates.yml</span> — each session is calculated with the rates that were current when it happened. The <strong style="color:var(--text);">mpg field is your baseline</strong> (24.4 mpg — your 2023 Escape's real-world average from Fuelly). LRB's sessions automatically use 23 mpg via a per-vehicle override in the code — you don't need a separate rates.yml entry for this.</p>
 
       <div class="code-label">_data/rates.yml — the gas_savings section</div>
       <div class="code-block">
@@ -783,8 +783,8 @@
             <strong>Per-vehicle MPG overrides (hardcoded)</strong><br>
             These are set in the JS/Liquid code — do NOT try to manage them via rates.yml:<br><br>
             <table style="font-size:0.75rem;width:100%;border-collapse:collapse">
-              <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">2025 Mach-E GT</td><td style="font-weight:700">27 mpg</td></tr>
-              <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">2026 Mach-E SR</td><td style="font-weight:700">27 mpg</td></tr>
+              <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">2025 Mach-E GT</td><td style="font-weight:700">24.4 mpg</td></tr>
+              <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">2026 Mach-E SR</td><td style="font-weight:700">24.4 mpg</td></tr>
               <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">LRB's 2025 Mach-E GT</td><td style="font-weight:700">23 mpg</td></tr>
               <tr><td style="padding:2px 6px 2px 0;color:var(--muted)">LRB's 2026 Mach-E SR</td><td style="font-weight:700">23 mpg</td></tr>
             </table>

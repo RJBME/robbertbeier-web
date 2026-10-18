@@ -81,7 +81,7 @@ const mileageHistory     = {{ site.data.mileage | jsonify }};
 const locationData       = {{ site.data.locations | jsonify }} || [];
 
 /* ── Constants + lookups (copied from charging-analytics.md — keep in sync) ── */
-const VEHICLE_MPG = { '2025 Mach-E GT':27, '2026 Mach-E SR':27, "LRB's 2025 Mach-E GT":23.0, "LRB's 2026 Mach-E SR":23.0 };
+const VEHICLE_MPG = { '2025 Mach-E GT':24.4, '2026 Mach-E SR':24.4, "LRB's 2025 Mach-E GT":23.0, "LRB's 2026 Mach-E SR":23.0 };
 const VEHICLE_COLORS = { '2025 Mach-E GT':'#C2A76C', '2026 Mach-E SR':'#E31E2E', "LRB's 2025 Mach-E GT":'#B5176B', "LRB's 2026 Mach-E SR":'#2E7D9E' };
 const BUCKET_COLORS = { 'Work':'#0288d1','Home':'#7b1fa2','Tesla SC':'#CC0000','ChargePoint':'#FF7A14','Blink':'#65A844','Rivian':'#ffa500','Electrify America':'#00963f','WeCharge':'#51A950','BP Pulse':'#8DC63F','Shell Recharge':'#FBCE07','Red E':'#FF5252','GM Energy/EVgo':'#14B8A6','Other':'#909090' };
 const CO2_GAS_KG_PER_GAL = 8.887, CO2_TREE_KG_PER_YEAR = 21;
@@ -90,10 +90,10 @@ const EGRID_DEFAULT = EGRID_FACTORS.RFCM;
 const STATE_TO_EGRID = { MI:'RFCM', WI:'MROE', MN:'MROW', IL:'RFCW', OH:'RFCW', IN:'RFCW', PA:'RFCE', NY:'RFCE' };
 function getStepRate(arr, date, field, fallback){ if(!Array.isArray(arr)||!arr.length) return fallback; let v=fallback; for(const r of arr){ if(r.date<=date) v=r[field]; } return (v==null)?fallback:v; }
 function getGasSavingsObj(date, vehicle){
-  const def={mpg:27, gas_price:3.26, mi_per_kwh:3.0};
+  const def={mpg:24.4, gas_price:3.26, mi_per_kwh:3.0};
   if(!Array.isArray(gasSavingsRates)||!gasSavingsRates.length) return def;
   let obj=gasSavingsRates[0]; for(const r of gasSavingsRates){ if(r.date<=date) obj=r; }
-  const mpg = (vehicle||'').includes('LRB') ? 23 : (obj.mpg||27);
+  const mpg = (vehicle||'').includes('LRB') ? 23 : (obj.mpg||24.4);
   return { mpg, gas_price:obj.gas_price||3.26, mi_per_kwh:obj.mi_per_kwh||3.0 };
 }
 function getEgridFactor(locStr){
@@ -118,12 +118,12 @@ sessions.forEach(s=>{
   s.hasRealEff = rawEff!==null && rawEff>=1.5 && rawEff<=4.75;
   s.effKwh = effKwh; s.realEff = s.hasRealEff ? rawEff : null;
   const estMiles = s.hasRealEff ? s.milesAdded : s.kwh*(gs.mi_per_kwh||3.0);
-  s.gasEquiv = estMiles/(gs.mpg||27)*(gs.gas_price||3.26);
+  s.gasEquiv = estMiles/(gs.mpg||24.4)*(gs.gas_price||3.26);
   s.saving = s.gasEquiv - s.cost;
   s.bucket = getBucket(s.location);
   s.month = s.date.slice(0,7);
   const egrid = s.solar ? 0 : getEgridFactor(s.location);
-  s.co2GasCould = (estMiles/(VEHICLE_MPG[s.vehicle]||27))*CO2_GAS_KG_PER_GAL;
+  s.co2GasCould = (estMiles/(VEHICLE_MPG[s.vehicle]||24.4))*CO2_GAS_KG_PER_GAL;
   s.co2Avoided = s.co2GasCould - s.kwh*egrid;
 });
 (memberships||[]).forEach(m=>{
@@ -258,7 +258,7 @@ function renderLookback(veh){
 
     <p class="lb-close">${Math.round(lastOdo).toLocaleString()} miles on the clock, ${(totKwh/1000).toFixed(1)} MWh charged, and about <b style="color:#2ecc71">${fmtUSD(totSave)}</b> kept out of a gas tank.<br>Thanks for the ride. 🚗⚡</p>
 
-    <p class="lb-foot">Same cost, gas-savings and CO₂ methodology as the Analytics page. Home cost includes the +10% wall-side uplift; CO₂ vs the ${VEHICLE_MPG[veh]||27} mpg baseline and eGRID regional grid factors. Private-residence map pins are coarsened for privacy.</p>
+    <p class="lb-foot">Same cost, gas-savings and CO₂ methodology as the Analytics page. Home cost includes the +10% wall-side uplift; CO₂ vs the ${VEHICLE_MPG[veh]||24.4} mpg baseline and eGRID regional grid factors. Private-residence map pins are coarsened for privacy.</p>
   `;
 
   buildCharts(veh, ss);

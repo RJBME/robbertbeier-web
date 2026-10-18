@@ -832,7 +832,7 @@ const BATTERY = { '2025 Mach-E GT': 91.7, "LRB's 2025 Mach-E GT": 91.7 };
 const DEFAULT_BATTERY = 91.7;
 // Gas comparison: latest mpg + gas price from _data/rates.yml
 {% assign gs = site.data.rates.gas_savings | last %}
-const GAS = { mpg: {{ gs.mpg | default: 27 }}, price: {{ gs.gas_price | default: 4.0 }} };
+const GAS = { mpg: {{ gs.mpg | default: 24.4 }}, price: {{ gs.gas_price | default: 4.0 }} };
 const GAS_STOP_MIN = 6;     // minutes per gas fill-up (matches analytics Road Trips)
 const GAS_TANK_GAL = 15.7;  // tank size of the comparison gas car (range = mpg × this)
 const DETOUR_MPH = 30;      // assumed local-road speed to leave the highway for an off-route charger and return

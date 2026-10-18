@@ -336,9 +336,9 @@ permalink: /charging/
     ── Per-session gas savings from _data/rates.yml ──
     All values are Ruby floats — math works cleanly.
     MPG is then overridden per vehicle so LRB's 23mpg car
-    is compared correctly vs RJB's 27mpg baseline.
+    is compared correctly vs RJB's 24.4mpg baseline (2023 Escape real-world).
   {% endcomment %}
-  {% assign p_mpg       = 27   %}
+  {% assign p_mpg       = 24.4 %}
   {% assign p_gas_price = 3.26 %}
   {% assign p_mi_kwh    = 3.0  %}
   {% for period in site.data.rates.gas_savings %}
@@ -442,7 +442,7 @@ permalink: /charging/
 
   <div id="gas-assumptions" class="assumptions-panel">
     <strong>Gas Savings Assumptions by Period</strong>
-    <p style="font-size:0.78rem;color:#888;margin:4px 0 8px">The <em>mpg</em> column is the baseline for your car (27 mpg). LRB's sessions automatically use <strong>23 mpg</strong> regardless of this table — that override is hardcoded per-vehicle in the analytics and dashboard code.</p>
+    <p style="font-size:0.78rem;color:#888;margin:4px 0 8px">The <em>mpg</em> column is the baseline for your car (24.4 mpg — your 2023 Escape's real-world average). LRB's sessions automatically use <strong>23 mpg</strong> regardless of this table — that override is hardcoded per-vehicle in the analytics and dashboard code.</p>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
     <table>
       <tr><th>From date</th><th>Baseline MPG</th><th>Gas $/gal</th><th>mi/kWh</th></tr>
