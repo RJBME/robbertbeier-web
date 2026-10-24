@@ -29,6 +29,7 @@ const SHELL_URLS = [
   '/filament.html',
   '/filament-sync.js',
   '/filament-guide.html',
+  '/site-nav.js',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',

@@ -185,6 +185,7 @@
             .tile { flex-direction: column; gap: 6px; }
         }
     </style>
+    <script src="/site-nav.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -198,7 +199,7 @@
             <div class="kpi"><div class="num need" id="k-out">0</div><div class="lab">colors out</div></div>
         </div>
         <div class="status" id="sync-status"></div>
-        <div class="home"><a href="filament-guide.html">📖 How to use</a> &nbsp;·&nbsp; <a href="/">&larr; robertbeier.com</a></div>
+        <div class="home"><a href="filament-guide.html">📖 How to use</a></div>
     </div>
 
     <div class="tabs" id="tabs">
@@ -395,7 +396,7 @@
     } else if (!all.length) {
       empty.hidden = false;
       empty.innerHTML = `<p style="margin-top:0"><b>No filaments yet.</b></p>
-        <p>Bring over everything from your Google Sheet — 30 Bambu colors, 4 orders and their tracking.</p>
+        <p>Bring over everything from your Google Sheet — 31 Bambu colors and 6 orders, checked against your receipts.</p>
         <button class="btn" id="import-btn">Import my spreadsheet</button>
         <p class="hint">Or add colors one at a time with the button below.</p>`;
       $('import-btn').onclick = importSeed;
