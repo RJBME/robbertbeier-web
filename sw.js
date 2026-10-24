@@ -28,6 +28,7 @@ const SHELL_URLS = [
   '/driving-sync.js',
   '/filament.html',
   '/filament-sync.js',
+  '/filament-catalog.js',
   '/filament-guide.html',
   '/site-nav.js',
   '/manifest.json',

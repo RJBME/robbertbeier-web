@@ -146,6 +146,17 @@
         .lines .ln input, .lines .ln select { padding: 9px 8px; font-size: 0.95rem; }
         .lines .hdr { font-size: 0.72rem; color: var(--faint); font-weight: 600; margin-bottom: 4px; }
         .x { background: none; border: none; color: var(--need); font-size: 1.2rem; cursor: pointer; padding: 0; }
+        .find { background: var(--accent-bg); border-radius: 12px; padding: 4px 12px 12px; margin-top: 4px; }
+        .find label { margin-top: 8px; }
+        .results { margin-top: 6px; }
+        .res { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; background: var(--card); color: var(--text);
+               border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-top: 6px; cursor: pointer; font: inherit; }
+        .res:active { border-color: var(--accent); }
+        .res .grow { flex: 1; min-width: 0; }
+        .res .nm { font-weight: 700; font-size: 0.92rem; }
+        .res .meta { color: var(--faint); font-size: 0.76rem; }
+        .res .have { font-size: 0.7rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+        .filled { display: inline-block; margin-top: 8px; font-size: 0.8rem; font-weight: 700; color: var(--accent); }
         .ship { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) 30px; gap: 6px; align-items: center; margin-bottom: 6px; }
         .ship input { padding: 9px 8px; font-size: 0.9rem; }
         .totals { background: var(--bg); border-radius: 10px; padding: 10px 12px; margin-top: 12px; font-size: 0.9rem; }
@@ -280,6 +291,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="filament-sync.js"></script>
+<script src="filament-catalog.js"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -593,6 +605,12 @@
     const isNew = !fid;
     $('fil-body').innerHTML = `
       <div class="dlg-head"><h2>${isNew ? 'New filament color' : 'Edit ' + esc(f.name)}</h2><button class="close" data-close>&times;</button></div>
+      ${isNew ? `<div class="find">
+        <label for="f-find">🔎 Find a Bambu color</label>
+        <input type="search" id="f-find" placeholder="Name or code, e.g. Charcoal or 11101" autocomplete="off" enterkeyhint="search">
+        <div class="results" id="f-results"></div>
+        <div class="hint" id="f-find-hint">Tap a match to fill in everything below, or type the details yourself.</div>
+      </div>` : ''}
       <label for="f-name">Color name</label><input type="text" id="f-name" value="${esc(f.name)}" placeholder="e.g. Jade White">
       <div class="row">
         <div><label for="f-brand">Brand</label><input type="text" id="f-brand" list="dl-brands" value="${esc(f.brand)}"></div>
@@ -612,6 +630,7 @@
       </div>`;
     const body = $('fil-body');
     body.querySelector('[data-close]').onclick = () => isNew ? dlgFil.close() : renderFilament(fid);
+    if (isNew) wireBambuSearch(onSaved);
     $('f-save').onclick = () => {
       const name = $('f-name').value.trim();
       if (!name) { $('f-name').focus(); return; }
@@ -629,7 +648,43 @@
       if (confirm('Delete ' + f.name + '?')) { Store.remove(fid); dlgFil.close(); toast('Deleted'); }
     };
     if (!dlgFil.open) dlgFil.showModal();
-    if (isNew) $('f-name').focus();
+
+  }
+
+  // Search the built-in Bambu list; a match fills the New color form, or opens the color if you already have it.
+  function wireBambuSearch(onSaved) {
+    const find = $('f-find'), out = $('f-results');
+    const norm = s => String(s || '').trim().toLowerCase();
+    const existing = c => Store.all('filament').find(f => (c.code && norm(f.code) === c.code) ||
+      (norm(f.name) === norm(c.name) && norm(f.material) === norm(c.material)));
+    let matches = [];
+    function show() {
+      matches = searchBambuCatalog(find.value, 8);
+      out.innerHTML = matches.map((c, i) => {
+        const have = existing(c);
+        return `<button type="button" class="res" data-i="${i}"><span class="sw" style="background:${esc(swatchCss(c))}"></span>
+          <span class="grow"><span class="nm">${esc(c.name)}</span><br><span class="meta">${esc(c.material)} · ${c.code ? esc(c.code) : 'code not listed'}</span></span>
+          ${have ? '<span class="have">In your list ›</span>' : ''}</button>`;
+      }).join('') + (find.value.trim() && !matches.length ? '<div class="hint" style="margin-top:6px">No match in the Bambu list. Fill in the details below.</div>' : '');
+      out.querySelectorAll('.res').forEach(b => b.onclick = () => pick(matches[+b.dataset.i]));
+    }
+    function pick(c) {
+      const have = existing(c);
+      if (have) {   // don't make a duplicate: jump to the color you already have
+        if (onSaved) { dlgFil.close(); onSaved(have.id); } else renderFilament(have.id);
+        return;
+      }
+      $('f-name').value = c.name; $('f-brand').value = c.brand; $('f-code').value = c.code; $('f-mat').value = c.material;
+      $('f-hex').value = c.hex.toLowerCase();
+      $('f-two').checked = !!c.hex2; if (c.hex2) $('f-hex2').value = c.hex2.toLowerCase();
+      out.innerHTML = `<span class="filled">✓ Filled in from the Bambu list${c.code ? '' : ' — add the code from your receipt'}</span>`;
+      find.value = '';
+      $('f-find-hint').hidden = true;
+      if (!c.code) $('f-code').focus();
+    }
+    find.oninput = show;
+    find.onkeydown = e => { if (e.key === 'Enter' && matches.length) { e.preventDefault(); pick(matches[0]); } };
+    find.focus();
   }
 
   // ---------- order form ----------
