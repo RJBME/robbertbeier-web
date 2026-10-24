@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#00873a">
+    <title>Filament Tracker Guide</title>
+    <style>
+        :root {
+            --bg: #eef1f5; --card: #fff; --text: #1f2733; --muted: #667; --faint: #889; --line: #e6ecf5;
+            --accent: #00873a; --accent-bg: #e6f6ec; --link: #0056b3;
+            --need: #c62828; --need-bg: #fdecea; --want: #b26a00; --want-bg: #fff4e0; --info: #0277bd; --info-bg: #e3f2fd;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #12161c; --card: #1c222b; --text: #e6eaf0; --muted: #9aa4b2; --faint: #7d8794; --line: #2a323d;
+                --accent: #2fbf6a; --accent-bg: #173326; --link: #7fb2ff;
+                --need: #ff6b6b; --need-bg: #3a1d1d; --want: #f5b14c; --want-bg: #3a2c14; --info: #6cc0ff; --info-bg: #142a3a;
+            }
+        }
+        html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text); margin: 0; line-height: 1.55;
+            padding: 20px 14px max(32px, env(safe-area-inset-bottom));
+        }
+        .wrap { max-width: 720px; margin: 0 auto; }
+        a { color: var(--link); }
+        .card { background: var(--card); border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); padding: 20px; margin-bottom: 14px; }
+        section { scroll-margin-top: 14px; }
+
+        /* hero */
+        .hero { text-align: center; }
+        .hero h1 { font-size: 1.5rem; margin: 0 0 4px; }
+        .hero p { color: var(--muted); margin: 0 auto 16px; max-width: 480px; }
+        .btn { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; border-radius: 10px; padding: 12px 20px; font-weight: 700; }
+        .home { display: block; font-size: 0.8rem; margin-top: 12px; }
+
+        /* jump links */
+        .jump { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px; }
+        .jump a { background: var(--card); color: var(--text); text-decoration: none; border-radius: 20px; padding: 7px 13px; font-size: 0.86rem;
+                  box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+        .jump a:active { background: var(--accent); color: #fff; }
+
+        h2 { font-size: 1.15rem; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+        .lead { color: var(--muted); margin: 0 0 14px; font-size: 0.94rem; }
+        h3 { font-size: 0.98rem; margin: 18px 0 8px; }
+        h3:first-of-type { margin-top: 4px; }
+        p { margin: 0 0 10px; }
+
+        /* the three building blocks */
+        .blocks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+        .block { background: var(--bg); border-radius: 12px; padding: 14px; }
+        .block .ic { font-size: 1.5rem; }
+        .block b { display: block; margin: 4px 0 2px; }
+        .block span { color: var(--muted); font-size: 0.86rem; }
+
+        /* spool life cycle */
+        .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 6px; }
+        .flow .arr { color: var(--faint); }
+        .bdg { font-size: 0.8rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; white-space: nowrap; display: inline-block; }
+        .bdg.ordered { background: var(--want-bg); color: var(--want); }
+        .bdg.incoming { background: var(--info-bg); color: var(--info); }
+        .bdg.sealed { background: var(--accent-bg); color: var(--accent); }
+        .bdg.open { background: var(--want-bg); color: var(--want); }
+        .bdg.low { background: var(--need-bg); color: var(--need); }
+        .bdg.out { background: var(--need-bg); color: var(--need); }
+        .bdg.empty { background: var(--line); color: var(--muted); }
+        .flag { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 2px 7px; border-radius: 6px; }
+        .flag.want { background: var(--want-bg); color: var(--want); }
+        .flag.need { background: var(--need-bg); color: var(--need); }
+
+        /* numbered steps */
+        .steps { list-style: none; counter-reset: s; padding: 0; margin: 0; }
+        .steps > li { counter-increment: s; position: relative; padding: 0 0 12px 40px; }
+        .steps > li:last-child { padding-bottom: 0; }
+        .steps > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%;
+                            background: var(--accent-bg); color: var(--accent); font-weight: 800; font-size: 0.85rem;
+                            display: flex; align-items: center; justify-content: center; }
+        .steps > li::after { content: ''; position: absolute; left: 13.5px; top: 32px; bottom: 4px; width: 1px; background: var(--line); }
+        .steps > li:last-child::after { display: none; }
+
+        /* task accordion */
+        details { border-top: 1px solid var(--line); }
+        details:first-of-type { border-top: none; }
+        summary { cursor: pointer; list-style: none; padding: 13px 0; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        summary::-webkit-details-marker { display: none; }
+        summary .ic { font-size: 1.15rem; width: 26px; text-align: center; flex-shrink: 0; }
+        summary::after { content: '›'; margin-left: auto; color: var(--faint); font-size: 1.3rem; transition: transform .2s; }
+        details[open] summary::after { transform: rotate(90deg); }
+        details .body { padding: 0 0 14px 36px; }
+
+        /* legend */
+        .legend { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 14px; align-items: center; font-size: 0.92rem; }
+        .legend > :nth-child(odd) { justify-self: start; }
+        .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; margin: 4px 0 10px; }
+        .kpis .num { font-size: 1.25rem; font-weight: 800; }
+        .kpis .lab { font-size: 0.72rem; color: var(--muted); }
+
+        .tip { background: var(--accent-bg); border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; margin-top: 12px; }
+        .tip.warn { background: var(--want-bg); }
+        .ui { font-weight: 700; white-space: nowrap; }
+        kbd { font-family: inherit; font-size: 0.85em; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+        .foot { text-align: center; color: var(--faint); font-size: 0.82rem; margin-top: 18px; }
+
+        @media (max-width: 520px) {
+            .blocks { grid-template-columns: 1fr; }
+            .block { display: grid; grid-template-columns: 34px minmax(0, 1fr); column-gap: 8px; align-items: center; }
+            .block .ic { grid-row: span 2; }
+            .block b { margin: 0; }
+            details .body { padding-left: 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <div class="card hero">
+        <h1>🧵 How the Filament Tracker works</h1>
+        <p>A quick tour: what it keeps track of, how to do the everyday things, and what the colors mean.</p>
+        <a class="btn" href="filament.html">Open the tracker →</a>
+        <a class="home" href="/">&larr; robertbeier.com</a>
+    </div>
+
+    <nav class="jump" aria-label="On this page">
+        <a href="#idea">The idea</a>
+        <a href="#start">Getting started</a>
+        <a href="#tasks">Everyday tasks</a>
+        <a href="#reading">Reading the screen</a>
+        <a href="#data">Your data</a>
+    </nav>
+
+    <!-- THE IDEA -->
+    <section class="card" id="idea">
+        <h2>💡 The idea in 30 seconds</h2>
+        <p class="lead">Everything is built from three simple things.</p>
+        <div class="blocks">
+            <div class="block"><div class="ic">🎨</div><b>Colors</b><span>Each filament you buy or want, like Jade White PLA Basic.</span></div>
+            <div class="block"><div class="ic">🧾</div><b>Orders</b><span>What you bought, when, what it cost, and tracking.</span></div>
+            <div class="block"><div class="ic">🧵</div><b>Spools</b><span>Each physical roll. Orders create them for you.</span></div>
+        </div>
+        <h3>The life of a spool</h3>
+        <div class="flow">
+            <span class="bdg ordered">Ordered</span><span class="arr">→</span>
+            <span class="bdg incoming">On the way</span><span class="arr">→</span>
+            <span class="bdg sealed">Sealed</span><span class="arr">→</span>
+            <span class="bdg open">Open · 60% left</span><span class="arr">→</span>
+            <span class="bdg empty">Used up</span>
+        </div>
+        <p style="font-size:.92rem;color:var(--muted);margin:6px 0 0">You only ever move a spool along this line. Ordering adds to your inventory, using up takes away, and the counts take care of themselves.</p>
+    </section>
+
+    <!-- GETTING STARTED -->
+    <section class="card" id="start">
+        <h2>🚀 Getting started</h2>
+        <p class="lead">One time only, the first time you open it.</p>
+        <ol class="steps">
+            <li><b>Import your spreadsheet.</b> On the empty Stock tab, tap <span class="ui">Import my spreadsheet</span>. It brings in your 31 colors and all six Bambu orders, checked against the receipts. It takes a minute or two to finish saving.</li>
+            <li><b>Mark the May order as arrived.</b> Its arrival date was never recorded, so it shows as on the way. On the Orders tab, open the <b>May 7, 2026</b> order and tap <span class="ui">Save &amp; mark arrived</span>.</li>
+            <li><b>Tell it which spools are open.</b> Everything imports as sealed. For each roll in use, tap the color and choose <span class="ui">Open</span>. Do the same with <span class="ui">Used up</span> for any that are finished.</li>
+            <li><b>Set how much is left</b> on the open ones (see <a href="#t-left">Checking how much is left</a>).</li>
+        </ol>
+        <div class="tip">💾 <b>Add it to your Home Screen.</b> In Safari tap <kbd>Share</kbd> → <kbd>Add to Home Screen</kbd> and it opens like an app, right at the printer.</div>
+    </section>
+
+    <!-- EVERYDAY TASKS -->
+    <section class="card" id="tasks">
+        <h2>✅ Everyday tasks</h2>
+        <p class="lead">Tap a task to see the steps.</p>
+
+        <details open>
+            <summary><span class="ic">📦</span>I just opened a new spool</summary>
+            <div class="body"><ol class="steps">
+                <li>On the <b>Stock</b> tab, tap the color.</li>
+                <li>Next to a sealed spool, tap <span class="ui">Open</span>. Today's date is saved as the day you opened it.</li>
+            </ol></div>
+        </details>
+
+        <details id="t-left">
+            <summary><span class="ic">⚖️</span>Checking how much is left on a roll</summary>
+            <div class="body">
+                <ol class="steps">
+                    <li>Tap the color. Each open spool has a slider.</li>
+                    <li>Slide it, or type the grams, to match your best estimate:
+                        <ul style="margin:6px 0 0;padding-left:18px">
+                            <li>the <b>markings on the spool</b>, or</li>
+                            <li>the <b>remaining %</b> shown in Bambu Handy for that AMS slot.</li>
+                        </ul></li>
+                    <li>Let go and it saves, with today's date.</li>
+                </ol>
+                <div class="tip">🔴 Under <b>20% left</b>, a spool turns red and counts as <b>running low</b>. If it's your last one, it goes on the Shopping list.</div>
+            </div>
+        </details>
+
+        <details>
+            <summary><span class="ic">🏁</span>I finished a spool</summary>
+            <div class="body"><ol class="steps">
+                <li>Tap the color, then tap <span class="ui">Used up</span> on that spool. Sliding it to 0 g offers to do the same.</li>
+                <li>Your on-hand count drops by one. The spool moves into the <b>Used up</b> history on the Costs tab, which shows how many days it lasted.</li>
+            </ol></div>
+        </details>
+
+        <details>
+            <summary><span class="ic">🛒</span>I ordered filament</summary>
+            <div class="body">
+                <ol class="steps">
+                    <li>On the <b>Orders</b> tab, tap <span class="ui">＋ New order</span>. Or tap <span class="ui">Order more</span> from any color, or start from the Shopping list.</li>
+                    <li>Add each color with its quantity and the <b>sale price per spool</b> from the receipt. The last price you paid fills in for you.</li>
+                    <li>Reusable spools or other non-filament items go under <span class="ui">Other items</span>. They count in the order total but not in your filament cost per kg.</li>
+                    <li>Tax is worked out at 6%. If the receipt is a cent different, type its exact figure in <span class="ui">Tax $</span>. Add the order number if you like.</li>
+                    <li>Tap <span class="ui">Add order</span>. The new spools show as <span class="bdg ordered" style="font-size:.72rem">Ordered</span>, and any Want/Need flag on those colors clears.</li>
+                </ol>
+                <div class="tip">Color not in the list yet? Pick <span class="ui">＋ New color…</span> at the bottom of the dropdown.</div>
+            </div>
+        </details>
+
+        <details>
+            <summary><span class="ic">🚚</span>Tracking a package / it arrived</summary>
+            <div class="body"><ol class="steps">
+                <li>Open the order and paste the tracking number under <b>Tracking</b>. UPS, FedEx and USPS numbers become tap-to-track links.</li>
+                <li>When it arrives, tap <span class="ui">Save &amp; mark arrived</span>, or fill in the <b>Arrived</b> date for each package if they came separately.</li>
+                <li>The spools change from <span class="bdg incoming" style="font-size:.72rem">On the way</span> to <span class="bdg sealed" style="font-size:.72rem">Sealed</span>, and your on-hand count goes up.</li>
+            </ol></div>
+        </details>
+
+        <details>
+            <summary><span class="ic">⭐</span>Remembering a color I want</summary>
+            <div class="body"><ol class="steps">
+                <li>Tap the color, or add it with <span class="ui">＋ Add a filament color</span> at the bottom of the Stock tab.</li>
+                <li>Choose <span class="flag want">Want</span> for "someday" or <span class="flag need">Need</span> for "buy soon".</li>
+            </ol></div>
+        </details>
+
+        <details>
+            <summary><span class="ic">📝</span>Making a shopping list</summary>
+            <div class="body"><ol class="steps">
+                <li>The <b>Shopping</b> tab collects everything worth buying: <span class="flag need">Need</span> and <span class="flag want">Want</span> colors, anything out of stock, and last spools that are running low or already open.</li>
+                <li>Untick anything you're skipping, then tap <span class="ui">Start an order with selected</span>. The order opens pre-filled with last-paid prices.</li>
+            </ol></div>
+        </details>
+
+        <details>
+            <summary><span class="ic">🧮</span>What did that print cost?</summary>
+            <div class="body"><ol class="steps">
+                <li>On the <b>Costs</b> tab, enter the grams from Bambu Studio or Handy.</li>
+                <li>Leave it on <b>Average of all</b>, or pick the color to use what you actually paid for it.</li>
+            </ol></div>
+        </details>
+
+        <details>
+            <summary><span class="ic">✏️</span>Fixing a mistake</summary>
+            <div class="body">
+                <p><b>Order:</b> tap it to edit anything, including quantities. Lowering a quantity removes a sealed spool; open or used ones are never deleted. <span class="ui">Delete order</span> is at the bottom.</p>
+                <p><b>Color:</b> tap it, then <span class="ui">✎ Edit color details</span> to change the name, code or swatch color. A color can only be deleted once it has no spools.</p>
+                <p style="margin:0"><b>Spool status:</b> just tap a different button (Sealed / Open / Used up) to undo.</p>
+            </div>
+        </details>
+    </section>
+
+    <!-- READING THE SCREEN -->
+    <section class="card" id="reading">
+        <h2>🔎 Reading the screen</h2>
+        <h3>The numbers at the top</h3>
+        <div class="kpis">
+            <div><div class="num" style="color:var(--accent)">17</div><div class="lab">spools on hand</div></div>
+            <div><div class="num" style="color:var(--want)">2</div><div class="lab">open now</div></div>
+            <div><div class="num" style="color:var(--info)">8</div><div class="lab">on the way</div></div>
+            <div><div class="num" style="color:var(--need)">1</div><div class="lab">colors out</div></div>
+        </div>
+        <p style="font-size:.92rem;color:var(--muted)"><b>On hand</b> = sealed + open. <b>Colors out</b> are colors you've bought before but have none of now. Below the filters you'll also see an estimate like "≈ 15.8 kg of filament on hand".</p>
+
+        <h3>Badges on each color</h3>
+        <div class="legend">
+            <span class="bdg sealed">2 sealed</span><span>Unopened spools on the shelf.</span>
+            <span class="bdg open">1 open · 60% left</span><span>In use, with your latest estimate. The bar under it shows the same.</span>
+            <span class="bdg low">1 open · 15% left</span><span>Running low (under 20%).</span>
+            <span class="bdg incoming">1 on the way</span><span>Ordered but not arrived yet.</span>
+            <span class="bdg out">Out</span><span>Bought before, none left.</span>
+            <span class="bdg empty">Never bought</span><span>On your list, but no spools yet.</span>
+            <span><span class="flag want">Want</span> <span class="flag need">Need</span></span><span>Your own flags. They feed the Shopping list.</span>
+        </div>
+    </section>
+
+    <!-- YOUR DATA -->
+    <section class="card" id="data">
+        <h2>☁️ Where your data lives</h2>
+        <ul style="padding-left:18px;margin:4px 0 0">
+            <li><b>Saved on your device first</b>, so it works with no signal. Changes upload when you're back online.</li>
+            <li><b>Synced through the same Google backend as the driving log</b>, so your phone and computer see the same inventory.</li>
+            <li><b>Your original filament spreadsheet isn't touched.</b> It stays as an archive; the tracker is now the place to update.</li>
+        </ul>
+        <h3>The status line under the numbers</h3>
+        <div class="legend" style="font-size:.9rem">
+            <b>✓ Synced</b><span>Everything is saved to the cloud.</span>
+            <b>Saving 3 changes…</b><span>Uploading. Google is a little slow, about a second per change.</span>
+            <b>⚠︎ Offline</b><span>Changes are safe on this device and will upload later. Tap ↻ to retry.</span>
+        </div>
+        <div class="tip warn">🧪 <b>Want to experiment?</b> Open <a href="filament.html?sandbox">filament.html?sandbox</a> for a separate practice copy. Nothing you do there touches your real inventory.</div>
+    </section>
+
+    <p class="foot"><a href="filament.html">← Back to the tracker</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Filament">
+    <meta name="theme-color" content="#00873a">
+    <title>Filament Tracker</title>
+    <style>
+        :root {
+            --bg: #eef1f5; --card: #fff; --text: #1f2733; --muted: #667; --faint: #889; --line: #e6ecf5; --input: #cdd5e0;
+            --accent: #00873a; --accent-dk: #006e2f; --accent-bg: #e6f6ec; --link: #0056b3;
+            --need: #c62828; --need-bg: #fdecea; --want: #b26a00; --want-bg: #fff4e0; --info: #0277bd; --info-bg: #e3f2fd;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #12161c; --card: #1c222b; --text: #e6eaf0; --muted: #9aa4b2; --faint: #7d8794; --line: #2a323d; --input: #3a4452;
+                --accent: #2fbf6a; --accent-dk: #25a65a; --accent-bg: #173326; --link: #7fb2ff;
+                --need: #ff6b6b; --need-bg: #3a1d1d; --want: #f5b14c; --want-bg: #3a2c14; --info: #6cc0ff; --info-bg: #142a3a;
+            }
+        }
+        html { -webkit-text-size-adjust: 100%; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text); margin: 0;
+            padding: 20px 14px max(24px, env(safe-area-inset-bottom));
+            -webkit-tap-highlight-color: transparent;
+        }
+        .wrap { max-width: 760px; margin: 0 auto; }
+        .card { background: var(--card); border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); padding: 18px; margin-bottom: 14px; }
+        h1 { font-size: 1.4rem; margin: 0 0 2px; text-align: center; }
+        .sub { text-align: center; color: var(--muted); font-size: 0.88rem; margin: 0 0 14px; }
+        a { color: var(--link); }
+        .home { display: block; text-align: center; font-size: 0.8rem; margin-top: 4px; }
+
+        /* KPI strip */
+        .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+        .kpi { text-align: center; }
+        .kpi .num { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+        .kpi .num.info { color: var(--info); } .kpi .num.need { color: var(--need); }
+        .kpi .lab { font-size: 0.72rem; color: var(--muted); }
+        .status { text-align: center; font-size: 0.8rem; color: var(--faint); margin-top: 10px; }
+        .status button { background: none; border: none; color: var(--link); font: inherit; cursor: pointer; padding: 0 4px; }
+
+        /* tabs */
+        .tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 4px; background: var(--card); border-radius: 12px; padding: 4px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 14px; }
+        .tabs button { flex: 1; border: none; background: none; color: var(--muted); padding: 10px 4px; border-radius: 9px; font: inherit;
+                       font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .tabs button.on { background: var(--accent); color: #fff; }
+        .tabs .count { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--need); color: #fff; font-size: 0.7rem; margin-left: 3px; }
+
+        /* controls */
+        label { display: block; font-weight: 600; font-size: 0.88rem; margin: 12px 0 5px; }
+        input[type=date], input[type=number], input[type=text], input[type=search], select, textarea {
+            width: 100%; padding: 10px 11px; border: 1px solid var(--input); border-radius: 9px;
+            font-size: 1rem; font-family: inherit; background: var(--card); color: var(--text); min-width: 0;
+        }
+        textarea { min-height: 60px; resize: vertical; }
+        .row { display: flex; gap: 10px; }
+        .row > * { flex: 1; min-width: 0; }
+        .hint { font-size: 0.76rem; color: var(--faint); margin-top: 4px; }
+        .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+        .chip { border: 1.5px solid var(--input); background: var(--card); color: var(--text); border-radius: 20px;
+                padding: 7px 13px; font-size: 0.86rem; cursor: pointer; font-family: inherit; }
+        .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .chip.on.want { background: var(--want); border-color: var(--want); }
+        .chip.on.need { background: var(--need); border-color: var(--need); }
+        .toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
+        .toolbar input { flex: 2; } .toolbar select { flex: 1; }
+        .btn { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 12px 16px; font-size: 1rem;
+               font-weight: 700; cursor: pointer; font-family: inherit; }
+        .btn:active { background: var(--accent-dk); }
+        .btn.full { width: 100%; }
+        .btn.secondary { background: var(--card); color: var(--accent); border: 2px solid var(--accent); }
+        .btn.small { padding: 8px 12px; font-size: 0.88rem; }
+        .btn.danger { background: none; color: var(--need); border: 1.5px solid var(--need); }
+        .linkbtn { background: none; border: none; color: var(--link); cursor: pointer; font: inherit; font-size: 0.86rem; padding: 4px; }
+        .sec-head { display: flex; justify-content: space-between; align-items: center; margin: 0 0 10px; gap: 10px; }
+        .sec-head h2 { font-size: 1.05rem; margin: 0; }
+
+        /* swatches + filament tiles */
+        .sw { display: inline-block; width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(0,0,0,.18); flex-shrink: 0; vertical-align: middle; }
+        .sw.lg { width: 44px; height: 44px; box-shadow: inset 0 -6px 10px rgba(0,0,0,.12); }
+        .sw.xl { width: 60px; height: 60px; box-shadow: inset 0 -8px 12px rgba(0,0,0,.14); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 10px; }
+        .tile { background: var(--card); border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); padding: 12px; cursor: pointer;
+                display: flex; gap: 10px; align-items: flex-start; position: relative; border: 1.5px solid transparent; min-width: 0; }
+        .tile:active { border-color: var(--accent); }
+        .tile.out { opacity: .72; }
+        .tile .nm { font-weight: 700; font-size: 0.92rem; line-height: 1.2; overflow-wrap: anywhere; }
+        .tile .meta { color: var(--faint); font-size: 0.72rem; margin-top: 2px; }
+        .tile .info { min-width: 0; flex: 1; }
+        .badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        .bdg { font-size: 0.7rem; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: var(--line); color: var(--text); white-space: nowrap; }
+        .bdg.sealed { background: var(--accent-bg); color: var(--accent); }
+        .bdg.open { background: var(--want-bg); color: var(--want); }
+        .bdg.incoming { background: var(--info-bg); color: var(--info); }
+        .bdg.out { background: var(--need-bg); color: var(--need); }
+        .bdg.empty { background: var(--line); color: var(--muted); }
+        .flag { font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 2px 6px; border-radius: 6px; }
+        .flag.want { background: var(--want-bg); color: var(--want); }
+        .flag.need { background: var(--need-bg); color: var(--need); }
+
+        /* lists */
+        .item { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+        .item:last-child { border-bottom: none; }
+        .item .grow { flex: 1; min-width: 0; }
+        .item .meta { color: var(--faint); font-size: 0.76rem; margin-top: 2px; }
+        .order { cursor: pointer; }
+        .order .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+        .order .ttl { font-weight: 700; }
+        .order .amt { font-weight: 800; }
+        .order .sws { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 4px; }
+        .order .sws .sw { width: 20px; height: 20px; }
+        .pill { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+        .pill.recv { background: var(--accent-bg); color: var(--accent); }
+        .pill.transit { background: var(--info-bg); color: var(--info); }
+        .pill.placed { background: var(--want-bg); color: var(--want); }
+        .trk { font-size: 0.78rem; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+        .empty-msg { color: var(--muted); text-align: center; padding: 14px 4px; font-size: 0.92rem; }
+
+        /* spool rows in the filament sheet */
+        .spool { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+        .spool:last-child { border-bottom: none; }
+        .spool .src { font-size: 0.8rem; color: var(--muted); }
+        .seg { display: inline-flex; border: 1.5px solid var(--input); border-radius: 9px; overflow: hidden; }
+        .seg button { border: none; background: var(--card); color: var(--text); padding: 7px 10px; font: inherit; font-size: 0.82rem; cursor: pointer; }
+        .seg button + button { border-left: 1.5px solid var(--input); }
+        .seg button.on { background: var(--accent); color: #fff; }
+        .seg button.on.open { background: var(--want); } .seg button.on.empty { background: var(--muted); }
+        .left-row { flex-basis: 100%; min-width: 0; width: 100%; display: flex; gap: 10px; align-items: center; background: var(--bg); border-radius: 10px; padding: 8px 10px; }
+        .left-row input[type=range] { flex: 1 1 0; width: 0; accent-color: var(--want); min-width: 0; }
+        .left-row input[type=number] { width: 78px; flex: none; padding: 7px 8px; font-size: 0.9rem; }
+        .left-row .pct { font-weight: 800; color: var(--want); min-width: 42px; text-align: right; }
+        .left-row.low .pct { color: var(--need); }
+        .meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 6px; }
+        .meter > div { height: 100%; background: var(--want); border-radius: 3px; }
+        .meter.low > div { background: var(--need); }
+        .bdg.low { background: var(--need-bg); color: var(--need); }
+
+        /* order form */
+        .lines .ln { display: grid; grid-template-columns: minmax(0, 1fr) 52px 82px 30px; gap: 6px; align-items: center; margin-bottom: 6px; }
+        .lines .ln input, .lines .ln select { padding: 9px 8px; font-size: 0.95rem; }
+        .lines .hdr { font-size: 0.72rem; color: var(--faint); font-weight: 600; margin-bottom: 4px; }
+        .x { background: none; border: none; color: var(--need); font-size: 1.2rem; cursor: pointer; padding: 0; }
+        .ship { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) 30px; gap: 6px; align-items: center; margin-bottom: 6px; }
+        .ship input { padding: 9px 8px; font-size: 0.9rem; }
+        .totals { background: var(--bg); border-radius: 10px; padding: 10px 12px; margin-top: 12px; font-size: 0.9rem; }
+        .totals div { display: flex; justify-content: space-between; padding: 2px 0; }
+        .totals .grand { font-weight: 800; font-size: 1.05rem; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 6px; }
+
+        /* dialogs as bottom sheets */
+        dialog { border: none; padding: 0; background: var(--card); color: var(--text); border-radius: 16px; width: min(560px, calc(100vw - 20px));
+                 max-height: calc(100vh - 30px); box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+        dialog::backdrop { background: rgba(10, 15, 25, .5); }
+        .dlg-in { padding: 18px; max-height: calc(100vh - 30px); overflow-y: auto; }
+        .dlg-head { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+        .dlg-head h2 { margin: 0; font-size: 1.2rem; }
+        .dlg-head .meta { color: var(--muted); font-size: 0.82rem; }
+        .dlg-head .close { margin-left: auto; align-self: flex-start; background: none; border: none; font-size: 1.5rem; color: var(--muted); cursor: pointer; padding: 0 4px; }
+        .actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+        .actions .btn { flex: 1; }
+
+        /* costs */
+        .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+        .stat { background: var(--card); border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); padding: 14px; text-align: center; }
+        .stat .num { font-size: 1.35rem; font-weight: 800; color: var(--accent); }
+        .stat .lab { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+        .calc-out { font-size: 2rem; font-weight: 800; text-align: center; color: var(--accent); margin: 12px 0 2px; }
+        table.t { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+        table.t th { text-align: left; color: var(--faint); font-weight: 600; font-size: 0.74rem; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+        table.t td { padding: 7px 4px; border-bottom: 1px solid var(--line); }
+        table.t .r { text-align: right; }
+
+        .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px); background: #2e7d32; color: #fff; padding: 12px 18px;
+                 border-radius: 24px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 100; box-shadow: 0 4px 14px rgba(0,0,0,.2); pointer-events: none; max-width: calc(100vw - 30px); text-align: center; }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        [hidden] { display: none !important; }
+        @media (max-width: 420px) {
+            .kpi .num { font-size: 1.2rem; }
+            .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .tile { flex-direction: column; gap: 6px; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="card">
+        <h1>🧵 Filament Tracker</h1>
+        <p class="sub">3D printer spools — what's on the shelf, what's on the way, what to buy.</p>
+        <div class="kpis">
+            <div class="kpi"><div class="num" id="k-hand">0</div><div class="lab">spools on hand</div></div>
+            <div class="kpi"><div class="num" id="k-open" style="color:var(--want)">0</div><div class="lab">open now</div></div>
+            <div class="kpi"><div class="num info" id="k-incoming">0</div><div class="lab">on the way</div></div>
+            <div class="kpi"><div class="num need" id="k-out">0</div><div class="lab">colors out</div></div>
+        </div>
+        <div class="status" id="sync-status"></div>
+        <div class="home"><a href="filament-guide.html">📖 How to use</a> &nbsp;·&nbsp; <a href="/">&larr; robertbeier.com</a></div>
+    </div>
+
+    <div class="tabs" id="tabs">
+        <button data-tab="stock" class="on">Stock</button>
+        <button data-tab="orders">Orders</button>
+        <button data-tab="shop">Shopping<span class="count" id="shop-count" hidden></span></button>
+        <button data-tab="costs">Costs</button>
+    </div>
+
+    <!-- STOCK -->
+    <section id="tab-stock">
+        <div class="toolbar">
+            <input type="search" id="q" placeholder="Search color, code…" autocomplete="off">
+            <select id="mat"><option value="">All materials</option></select>
+        </div>
+        <div class="chips" id="stock-filter" style="margin-bottom:12px">
+            <button class="chip on" data-f="all">All</button>
+            <button class="chip" data-f="hand">On hand</button>
+            <button class="chip" data-f="open">Open</button>
+            <button class="chip" data-f="incoming">On the way</button>
+            <button class="chip" data-f="out">Out</button>
+        </div>
+        <div class="hint" id="stock-sum" style="margin:-4px 0 10px"></div>
+        <div class="grid" id="grid"></div>
+        <div class="card empty-msg" id="stock-empty" hidden></div>
+        <div style="margin-top:14px; text-align:center"><button class="btn secondary small" id="add-fil">＋ Add a filament color</button></div>
+    </section>
+
+    <!-- ORDERS -->
+    <section id="tab-orders" hidden>
+        <div class="card">
+            <div class="sec-head"><h2>Orders</h2><button class="btn small" id="new-order">＋ New order</button></div>
+            <div id="order-list"></div>
+        </div>
+    </section>
+
+    <!-- SHOPPING -->
+    <section id="tab-shop" hidden>
+        <div class="card">
+            <div class="sec-head"><h2>Shopping list</h2></div>
+            <p class="hint" style="margin-top:-4px">Colors you've flagged <b>Need</b> or <b>Want</b>, plus anything that's run out or is down to its last open spool. Tick what you're buying and start an order.</p>
+            <div id="shop-list"></div>
+            <button class="btn full" id="shop-order" style="margin-top:12px">Start an order with selected</button>
+        </div>
+    </section>
+
+    <!-- COSTS -->
+    <section id="tab-costs" hidden>
+        <div class="tiles" id="cost-tiles" style="margin-bottom:14px"></div>
+        <div class="card">
+            <div class="sec-head"><h2>🧮 Print cost</h2></div>
+            <div class="row">
+                <div><label for="calc-g">Grams used</label><input type="number" id="calc-g" min="0" step="1" inputmode="decimal" placeholder="e.g. 262"></div>
+                <div><label for="calc-f">Filament</label><select id="calc-f"></select></div>
+            </div>
+            <div class="calc-out" id="calc-out">$0.00</div>
+            <div class="hint" style="text-align:center" id="calc-rate"></div>
+        </div>
+        <div class="card">
+            <div class="sec-head"><h2>By material</h2></div>
+            <table class="t" id="by-mat"></table>
+        </div>
+        <div class="card">
+            <div class="sec-head"><h2>Used up</h2></div>
+            <table class="t" id="used-up"></table>
+        </div>
+        <div class="card">
+            <div class="sec-head"><h2>By order</h2></div>
+            <table class="t" id="by-order"></table>
+        </div>
+    </section>
+</div>
+
+<dialog id="dlg-fil"><div class="dlg-in" id="fil-body"></div></dialog>
+<dialog id="dlg-order"><div class="dlg-in" id="order-body"></div></dialog>
+<datalist id="dl-brands"></datalist>
+<datalist id="dl-materials"></datalist>
+<div class="toast" id="toast"></div>
+
+<script src="filament-sync.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function fmtDate(iso, withYear) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-').map(Number);
+    const sameYear = y === new Date().getFullYear();
+    return MON[m - 1] + ' ' + d + ((withYear || !sameYear) ? ', ' + y : '');
+  }
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
+  const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
+
+  let tab = 'stock', stockFilter = 'all', importing = false;
+  const LOW_PCT = 20;   // an open spool under this % left counts as running low
+  const shopUnchecked = new Set();
+
+  // ---------- helpers over the store ----------
+  const filaments = () => sortFilaments(Store.all('filament'));
+  const fil = id => Store.get(id);
+  const ordersSorted = () => Store.all('order').sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.t - a.t);
+  function lastPrice(fid) {
+    for (const o of ordersSorted()) for (const it of o.items || []) if (it.fid === fid && it.price != null && it.price !== '') return +it.price;
+    return null;
+  }
+  function shopItems() {
+    const out = [];
+    filaments().forEach(f => {
+      const s = stockFor(f.id, Store.entries);
+      let reason = '';
+      if (f.flag === 'need') reason = 'need';
+      else if (f.flag === 'want') reason = 'want';
+      else if (s.onHand === 0 && s.incoming === 0 && s.spools.length) reason = 'out';
+      else if (s.sealed === 0 && s.open > 0 && s.incoming === 0) reason = s.openPcts[0] < LOW_PCT ? 'low' : 'last';
+      if (reason) out.push({ f, s, reason });
+    });
+    const order = { need: 0, out: 1, low: 2, want: 3, last: 4 };
+    return out.sort((a, b) => order[a.reason] - order[b.reason]);
+  }
+
+  // ---------- render ----------
+  function render() {
+    renderHeader();
+    if (tab === 'stock') renderStock();
+    if (tab === 'orders') renderOrders();
+    if (tab === 'shop') renderShop();
+    if (tab === 'costs') renderCosts();
+    const n = shopItems().filter(x => x.reason === 'need' || x.reason === 'out' || x.reason === 'low').length;
+    $('shop-count').hidden = !n; $('shop-count').textContent = n;
+  }
+
+  function renderHeader() {
+    let hand = 0, open = 0, incoming = 0, out = 0;
+    filaments().forEach(f => {
+      const s = stockFor(f.id, Store.entries);
+      hand += s.onHand; open += s.open; incoming += s.incoming;
+      if (!s.onHand && !s.incoming && s.spools.length) out++;
+    });
+    $('k-hand').textContent = hand; $('k-open').textContent = open; $('k-incoming').textContent = incoming; $('k-out').textContent = out;
+    const pend = Store.pendingCount();
+    let msg;
+    if (Store.online === false && !Store.busy) msg = '⚠︎ Offline' + (pend ? ' — ' + pend + ' change' + (pend > 1 ? 's' : '') + ' saved on this device' : '');
+    else if (pend) msg = 'Saving ' + pend + ' change' + (pend > 1 ? 's' : '') + '…';
+    else if (Store.busy) msg = 'Syncing…';
+    else if (Store.online) msg = '✓ Synced';
+    else msg = '';
+    $('sync-status').innerHTML = esc(msg) + (Store.busy ? '' : ' <button id="sync-now">↻</button>');
+    const b = $('sync-now'); if (b) b.onclick = () => Store.sync();
+  }
+
+  function renderStock() {
+    const all = filaments();
+    const mats = [...new Set(all.map(f => f.material))].sort();
+    const matSel = $('mat'), cur = matSel.value;
+    matSel.innerHTML = '<option value="">All materials</option>' + mats.map(m => `<option${m === cur ? ' selected' : ''}>${esc(m)}</option>`).join('');
+    const q = $('q').value.trim().toLowerCase();
+    const stock = new Map(all.map(f => [f.id, stockFor(f.id, Store.entries)]));
+    const list = all.filter(f => {
+      if (matSel.value && f.material !== matSel.value) return false;
+      if (q && !(f.name + ' ' + f.code + ' ' + f.material + ' ' + f.brand).toLowerCase().includes(q)) return false;
+      const s = stock.get(f.id);
+      if (stockFilter === 'hand') return s.onHand > 0;
+      if (stockFilter === 'open') return s.open > 0;
+      if (stockFilter === 'incoming') return s.incoming > 0;
+      if (stockFilter === 'out') return !s.onHand && !s.incoming && s.spools.length;
+      return true;
+    });
+    $('grid').innerHTML = list.map(f => {
+      const s = stock.get(f.id), b = [];
+      if (s.sealed) b.push(`<span class="bdg sealed">${s.sealed} sealed</span>`);
+      const low = s.openPcts.length && s.openPcts[0] < LOW_PCT;
+      if (s.open) b.push(`<span class="bdg open${low ? ' low' : ''}">${s.open} open${s.openPcts.length ? ' · ' + s.openPcts[0] + '% left' : ''}</span>`);
+      if (s.incoming) b.push(`<span class="bdg incoming">${s.incoming} on the way</span>`);
+      if (!s.onHand && !s.incoming) b.push(`<span class="bdg out">${s.spools.length ? 'Out' : 'Never bought'}</span>`);
+      if (f.flag) b.push(`<span class="flag ${f.flag}">${f.flag}</span>`);
+      const out = !s.onHand;
+      return `<div class="tile${out ? ' out' : ''}" data-fid="${esc(f.id)}">
+          <span class="sw lg" style="background:${esc(swatchCss(f))}"></span>
+          <div class="info"><div class="nm">${esc(f.name)}</div>
+            <div class="meta">${esc([f.code, f.material].filter(Boolean).join(' · '))}</div>
+            <div class="badges">${b.join('')}</div>
+            ${s.open ? `<div class="meter${low ? ' low' : ''}"><div style="width:${s.openPcts[0]}%"></div></div>` : ''}</div>
+        </div>`;
+    }).join('');
+    $('grid').querySelectorAll('.tile').forEach(t => t.onclick = () => openFilament(t.dataset.fid));
+    let grams = 0, opens = 0, lows = 0;
+    stock.forEach(s => { grams += s.gramsLeft; opens += s.open; lows += s.openPcts.filter(p => p < LOW_PCT).length; });
+    $('stock-sum').innerHTML = all.length ? `≈ <b>${(grams / 1000).toFixed(1)} kg</b> of filament on hand` +
+      (opens ? ` · ${opens} open spool${opens > 1 ? 's' : ''}` : '') + (lows ? ` · <b style="color:var(--need)">${lows} running low</b>` : '') : '';
+    const empty = $('stock-empty');
+    if (!all.length && importing) {
+      empty.hidden = false; empty.innerHTML = 'Importing your spreadsheet…';
+    } else if (!all.length) {
+      empty.hidden = false;
+      empty.innerHTML = `<p style="margin-top:0"><b>No filaments yet.</b></p>
+        <p>Bring over everything from your Google Sheet — 30 Bambu colors, 4 orders and their tracking.</p>
+        <button class="btn" id="import-btn">Import my spreadsheet</button>
+        <p class="hint">Or add colors one at a time with the button below.</p>`;
+      $('import-btn').onclick = importSeed;
+    } else if (!list.length) {
+      empty.hidden = false; empty.innerHTML = 'Nothing matches that filter.';
+    } else empty.hidden = true;
+  }
+
+  function orderStatus(o) {
+    const rec = orderReceived(o);
+    if (rec) return `<span class="pill recv">Received ${fmtDate(rec)}</span>`;
+    const eta = orderEta(o);
+    if ((o.shipments || []).some(s => s.number)) return `<span class="pill transit">On the way${eta ? ' · ETA ' + fmtDate(eta) : ''}</span>`;
+    return `<span class="pill placed">Ordered</span>`;
+  }
+  function trackLinks(o) {
+    return (o.shipments || []).filter(s => s.number).map(s => {
+      const c = s.carrier || detectCarrier(s.number);
+      return `<a href="${esc(trackingUrl(s.number, c))}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(c || 'Track')} ${esc(s.number)}</a>${s.received ? ' ✓' : ''}`;
+    }).join('');
+  }
+  function renderOrders() {
+    const os = ordersSorted();
+    $('order-list').innerHTML = os.length ? os.map(o => {
+      const T = orderTotals(o);
+      const sws = [];
+      (o.items || []).forEach(it => { const f = fil(it.fid); for (let i = 0; i < (+it.qty || 0); i++) sws.push(`<span class="sw" title="${esc(f ? f.name : '?')}" style="background:${esc(swatchCss(f))}"></span>`); });
+      return `<div class="item order" data-oid="${esc(o.id)}"><div class="grow">
+          <div class="top"><span class="ttl">${esc(fmtDate(o.date, true))} · ${esc(o.vendor || '')}</span>
+            <span class="amt">${T.subtotal || !T.unknown ? money(T.total) : '—'}</span></div>
+          <div class="top" style="margin-top:4px"><span class="meta">${T.spools || !(o.extras || []).length ? T.spools + ' spool' + (T.spools === 1 ? '' : 's') : 'No filament'}${T.unknown ? ` · ${T.unknown} unpriced` : ''}${(o.extras || []).map(x => ` · + ${x.qty > 1 ? x.qty + ' ' : ''}${esc(x.name)}`).join('')}</span>${orderStatus(o)}</div>
+          ${o.orderNo ? `<div class="meta">Order #${esc(o.orderNo)}</div>` : ''}
+          <div class="sws">${sws.join('')}</div>
+          <div class="trk">${trackLinks(o)}</div>
+        </div></div>`;
+    }).join('') : '<div class="empty-msg">No orders yet. Tap <b>＋ New order</b> when you buy filament.</div>';
+    $('order-list').querySelectorAll('.order').forEach(el => el.onclick = () => openOrder(el.dataset.oid));
+  }
+
+  function renderShop() {
+    const items = shopItems();
+    const lab = { need: ['need', 'Need'], want: ['want', 'Want'], out: ['need', 'Out of stock'], low: ['need', 'Running low'], last: ['want', 'Last spool open'] };
+    $('shop-list').innerHTML = items.length ? items.map(({ f, s, reason }) => {
+      const p = lastPrice(f.id);
+      return `<div class="item">
+          <input type="checkbox" data-fid="${esc(f.id)}" ${shopUnchecked.has(f.id) ? '' : 'checked'} style="width:20px;height:20px">
+          <span class="sw" style="background:${esc(swatchCss(f))}"></span>
+          <div class="grow"><b>${esc(f.name)}</b> <span class="flag ${lab[reason][0]}">${lab[reason][1]}</span>
+            <div class="meta">${esc([f.code, f.material].filter(Boolean).join(' · '))}${s.onHand ? ` · ${s.onHand} on hand` : ''}${s.openPcts.length ? ` · open spool ${s.openPcts[0]}% left` : ''}${p != null ? ' · last paid ' + money(p) : ''}</div></div>
+        </div>`;
+    }).join('') : '<div class="empty-msg">Nothing on the list. Flag a color as <b>Want</b> or <b>Need</b> from the Stock tab.</div>';
+    $('shop-list').querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => { cb.checked ? shopUnchecked.delete(cb.dataset.fid) : shopUnchecked.add(cb.dataset.fid); });
+    $('shop-order').hidden = !items.length;
+  }
+
+  function costStats() {
+    const spools = Store.all('spool').filter(s => s.cost != null);
+    const cost = spools.reduce((a, s) => a + s.cost, 0), grams = spools.reduce((a, s) => a + (s.grams || 0), 0);
+    return { spools, cost, grams, perG: grams ? cost / grams : 0 };
+  }
+  function renderCosts() {
+    const os = ordersSorted();
+    const spent = os.reduce((a, o) => a + orderTotals(o).total, 0)
+      + Store.all('spool').filter(s => !s.orderId && s.cost != null).reduce((a, s) => a + s.cost, 0);
+    const st = costStats();
+    const bought = Store.all('spool').length, used = Store.all('spool').filter(s => s.status === 'empty').length;
+    $('cost-tiles').innerHTML = [
+      [money(spent), 'total spent'], [bought, 'spools bought'], [money(st.perG * 1000), 'avg per kg'],
+      ['$' + st.perG.toFixed(3), 'avg per gram'], [used, 'spools used up']
+    ].map(([n, l]) => `<div class="stat"><div class="num">${n}</div><div class="lab">${l}</div></div>`).join('');
+
+    const sel = $('calc-f'), cur = sel.value;
+    sel.innerHTML = '<option value="">Average of all</option>' + filaments().map(f => `<option value="${esc(f.id)}"${f.id === cur ? ' selected' : ''}>${esc(f.name)} (${esc(f.material)})</option>`).join('');
+    calc();
+    renderUsedUp();
+
+    const mats = {};
+    st.spools.forEach(s => { const f = fil(s.fid); const m = f ? f.material : '?'; (mats[m] = mats[m] || { n: 0, c: 0, g: 0 }); mats[m].n++; mats[m].c += s.cost; mats[m].g += s.grams || 0; });
+    $('by-mat').innerHTML = '<tr><th>Material</th><th class="r">Spools</th><th class="r">Spent</th><th class="r">$/kg</th></tr>' +
+      Object.entries(mats).sort((a, b) => b[1].c - a[1].c).map(([m, v]) => `<tr><td>${esc(m)}</td><td class="r">${v.n}</td><td class="r">${money(v.c)}</td><td class="r">${money(v.g ? v.c / v.g * 1000 : null)}</td></tr>`).join('');
+    $('by-order').innerHTML = '<tr><th>Date</th><th>Vendor</th><th class="r">Spools</th><th class="r">Total</th></tr>' +
+      os.map(o => { const T = orderTotals(o); return `<tr><td>${esc(fmtDate(o.date, true))}</td><td>${esc(o.vendor)}</td><td class="r">${T.spools}</td><td class="r">${money(T.total)}${T.unknown ? '*' : ''}</td></tr>`; }).join('') +
+      (os.some(o => orderTotals(o).unknown) ? '<tr><td colspan="4" class="hint">* some spools have no price yet</td></tr>' : '');
+  }
+  function renderUsedUp() {
+    const done = Store.all('spool').filter(s => s.status === 'empty').sort((a, b) => (b.emptied || '').localeCompare(a.emptied || ''));
+    const days = s => s.opened && s.emptied ? Math.round((new Date(s.emptied) - new Date(s.opened)) / 864e5) : null;
+    $('used-up').innerHTML = done.length ? '<tr><th>Color</th><th>Opened</th><th>Used up</th><th class="r">Days</th></tr>' + done.map(s => {
+      const f = fil(s.fid), d = days(s);
+      return `<tr><td><span class="sw" style="width:14px;height:14px;background:${esc(swatchCss(f))}"></span> ${esc(f ? f.name : '?')}</td>
+        <td>${esc(fmtDate(s.opened))}</td><td>${esc(fmtDate(s.emptied))}</td><td class="r">${d == null ? '' : d}</td></tr>`;
+    }).join('') : '<tr><td class="hint">When you mark a spool <b>Used up</b> it shows here, so you can see how fast each color goes.</td></tr>';
+  }
+  function calc() {
+    const g = +$('calc-g').value || 0, fid = $('calc-f').value;
+    let perG = costStats().perG, label = 'average across all priced spools';
+    if (fid) {
+      const sp = Store.all('spool').filter(s => s.fid === fid && s.cost != null);
+      const c = sp.reduce((a, s) => a + s.cost, 0), gr = sp.reduce((a, s) => a + (s.grams || 0), 0);
+      if (gr) { perG = c / gr; label = 'what you paid for this color'; } else label = 'no price for this color yet — using the overall average';
+    }
+    $('calc-out').textContent = money(g * perG);
+    $('calc-rate').textContent = '$' + perG.toFixed(4) + '/g · ' + label;
+  }
+
+  // ---------- filament sheet ----------
+  const dlgFil = $('dlg-fil');
+  function openFilament(fid) { renderFilament(fid); if (!dlgFil.open) dlgFil.showModal(); }
+  function renderFilament(fid) {
+    const f = fil(fid); if (!f) { dlgFil.close(); return; }
+    const s = stockFor(fid, Store.entries);
+    const orders = new Map(Store.all('order').map(o => [o.id, o]));
+    const rank = s => spoolIncoming(s, Store.entries) ? 0 : { open: 1, sealed: 2, empty: 3 }[s.status];
+    const spools = s.spools.slice().sort((a, b) => rank(a) - rank(b));
+    $('fil-body').innerHTML = `
+      <div class="dlg-head"><span class="sw xl" style="background:${esc(swatchCss(f))}"></span>
+        <div><h2>${esc(f.name)}</h2><div class="meta">${esc([f.brand, f.material, f.code].filter(Boolean).join(' · '))}</div></div>
+        <button class="close" data-close>&times;</button></div>
+      <div class="chips" style="margin:6px 0 4px">
+        <button class="chip${!f.flag ? ' on' : ''}" data-flag="">No flag</button>
+        <button class="chip want${f.flag === 'want' ? ' on' : ''}" data-flag="want">Want</button>
+        <button class="chip need${f.flag === 'need' ? ' on' : ''}" data-flag="need">Need</button>
+      </div>
+      ${f.notes ? `<p class="hint">${esc(f.notes)}</p>` : ''}
+      <label>Spools <span class="hint" style="font-weight:400">— ${s.onHand} on hand${s.onHand ? ' (≈ ' + (s.gramsLeft / 1000).toFixed(2) + ' kg)' : ''}${s.incoming ? ', ' + s.incoming + ' on the way' : ''}${s.empty ? ', ' + s.empty + ' used up' : ''}</span></label>
+      <div>${spools.length ? spools.map(sp => {
+        const o = orders.get(sp.orderId), inc = spoolIncoming(sp, Store.entries);
+        const src = o ? 'Ordered ' + fmtDate(o.date, true) : 'Added by hand';
+        const when = sp.status === 'empty' && sp.emptied ? ' · used up ' + fmtDate(sp.emptied) : sp.status === 'open' && sp.opened ? ' · opened ' + fmtDate(sp.opened) : '';
+        return `<div class="spool"><div><div>${inc ? '<span class="bdg incoming">On the way</span>' : ''} <span class="src">${esc(src)}${when}</span></div>
+            <div class="src">${sp.cost != null ? money(sp.cost) : 'no price'} · ${sp.grams} g</div></div>
+          ${inc ? (o ? `<button class="linkbtn" data-oid="${esc(o.id)}">View order</button>` : '') : `<div class="seg" data-sid="${esc(sp.id)}">
+            <button data-st="sealed" class="${sp.status === 'sealed' ? 'on' : ''}">Sealed</button>
+            <button data-st="open" class="open${sp.status === 'open' ? ' on' : ''}">Open</button>
+            <button data-st="empty" class="empty${sp.status === 'empty' ? ' on' : ''}">Used up</button></div>`}
+          ${!sp.orderId ? `<button class="x" data-del="${esc(sp.id)}" title="Remove this spool">&times;</button>` : ''}
+          ${!inc && sp.status === 'open' ? `<div class="left-row${spoolPct(sp) < LOW_PCT ? ' low' : ''}" data-sid="${esc(sp.id)}">
+            <input type="range" min="0" max="${sp.grams}" step="10" value="${spoolLeft(sp)}" aria-label="Filament left">
+            <input type="number" min="0" max="${sp.grams}" step="1" inputmode="numeric" value="${spoolLeft(sp)}" aria-label="Grams left"><span class="hint">g</span>
+            <span class="pct">${spoolPct(sp)}%</span></div>
+            <div class="hint" style="flex-basis:100%;margin-top:-4px">${sp.checked ? 'Estimated ' + fmtDate(sp.checked) : 'Not estimated yet — slide to match the spool markings or Bambu Handy'}</div>` : ''}
+        </div>`;
+      }).join('') : '<div class="empty-msg">No spools yet.</div>'}</div>
+      <div class="actions">
+        <button class="btn" data-act="reorder">Order more</button>
+        <button class="btn secondary" data-act="add">＋ Spool on hand</button>
+      </div>
+      <div class="actions" style="margin-top:8px">
+        <button class="linkbtn" data-act="edit">✎ Edit color details</button>
+      </div>`;
+    const body = $('fil-body');
+    body.querySelector('[data-close]').onclick = () => dlgFil.close();
+    body.querySelectorAll('[data-flag]').forEach(b => b.onclick = () => { Store.put(Object.assign({}, f, { flag: b.dataset.flag })); renderFilament(fid); });
+    body.querySelectorAll('.seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.onclick = () => {
+      const sp = Store.get(seg.dataset.sid), st = b.dataset.st;
+      if (!sp || sp.status === st) return;
+      const upd = Object.assign({}, sp, { status: st });
+      if (st === 'open') { upd.opened = sp.opened || todayISO(); upd.emptied = ''; if (sp.status === 'empty' && !+sp.remaining) { upd.remaining = null; upd.checked = ''; } }
+      if (st === 'empty') upd.emptied = todayISO();
+      if (st === 'sealed') { upd.opened = ''; upd.emptied = ''; upd.remaining = null; upd.checked = ''; }
+      Store.put(upd); renderFilament(fid);
+    }));
+    body.querySelectorAll('.left-row').forEach(row => {
+      const rng = row.querySelector('input[type=range]'), nb = row.querySelector('input[type=number]'), pct = row.querySelector('.pct');
+      const sp = Store.get(row.dataset.sid), g = +sp.grams || DEFAULT_SPOOL_GRAMS;
+      const show = v => { pct.textContent = Math.round(v / g * 100) + '%'; row.classList.toggle('low', v / g * 100 < LOW_PCT); };
+      rng.oninput = () => { nb.value = rng.value; show(+rng.value); };
+      nb.oninput = () => { rng.value = nb.value; show(+nb.value || 0); };
+      const save = v => {
+        v = Math.max(0, Math.min(g, Math.round(+v || 0)));
+        if (v === 0 && confirm('Nothing left — mark this spool as used up?')) {
+          Store.put(Object.assign({}, Store.get(sp.id), { status: 'empty', remaining: 0, checked: todayISO(), emptied: todayISO() }));
+        } else Store.put(Object.assign({}, Store.get(sp.id), { remaining: v, checked: todayISO() }));
+        renderFilament(fid);
+      };
+      rng.onchange = () => save(rng.value);
+      nb.onchange = () => save(nb.value);
+    });
+    body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { if (confirm('Remove this spool?')) { Store.remove(b.dataset.del); renderFilament(fid); } });
+    body.querySelectorAll('[data-oid]').forEach(b => b.onclick = () => { dlgFil.close(); openOrder(b.dataset.oid); });
+    body.querySelector('[data-act=reorder]').onclick = () => { dlgFil.close(); openOrder(null, [{ fid, qty: 1, price: lastPrice(fid) }]); };
+    body.querySelector('[data-act=add]').onclick = () => {
+      const c = prompt('Cost of this spool, including tax (leave blank if unknown):', '');
+      if (c === null) return;
+      Store.put({ kind: 'spool', fid, orderId: '', status: 'sealed', cost: num(c) });
+      renderFilament(fid); toast('Spool added');
+    };
+    body.querySelector('[data-act=edit]').onclick = () => editFilament(fid);
+  }
+
+  // Edit/create a filament. onSaved(newFid) lets the order form pick a freshly created color.
+  function editFilament(fid, onSaved) {
+    const f = fid ? fil(fid) : normalizeEntry({ kind: 'filament' });
+    const isNew = !fid;
+    $('fil-body').innerHTML = `
+      <div class="dlg-head"><h2>${isNew ? 'New filament color' : 'Edit ' + esc(f.name)}</h2><button class="close" data-close>&times;</button></div>
+      <label for="f-name">Color name</label><input type="text" id="f-name" value="${esc(f.name)}" placeholder="e.g. Jade White">
+      <div class="row">
+        <div><label for="f-brand">Brand</label><input type="text" id="f-brand" list="dl-brands" value="${esc(f.brand)}"></div>
+        <div><label for="f-code">Code / SKU</label><input type="text" id="f-code" value="${esc(f.code)}" placeholder="e.g. 10100"></div>
+      </div>
+      <label for="f-mat">Material</label><input type="text" id="f-mat" list="dl-materials" value="${esc(f.material)}">
+      <div class="row">
+        <div><label for="f-hex">Swatch color</label><input type="color" id="f-hex" value="${esc(f.hex)}" style="width:100%;height:42px;border:1px solid var(--input);border-radius:9px;background:var(--card)"></div>
+        <div><label for="f-hex2">2nd color <span class="hint" style="font-weight:400">(silk/dual)</span></label>
+          <div style="display:flex;gap:6px;align-items:center"><input type="color" id="f-hex2" value="${esc(f.hex2 || '#ffffff')}" style="flex:1;height:42px;border:1px solid var(--input);border-radius:9px;background:var(--card)">
+          <label style="margin:0;font-weight:400;font-size:.8rem;display:flex;gap:4px;align-items:center"><input type="checkbox" id="f-two" ${f.hex2 ? 'checked' : ''}>use</label></div></div>
+      </div>
+      <label for="f-notes">Notes</label><textarea id="f-notes" placeholder="Print temps, AMS slot, anything…">${esc(f.notes)}</textarea>
+      <div class="actions">
+        <button class="btn" id="f-save">${isNew ? 'Add color' : 'Save'}</button>
+        ${isNew ? '' : '<button class="btn danger" id="f-del">Delete</button>'}
+      </div>`;
+    const body = $('fil-body');
+    body.querySelector('[data-close]').onclick = () => isNew ? dlgFil.close() : renderFilament(fid);
+    $('f-save').onclick = () => {
+      const name = $('f-name').value.trim();
+      if (!name) { $('f-name').focus(); return; }
+      const saved = Store.put(Object.assign({}, f, {
+        name, brand: $('f-brand').value.trim(), code: $('f-code').value.trim(), material: $('f-mat').value.trim() || 'PLA Basic',
+        hex: $('f-hex').value, hex2: $('f-two').checked ? $('f-hex2').value : '', notes: $('f-notes').value.trim()
+      }));
+      toast(isNew ? 'Color added' : 'Saved');
+      if (onSaved) { dlgFil.close(); onSaved(saved.id); } else renderFilament(saved.id);
+    };
+    const del = $('f-del');
+    if (del) del.onclick = () => {
+      const s = stockFor(fid, Store.entries);
+      if (s.spools.length) { alert('This color has ' + s.spools.length + ' spool(s) in its history. Remove those (or their orders) first.'); return; }
+      if (confirm('Delete ' + f.name + '?')) { Store.remove(fid); dlgFil.close(); toast('Deleted'); }
+    };
+    if (!dlgFil.open) dlgFil.showModal();
+    if (isNew) $('f-name').focus();
+  }
+
+  // ---------- order form ----------
+  const dlgOrder = $('dlg-order');
+  function filamentOptions(sel) {
+    const groups = {};
+    filaments().forEach(f => (groups[f.material] = groups[f.material] || []).push(f));
+    return '<option value="">Choose a color…</option>' + Object.entries(groups).map(([m, fs]) =>
+      `<optgroup label="${esc(m)}">${fs.map(f => `<option value="${esc(f.id)}"${f.id === sel ? ' selected' : ''}>${esc(f.name)}${f.code ? ' (' + esc(f.code) + ')' : ''}</option>`).join('')}</optgroup>`).join('')
+      + '<option value="__new">＋ New color…</option>';
+  }
+  function openOrder(oid, prefill) {
+    const existing = oid ? Store.get(oid) : null;
+    const o = existing ? JSON.parse(JSON.stringify(existing)) : normalizeEntry({ kind: 'order', date: todayISO(), items: prefill || [{ fid: '', qty: 1, price: null }] });
+    if (!o.items.length) o.items.push({ fid: '', qty: 1, price: null });
+    const recv = orderReceived(o);
+    $('order-body').innerHTML = `
+      <div class="dlg-head"><h2>${existing ? 'Order · ' + esc(fmtDate(o.date, true)) : 'New order'}</h2><button class="close" data-close>&times;</button></div>
+      <div class="row">
+        <div><label for="o-date">Order date</label><input type="date" id="o-date" value="${esc(o.date)}"></div>
+        <div><label for="o-vendor">Store</label><input type="text" id="o-vendor" list="dl-brands" value="${esc(o.vendor)}"></div>
+      </div>
+      <label for="o-no">Order #</label><input type="text" id="o-no" value="${esc(o.orderNo)}" placeholder="optional" autocomplete="off">
+      <label>Spools</label>
+      <div class="lines"><div class="ln hdr"><span>Color</span><span>Qty</span><span>$ each</span><span></span></div><div id="o-lines"></div></div>
+      <button class="linkbtn" id="o-addline">＋ Add a color</button>
+      <label>Other items <span class="hint" style="font-weight:400">— not filament (reusable spools, nozzles…)</span></label>
+      <div class="lines"><div id="o-extras"></div></div>
+      <button class="linkbtn" id="o-addextra">＋ Add another item</button>
+      <div class="row">
+        <div><label for="o-disc">Discount $</label><input type="number" id="o-disc" step="0.01" min="0" inputmode="decimal" value="${o.discount || ''}" placeholder="0.00"></div>
+        <div><label for="o-ship">Shipping $</label><input type="number" id="o-ship" step="0.01" min="0" inputmode="decimal" value="${o.shipping || ''}" placeholder="0.00"></div>
+      </div>
+      <div class="row">
+        <div><label for="o-rate">Tax rate %</label><input type="number" id="o-rate" step="0.01" min="0" inputmode="decimal" value="${o.taxRate}"></div>
+        <div><label for="o-tax">Tax $ <span class="hint" style="font-weight:400">(if different)</span></label><input type="number" id="o-tax" step="0.01" min="0" inputmode="decimal" value="${o.tax != null ? o.tax : ''}" placeholder="auto"></div>
+      </div>
+      <div class="totals" id="o-totals"></div>
+      <label>Tracking</label>
+      <div class="ship hdr" style="font-size:.72rem;color:var(--faint);font-weight:600"><span>Tracking #</span><span>ETA</span><span>Arrived</span><span></span></div>
+      <div id="o-ships"></div>
+      <button class="linkbtn" id="o-addship">＋ Add a tracking number</button>
+      <div class="hint">UPS, FedEx and USPS numbers become tap-to-track links. An order counts as received once every package has arrived.</div>
+      <label for="o-notes">Notes</label><textarea id="o-notes">${esc(o.notes)}</textarea>
+      <div class="actions">
+        <button class="btn" id="o-save">${existing ? 'Save order' : 'Add order'}</button>
+        ${recv ? '' : '<button class="btn secondary" id="o-recv">Save &amp; mark arrived</button>'}
+      </div>
+      ${existing ? '<div class="actions" style="margin-top:8px"><button class="btn danger small" id="o-del" style="flex:0 1 auto">Delete order</button></div>' : ''}`;
+
+    const lines = $('o-lines'), ships = $('o-ships');
+    function lineHtml(it) {
+      return `<div class="ln"><select class="l-f">${filamentOptions(it.fid)}</select>
+        <input type="number" class="l-q" min="1" step="1" inputmode="numeric" value="${it.qty || 1}">
+        <input type="number" class="l-p" min="0" step="0.01" inputmode="decimal" value="${it.price != null && it.price !== '' ? it.price : ''}" placeholder="?">
+        <button class="x" title="Remove">&times;</button></div>`;
+    }
+    function shipHtml(s) {
+      return `<div class="ship"><input type="text" class="s-n" value="${esc(s.number || '')}" placeholder="1Z… / 8874…" autocomplete="off">
+        <input type="date" class="s-e" value="${esc(s.eta || '')}"><input type="date" class="s-r" value="${esc(s.received || '')}">
+        <button class="x" title="Remove">&times;</button></div>`;
+    }
+    function extraHtml(x) {
+      return `<div class="ln"><input type="text" class="x-n" value="${esc(x.name || '')}" placeholder="e.g. Reusable spool" autocomplete="off">
+        <input type="number" class="x-q" min="1" step="1" inputmode="numeric" value="${x.qty || 1}">
+        <input type="number" class="x-p" min="0" step="0.01" inputmode="decimal" value="${x.price != null && x.price !== '' ? x.price : ''}" placeholder="0.00">
+        <button class="x" title="Remove">&times;</button></div>`;
+    }
+    const extrasBox = $('o-extras');
+    extrasBox.innerHTML = (o.extras || []).map(extraHtml).join('');
+    lines.innerHTML = o.items.map(lineHtml).join('');
+    ships.innerHTML = o.shipments.map(shipHtml).join('');
+    // keep extra per-item fields (grams) that the form doesn't show
+    const itemExtras = o.items.map(it => ({ grams: it.grams || DEFAULT_SPOOL_GRAMS }));
+
+    function readForm() {
+      const items = [...lines.querySelectorAll('.ln')].map((ln, i) => ({
+        fid: ln.querySelector('.l-f').value, qty: Math.max(1, Math.round(+ln.querySelector('.l-q').value || 1)),
+        price: num(ln.querySelector('.l-p').value), grams: (itemExtras[i] || {}).grams || DEFAULT_SPOOL_GRAMS
+      })).filter(it => it.fid && it.fid !== '__new');
+      const shipments = [...ships.querySelectorAll('.ship')].map(r => {
+        const n = r.querySelector('.s-n').value.trim();
+        return { number: n, carrier: detectCarrier(n), eta: r.querySelector('.s-e').value, received: r.querySelector('.s-r').value };
+      }).filter(s => s.number || s.eta || s.received);
+      const extras = [...extrasBox.querySelectorAll('.ln')].map(r => ({
+        name: r.querySelector('.x-n').value.trim(), qty: Math.max(1, Math.round(+r.querySelector('.x-q').value || 1)), price: num(r.querySelector('.x-p').value)
+      })).filter(x => x.name || x.price != null);
+      return Object.assign({}, o, {
+        date: $('o-date').value, vendor: $('o-vendor').value.trim(), orderNo: $('o-no').value.trim(), items, extras, shipments,
+        discount: num($('o-disc').value) || 0, shipping: num($('o-ship').value) || 0,
+        taxRate: num($('o-rate').value) || 0, tax: num($('o-tax').value), notes: $('o-notes').value.trim()
+      });
+    }
+    function updTotals() {
+      const T = orderTotals(readForm());
+      $('o-totals').innerHTML = `<div><span>${T.spools} spool${T.spools === 1 ? '' : 's'}${T.unknown ? ` (${T.unknown} unpriced)` : ''}</span><span>${money(T.filSub)}</span></div>
+        ${T.extras ? `<div><span>Other items</span><span>${money(T.extras)}</span></div>` : ''}
+        ${T.discount ? `<div><span>Discount</span><span>−${money(T.discount)}</span></div>` : ''}
+        ${T.shipping ? `<div><span>Shipping</span><span>${money(T.shipping)}</span></div>` : ''}
+        <div><span>Tax</span><span>${money(T.tax)}</span></div>
+        <div class="grand"><span>Total</span><span>${money(T.total)}</span></div>`;
+    }
+    function wire() {
+      lines.querySelectorAll('.ln').forEach((ln, i) => {
+        ln.querySelector('.x').onclick = () => { ln.remove(); itemExtras.splice(i, 1); wire(); updTotals(); };
+        const sel = ln.querySelector('.l-f');
+        sel.onchange = () => {
+          if (sel.value === '__new') {
+            sel.value = '';
+            editFilament(null, newFid => { lines.querySelectorAll('.l-f').forEach(s => { const v = s.value; s.innerHTML = filamentOptions(v); }); sel.value = newFid; });
+            return;
+          }
+          const p = ln.querySelector('.l-p');
+          if (!p.value) { const lp = lastPrice(sel.value); if (lp != null) p.value = lp; }
+          updTotals();
+        };
+      });
+      ships.querySelectorAll('.ship').forEach(r => r.querySelector('.x').onclick = () => r.remove());
+      extrasBox.querySelectorAll('.ln').forEach(r => r.querySelector('.x').onclick = () => { r.remove(); updTotals(); });
+    }
+    wire(); updTotals();
+    $('order-body').addEventListener('input', updTotals);
+    $('order-body').querySelector('[data-close]').onclick = () => dlgOrder.close();
+    $('o-addline').onclick = () => { lines.insertAdjacentHTML('beforeend', lineHtml({ fid: '', qty: 1, price: null })); itemExtras.push({}); wire(); lines.lastElementChild.querySelector('select').focus(); };
+    $('o-addextra').onclick = () => { extrasBox.insertAdjacentHTML('beforeend', extraHtml({ qty: 1 })); wire(); extrasBox.lastElementChild.querySelector('input').focus(); };
+    $('o-addship').onclick = () => { ships.insertAdjacentHTML('beforeend', shipHtml({})); wire(); ships.lastElementChild.querySelector('input').focus(); };
+
+    function save(markArrived) {
+      const ord = readForm();
+      if (!ord.date) { $('o-date').focus(); return; }
+      if (!ord.items.length && !ord.extras.length) { alert('Add at least one color or other item to the order.'); return; }
+      if (markArrived) {
+        const t = todayISO();
+        ord.received = t;
+        ord.shipments.forEach(s => { if (!s.received) s.received = t; });
+      } else if (ord.shipments.length && ord.shipments.some(s => !s.received)) ord.received = '';
+      ord.id = ord.id || newId();
+      const { puts, dels } = reconcileOrderSpools(ord, Store.entries);
+      // a new order clears Want/Need on the colors it includes
+      const flagClears = existing ? [] : ord.items.map(it => fil(it.fid)).filter(f => f && f.flag).map(f => Object.assign({}, f, { flag: '' }));
+      Store.commit([ord, ...puts, ...flagClears], dels);
+      dlgOrder.close();
+      toast(markArrived ? 'Arrived — spools are in stock' : existing ? 'Order saved' : 'Order added' + (flagClears.length ? ' · cleared ' + flagClears.length + ' shopping flag' + (flagClears.length > 1 ? 's' : '') : ''));
+    }
+    $('o-save').onclick = () => save(false);
+    if ($('o-recv')) $('o-recv').onclick = () => save(true);
+    if ($('o-del')) $('o-del').onclick = () => {
+      const linked = Store.all('spool').filter(s => s.orderId === o.id);
+      const sealed = linked.filter(s => s.status === 'sealed');
+      if (!confirm('Delete this order?' + (sealed.length ? ` Its ${sealed.length} sealed spool(s) will be removed too.` : '') + (linked.length > sealed.length ? ' Open/used spools are kept.' : ''))) return;
+      Store.commit([], [o.id, ...sealed.map(s => s.id)]);
+      dlgOrder.close(); toast('Order deleted');
+    };
+    if (!dlgOrder.open) dlgOrder.showModal();
+  }
+
+  // ---------- import ----------
+  async function importSeed() {
+    importing = true; render();
+    try {
+      await Store.sync();   // another device may have imported already
+      if (Store.all('filament').length) { toast('Already has data — import skipped'); return; }
+      await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'filament-seed.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    } catch (e) { toast('Import failed — check your connection'); return; }
+    finally { importing = false; render(); }
+    const seed = window.FILAMENT_SEED;
+    const puts = [...seed.filaments, ...seed.orders];
+    const orders = seed.orders.map(o => normalizeEntry(o));
+    orders.forEach(o => puts.push(...reconcileOrderSpools(o, []).puts));
+    Store.commit(puts, []);
+    toast('Imported ' + seed.filaments.length + ' colors and ' + seed.orders.length + ' orders');
+  }
+
+  // ---------- wiring ----------
+  $('tabs').querySelectorAll('button').forEach(b => b.onclick = () => {
+    tab = b.dataset.tab;
+    $('tabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    ['stock', 'orders', 'shop', 'costs'].forEach(t => $('tab-' + t).hidden = t !== tab);
+    try { localStorage.setItem('filamentTab', tab); } catch (e) {}
+    render();
+  });
+  $('stock-filter').querySelectorAll('.chip').forEach(c => c.onclick = () => {
+    stockFilter = c.dataset.f;
+    $('stock-filter').querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c));
+    renderStock();
+  });
+  $('q').oninput = renderStock; $('mat').onchange = renderStock;
+  $('add-fil').onclick = () => editFilament(null);
+  $('new-order').onclick = () => openOrder(null);
+  $('shop-order').onclick = () => {
+    const items = shopItems().filter(x => !shopUnchecked.has(x.f.id)).map(x => ({ fid: x.f.id, qty: 1, price: lastPrice(x.f.id) }));
+    if (!items.length) { toast('Tick at least one color'); return; }
+    openOrder(null, items);
+  };
+  $('calc-g').oninput = calc; $('calc-f').onchange = calc;
+  [dlgFil, dlgOrder].forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+  dlgFil.addEventListener('close', render);
+  $('dl-brands').innerHTML = BRANDS.map(b => `<option value="${esc(b)}">`).join('');
+  $('dl-materials').innerHTML = MATERIALS.map(m => `<option value="${esc(m)}">`).join('');
+
+  Store.onChange(() => {
+    renderHeader();
+    if (!dlgOrder.open && !dlgFil.open) render();
+  });
+  try { const t = localStorage.getItem('filamentTab'); if (t && $('tab-' + t)) $('tabs').querySelector(`[data-tab="${t}"]`).click(); } catch (e) {}
+  render();
+  Store.sync();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !Store.busy) Store.sync(); });
+})();
+</script>
+</body>
+</html>
