@@ -485,6 +485,10 @@ permalink: /charging-analytics/
     margin-bottom: 4px; font-variant-numeric: tabular-nums;
   }
   .co2-unit { font-size: 1rem; font-weight: 400; opacity: 0.7; margin-left: 4px; }
+  /* Secondary US-customary equivalent next to an SI value — SI stays primary, this is quieter. */
+  .imp { font-size: 0.78em; font-weight: 400; opacity: 0.62; margin-left: 4px; white-space: nowrap; letter-spacing: 0; text-transform: none; }
+  /* Inside big headline numbers, shrink further so the SI value clearly leads. */
+  .co2-stat-value .imp, #co2SolarBase .imp, #co2Solar50 .imp, #co2Solar100 .imp, #co2SolarAll .imp { font-size: 0.5em; }
   .co2-sub { font-size: 0.8rem; color: #86efac; opacity: 0.8; margin-bottom: 20px; }
   .co2-grid {
     display: grid;
@@ -901,7 +905,7 @@ permalink: /charging-analytics/
       <div style="margin-left:auto;display:flex;gap:14px;flex-wrap:wrap">
         {% if latest.kwh > 0 %}<span style="font-size:0.72rem;color:#888"><strong style="color:var(--text)">{{ latest.kwh }}</strong> kWh</span>{% endif %}
         {% if latest.saving > 0 %}<span style="font-size:0.72rem;color:#888">saved <strong style="color:#2ecc71">${{ latest.saving }}</strong></span>{% endif %}
-        {% if latest.co2_avoided > 0 %}<span style="font-size:0.72rem;color:#888"><strong style="color:#2ecc71">{{ latest.co2_avoided }}</strong> kg CO₂ avoided</span>{% endif %}
+        {% if latest.co2_avoided > 0 %}<span style="font-size:0.72rem;color:#888"><strong style="color:#2ecc71">{{ latest.co2_avoided }}</strong> kg <span class="imp">(≈ {{ latest.co2_avoided | times: 2.20462 | round }} lb)</span> CO₂ avoided</span>{% endif %}
       </div>
     </div>
     <p style="font-size:0.92rem;line-height:1.75;color:var(--text);margin:0">{{ latest.summary }}</p>
@@ -1375,7 +1379,7 @@ permalink: /charging-analytics/
     <div class="co2-sub" id="co2HeroSub">calculating…</div>
     <div class="co2-grid" id="co2StatGrid">
       <div class="co2-stat"><span class="co2-stat-label">Gallons Not Burned</span><span class="co2-stat-value" id="co2Gallons">—</span><span class="co2-stat-sub">equivalent</span></div>
-      <div class="co2-stat"><span class="co2-stat-label">Trees Absorbing 1 Year</span><span class="co2-stat-value" id="co2Trees">—</span><span class="co2-stat-sub">@ 21 kg CO₂/tree/yr</span></div>
+      <div class="co2-stat"><span class="co2-stat-label">Trees Absorbing 1 Year</span><span class="co2-stat-value" id="co2Trees">—</span><span class="co2-stat-sub">@ 21 kg <span class="imp">(46 lb)</span> CO₂/tree/yr</span></div>
       <div class="co2-stat"><span class="co2-stat-label">Gas Car Miles Avoided</span><span class="co2-stat-value" id="co2Miles">—</span><span class="co2-stat-sub">equivalent distance</span></div>
       <div class="co2-stat"><span class="co2-stat-label">Barrels of Oil</span><span class="co2-stat-value" id="co2Barrels">—</span><span class="co2-stat-sub">not refined for fuel</span></div>
       <div class="co2-stat"><span class="co2-stat-label">Homes Powered</span><span class="co2-stat-value" id="co2Homes">—</span><span class="co2-stat-sub">days of avg US home</span></div>
@@ -2054,6 +2058,14 @@ const CO2_GAS_KG_PER_GAL   = 8.887;
 const CO2_TREE_KG_PER_YEAR = 21;
 const CO2_HOME_KWH_YEAR    = 10649;
 const CO2_BARREL_KG        = 131;   // kg CO2 per barrel of crude → gasoline
+
+// SI-first, US-customary second. Function declarations (hoisted) so any builder can use
+// them regardless of init order. impLb(kg) → muted "(≈ 2,890 lb)" span; impGkwh(g) →
+// "(≈ 970 lb/MWh)" (g/kWh × 2.20462 = lb/MWh, the unit eGRID publishes in).
+function kgToLb(kg) { return kg * 2.20462; }
+function fmtLb(kg, d) { return kgToLb(kg).toLocaleString(undefined, { maximumFractionDigits: d || 0 }); }
+function impLb(kg, d) { return `<span class="imp">(≈ ${fmtLb(kg, d)} lb)</span>`; }
+function impGkwh(g) { return `<span class="imp">(≈ ${Math.round(g * 2.20462).toLocaleString()} lb/MWh)</span>`; }
 
 // eGRID 2023 subregion factors (kg CO2/kWh)
 // Source: EPA eGRID 2023 Summary Tables Rev2, June 2025
@@ -4024,7 +4036,7 @@ mkChart('chartHistogram', {
     const heroEl = document.getElementById('co2HeroNum');
     if (heroEl) heroEl.innerHTML = totalNetAvoided.toFixed(0) + '<span class="co2-unit">kg</span>';
     const subEl = document.getElementById('co2HeroSub');
-    if (subEl) subEl.textContent = `≈ ${(totalNetAvoided / 1000).toFixed(2)} metric tons of CO₂ not released into the atmosphere`;
+    if (subEl) subEl.innerHTML = `≈ ${(totalNetAvoided / 1000).toFixed(2)} metric tons <span class="imp">(≈ ${fmtLb(totalNetAvoided)} lb · ${(kgToLb(totalNetAvoided) / 2000).toFixed(2)} US tons)</span> of CO₂ not released into the atmosphere`;
 
     // Stat cards
     const effTotalMiles = sl.reduce((a,s) => {
@@ -4038,13 +4050,14 @@ mkChart('chartHistogram', {
     const pct = totalGasCould > 0 ? (totalNetAvoided / totalGasCould * 100) : 0;
 
     function setStatEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+    function setStatHtml(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
     setStatEl('co2Gallons',  gallons.toFixed(0));
     setStatEl('co2Trees',    trees.toFixed(1));
     setStatEl('co2Miles',    Math.round(effTotalMiles).toLocaleString());
     setStatEl('co2Barrels',  barrels.toFixed(1));
     setStatEl('co2Homes',    homeDays.toFixed(0) + ' days');
-    setStatEl('co2GridEmit', totalGridEmit.toFixed(0) + ' kg');
-    setStatEl('co2GasWould', totalGasCould.toFixed(0) + ' kg');
+    setStatHtml('co2GridEmit', totalGridEmit.toFixed(0) + ' kg' + impLb(totalGridEmit));
+    setStatHtml('co2GasWould', totalGasCould.toFixed(0) + ' kg' + impLb(totalGasCould));
     setStatEl('co2Pct',      pct.toFixed(0) + '%');
 
     // ── Solar what-if scenarios ──
@@ -4086,21 +4099,25 @@ mkChart('chartHistogram', {
       return (d >= 0 ? '+' : '') + fmtKg(d);
     };
 
-    setStatEl('co2SolarBase',      fmtKg(base));
-    setStatEl('co2Solar50',        fmtKg(solar50));
-    setStatEl('co2Solar100',       fmtKg(solar100));
-    setStatEl('co2SolarAll',       fmtKg(solarAllVal));
-    setStatEl('co2Solar50delta',   fmtDelta(solar50,    base));
-    setStatEl('co2Solar100delta',  fmtDelta(solar100,   base));
-    setStatEl('co2SolarAlldelta',  fmtDelta(solarAllVal, base));
+    // Big values: tonnes ≥ 1000 kg → secondary in US tons; smaller → lb. Deltas → lb.
+    const impBig = v => v >= 1000
+      ? `<span class="imp">(≈ ${(kgToLb(v) / 2000).toFixed(2)} US t)</span>`
+      : impLb(v);
+    setStatHtml('co2SolarBase',      fmtKg(base)        + impBig(base));
+    setStatHtml('co2Solar50',        fmtKg(solar50)     + impBig(solar50));
+    setStatHtml('co2Solar100',       fmtKg(solar100)    + impBig(solar100));
+    setStatHtml('co2SolarAll',       fmtKg(solarAllVal) + impBig(solarAllVal));
+    setStatHtml('co2Solar50delta',   fmtDelta(solar50,    base) + impLb(solar50 - base));
+    setStatHtml('co2Solar100delta',  fmtDelta(solar100,   base) + impLb(solar100 - base));
+    setStatHtml('co2SolarAlldelta',  fmtDelta(solarAllVal, base) + impLb(solarAllVal - base));
 
     const noteEl = document.getElementById('co2SolarNote');
     if (noteEl) {
       const homeKwhPct = totalGridEmit > 0 ? (homeGridEmit / totalGridEmit * 100).toFixed(0) : 0;
       noteEl.innerHTML =
-        `<strong>Home charging</strong> accounts for ${fmtKg(homeGridEmit)} of ${fmtKg(totalGridEmit)} total grid CO₂ (${homeKwhPct}%). ` +
-        `Solar+battery lifecycle factor used: <strong>${SOLAR_BATT_G_PER_KWH} g CO₂/kWh</strong> ` +
-        `(vs. Michigan grid ${(EGRID_FACTORS.RFCM * 1000).toFixed(0)} g/kWh — ` +
+        `<strong>Home charging</strong> accounts for ${fmtKg(homeGridEmit)}${impLb(homeGridEmit)} of ${fmtKg(totalGridEmit)}${impLb(totalGridEmit)} total grid CO₂ (${homeKwhPct}%). ` +
+        `Solar+battery lifecycle factor used: <strong>${SOLAR_BATT_G_PER_KWH} g CO₂/kWh</strong>${impGkwh(SOLAR_BATT_G_PER_KWH)} ` +
+        `(vs. Michigan grid ${(EGRID_FACTORS.RFCM * 1000).toFixed(0)} g/kWh${impGkwh(EGRID_FACTORS.RFCM * 1000)} — ` +
         `${Math.round((1 - SOLAR_BATT_KG / EGRID_FACTORS.RFCM) * 100)}% cleaner). ` +
         `"All sites" scenario assumes solar/storage at every charging location — theoretical best-case. ` +
         `Source: IPCC AR6 WG3 §6.4, NREL lifecycle LCA 2022.`;
@@ -4141,7 +4158,7 @@ mkChart('chartHistogram', {
           responsive: true, maintainAspectRatio: false,
           plugins: {
             legend: { display: false }, datalabels: { display: false },
-            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(1)} kg CO₂ avoided` } }
+            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(1)} kg CO₂ avoided  (≈ ${fmtLb(ctx.parsed.y)} lb)` } }
           },
           scales: {
             x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
@@ -4171,7 +4188,7 @@ mkChart('chartHistogram', {
           plugins: {
             legend: { position: 'top', labels: { color: tc(), boxWidth: 12, padding: 10, font: { size: 10 } } },
             datalabels: { display: false },
-            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} kg` } }
+            tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} kg  (≈ ${fmtLb(ctx.parsed.y || 0)} lb)` } }
           },
           scales: {
             x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
@@ -4200,7 +4217,7 @@ mkChart('chartHistogram', {
           responsive: true, maintainAspectRatio: false,
           plugins: {
             legend: { display: false }, datalabels: { display: false },
-            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(0)} kg CO₂ avoided to date` } }
+            tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(0)} kg CO₂ avoided to date  (≈ ${fmtLb(ctx.parsed.y)} lb)` } }
           },
           scales: {
             x: { grid: { display: false }, ticks: { color: tc(), font: { size: 9 } } },
@@ -4252,8 +4269,8 @@ mkChart('chartHistogram', {
             legend: { display: false }, datalabels: { display: false },
             tooltip: { callbacks: { label: (ctx) => {
               const [,v] = locSorted[ctx.dataIndex];
-              return [` ${v.net.toFixed(1)} kg net avoided`,
-                      ` Grid: ${(v.factor*1000).toFixed(0)} g CO₂/kWh`,
+              return [` ${v.net.toFixed(1)} kg net avoided  (≈ ${fmtLb(v.net)} lb)`,
+                      ` Grid: ${(v.factor*1000).toFixed(0)} g CO₂/kWh  (≈ ${Math.round(v.factor*1000*2.20462)} lb/MWh)`,
                       ` ${v.kwh.toFixed(1)} kWh charged`];
             }}}
           },
@@ -4610,9 +4627,9 @@ mkChart('chartHistogram', {
       const co2BadgeHtml = tripNetAvoided > 0.5 ? `
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
           <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.25);border-radius:6px;padding:3px 8px;font-size:0.68rem;color:#2ecc71;font-weight:700">
-            🌿 ${tripNetAvoided.toFixed(1)} kg CO₂ avoided
+            🌿 ${tripNetAvoided.toFixed(1)} kg CO₂ avoided${impLb(tripNetAvoided)}
           </span>
-          <span style="font-size:0.63rem;color:#aaa">grid: ${tripGridEmit.toFixed(1)} kg · gas equiv: ${tripGasCould.toFixed(1)} kg</span>
+          <span style="font-size:0.63rem;color:#aaa">grid: ${tripGridEmit.toFixed(1)} kg${impLb(tripGridEmit)} · gas equiv: ${tripGasCould.toFixed(1)} kg${impLb(tripGasCould)}</span>
         </div>` : '';
 
       const vehBadgeColor = isLRB ? '#f39c12' : '#7b1fa2';
@@ -6550,8 +6567,8 @@ function buildPerspectiveCards(sl) {
       number: fmt(treesYear, 0),
       unit: 'trees working for a year',
       label: 'CO₂ Absorbed',
-      desc: `Your net ${Math.round(totalCo2Avoided)} kg of avoided CO₂ equals a year of carbon absorption by <strong>${fmt(treesYear,0)} trees</strong>.`,
-      footnote: 'EPA: avg tree absorbs 21 kg CO₂/year'
+      desc: `Your net ${Math.round(totalCo2Avoided)} kg${impLb(totalCo2Avoided)} of avoided CO₂ equals a year of carbon absorption by <strong>${fmt(treesYear,0)} trees</strong>.`,
+      footnote: 'EPA: avg tree absorbs 21 kg (≈ 46 lb) CO₂/year'
     },
     {
       color: 'c-amber',
@@ -6586,8 +6603,8 @@ function buildPerspectiveCards(sl) {
       number: fmtBig(balloons),
       unit: 'party balloons of CO₂',
       label: 'CO₂ Kept Out of the Air',
-      desc: `Your avoided CO₂ would fill <strong>${fmtBig(balloons)} party balloons</strong> — each holds about 11 liters of CO₂ gas.`,
-      footnote: 'CO₂ density: 1.98 g/L at standard conditions'
+      desc: `Your avoided CO₂ would fill <strong>${fmtBig(balloons)} party balloons</strong> — each holds about 11 liters <span class="imp">(≈ 2.9 gal)</span> of CO₂ gas.`,
+      footnote: 'CO₂ density: 1.98 g/L (≈ 0.12 lb/ft³) at standard conditions'
     }
   ];
 
