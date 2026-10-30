@@ -4407,7 +4407,9 @@ mkChart('chartHistogram', {
     const bkRows = Object.entries(bkSave).map(([b,v])=>({b, v:+v.toFixed(0)})).sort((a,b)=>b.v-a.v);
     // One label per bar: grow the card with the row count instead of letting Chart.js skip labels.
     const bkWrap = document.getElementById('chartGaBySource')?.parentElement;
-    if (bkWrap) bkWrap.style.height = Math.max(240, bkRows.length * 22 + 50) + 'px';
+    const bkH = Math.max(240, bkRows.length * 22 + 50) + 'px';
+    // …and keep the paired sensitivity card the same height so the row stays even.
+    [bkWrap, document.getElementById('chartGaSensitivity')?.parentElement].forEach(w => { if (w) w.style.height = bkH; });
     const usd = v => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString();
     mkChart('chartGaBySource', { type:'bar',
       data:{ labels: bkRows.map(x=>x.b), datasets:[{ data: bkRows.map(x=>x.v), backgroundColor: bkRows.map(x=>BUCKET_COLORS[x.b]||'#909090'), borderRadius:5 }] },
