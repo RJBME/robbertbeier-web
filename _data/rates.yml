@@ -92,3 +92,7 @@ gas_savings:
     mpg: 24.4
     gas_price: 4.47
     mi_per_kwh: 3.0
+  - date: "2026-10-01"
+    mpg: 24.4
+    gas_price: 4.60   # Day-weighted avg of GasBuddy Detroit 1-month chart, Oct 1–30 (10/31 extrapolated); range $4.43–$4.88
+    mi_per_kwh: 3.0
