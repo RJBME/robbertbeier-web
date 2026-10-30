@@ -4405,11 +4405,15 @@ mkChart('chartHistogram', {
     // 5. Savings by charging source
     const bkSave = {}; sl.forEach(s => { bkSave[s.bucket] = (bkSave[s.bucket]||0) + s.saving; });
     const bkRows = Object.entries(bkSave).map(([b,v])=>({b, v:+v.toFixed(0)})).sort((a,b)=>b.v-a.v);
+    // One label per bar: grow the card with the row count instead of letting Chart.js skip labels.
+    const bkWrap = document.getElementById('chartGaBySource')?.parentElement;
+    if (bkWrap) bkWrap.style.height = Math.max(240, bkRows.length * 22 + 50) + 'px';
+    const usd = v => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString();
     mkChart('chartGaBySource', { type:'bar',
       data:{ labels: bkRows.map(x=>x.b), datasets:[{ data: bkRows.map(x=>x.v), backgroundColor: bkRows.map(x=>BUCKET_COLORS[x.b]||'#909090'), borderRadius:5 }] },
       options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'end', color:tc(), font:{size:10, weight:'bold'}, formatter:v=>'$'+v.toLocaleString() }, tooltip:{callbacks:{label:c=>' '+fmtUSD(c.parsed.x)+' saved'}} },
-        scales:{ x:{grid:{color:gc()}, ticks:{color:tc(), callback:v=>'$'+v}, beginAtZero:true, grace:'15%'}, y:{grid:{display:false}, ticks:{color:tc(), font:{size:11}}} } } });
+        plugins:{ legend:{display:false}, datalabels:{ anchor:'end', align:'end', color:tc(), font:{size:10, weight:'bold'}, formatter:usd }, tooltip:{callbacks:{label:c=>' '+fmtUSD(c.parsed.x)+' saved'}} },
+        scales:{ x:{grid:{color:gc()}, ticks:{color:tc(), callback:usd}, beginAtZero:true, grace:'15%'}, y:{grid:{display:false}, ticks:{color:tc(), font:{size:11}, autoSkip:false}} } } });
 
     // 6. Sensitivity — total savings at hypothetical gas prices
     const prices = [2,3,4,5,6,7];
