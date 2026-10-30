@@ -15,6 +15,32 @@ collections_config:
     add_options:
       - name: Add Charging Session
         schema: default
+    # Card previews. Sessions are data-only (output: false) so there's no page for
+    # CloudCannon to screenshot — this tells it what to show instead. Cost is left
+    # off on purpose: home sessions store 0 and the real home cost is computed on
+    # the site, so "$0" on the card would mislead.
+    preview:
+      text:
+        - template: '{date|year}-{date|month}-{date|day} · {location}'
+        - key: location
+      subtext:
+        - key: vehicle
+      icon: ev_station
+      metadata:
+        - icon: bolt
+          text:
+            - template: '{energy_kwh} kWh'
+        - icon: battery_charging_full
+          text:
+            - template: '{soc_start}% → {soc_end}%'
+        - icon: route
+          text:
+            - template: '+{miles_added} mi'
+      gallery:
+        icon: ev_station
+        icon_color: '#5D3FD3'
+        background_color: '#efeafc'
+        fit: padded
 
   fuelups:
     path: _fuelups
@@ -32,6 +58,29 @@ collections_config:
     add_options:
       - name: Add Fuel-up
         schema: default
+    # Card previews (fill-ups are data-only, so there's no page to screenshot).
+    preview:
+      text:
+        - template: '{date|year}-{date|month}-{date|day} · {station}'
+        - template: '{date|year}-{date|month}-{date|day}'
+      subtext:
+        - key: vehicle
+      icon: local_gas_station
+      metadata:
+        - icon: local_gas_station
+          text:
+            - template: '{gallons} gal'
+        - icon: payments
+          text:
+            - template: '${total_cost}'
+        - icon: speed
+          text:
+            - template: '{odometer} mi'
+      gallery:
+        icon: local_gas_station
+        icon_color: '#066FEF'
+        background_color: '#e6f0fe'
+        fit: padded
     # Collection-scoped inputs — kept separate from the charging editor so the
     # two logs never share a dropdown. (Uses `station`/`total_cost` rather than
     # charging's `location`/`cost` keys to avoid any global-input collision.)
