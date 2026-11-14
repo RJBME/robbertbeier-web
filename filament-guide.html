@@ -197,7 +197,8 @@
             <summary><span class="ic">🏁</span>I finished a spool</summary>
             <div class="body"><ol class="steps">
                 <li>Tap the color, then tap <span class="ui">Used up</span> on that spool. Sliding it to 0 g offers to do the same.</li>
-                <li>Your on-hand count drops by one. The spool moves into the <b>Used up</b> history on the Costs tab, which shows how many days it lasted.</li>
+                <li>Your on-hand count drops by one. In that color's list the roll folds into a collapsed <b>Used up</b> line, and it shows in the <b>Used up</b> history on the Costs tab with how many days it lasted.</li>
+                <li>Its spool is now empty, so <b>🧺 Reusable spools → empty &amp; ready</b> goes up by one. Nothing else to do — it waits there until you open a refill.</li>
             </ol></div>
         </details>
 
@@ -206,7 +207,7 @@
             <div class="body">
                 <ol class="steps">
                     <li>On the <b>Orders</b> tab, tap <span class="ui">＋ New order</span>. Or tap <span class="ui">Order more</span> from any color, or start from the Shopping list.</li>
-                    <li>Add each color with its quantity and the <b>sale price per spool</b> from the receipt. The last price you paid fills in for you.</li>
+                    <li>Add each color with its quantity and the <b>sale price per spool</b> from the receipt. The last price you paid fills in for you. Tick <b>Spool</b> on any line that comes on a spool rather than as a refill.</li>
                     <li>Reusable spools or other non-filament items go under <span class="ui">Other items</span>. They count in the order total but not in your filament cost per kg.</li>
                     <li>Tax is worked out at 6%. If the receipt is a cent different, type its exact figure in <span class="ui">Tax $</span>. Add the order number if you like.</li>
                     <li>Tap <span class="ui">Add order</span>. The new spools show as <span class="bdg ordered" style="font-size:.72rem">Ordered</span>, and any Want/Need flag on those colors clears.</li>
@@ -258,6 +259,21 @@
                 <li>On the <b>Costs</b> tab, enter the grams from Bambu Studio or Handy.</li>
                 <li>Leave it on <b>Average of all</b>, or pick the color to use what you actually paid for it.</li>
             </ol></div>
+        </details>
+
+        <details id="t-spools">
+            <summary><span class="ic">🧺</span>Keeping track of reusable spools</summary>
+            <div class="body">
+                <p>Refills arrive without a spool, so they need one of your reusable spools when you open them. The <b>🧺 Reusable spools</b> card at the top of the Stock tab keeps count for you:</p>
+                <ul style="margin:0 0 10px;padding-left:18px">
+                    <li><b>Total owned</b>: reusable spools you bought (any "Other items" line with "spool" in its name, once the order arrives), plus every roll that came on a spool.</li>
+                    <li><b>Holding filament</b>: one for every open roll.</li>
+                    <li><b>In sealed boxes</b>: unopened rolls that came on a spool.</li>
+                    <li><b>Empty &amp; ready</b>: everything else. Using up a roll adds one here; opening a refill takes one away.</li>
+                </ul>
+                <p>Below that it tells you how many refills (sealed or on the way) will need a spool, and whether you're short. If you are, the Shopping list suggests adding spools to your next order.</p>
+                <div class="tip">If the count ever disagrees with your shelf, tap <span class="ui">Count is off?</span> and type how many empty spools you actually have. It records a correction, so spools that came from anywhere else are covered too. The paper stock-check sheet has a spot for this count as well.</div>
+            </div>
         </details>
 
         <details id="t-check">

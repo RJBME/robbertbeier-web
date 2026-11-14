@@ -41,11 +41,12 @@ window.FILAMENT_SEED = (function () {
     F(13916, 'Phantom Blue', 'PLA Silk Multi-Color', '#00629B', '', '#1A1A1A'),
     F(65104, 'Support for PLA', 'Support for PLA', '#E9E6DA', 'need')
   ];
-  const I = (code, price, qty) => ({ fid: 'f-' + code, qty: qty || 1, price, grams: 1000 });
+  const I = (code, price, qty, onSpool) => ({ fid: 'f-' + code, qty: qty || 1, price, grams: 1000, onSpool: !!onSpool });
+  const S = (code, price, qty) => I(code, price, qty, true);   // came on a spool (not a refill)
   const spools = (qty, price) => [{ name: 'Bambu Reusable Spool (Low Temp)', qty, price }];
   const orders = [
     { kind: 'order', id: 'o-20251226', orderNo: 'us681217365927149569', date: '2025-12-26', vendor: 'Bambu Lab', taxRate: 6, tax: 10.24,
-      items: [I(13902, 22.49), I(10700, 13.99), I(10604, 13.99), I(10501, 13.99), I(10200, 16.09), I(10103, 13.99),
+      items: [S(13902, 22.49), I(10700, 13.99), I(10604, 13.99), I(10501, 13.99), S(10200, 16.09), I(10103, 13.99),
               I(10101, 13.99), I(10100, 13.99)],
       extras: spools(6, 7.99),
       shipments: [{ number: '887443760723', carrier: 'FedEx', eta: '2025-12-31', received: '2025-12-31' },
@@ -57,13 +58,13 @@ window.FILAMENT_SEED = (function () {
       shipments: [{ number: '1ZC6J5620311435858', carrier: 'UPS', eta: '2026-01-08', received: '2026-01-07' }],
       notes: 'All refills. Receipt total $139.80.' },
     { kind: 'order', id: 'o-20251229', orderNo: 'us682167831873114113', date: '2025-12-29', vendor: 'Bambu Lab', taxRate: 6, tax: 5.79,
-      items: [I(13916, 22.49), I(10502, 19.99), I(10701, 19.99), I(10400, 19.99)],
+      items: [S(13916, 22.49), I(10502, 19.99), I(10701, 19.99), I(10400, 19.99)],
       extras: spools(3, 7.99), discount: 10,
       shipments: [{ number: '1ZXJ33010306353188', carrier: 'UPS', eta: '2026-01-03', received: '2026-01-03' },
                   { number: '1ZC6J5620324924126', carrier: 'UPS', eta: '2026-01-09', received: '2026-01-07' }],
       notes: 'Phantom Blue came with a spool; the rest are refills (not on the bulk sale). $10 subscription discount. Receipt total $102.22.' },
     { kind: 'order', id: 'o-20260507', orderNo: 'us729011898635612161', date: '2026-05-07', vendor: 'Bambu Lab', taxRate: 6, tax: 8.16,
-      items: [I(10202, 12.99), I(11201, 12.99), I(10802, 14.94), I(10601, 14.94), I(10100, 12.99), I(10402, 14.94),
+      items: [I(10202, 12.99), I(11201, 12.99), S(10802, 14.94), S(10601, 14.94), I(10100, 12.99), S(10402, 14.94),
               I(10102, 12.99), I(10105, 12.99), I(10101, 12.99), I(10605, 12.99)],
       shipments: [],
       notes: 'Cocoa Brown, Blue and Sunflower Yellow came with a spool; the rest are refills. Receipt total $143.91. No tracking or arrival date recorded.' },
@@ -72,7 +73,7 @@ window.FILAMENT_SEED = (function () {
       shipments: [],
       notes: 'Reusable spools only (full price, no bundle deal). Tax was not charged on shipping. Receipt total $70.54.' },
     { kind: 'order', id: 'o-20261018', orderNo: 'us788376212614414337', date: '2026-10-18', vendor: 'Bambu Lab', taxRate: 6, tax: 6.46,
-      items: [I(11101, 16.1425, 4), I(10101, 13.59, 2)],
+      items: [S(11101, 16.1425, 4), I(10101, 13.59, 2)],
       extras: spools(2, 7.99),
       shipments: [],
       notes: 'Charcoal came with spools ($64.57 for 4); Black are refills. Receipt total $114.19.' }

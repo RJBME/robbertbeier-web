@@ -33,11 +33,14 @@ const DEFAULTS = {
               orderNo: '', extras: [] },
   spool:    { v: SCHEMA_VERSION, id: '', kind: 'spool', fid: '', orderId: '', status: 'sealed', grams: DEFAULT_SPOOL_GRAMS,
               cost: null, opened: '', emptied: '', notes: '', t: 0, synced: false,
-              remaining: null, checked: '' }
+              remaining: null, checked: '', onSpool: false },
+  spooladj: { v: SCHEMA_VERSION, id: '', kind: 'spooladj', delta: 0, date: '', note: '', t: 0, synced: false }
 };
+// spool.onSpool  = this roll came on its own reusable spool (not a refill), so it added one to your spools.
+// spooladj       = a manual correction to the reusable-spool count (from counting your empty spools).
 // spool.remaining = estimated grams left (from the spool's markings or Bambu Handy); null = not
 // estimated yet (treated as full). spool.checked = date of that estimate.
-// order.items[]     = { fid, qty, price (per spool, pre-tax; null = unknown), grams }
+// order.items[]     = { fid, qty, price (per spool, pre-tax; null = unknown), grams, onSpool (came on a spool, not a refill) }
 // order.shipments[] = { number, carrier, eta, received }
 // order.extras[]    = { name, qty, price } — non-filament items (reusable spools, nozzles…): count toward the
 //                     order total, but never become spools or affect $/kg
@@ -242,12 +245,13 @@ function reconcileOrderSpools(order, entries) {
         const it = items[i];
         const cost = (it.price == null || it.price === '') ? null : round2(+it.price * T.factor);
         const grams = +it.grams || DEFAULT_SPOOL_GRAMS;
-        if (s.cost !== cost || s.grams !== grams) puts.push(Object.assign({}, s, { cost, grams }));
+        const onSpool = !!it.onSpool;
+        if (s.cost !== cost || s.grams !== grams || !!s.onSpool !== onSpool) puts.push(Object.assign({}, s, { cost, grams, onSpool }));
       } else if (s.status === 'sealed') dels.push(s.id);
     });
     for (let i = have.length; i < items.length; i++) {
       const it = items[i];
-      puts.push({ kind: 'spool', id: newId() + i, fid, orderId: order.id, status: 'sealed',
+      puts.push({ kind: 'spool', id: newId() + i, fid, orderId: order.id, status: 'sealed', onSpool: !!it.onSpool,
         grams: +it.grams || DEFAULT_SPOOL_GRAMS,
         cost: (it.price == null || it.price === '') ? null : round2(+it.price * T.factor) });
     }
@@ -284,6 +288,34 @@ function stockFor(fid, entries) {
   r.onHand = r.sealed + r.open;
   return r;
 }
+// Reusable-spool count. Owned = spools bought on their own (received "Other items" with "spool" in the
+// name) + rolls that came on a spool + manual corrections. Every open roll sits on one, and a sealed roll
+// that came on a spool has one in its box; the rest are empty and ready. Refills (sealed or on the way)
+// will each need an empty spool when opened. Marking a roll Used up frees its spool automatically.
+const isSpoolItem = x => /spool/i.test(x && x.name || '');
+function spoolInventory(entries) {
+  const orders = new Map(entries.filter(e => e.kind === 'order').map(o => [o.id, o]));
+  const r = { bought: 0, cameOnSpool: 0, adjust: 0, holding: 0, boxed: 0, waiting: 0, waitingNames: [], incomingWithSpool: 0, incomingBought: 0 };
+  orders.forEach(o => {
+    const n = (o.extras || []).filter(isSpoolItem).reduce((a, x) => a + (+x.qty || 0), 0);
+    if (orderReceived(o)) r.bought += n; else r.incomingBought += n;
+  });
+  const names = new Map(entries.filter(e => e.kind === 'filament').map(f => [f.id, f.name]));
+  entries.forEach(e => {
+    if (e.kind === 'spooladj') { r.adjust += +e.delta || 0; return; }
+    if (e.kind !== 'spool' || e.status === 'empty' && !e.onSpool) return;
+    const o = orders.get(e.orderId), inc = !!(o && !orderReceived(o));
+    if (inc) { if (e.onSpool) r.incomingWithSpool++; else { r.waiting++; r.waitingNames.push(names.get(e.fid)); } return; }
+    if (e.onSpool) r.cameOnSpool++;
+    if (e.status === 'open') r.holding++;
+    else if (e.status === 'sealed') { if (e.onSpool) r.boxed++; else { r.waiting++; r.waitingNames.push(names.get(e.fid)); } }
+  });
+  r.total = r.bought + r.cameOnSpool + r.adjust;
+  r.empty = r.total - r.holding - r.boxed;
+  r.short = Math.max(0, r.waiting - r.empty - r.incomingBought);
+  return r;
+}
+
 function spoolIncoming(s, entries) {
   const o = s.orderId && entries.find(e => e.id === s.orderId);
   return !!(o && !orderReceived(o) && s.status !== 'empty');

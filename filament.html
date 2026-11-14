@@ -142,7 +142,22 @@
         .bdg.low { background: var(--need-bg); color: var(--need); }
 
         /* order form */
-        .lines .ln { display: grid; grid-template-columns: minmax(0, 1fr) 52px 82px 30px; gap: 6px; align-items: center; margin-bottom: 6px; }
+        .lines .ln { display: grid; grid-template-columns: minmax(0, 1fr) 48px 74px 30px; gap: 6px; align-items: center; margin-bottom: 6px; }
+        #o-lines .ln, .lines .ln.hdr.items { grid-template-columns: minmax(0, 1fr) 48px 74px 40px 26px; }
+        .ln .spl { display: flex; justify-content: center; align-items: center; }
+        .ln .spl input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+        .spoolcard { padding: 14px 16px; }
+        .spoolcard .row4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; margin-top: 8px; }
+        .spoolcard .n { font-size: 1.25rem; font-weight: 800; }
+        .spoolcard .l { font-size: 0.7rem; color: var(--muted); }
+        .spoolcard .say { font-size: 0.86rem; margin-top: 10px; padding: 8px 10px; border-radius: 9px; background: var(--bg); }
+        .spoolcard .say.short { background: var(--need-bg); color: var(--need); }
+        .spoolcard .say.ok { background: var(--accent-bg); color: var(--accent); }
+        details.usedup summary { cursor: pointer; padding: 10px 0; font-size: 0.86rem; color: var(--muted); list-style: none; }
+        details.usedup summary::-webkit-details-marker { display: none; }
+        details.usedup summary::before { content: '▸ '; }
+        details.usedup[open] summary::before { content: '▾ '; }
+        .tag { font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--line); color: var(--muted); white-space: nowrap; }
         .lines .ln input, .lines .ln select { padding: 9px 8px; font-size: 0.95rem; }
         .lines .hdr { font-size: 0.72rem; color: var(--faint); font-weight: 600; margin-bottom: 4px; }
         .x { background: none; border: none; color: var(--need); font-size: 1.2rem; cursor: pointer; padding: 0; }
@@ -260,6 +275,7 @@
 
     <!-- STOCK -->
     <section id="tab-stock">
+        <div class="card spoolcard" id="spool-card"></div>
         <div class="toolbar">
             <input type="search" id="q" placeholder="Search color, code…" autocomplete="off">
             <select id="mat"><option value="">All materials</option></select>
@@ -332,8 +348,8 @@
 <div class="toast" id="toast"></div>
 <div id="print-area"></div>
 
-<script src="filament-sync.js"></script>
-<script src="filament-catalog.js"></script>
+<script src="filament-sync.js?v=20261114"></script>
+<script src="filament-catalog.js?v=20261114"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -348,7 +364,7 @@
   function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
   const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
 
-  let tab = 'stock', stockFilter = 'all', importing = false;
+  let tab = 'stock', stockFilter = 'all', importing = false, shopSkipSpools = false;
   const LOW_PCT = 20;   // an open spool under this % left counts as running low
   const shopUnchecked = new Set();
 
@@ -405,7 +421,36 @@
     const b = $('sync-now'); if (b) b.onclick = () => Store.sync();
   }
 
+  function renderSpoolCard() {
+    const r = spoolInventory(Store.entries), card = $('spool-card');
+    card.hidden = !Store.all('filament').length;
+    let say;
+    if (r.waiting) {
+      const who = r.waitingNames.length <= 4 ? ' (' + r.waitingNames.map(esc).join(', ') + ')' : '';
+      const extra = r.incomingBought ? ` — counting the ${r.incomingBought} spool${r.incomingBought > 1 ? 's' : ''} you've ordered` : '';
+      say = r.short
+        ? `<div class="say short">${r.waiting} refill${r.waiting > 1 ? 's' : ''}${who} will need a spool — <b>you're ${r.short} short</b>${extra}.</div>`
+        : `<div class="say ok">${r.waiting} refill${r.waiting > 1 ? 's' : ''}${who} will need a spool — you have enough${extra}.</div>`;
+    } else say = '<div class="say">No refills waiting for a spool.</div>';
+    card.innerHTML = `<div class="sec-head" style="margin:0"><h2>🧺 Reusable spools</h2><button class="linkbtn" id="spool-fix">Count is off?</button></div>
+      <div class="row4">
+        <div><div class="n" style="color:${r.empty < 0 ? 'var(--need)' : 'var(--accent)'}">${r.empty}</div><div class="l">empty &amp; ready</div></div>
+        <div><div class="n" style="color:var(--want)">${r.holding}</div><div class="l">holding filament</div></div>
+        <div><div class="n">${r.boxed}</div><div class="l">in sealed boxes</div></div>
+        <div><div class="n">${r.total}</div><div class="l">total owned</div></div>
+      </div>${say}`;
+    $('spool-fix').onclick = () => {
+      const v = prompt(`The tracker thinks you have ${r.empty} empty reusable spool${r.empty === 1 ? '' : 's'} (not holding filament).\nHow many do you actually have right now?`, Math.max(0, r.empty));
+      if (v === null || v.trim() === '' || isNaN(+v)) return;
+      const delta = Math.round(+v) - r.empty;
+      if (!delta) { toast('Already matches'); return; }
+      Store.put({ kind: 'spooladj', delta, date: todayISO(), note: `Counted ${Math.round(+v)} empty spools (tracker had ${r.empty})` });
+      toast(`Spool count ${delta > 0 ? '+' : ''}${delta}`);
+    };
+  }
+
   function renderStock() {
+    renderSpoolCard();
     const all = filaments();
     const mats = [...new Set(all.map(f => f.material))].sort();
     const matSel = $('mat'), cur = matSel.value;
@@ -503,7 +548,14 @@
         </div>`;
     }).join('') : '<div class="empty-msg">Nothing on the list. Flag a color as <b>Want</b> or <b>Need</b> from the Stock tab.</div>';
     $('shop-list').querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => { cb.checked ? shopUnchecked.delete(cb.dataset.fid) : shopUnchecked.add(cb.dataset.fid); });
-    $('shop-order').hidden = !items.length;
+    const r = spoolInventory(Store.entries);
+    if (r.short) $('shop-list').insertAdjacentHTML('afterbegin', `<div class="item">
+        <input type="checkbox" id="shop-spools" ${shopSkipSpools ? '' : 'checked'} style="width:20px;height:20px">
+        <span style="font-size:1.2rem;width:22px;text-align:center">🧺</span>
+        <div class="grow"><b>Reusable spools × ${r.short}</b> <span class="flag need">Short</span>
+          <div class="meta">${r.waiting} refill${r.waiting > 1 ? 's' : ''} waiting, ${Math.max(0, r.empty)} empty spool${r.empty === 1 ? '' : 's'} on hand</div></div></div>`);
+    const sc = $('shop-spools'); if (sc) sc.onchange = () => { shopSkipSpools = !sc.checked; };
+    $('shop-order').hidden = !items.length && !r.short;
   }
 
   function costStats() {
@@ -565,22 +617,13 @@
     const orders = new Map(Store.all('order').map(o => [o.id, o]));
     const rank = s => spoolIncoming(s, Store.entries) ? 0 : { open: 1, sealed: 2, empty: 3 }[s.status];
     const spools = s.spools.slice().sort((a, b) => rank(a) - rank(b));
-    $('fil-body').innerHTML = `
-      <div class="dlg-head"><span class="sw xl" style="background:${esc(swatchCss(f))}"></span>
-        <div><h2>${esc(f.name)}</h2><div class="meta">${esc([f.brand, f.material, f.code].filter(Boolean).join(' · '))}</div></div>
-        <button class="close" data-close>&times;</button></div>
-      <div class="chips" style="margin:6px 0 4px">
-        <button class="chip${!f.flag ? ' on' : ''}" data-flag="">No flag</button>
-        <button class="chip want${f.flag === 'want' ? ' on' : ''}" data-flag="want">Want</button>
-        <button class="chip need${f.flag === 'need' ? ' on' : ''}" data-flag="need">Need</button>
-      </div>
-      ${f.notes ? `<p class="hint">${esc(f.notes)}</p>` : ''}
-      <label>Spools <span class="hint" style="font-weight:400">— ${s.onHand} on hand${s.onHand ? ' (≈ ' + (s.gramsLeft / 1000).toFixed(2) + ' kg)' : ''}${s.incoming ? ', ' + s.incoming + ' on the way' : ''}${s.empty ? ', ' + s.empty + ' used up' : ''}</span></label>
-      <div>${spools.length ? spools.map(sp => {
+    const active = spools.filter(sp => sp.status !== 'empty'), done = spools.filter(sp => sp.status === 'empty');
+    function spoolRowHtml(sp) {
+
         const o = orders.get(sp.orderId), inc = spoolIncoming(sp, Store.entries);
         const src = o ? 'Ordered ' + fmtDate(o.date, true) : 'Added by hand';
         const when = sp.status === 'empty' && sp.emptied ? ' · used up ' + fmtDate(sp.emptied) : sp.status === 'open' && sp.opened ? ' · opened ' + fmtDate(sp.opened) : '';
-        return `<div class="spool"><div><div>${inc ? '<span class="bdg incoming">On the way</span>' : ''} <span class="src">${esc(src)}${when}</span></div>
+        return `<div class="spool"><div><div>${inc ? '<span class="bdg incoming">On the way</span>' : ''} <span class="src">${esc(src)}${when}</span> <span class="tag">${sp.onSpool ? 'came on a spool' : 'refill'}</span></div>
             <div class="src">${sp.cost != null ? money(sp.cost) : 'no price'} · ${sp.grams} g</div></div>
           ${inc ? (o ? `<button class="linkbtn" data-oid="${esc(o.id)}">View order</button>` : '') : `<div class="seg" data-sid="${esc(sp.id)}">
             <button data-st="sealed" class="${sp.status === 'sealed' ? 'on' : ''}">Sealed</button>
@@ -593,7 +636,19 @@
             <span class="pct">${spoolPct(sp)}%</span></div>
             <div class="hint" style="flex-basis:100%;margin-top:-4px">${sp.checked ? 'Estimated ' + fmtDate(sp.checked) : 'Not estimated yet — slide to match the spool markings or Bambu Handy'}</div>` : ''}
         </div>`;
-      }).join('') : '<div class="empty-msg">No spools yet.</div>'}</div>
+    }
+    $('fil-body').innerHTML = `
+      <div class="dlg-head"><span class="sw xl" style="background:${esc(swatchCss(f))}"></span>
+        <div><h2>${esc(f.name)}</h2><div class="meta">${esc([f.brand, f.material, f.code].filter(Boolean).join(' · '))}</div></div>
+        <button class="close" data-close>&times;</button></div>
+      <div class="chips" style="margin:6px 0 4px">
+        <button class="chip${!f.flag ? ' on' : ''}" data-flag="">No flag</button>
+        <button class="chip want${f.flag === 'want' ? ' on' : ''}" data-flag="want">Want</button>
+        <button class="chip need${f.flag === 'need' ? ' on' : ''}" data-flag="need">Need</button>
+      </div>
+      ${f.notes ? `<p class="hint">${esc(f.notes)}</p>` : ''}
+      <label>Spools <span class="hint" style="font-weight:400">— ${s.onHand} on hand${s.onHand ? ' (≈ ' + (s.gramsLeft / 1000).toFixed(2) + ' kg)' : ''}${s.incoming ? ', ' + s.incoming + ' on the way' : ''}${s.empty ? ', ' + s.empty + ' used up' : ''}</span></label>
+      <div>${spools.length ? active.map(sp => spoolRowHtml(sp)).join('') + (done.length ? `<details class="usedup"><summary>Used up (${done.length})</summary>${done.map(sp => spoolRowHtml(sp)).join('')}</details>` : '') : '<div class="empty-msg">No spools yet.</div>'}</div>
       <div class="actions">
         <button class="btn" data-act="reorder">Order more</button>
         <button class="btn secondary" data-act="add">＋ Spool on hand</button>
@@ -608,6 +663,8 @@
       const sp = Store.get(seg.dataset.sid), st = b.dataset.st;
       if (!sp || sp.status === st) return;
       const upd = Object.assign({}, sp, { status: st });
+      if (st === 'open' && sp.status === 'sealed' && !sp.onSpool && spoolInventory(Store.entries).empty <= 0)
+        toast('Heads up: the tracker shows no empty spools left');
       if (st === 'open') { upd.opened = sp.opened || todayISO(); upd.emptied = ''; if (sp.status === 'empty' && !+sp.remaining) { upd.remaining = null; upd.checked = ''; } }
       if (st === 'empty') upd.emptied = todayISO();
       if (st === 'sealed') { upd.opened = ''; upd.emptied = ''; upd.remaining = null; upd.checked = ''; }
@@ -635,7 +692,8 @@
     body.querySelector('[data-act=add]').onclick = () => {
       const c = prompt('Cost of this spool, including tax (leave blank if unknown):', '');
       if (c === null) return;
-      Store.put({ kind: 'spool', fid, orderId: '', status: 'sealed', cost: num(c) });
+      const own = confirm('Did this roll come on its own spool?\n\nOK = yes, it has its own spool\nCancel = no, it\'s a refill');
+      Store.put({ kind: 'spool', fid, orderId: '', status: 'sealed', cost: num(c), onSpool: own });
       renderFilament(fid); toast('Spool added');
     };
     body.querySelector('[data-act=edit]').onclick = () => editFilament(fid);
@@ -808,7 +866,7 @@
           photos to Claude. The <b>Ref</b> code tells Claude which spool each line is.</p>`
         : `<div class="ps-cont"><b>🧵 Filament stock check (continued)</b><span>${stamp}</span></div>`}
       <table>${cols}${head}<tbody>${pg.join('')}</tbody></table>
-      ${pi === pages.length - 1 ? '<div class="foot"><div>Empty reusable spools on hand: <span></span></div><div>Checked by: <span></span></div><div>Date: <span></span></div></div>' : ''}
+      ${pi === pages.length - 1 ? '<div class="foot"><div>Empty reusable spools on hand: <span></span> <small>(tracker: ${Math.max(0, spoolInventory(Store.entries).empty)})</small></div><div>Checked by: <span></span></div><div>Date: <span></span></div></div>' : ''}
       <div style="text-align:right;font-size:7.5pt;margin-top:4px">Page ${pi + 1} of ${pages.length}</div>
     </div>`).join('')}</div>`;
   }
@@ -822,9 +880,9 @@
       `<optgroup label="${esc(m)}">${fs.map(f => `<option value="${esc(f.id)}"${f.id === sel ? ' selected' : ''}>${esc(f.name)}${f.code ? ' (' + esc(f.code) + ')' : ''}</option>`).join('')}</optgroup>`).join('')
       + '<option value="__new">＋ New color…</option>';
   }
-  function openOrder(oid, prefill) {
+  function openOrder(oid, prefill, prefillExtras) {
     const existing = oid ? Store.get(oid) : null;
-    const o = existing ? JSON.parse(JSON.stringify(existing)) : normalizeEntry({ kind: 'order', date: todayISO(), items: prefill || [{ fid: '', qty: 1, price: null }] });
+    const o = existing ? JSON.parse(JSON.stringify(existing)) : normalizeEntry({ kind: 'order', date: todayISO(), items: prefill || [{ fid: '', qty: 1, price: null }], extras: prefillExtras || [] });
     if (!o.items.length) o.items.push({ fid: '', qty: 1, price: null });
     const recv = orderReceived(o);
     $('order-body').innerHTML = `
@@ -835,7 +893,8 @@
       </div>
       <label for="o-no">Order #</label><input type="text" id="o-no" value="${esc(o.orderNo)}" placeholder="optional" autocomplete="off">
       <label>Spools</label>
-      <div class="lines"><div class="ln hdr"><span>Color</span><span>Qty</span><span>$ each</span><span></span></div><div id="o-lines"></div></div>
+      <div class="lines"><div class="ln hdr items"><span>Color</span><span>Qty</span><span>$ each</span><span style="text-align:center">Spool</span><span></span></div><div id="o-lines"></div></div>
+      <div class="hint" style="margin-top:-2px">Tick <b>Spool</b> for rolls that come on a spool (not refills); each adds one to your reusable spools when it arrives.</div>
       <button class="linkbtn" id="o-addline">＋ Add a color</button>
       <label>Other items <span class="hint" style="font-weight:400">— not filament (reusable spools, nozzles…)</span></label>
       <div class="lines"><div id="o-extras"></div></div>
@@ -866,6 +925,7 @@
       return `<div class="ln"><select class="l-f">${filamentOptions(it.fid)}</select>
         <input type="number" class="l-q" min="1" step="1" inputmode="numeric" value="${it.qty || 1}">
         <input type="number" class="l-p" min="0" step="0.01" inputmode="decimal" value="${it.price != null && it.price !== '' ? it.price : ''}" placeholder="?">
+        <label class="spl" title="Comes on a spool (not a refill)"><input type="checkbox" class="l-s"${it.onSpool ? ' checked' : ''}></label>
         <button class="x" title="Remove">&times;</button></div>`;
     }
     function shipHtml(s) {
@@ -889,7 +949,8 @@
     function readForm() {
       const items = [...lines.querySelectorAll('.ln')].map((ln, i) => ({
         fid: ln.querySelector('.l-f').value, qty: Math.max(1, Math.round(+ln.querySelector('.l-q').value || 1)),
-        price: num(ln.querySelector('.l-p').value), grams: (itemExtras[i] || {}).grams || DEFAULT_SPOOL_GRAMS
+        price: num(ln.querySelector('.l-p').value), grams: (itemExtras[i] || {}).grams || DEFAULT_SPOOL_GRAMS,
+        onSpool: ln.querySelector('.l-s').checked
       })).filter(it => it.fid && it.fid !== '__new');
       const shipments = [...ships.querySelectorAll('.ship')].map(r => {
         const n = r.querySelector('.s-n').value.trim();
@@ -1009,12 +1070,15 @@
   $('new-order').onclick = () => openOrder(null);
   $('shop-order').onclick = () => {
     const items = shopItems().filter(x => !shopUnchecked.has(x.f.id)).map(x => ({ fid: x.f.id, qty: 1, price: lastPrice(x.f.id) }));
-    if (!items.length) { toast('Tick at least one color'); return; }
-    openOrder(null, items);
+    const short = shopSkipSpools ? 0 : spoolInventory(Store.entries).short;
+    const extras = short ? [{ name: 'Bambu Reusable Spool', qty: short, price: 7.99 }] : [];
+    if (!items.length && !extras.length) { toast('Tick at least one item'); return; }
+    openOrder(null, items.length ? items : null, extras);
   };
   $('calc-g').oninput = calc; $('calc-f').onchange = calc;
   [dlgFil, dlgOrder].forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
   dlgFil.addEventListener('close', render);
+  dlgOrder.addEventListener('close', render);   // show a just-saved order right away, not after the next sync
   $('dl-brands').innerHTML = BRANDS.map(b => `<option value="${esc(b)}">`).join('');
   $('dl-materials').innerHTML = MATERIALS.map(m => `<option value="${esc(m)}">`).join('');
 
