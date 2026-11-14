@@ -321,7 +321,7 @@
     <section id="tab-shop" hidden>
         <div class="card">
             <div class="sec-head"><h2>Shopping list</h2></div>
-            <p class="hint" style="margin-top:-4px">Colors you've flagged <b>Need</b> or <b>Want</b>, plus anything that's run out or is down to its last open spool. <b>Suggested</b> ideas are listed last, unticked. Tick what you're buying and start an order.</p>
+            <p class="hint" style="margin-top:-4px">Colors you've flagged <b>Need</b> or <b>Want</b>, plus anything that's run out or running low, ticked. Below them, unticked: colors down to their last open roll (not low yet) and <b>Suggested</b> ideas. Tick what you're buying and start an order.</p>
             <div id="shop-list"></div>
             <button class="btn full" id="shop-order" style="margin-top:12px">Start an order with selected</button>
         </div>
@@ -396,7 +396,9 @@
     for (const o of ordersSorted()) for (const it of o.items || []) if (it.fid === fid && it.price != null && it.price !== '') return +it.price;
     return null;
   }
-  const shopPickedFor = (id, reason) => reason === 'suggested' ? shopPicked.has(id) : !shopUnchecked.has(id);
+  // Main list (need / out / low / want) starts ticked; the two "maybe" groups (last roll open, suggested) start unticked.
+  const SHOP_MAYBE = { last: 'Last roll open — not low yet, tick if you want a backup', suggested: 'Suggested — ideas to fill gaps (tick any you want)' };
+  const shopPickedFor = (id, reason) => SHOP_MAYBE[reason] ? shopPicked.has(id) : !shopUnchecked.has(id);
   function shopItems() {
     const out = [];
     filaments().forEach(f => {
@@ -570,12 +572,12 @@
   function renderShop() {
     const items = shopItems();
     const lab = { need: ['need', 'Need'], want: ['want', 'Want'], out: ['need', 'Out of stock'], low: ['need', 'Running low'], last: ['want', 'Last spool open'], suggested: ['suggested', 'Suggested'] };
-    let sugHead = false;
+    const heads = new Set();
     $('shop-list').innerHTML = items.length ? items.map(({ f, s, reason }) => {
       const p = lastPrice(f.id);
-      const head = reason === 'suggested' && !sugHead ? (sugHead = true, '<div class="shop-group">Suggested — ideas to fill gaps (tick any you want)</div>') : '';
+      const head = SHOP_MAYBE[reason] && !heads.has(reason) ? (heads.add(reason), `<div class="shop-group">${SHOP_MAYBE[reason]}</div>`) : '';
       return `${head}<div class="item">
-          <input type="checkbox" data-fid="${esc(f.id)}" data-sug="${reason === 'suggested' ? 1 : ''}" ${shopPickedFor(f.id, reason) ? 'checked' : ''} style="width:20px;height:20px">
+          <input type="checkbox" data-fid="${esc(f.id)}" data-sug="${SHOP_MAYBE[reason] ? 1 : ''}" ${shopPickedFor(f.id, reason) ? 'checked' : ''} style="width:20px;height:20px">
           <span class="sw" style="background:${esc(swatchCss(f))}"></span>
           <div class="grow"><b>${esc(f.name)}</b> <span class="flag ${lab[reason][0]}">${lab[reason][1]}</span>
             <div class="meta">${esc([f.code, f.material].filter(Boolean).join(' · '))}${s.onHand ? ` · ${s.onHand} on hand` : ''}${s.openPcts.length ? ` · open spool ${s.openPcts[0]}% left` : ''}${p != null ? ' · last paid ' + money(p) : ''}${f.notes ? ' · ' + esc(f.notes) : ''}</div></div>
