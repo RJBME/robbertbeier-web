@@ -68,6 +68,8 @@
         .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
         .chip.on.want { background: var(--want); border-color: var(--want); }
         .chip.on.need { background: var(--need); border-color: var(--need); }
+        .chip.on.skip { background: var(--muted); border-color: var(--muted); }
+        .chip.on.suggest { background: var(--info); border-color: var(--info); }
         .toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
         .toolbar input { flex: 2; } .toolbar select { flex: 1; }
         .btn { background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 12px 16px; font-size: 1rem;
@@ -103,6 +105,12 @@
         .flag { font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; padding: 2px 6px; border-radius: 6px; }
         .flag.want { background: var(--want-bg); color: var(--want); }
         .flag.need { background: var(--need-bg); color: var(--need); }
+        .flag.norestock { background: var(--line); color: var(--muted); }
+        .flag.suggested { background: var(--info-bg); color: var(--info); }
+        .gear-ic { font-size: 1.2rem; width: 26px; text-align: center; flex-shrink: 0; }
+        .gear-row { cursor: pointer; }
+        .gear-row .meta a { color: var(--link); }
+        .shop-group { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 14px 0 2px; }
 
         /* lists */
         .item { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
@@ -313,9 +321,14 @@
     <section id="tab-shop" hidden>
         <div class="card">
             <div class="sec-head"><h2>Shopping list</h2></div>
-            <p class="hint" style="margin-top:-4px">Colors you've flagged <b>Need</b> or <b>Want</b>, plus anything that's run out or is down to its last open spool. Tick what you're buying and start an order.</p>
+            <p class="hint" style="margin-top:-4px">Colors you've flagged <b>Need</b> or <b>Want</b>, plus anything that's run out or is down to its last open spool. <b>Suggested</b> ideas are listed last, unticked. Tick what you're buying and start an order.</p>
             <div id="shop-list"></div>
             <button class="btn full" id="shop-order" style="margin-top:12px">Start an order with selected</button>
+        </div>
+        <div class="card">
+            <div class="sec-head"><h2>🛠 Tools, accessories &amp; upgrades</h2><button class="btn small secondary" id="add-gear">＋ Add</button></div>
+            <p class="hint" style="margin-top:-4px">A wish list for everything that isn't filament: nozzles, plates, tools, upgrades. Tap one to edit it or mark it <b>Got it</b>.</p>
+            <div id="gear-list"></div>
         </div>
     </section>
 
@@ -353,8 +366,8 @@
 <div class="toast" id="toast"></div>
 <div id="print-area"></div>
 
-<script src="filament-sync.js?v=20261114b"></script>
-<script src="filament-catalog.js?v=20261114b"></script>
+<script src="filament-sync.js?v=20261114d"></script>
+<script src="filament-catalog.js?v=20261114d"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -370,6 +383,8 @@
   const num = v => (v === '' || v == null || isNaN(+v)) ? null : +v;
 
   let tab = 'stock', stockFilter = 'all', importing = false, shopSkipSpools = false;
+  const FLAG_LABEL = { want: 'want', need: 'need', suggested: 'suggested', norestock: "don't restock" };
+  const shopPicked = new Set();   // Suggested items start unticked; this holds the ones you tick
   const LOW_PCT = 20;   // an open spool under this % left counts as running low
   const shopUnchecked = new Set();
 
@@ -381,18 +396,21 @@
     for (const o of ordersSorted()) for (const it of o.items || []) if (it.fid === fid && it.price != null && it.price !== '') return +it.price;
     return null;
   }
+  const shopPickedFor = (id, reason) => reason === 'suggested' ? shopPicked.has(id) : !shopUnchecked.has(id);
   function shopItems() {
     const out = [];
     filaments().forEach(f => {
+      if (f.flag === 'norestock') return;   // still shown in stock, never suggested
       const s = stockFor(f.id, Store.entries);
       let reason = '';
       if (f.flag === 'need') reason = 'need';
       else if (f.flag === 'want') reason = 'want';
+      else if (f.flag === 'suggested') reason = 'suggested';
       else if (s.onHand === 0 && s.incoming === 0 && s.spools.length) reason = 'out';
       else if (s.sealed === 0 && s.open > 0 && s.incoming === 0) reason = s.openPcts[0] < LOW_PCT ? 'low' : 'last';
       if (reason) out.push({ f, s, reason });
     });
-    const order = { need: 0, out: 1, low: 2, want: 3, last: 4 };
+    const order = { need: 0, out: 1, low: 2, want: 3, last: 4, suggested: 5 };
     return out.sort((a, b) => order[a.reason] - order[b.reason]);
   }
 
@@ -487,7 +505,7 @@
       if (incOn) b.push(`<span class="bdg incoming">${incOn} on the way · on spool</span>`);
       if (s.incomingRefill) b.push(`<span class="bdg incoming refill" title="No spool yet — needs one when opened">${s.incomingRefill} on the way · refill</span>`);
       if (!s.onHand && !s.incoming) b.push(`<span class="bdg out">${s.spools.length ? 'Out' : 'Never bought'}</span>`);
-      if (f.flag) b.push(`<span class="flag ${f.flag}">${f.flag}</span>`);
+      if (f.flag) b.push(`<span class="flag ${f.flag}">${FLAG_LABEL[f.flag] || f.flag}</span>`);
       const out = !s.onHand;
       return `<div class="tile${out ? ' out' : ''}" data-fid="${esc(f.id)}">
           <span class="sw lg" style="background:${esc(swatchCss(f))}"></span>
@@ -551,17 +569,23 @@
 
   function renderShop() {
     const items = shopItems();
-    const lab = { need: ['need', 'Need'], want: ['want', 'Want'], out: ['need', 'Out of stock'], low: ['need', 'Running low'], last: ['want', 'Last spool open'] };
+    const lab = { need: ['need', 'Need'], want: ['want', 'Want'], out: ['need', 'Out of stock'], low: ['need', 'Running low'], last: ['want', 'Last spool open'], suggested: ['suggested', 'Suggested'] };
+    let sugHead = false;
     $('shop-list').innerHTML = items.length ? items.map(({ f, s, reason }) => {
       const p = lastPrice(f.id);
-      return `<div class="item">
-          <input type="checkbox" data-fid="${esc(f.id)}" ${shopUnchecked.has(f.id) ? '' : 'checked'} style="width:20px;height:20px">
+      const head = reason === 'suggested' && !sugHead ? (sugHead = true, '<div class="shop-group">Suggested — ideas to fill gaps (tick any you want)</div>') : '';
+      return `${head}<div class="item">
+          <input type="checkbox" data-fid="${esc(f.id)}" data-sug="${reason === 'suggested' ? 1 : ''}" ${shopPickedFor(f.id, reason) ? 'checked' : ''} style="width:20px;height:20px">
           <span class="sw" style="background:${esc(swatchCss(f))}"></span>
           <div class="grow"><b>${esc(f.name)}</b> <span class="flag ${lab[reason][0]}">${lab[reason][1]}</span>
-            <div class="meta">${esc([f.code, f.material].filter(Boolean).join(' · '))}${s.onHand ? ` · ${s.onHand} on hand` : ''}${s.openPcts.length ? ` · open spool ${s.openPcts[0]}% left` : ''}${p != null ? ' · last paid ' + money(p) : ''}</div></div>
+            <div class="meta">${esc([f.code, f.material].filter(Boolean).join(' · '))}${s.onHand ? ` · ${s.onHand} on hand` : ''}${s.openPcts.length ? ` · open spool ${s.openPcts[0]}% left` : ''}${p != null ? ' · last paid ' + money(p) : ''}${f.notes ? ' · ' + esc(f.notes) : ''}</div></div>
         </div>`;
     }).join('') : '<div class="empty-msg">Nothing on the list. Flag a color as <b>Want</b> or <b>Need</b> from the Stock tab.</div>';
-    $('shop-list').querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = () => { cb.checked ? shopUnchecked.delete(cb.dataset.fid) : shopUnchecked.add(cb.dataset.fid); });
+    $('shop-list').querySelectorAll('input[data-fid]').forEach(cb => cb.onchange = () => {
+      const id = cb.dataset.fid;
+      if (cb.dataset.sug) cb.checked ? shopPicked.add(id) : shopPicked.delete(id);
+      else cb.checked ? shopUnchecked.delete(id) : shopUnchecked.add(id);
+    });
     const r = spoolInventory(Store.entries);
     if (r.short) $('shop-list').insertAdjacentHTML('afterbegin', `<div class="item">
         <input type="checkbox" id="shop-spools" ${shopSkipSpools ? '' : 'checked'} style="width:20px;height:20px">
@@ -570,6 +594,57 @@
           <div class="meta">To spool every refill (${r.waiting} on hand${r.arriving ? `, ${r.arriving} on the way` : ''}); ${Math.max(0, r.empty)} empty spool${r.empty === 1 ? '' : 's'} on hand</div></div></div>`);
     const sc = $('shop-spools'); if (sc) sc.onchange = () => { shopSkipSpools = !sc.checked; };
     $('shop-order').hidden = !items.length && !r.short;
+    renderGear();
+  }
+
+  // ---------- tools / accessories / upgrades wish list ----------
+  function renderGear() {
+    const all = Store.all('gear'), rank = { need: 0, want: 1, suggested: 2 };
+    const wanted = all.filter(g => !g.got).sort((a, b) => (rank[a.flag] ?? 3) - (rank[b.flag] ?? 3) || a.name.localeCompare(b.name));
+    const got = all.filter(g => g.got).sort((a, b) => b.got.localeCompare(a.got));
+    const safeLink = u => /^https?:\/\//i.test(u || '') ? u : '';
+    const row = g => `<div class="item gear-row" data-gid="${esc(g.id)}"><span class="gear-ic">${GEAR_TYPES[g.type] || '🔧'}</span>
+        <div class="grow"><b>${esc(g.name)}</b> ${g.got ? '' : `<span class="flag ${esc(g.flag)}">${esc(FLAG_LABEL[g.flag] || g.flag)}</span>`}
+          <div class="meta">${esc(g.type)}${g.price != null && g.price !== '' ? ' · ≈ ' + money(g.price) : ''}${g.got ? ' · got ' + esc(fmtDate(g.got, true)) : ''}${g.notes ? ' · ' + esc(g.notes) : ''}${safeLink(g.link) ? ` · <a href="${esc(safeLink(g.link))}" target="_blank" rel="noopener" onclick="event.stopPropagation()">link</a>` : ''}</div></div></div>`;
+    $('gear-list').innerHTML = (wanted.length ? wanted.map(row).join('') : '<div class="empty-msg">Nothing on the wish list.</div>')
+      + (got.length ? `<details class="usedup"><summary>Got it (${got.length})</summary>${got.map(row).join('')}</details>` : '');
+    $('gear-list').querySelectorAll('.gear-row').forEach(r => r.onclick = () => editGear(r.dataset.gid));
+  }
+  function editGear(gid) {
+    const g = gid ? Store.get(gid) : normalizeEntry({ kind: 'gear' });
+    const isNew = !gid;
+    $('fil-body').innerHTML = `
+      <div class="dlg-head"><h2>${isNew ? 'Add to wish list' : esc(g.name)}</h2><button class="close" data-close>&times;</button></div>
+      <label for="g-name">What is it?</label><input type="text" id="g-name" value="${esc(g.name)}" placeholder="e.g. Hardened steel nozzle 0.4 mm">
+      <label>Type</label><div class="chips" id="g-type">${Object.keys(GEAR_TYPES).map(t => `<button class="chip${g.type === t ? ' on' : ''}" data-v="${t}">${GEAR_TYPES[t]} ${t}</button>`).join('')}</div>
+      <label>Priority</label><div class="chips" id="g-flag">${[['need', 'Need', 'need'], ['want', 'Want', 'want'], ['suggested', 'Suggested', 'suggest']].map(([v, l, c]) => `<button class="chip ${c}${g.flag === v ? ' on' : ''}" data-v="${v}">${l}</button>`).join('')}</div>
+      <div class="row">
+        <div><label for="g-price">About $</label><input type="number" id="g-price" min="0" step="0.01" inputmode="decimal" value="${g.price != null && g.price !== '' ? g.price : ''}" placeholder="optional"></div>
+        <div><label for="g-got">Got it on</label><input type="date" id="g-got" value="${esc(g.got)}"></div>
+      </div>
+      <label for="g-link">Link</label><input type="text" id="g-link" value="${esc(g.link)}" placeholder="https://… (optional)" autocomplete="off">
+      <label for="g-notes">Notes</label><textarea id="g-notes" placeholder="Why you want it, what it's for…">${esc(g.notes)}</textarea>
+      <div class="actions">
+        <button class="btn" id="g-save">${isNew ? 'Add' : 'Save'}</button>
+        ${isNew || g.got ? '' : '<button class="btn secondary" id="g-gotit">Got it today</button>'}
+      </div>
+      ${isNew ? '' : '<div class="actions" style="margin-top:8px"><button class="btn danger small" id="g-del" style="flex:0 1 auto">Delete</button></div>'}`;
+    const body = $('fil-body');
+    body.querySelector('[data-close]').onclick = () => dlgFil.close();
+    ['g-type', 'g-flag'].forEach(id => $(id).querySelectorAll('.chip').forEach(c => c.onclick = () => $(id).querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c))));
+    const read = () => ({ name: $('g-name').value.trim(), type: ($('g-type').querySelector('.on') || {}).dataset.v || 'Upgrade',
+      flag: ($('g-flag').querySelector('.on') || {}).dataset.v || 'want', price: num($('g-price').value), got: $('g-got').value,
+      link: $('g-link').value.trim(), notes: $('g-notes').value.trim() });
+    const save = extra => {
+      const v = Object.assign(read(), extra || {});
+      if (!v.name) { $('g-name').focus(); return; }
+      Store.put(Object.assign({}, g, v)); dlgFil.close(); toast(isNew ? 'Added to wish list' : 'Saved');
+    };
+    $('g-save').onclick = () => save();
+    if ($('g-gotit')) $('g-gotit').onclick = () => save({ got: todayISO() });
+    if ($('g-del')) $('g-del').onclick = () => { if (confirm('Delete ' + g.name + '?')) { Store.remove(g.id); dlgFil.close(); toast('Deleted'); } };
+    if (!dlgFil.open) dlgFil.showModal();
+    if (isNew) $('g-name').focus();
   }
 
   function costStats() {
@@ -659,6 +734,8 @@
         <button class="chip${!f.flag ? ' on' : ''}" data-flag="">No flag</button>
         <button class="chip want${f.flag === 'want' ? ' on' : ''}" data-flag="want">Want</button>
         <button class="chip need${f.flag === 'need' ? ' on' : ''}" data-flag="need">Need</button>
+        <button class="chip suggest${f.flag === 'suggested' ? ' on' : ''}" data-flag="suggested" title="An idea: on the Shopping list, but unticked">Suggested</button>
+        <button class="chip skip${f.flag === 'norestock' ? ' on' : ''}" data-flag="norestock" title="Keep it in stock, but never suggest buying more">Don't restock</button>
       </div>
       ${f.notes ? `<p class="hint">${esc(f.notes)}</p>` : ''}
       <label>Spools <span class="hint" style="font-weight:400">— ${s.onHand} on hand${s.onHand ? ' (≈ ' + (s.gramsLeft / 1000).toFixed(2) + ' kg)' : ''}${s.incoming ? ', ' + s.incoming + ' on the way' : ''}${s.empty ? ', ' + s.empty + ' used up' : ''}</span></label>
@@ -1082,8 +1159,9 @@
   };
   window.addEventListener('beforeprint', buildStockSheet);   // Cmd+P prints the sheet too, never a blank page
   $('new-order').onclick = () => openOrder(null);
+  $('add-gear').onclick = () => editGear(null);
   $('shop-order').onclick = () => {
-    const items = shopItems().filter(x => !shopUnchecked.has(x.f.id)).map(x => ({ fid: x.f.id, qty: 1, price: lastPrice(x.f.id) }));
+    const items = shopItems().filter(x => shopPickedFor(x.f.id, x.reason)).map(x => ({ fid: x.f.id, qty: 1, price: lastPrice(x.f.id) }));
     const short = shopSkipSpools ? 0 : spoolInventory(Store.entries).short;
     const extras = short ? [{ name: 'Bambu Reusable Spool', qty: short, price: 7.99 }] : [];
     if (!items.length && !extras.length) { toast('Tick at least one item'); return; }

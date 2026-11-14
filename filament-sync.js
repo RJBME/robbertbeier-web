@@ -14,7 +14,8 @@ const DEFAULT_SPOOL_GRAMS = 1000;
 const BRANDS = ['Bambu Lab', 'Polymaker', 'eSun', 'Elegoo', 'Sunlu', 'Overture', 'Prusament'];
 const MATERIALS = ['PLA Basic', 'PLA Matte', 'PLA Silk', 'PLA Silk Multi-Color', 'PLA Silk+', 'PLA Translucent',
                    'PLA Glow', 'PLA Marble', 'PLA-CF', 'PETG Basic', 'PETG HF', 'PETG Translucent', 'ABS', 'ASA',
-                   'TPU 95A', 'Support for PLA', 'Support for PLA/PETG', 'PVA'];
+                   'TPU 95A', 'TPU for AMS', 'Support for PLA', 'Support for PLA/PETG', 'PVA'];
+const GEAR_TYPES = { Tool: '🔧', Accessory: '🧩', Upgrade: '⬆️' };
 
 // ---- Entry schema (backward/forward compatible) ----
 // Same rules as the driving log: only ADD fields (with a default below), never rename or
@@ -34,8 +35,14 @@ const DEFAULTS = {
   spool:    { v: SCHEMA_VERSION, id: '', kind: 'spool', fid: '', orderId: '', status: 'sealed', grams: DEFAULT_SPOOL_GRAMS,
               cost: null, opened: '', emptied: '', notes: '', t: 0, synced: false,
               remaining: null, checked: '', onSpool: false },
-  spooladj: { v: SCHEMA_VERSION, id: '', kind: 'spooladj', delta: 0, date: '', note: '', t: 0, synced: false }
+  spooladj: { v: SCHEMA_VERSION, id: '', kind: 'spooladj', delta: 0, date: '', note: '', t: 0, synced: false },
+  gear:     { v: SCHEMA_VERSION, id: '', kind: 'gear', name: '', type: 'Upgrade', flag: 'want', price: null, link: '', notes: '',
+              got: '', t: 0, synced: false }
 };
+// filament.flag  = '' | 'want' | 'need' | 'suggested' (an idea: on the Shopping list but unticked)
+//                  | 'norestock' (kept in stock, never suggested on the Shopping list)
+// gear           = tools / accessories / upgrades wish list: type Tool|Accessory|Upgrade, flag need|want|suggested,
+//                  got = date bought ('' = still wanted)
 // spool.onSpool  = this roll came on its own reusable spool (not a refill), so it added one to your spools.
 // spooladj       = a manual correction to the reusable-spool count (from counting your empty spools).
 // spool.remaining = estimated grams left (from the spool's markings or Bambu Handy); null = not

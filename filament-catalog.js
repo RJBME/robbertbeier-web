@@ -47,6 +47,10 @@ const BAMBU_CATALOG = (function () {
       ['', 'Yellow', '#F9D23C'], ['', 'Lime Green', '#8BC34A'], ['', 'Green', '#2E9D4A'], ['', 'Forest Green', '#2F4F2F'],
       ['', 'Lake Blue', '#1F8FBF'], ['', 'Blue', '#1F4FBF']
     ],
+    'PETG Translucent': [['', 'Clear', '#E6ECEE'], ['', 'Translucent Gray', '#9AA0A4']],
+    'ASA': [['', 'Black', '#111111'], ['', 'White', '#F5F5F5'], ['', 'Gray', '#8E9089']],
+    'TPU for AMS': [['', 'Black', '#111111'], ['', 'White', '#F5F5F5'], ['', 'Gray', '#8E9089']],
+    'PLA Glow': [['', 'Green', '#C5E8A0'], ['', 'Blue', '#A9D6EA'], ['', 'Orange', '#F6C7A0'], ['', 'Pink', '#F2B9CC'], ['', 'Yellow', '#EDE7A6']],
     'Support for PLA': [['65104', 'Support for PLA', '#E9E6DA']]
   };
   const out = [];
