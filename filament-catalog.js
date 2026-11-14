@@ -1,7 +1,7 @@
 // Built-in Bambu Lab color list for the Filament Tracker's "Find a Bambu color" search.
 // Picking one fills in the name, code, material and swatch of a new color.
 // Swatch hexes are close approximations of Bambu's colors, not official values. Codes are filled in
-// only where known (PLA Basic series, plus codes confirmed on receipts); a blank code means "add it
+// only where known (PLA Basic series, plus codes confirmed on receipts/invoices); a blank code means "add it
 // from the receipt" — the color is still searchable by name. To add more: [code, name, hex, hex2?].
 const BAMBU_CATALOG = (function () {
   const groups = {
@@ -21,12 +21,12 @@ const BAMBU_CATALOG = (function () {
     'PLA Matte': [
       ['11100', 'Ivory White', '#FFFFF0'], ['11101', 'Charcoal', '#3A3A3C'], ['', 'Bone White', '#CBC6B8'],
       ['', 'Ash Gray', '#9B9EA0'], ['', 'Nardo Gray', '#757575'], ['', 'Desert Tan', '#E8DBB7'],
-      ['', 'Latte Brown', '#D3B7A7'], ['', 'Caramel', '#AE835B'], ['', 'Dark Brown', '#7D6556'],
+      ['', 'Latte Brown', '#D3B7A7'], ['', 'Caramel', '#AE835B'], ['11801', 'Dark Brown', '#7D6556'],
       ['', 'Terracotta', '#B15533'], ['', 'Mandarin Orange', '#F99963'], ['', 'Lemon Yellow', '#F7D959'],
       ['11201', 'Sakura Pink', '#E8AFCF'], ['', 'Scarlet Red', '#DE4343'], ['', 'Dark Red', '#BB3D43'],
       ['', 'Plum', '#950051'], ['', 'Lilac Purple', '#AE96D4'], ['', 'Apple Green', '#C2E189'],
       ['', 'Grass Green', '#61C680'], ['', 'Dark Green', '#68724D'], ['', 'Ice Blue', '#A3D8E1'],
-      ['', 'Sky Blue', '#56B7E6'], ['', 'Marine Blue', '#0078BF'], ['', 'Dark Blue', '#042F56']
+      ['', 'Sky Blue', '#56B7E6'], ['', 'Marine Blue', '#0078BF'], ['11602', 'Dark Blue', '#042F56']
     ],
     'PLA Silk Multi-Color': [
       ['13902', 'Midnight Blaze', '#1D3FBF', '#C8102E'], ['13916', 'Phantom Blue', '#00629B', '#1A1A1A'],
@@ -36,7 +36,7 @@ const BAMBU_CATALOG = (function () {
       ['', 'Velvet Eclipse', '#1A1A1A', '#B71C1C']
     ],
     'PLA Silk+': [
-      ['', 'Gold', '#D4AF37'], ['', 'Silver', '#C0C2C4'], ['', 'Titan Gray', '#5F6367'], ['', 'White', '#F5F5F5'],
+      ['13405', 'Gold', '#D4AF37'], ['', 'Silver', '#C0C2C4'], ['', 'Titan Gray', '#5F6367'], ['', 'White', '#F5F5F5'],
       ['', 'Champagne', '#E8D3B0'], ['', 'Rose Gold', '#C9A296'], ['', 'Pink', '#F4A6C1'], ['', 'Candy Red', '#C8102E'],
       ['', 'Candy Green', '#118C4F'], ['', 'Mint', '#9FE2BF'], ['', 'Baby Blue', '#89CFF0'], ['', 'Blue', '#1F4FBF'],
       ['', 'Purple', '#7B3FA0']
