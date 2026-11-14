@@ -150,8 +150,10 @@
         .spoolcard .row4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; margin-top: 8px; }
         .spoolcard .n { font-size: 1.25rem; font-weight: 800; }
         .spoolcard .l { font-size: 0.7rem; color: var(--muted); }
-        .spoolcard .say { font-size: 0.86rem; margin-top: 10px; padding: 8px 10px; border-radius: 9px; background: var(--bg); }
-        .spoolcard .say.short { background: var(--need-bg); color: var(--need); }
+        .spoolcard .say { font-size: 0.86rem; margin-top: 8px; padding: 8px 10px; border-radius: 9px; background: var(--bg); }
+        .spoolcard .say.short { background: var(--want-bg); color: var(--want); }
+        .spoolcard .say .linkbtn { padding: 0 0 0 4px; font-size: inherit; }
+        .bdg.refill { background: transparent; border: 1.5px dashed currentColor; padding: 1px 6px; }
         .spoolcard .say.ok { background: var(--accent-bg); color: var(--accent); }
         details.usedup summary { cursor: pointer; padding: 10px 0; font-size: 0.86rem; color: var(--muted); list-style: none; }
         details.usedup summary::-webkit-details-marker { display: none; }
@@ -286,6 +288,7 @@
             <button class="chip" data-f="open">Open</button>
             <button class="chip" data-f="incoming">On the way</button>
             <button class="chip" data-f="out">Out</button>
+            <button class="chip" data-f="needspool">Needs a spool</button>
         </div>
         <div class="hint" id="stock-sum" style="margin:-4px 0 10px"></div>
         <div class="grid" id="grid"></div>
@@ -348,8 +351,8 @@
 <div class="toast" id="toast"></div>
 <div id="print-area"></div>
 
-<script src="filament-sync.js?v=20261114"></script>
-<script src="filament-catalog.js?v=20261114"></script>
+<script src="filament-sync.js?v=20261114b"></script>
+<script src="filament-catalog.js?v=20261114b"></script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);
@@ -424,14 +427,14 @@
   function renderSpoolCard() {
     const r = spoolInventory(Store.entries), card = $('spool-card');
     card.hidden = !Store.all('filament').length;
-    let say;
-    if (r.waiting) {
-      const who = r.waitingNames.length <= 4 ? ' (' + r.waitingNames.map(esc).join(', ') + ')' : '';
-      const extra = r.incomingBought ? ` — counting the ${r.incomingBought} spool${r.incomingBought > 1 ? 's' : ''} you've ordered` : '';
-      say = r.short
-        ? `<div class="say short">${r.waiting} refill${r.waiting > 1 ? 's' : ''}${who} will need a spool — <b>you're ${r.short} short</b>${extra}.</div>`
-        : `<div class="say ok">${r.waiting} refill${r.waiting > 1 ? 's' : ''}${who} will need a spool — you have enough${extra}.</div>`;
-    } else say = '<div class="say">No refills waiting for a spool.</div>';
+    const list = names => names.length <= 4 ? ' (' + names.map(esc).join(', ') + ')' : '';
+    const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+    let say = '';
+    if (r.waiting) say += `<div class="say ${r.shortNow ? 'short' : 'ok'}">${plural(r.waiting, 'refill', 'refills')}${list(r.waitingNames)} ${r.waiting === 1 ? "isn't" : "aren't"} on a spool yet.
+      You have ${plural(Math.max(0, r.empty), 'empty spool', 'empty spools')}: ${r.shortNow ? `<b>${r.shortNow} more</b> to spool ${r.waiting === 1 ? 'it' : 'them all'}` : `enough to spool ${r.waiting === 1 ? 'it' : 'them all'}`}.<button class="linkbtn" id="spool-show">Show</button></div>`;
+    if (r.arriving) say += `<div class="say ${r.short ? 'short' : ''}">${plural(r.arriving, 'more refill is', 'more refills are')} on the way${list(r.arrivingNames)}.
+      ${r.short ? `Once ${r.arriving === 1 ? 'it arrives' : 'they arrive'} you'd need <b>${r.short} more spool${r.short === 1 ? '' : 's'}</b> to spool everything${r.incomingBought ? ` (counting the ${r.incomingBought} on order)` : ''}.` : "You'll still have enough spools when they arrive."}</div>`;
+    if (!say) say = '<div class="say ok">Every roll you have is on a spool.</div>';
     card.innerHTML = `<div class="sec-head" style="margin:0"><h2>🧺 Reusable spools</h2><button class="linkbtn" id="spool-fix">Count is off?</button></div>
       <div class="row4">
         <div><div class="n" style="color:${r.empty < 0 ? 'var(--need)' : 'var(--accent)'}">${r.empty}</div><div class="l">empty &amp; ready</div></div>
@@ -439,6 +442,8 @@
         <div><div class="n">${r.boxed}</div><div class="l">in sealed boxes</div></div>
         <div><div class="n">${r.total}</div><div class="l">total owned</div></div>
       </div>${say}`;
+    const show = $('spool-show');
+    if (show) show.onclick = () => $('stock-filter').querySelector('[data-f="needspool"]').click();
     $('spool-fix').onclick = () => {
       const v = prompt(`The tracker thinks you have ${r.empty} empty reusable spool${r.empty === 1 ? '' : 's'} (not holding filament).\nHow many do you actually have right now?`, Math.max(0, r.empty));
       if (v === null || v.trim() === '' || isNaN(+v)) return;
@@ -465,14 +470,19 @@
       if (stockFilter === 'open') return s.open > 0;
       if (stockFilter === 'incoming') return s.incoming > 0;
       if (stockFilter === 'out') return !s.onHand && !s.incoming && s.spools.length;
+      if (stockFilter === 'needspool') return s.sealedRefill > 0;   // refills you have now; arriving ones are under On the way
       return true;
     });
     $('grid').innerHTML = list.map(f => {
       const s = stock.get(f.id), b = [];
-      if (s.sealed) b.push(`<span class="bdg sealed">${s.sealed} sealed</span>`);
+      const sealedOn = s.sealed - s.sealedRefill;
+      if (sealedOn) b.push(`<span class="bdg sealed">${sealedOn} sealed · on spool</span>`);
+      if (s.sealedRefill) b.push(`<span class="bdg sealed refill" title="No spool yet — needs one when opened">${s.sealedRefill} sealed · refill</span>`);
       const low = s.openPcts.length && s.openPcts[0] < LOW_PCT;
       if (s.open) b.push(`<span class="bdg open${low ? ' low' : ''}">${s.open} open${s.openPcts.length ? ' · ' + s.openPcts[0] + '% left' : ''}</span>`);
-      if (s.incoming) b.push(`<span class="bdg incoming">${s.incoming} on the way</span>`);
+      const incOn = s.incoming - s.incomingRefill;
+      if (incOn) b.push(`<span class="bdg incoming">${incOn} on the way · on spool</span>`);
+      if (s.incomingRefill) b.push(`<span class="bdg incoming refill" title="No spool yet — needs one when opened">${s.incomingRefill} on the way · refill</span>`);
       if (!s.onHand && !s.incoming) b.push(`<span class="bdg out">${s.spools.length ? 'Out' : 'Never bought'}</span>`);
       if (f.flag) b.push(`<span class="flag ${f.flag}">${f.flag}</span>`);
       const out = !s.onHand;
@@ -553,7 +563,7 @@
         <input type="checkbox" id="shop-spools" ${shopSkipSpools ? '' : 'checked'} style="width:20px;height:20px">
         <span style="font-size:1.2rem;width:22px;text-align:center">🧺</span>
         <div class="grow"><b>Reusable spools × ${r.short}</b> <span class="flag need">Short</span>
-          <div class="meta">${r.waiting} refill${r.waiting > 1 ? 's' : ''} waiting, ${Math.max(0, r.empty)} empty spool${r.empty === 1 ? '' : 's'} on hand</div></div></div>`);
+          <div class="meta">To spool every refill (${r.waiting} on hand${r.arriving ? `, ${r.arriving} on the way` : ''}); ${Math.max(0, r.empty)} empty spool${r.empty === 1 ? '' : 's'} on hand</div></div></div>`);
     const sc = $('shop-spools'); if (sc) sc.onchange = () => { shopSkipSpools = !sc.checked; };
     $('shop-order').hidden = !items.length && !r.short;
   }

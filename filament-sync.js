@@ -271,14 +271,16 @@ function spoolPct(s) { return Math.round(spoolLeft(s) / (+s.grams || DEFAULT_SPO
 // openPcts = % left on each open spool, lowest first.
 function stockFor(fid, entries) {
   const orders = new Map(entries.filter(e => e.kind === 'order').map(o => [o.id, o]));
-  const r = { incoming: 0, sealed: 0, open: 0, empty: 0, spools: [], gramsLeft: 0, openPcts: [] };
+  // sealedRefill / incomingRefill = rolls with no spool of their own yet (they'll each need one when opened)
+  const r = { incoming: 0, sealed: 0, open: 0, empty: 0, spools: [], gramsLeft: 0, openPcts: [], sealedRefill: 0, incomingRefill: 0 };
   entries.forEach(s => {
     if (s.kind !== 'spool' || s.fid !== fid) return;
     r.spools.push(s);
     const o = orders.get(s.orderId);
     if (s.status === 'empty') r.empty++;
-    else if (o && !orderReceived(o)) r.incoming++;
+    else if (o && !orderReceived(o)) { r.incoming++; if (!s.onSpool) r.incomingRefill++; }
     else {
+      if (s.status === 'sealed' && !s.onSpool) r.sealedRefill++;
       r[s.status === 'open' ? 'open' : 'sealed']++;
       r.gramsLeft += spoolLeft(s);
       if (s.status === 'open') r.openPcts.push(spoolPct(s));
@@ -286,16 +288,19 @@ function stockFor(fid, entries) {
   });
   r.openPcts.sort((a, b) => a - b);
   r.onHand = r.sealed + r.open;
+  r.needSpool = r.sealedRefill + r.incomingRefill;
   return r;
 }
 // Reusable-spool count. Owned = spools bought on their own (received "Other items" with "spool" in the
 // name) + rolls that came on a spool + manual corrections. Every open roll sits on one, and a sealed roll
 // that came on a spool has one in its box; the rest are empty and ready. Refills (sealed or on the way)
-// will each need an empty spool when opened. Marking a roll Used up frees its spool automatically.
+// will each need an empty spool when opened (only refills you already have count as waiting; ones on the way
+// are counted separately). Marking a roll Used up frees its spool automatically.
 const isSpoolItem = x => /spool/i.test(x && x.name || '');
 function spoolInventory(entries) {
   const orders = new Map(entries.filter(e => e.kind === 'order').map(o => [o.id, o]));
-  const r = { bought: 0, cameOnSpool: 0, adjust: 0, holding: 0, boxed: 0, waiting: 0, waitingNames: [], incomingWithSpool: 0, incomingBought: 0 };
+  const r = { bought: 0, cameOnSpool: 0, adjust: 0, holding: 0, boxed: 0, waiting: 0, waitingNames: [],
+              arriving: 0, arrivingNames: [], incomingWithSpool: 0, incomingBought: 0 };
   orders.forEach(o => {
     const n = (o.extras || []).filter(isSpoolItem).reduce((a, x) => a + (+x.qty || 0), 0);
     if (orderReceived(o)) r.bought += n; else r.incomingBought += n;
@@ -305,14 +310,16 @@ function spoolInventory(entries) {
     if (e.kind === 'spooladj') { r.adjust += +e.delta || 0; return; }
     if (e.kind !== 'spool' || e.status === 'empty' && !e.onSpool) return;
     const o = orders.get(e.orderId), inc = !!(o && !orderReceived(o));
-    if (inc) { if (e.onSpool) r.incomingWithSpool++; else { r.waiting++; r.waitingNames.push(names.get(e.fid)); } return; }
+    if (inc) { if (e.onSpool) r.incomingWithSpool++; else { r.arriving++; r.arrivingNames.push(names.get(e.fid)); } return; }
     if (e.onSpool) r.cameOnSpool++;
     if (e.status === 'open') r.holding++;
     else if (e.status === 'sealed') { if (e.onSpool) r.boxed++; else { r.waiting++; r.waitingNames.push(names.get(e.fid)); } }
   });
   r.total = r.bought + r.cameOnSpool + r.adjust;
   r.empty = r.total - r.holding - r.boxed;
-  r.short = Math.max(0, r.waiting - r.empty - r.incomingBought);
+  // waiting = refills you have now with no spool; arriving = refills still on the way.
+  r.shortNow = Math.max(0, r.waiting - r.empty);
+  r.short = Math.max(0, r.waiting + r.arriving - r.empty - r.incomingBought);   // once everything on order arrives
   return r;
 }
 
