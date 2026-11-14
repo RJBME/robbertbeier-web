@@ -190,6 +190,39 @@
                  border-radius: 24px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 100; box-shadow: 0 4px 14px rgba(0,0,0,.2); pointer-events: none; max-width: calc(100vw - 30px); text-align: center; }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         [hidden] { display: none !important; }
+
+        /* printable stock-check sheet (built on demand into #print-area) */
+        #print-area { display: none; }
+        @media print {
+            @page { size: letter landscape; margin: 0.4in; }
+            html, body { background: #fff !important; color: #000 !important; padding: 0 !important; }
+            body > .wrap, dialog, .toast, .sn-bar { display: none !important; }
+            #print-area { display: block !important; }
+        }
+        .ps { font: 10pt/1.25 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; color: #000; }
+        .ps * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .ps-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; }
+        .ps-head h1 { font-size: 16pt; margin: 0; text-align: left; }
+        .ps-head .r { text-align: right; font-size: 9pt; }
+        .ps-how { font-size: 8.5pt; margin: 0 0 8px; }
+        .ps h2 { font-size: 11pt; margin: 12px 0 4px; break-after: avoid; }
+        .ps table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .ps th { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .03em; text-align: left; background: #e9e9e9; border: 1px solid #888; padding: 3px 4px; }
+        .ps td { border: 1px solid #888; padding: 3px 4px; height: 0.36in; vertical-align: middle; }
+        .ps tr { break-inside: avoid; }
+        .ps thead { display: table-header-group; }
+        .ps .ref { font: 700 10pt ui-monospace, Menlo, Consolas, monospace; letter-spacing: .04em; }
+        .ps .num { color: #555; font-size: 8pt; text-align: center; }
+        .ps .sw { width: 13px; height: 13px; border-radius: 50%; border: 1px solid #555; display: inline-block; vertical-align: -2px; margin-right: 4px; }
+        .ps .nm { font-weight: 700; }
+        .ps .sub { font-size: 7.5pt; color: #444; }
+        .ps .says { font-size: 8.5pt; }
+        .ps .bx { display: inline-block; width: 11px; height: 11px; border: 1.3px solid #000; vertical-align: -2px; margin: 0 2px 0 5px; }
+        .ps .bx:first-child { margin-left: 0; }
+        .ps .opt { white-space: nowrap; font-size: 8.5pt; }
+        .ps .g { display: inline-block; width: 0.45in; border-bottom: 1px solid #000; margin-left: 4px; }
+        .ps .foot { display: flex; gap: 28px; margin-top: 14px; font-size: 10pt; }
+        .ps .foot span { display: inline-block; min-width: 1.1in; border-bottom: 1px solid #000; }
         @media (max-width: 420px) {
             .kpi .num { font-size: 1.2rem; }
             .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -236,7 +269,10 @@
         <div class="hint" id="stock-sum" style="margin:-4px 0 10px"></div>
         <div class="grid" id="grid"></div>
         <div class="card empty-msg" id="stock-empty" hidden></div>
-        <div style="margin-top:14px; text-align:center"><button class="btn secondary small" id="add-fil">＋ Add a filament color</button></div>
+        <div style="margin-top:14px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap">
+            <button class="btn secondary small" id="add-fil">＋ Add a filament color</button>
+            <button class="btn secondary small" id="print-sheet">🖨️ Print stock-check sheet</button>
+        </div>
     </section>
 
     <!-- ORDERS -->
@@ -289,6 +325,7 @@
 <datalist id="dl-brands"></datalist>
 <datalist id="dl-materials"></datalist>
 <div class="toast" id="toast"></div>
+<div id="print-area"></div>
 
 <script src="filament-sync.js"></script>
 <script src="filament-catalog.js"></script>
@@ -687,6 +724,73 @@
     find.focus();
   }
 
+  // ---------- printable stock-check sheet ----------
+  // One row per physical spool, each with a short Ref (the end of its id) so a photo of the filled-in
+  // sheet can be matched back to the exact spool. Used-up spools are left off; arriving ones get their own section.
+  // Ref = FNV-1a hash of the spool id, written in an alphabet with no look-alike characters
+  // (no 0/O, 1/I/L, 2/Z, 5/S, 8/B), so it reads cleanly in a photo and is the same on every printing.
+  const REF_ABC = 'ACDEFGHJKMNPQRTUVWXY34679';
+  function spoolRef(id, len) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    let out = '';
+    for (let i = 0; i < len; i++) { out += REF_ABC[h % 25]; h = Math.floor(h / 25); }
+    return out;
+  }
+  function shortRefs(spools) {
+    for (let n = 4; n <= 6; n++) {
+      const cand = spools.map(s => spoolRef(s.id, n));
+      if (new Set(cand).size === cand.length) return new Map(spools.map((s, i) => [s.id, cand[i]]));
+    }
+    return new Map(spools.map(s => [s.id, s.id.toUpperCase()]));
+  }
+  function buildStockSheet() {
+    const orders = new Map(Store.all('order').map(o => [o.id, o]));
+    const order = filaments();
+    const rank = new Map(order.map((f, i) => [f.id, i]));
+    const live = Store.all('spool').filter(s => s.status !== 'empty' && fil(s.fid))
+      .sort((a, b) => rank.get(a.fid) - rank.get(b.fid) || (a.status === 'open' ? 0 : 1) - (b.status === 'open' ? 0 : 1));
+    const refs = shortRefs(live);
+    const onHand = live.filter(s => !spoolIncoming(s, Store.entries)), arriving = live.filter(s => spoolIncoming(s, Store.entries));
+    const sw = f => `<span class="sw" style="background:${esc(swatchCss(f))}"></span>`;
+    const colorCell = f => `${sw(f)}<span class="nm">${esc(f.name)}</span><div class="sub">${esc([f.code, f.material].filter(Boolean).join(' · '))}</div>`;
+    const src = s => { const o = orders.get(s.orderId); return o ? 'ordered ' + fmtDate(o.date, true) : 'added by hand'; };
+    const says = s => s.status === 'sealed' ? 'Sealed'
+      : 'Open · ' + (s.remaining == null || s.remaining === '' ? 'not estimated' : spoolPct(s) + '% (' + Math.round(spoolLeft(s)) + ' g)');
+    const box = t => `<span class="opt"><span class="bx"></span>${t}</span>`;
+    const statusBoxes = [box('Sealed'), box('Open'), box('Used up'), box('Can\'t find')].join(' ');
+    const amountBoxes = [box('Full'), box('¾'), box('½'), box('¼'), box('Low')].join(' ') + ' <span class="opt">or<span class="g"></span> g</span>';
+    let n = 0;
+    const row = s => { const f = fil(s.fid); n++; return `<tr><td class="num">${n}</td><td class="ref">${refs.get(s.id)}</td>
+      <td>${colorCell(f)}</td><td class="says">${esc(says(s))}<div class="sub">${esc(src(s))}</div></td>
+      <td>${statusBoxes}</td><td>${amountBoxes}</td><td></td></tr>`; };
+    const cols = '<colgroup><col style="width:3%"><col style="width:7%"><col style="width:17%"><col style="width:15%"><col style="width:25%"><col style="width:23%"><col style="width:10%"></colgroup>';
+    const head = '<thead><tr><th>#</th><th>Ref</th><th>Color</th><th>Tracker says</th><th>What you see</th><th>Amount left (open spools)</th><th>Notes</th></tr></thead>';
+    const cOpen = onHand.filter(s => s.status === 'open').length, cSealed = onHand.length - cOpen;
+    const today = new Date();
+    $('print-area').innerHTML = `<div class="ps">
+      <div class="ps-head"><h1>🧵 Filament stock check</h1>
+        <div class="r">Printed ${esc(fmtDate(todayISO(), true))}, ${today.toTimeString().slice(0, 5)}<br>
+        Tracker says: <b>${cOpen} open · ${cSealed} sealed · ${arriving.length} on the way</b></div></div>
+      <p class="ps-how"><b>How to use:</b> for each spool, tick what you actually see, and for open spools tick (or write in grams) how much is left,
+        from the spool markings or Bambu Handy. Anything that isn't listed goes in <b>Not on this list</b>. When you're done, photograph
+        each page flat and in good light and send the photos to Claude to update the tracker. The <b>Ref</b> code is how each line is matched.</p>
+      <h2>On hand (${onHand.length} spools)</h2>
+      <table>${cols}${head}<tbody>${onHand.map(row).join('')}</tbody></table>
+      ${arriving.length ? `<h2>On the way (${arriving.length} spools) — tick if it has arrived</h2>
+      <table>${cols}<thead><tr><th>#</th><th>Ref</th><th>Color</th><th>Order</th><th>Arrived?</th><th>Opened?</th><th>Notes</th></tr></thead><tbody>
+      ${arriving.map(s => { const f = fil(s.fid); n++; return `<tr><td class="num">${n}</td><td class="ref">${refs.get(s.id)}</td><td>${colorCell(f)}</td>
+        <td class="says">${esc(src(s))}</td><td>${box('Yes')} ${box('No')} <span class="opt">date<span class="g"></span></span></td><td>${box('Still sealed')} ${box('Opened')}</td><td></td></tr>`; }).join('')}
+      </tbody></table>` : ''}
+      <h2>Not on this list — write in anything else you find</h2>
+      <table><colgroup><col style="width:3%"><col style="width:20%"><col style="width:10%"><col style="width:14%"><col style="width:20%"><col style="width:23%"><col style="width:10%"></colgroup>
+      <thead><tr><th>#</th><th>Color name</th><th>Code (label)</th><th>Material</th><th>Status</th><th>Amount left</th><th>Notes</th></tr></thead><tbody>
+      ${Array.from({ length: 6 }, (_, i) => `<tr><td class="num">W${i + 1}</td><td></td><td></td><td></td><td>${box('Sealed')} ${box('Open')}</td><td>${amountBoxes}</td><td></td></tr>`).join('')}
+      </tbody></table>
+      <div class="foot"><div>Empty reusable spools on hand: <span></span></div><div>Checked by: <span></span></div><div>Date: <span></span></div></div>
+    </div>`;
+  }
+
   // ---------- order form ----------
   const dlgOrder = $('dlg-order');
   function filamentOptions(sel) {
@@ -873,6 +977,8 @@
   });
   $('q').oninput = renderStock; $('mat').onchange = renderStock;
   $('add-fil').onclick = () => editFilament(null);
+  $('print-sheet').onclick = () => { buildStockSheet(); window.print(); };
+  window.addEventListener('beforeprint', buildStockSheet);   // Cmd+P prints the sheet too, never a blank page
   $('new-order').onclick = () => openOrder(null);
   $('shop-order').onclick = () => {
     const items = shopItems().filter(x => !shopUnchecked.has(x.f.id)).map(x => ({ fid: x.f.id, qty: 1, price: lastPrice(x.f.id) }));
