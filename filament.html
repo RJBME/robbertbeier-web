@@ -150,6 +150,7 @@
         .spoolcard .row4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; margin-top: 8px; }
         .spoolcard .n { font-size: 1.25rem; font-weight: 800; }
         .spoolcard .l { font-size: 0.7rem; color: var(--muted); }
+        .spoolcard .l2 { font-size: 0.64rem; color: var(--faint); }
         .spoolcard .say { font-size: 0.86rem; margin-top: 8px; padding: 8px 10px; border-radius: 9px; background: var(--bg); }
         .spoolcard .say.short { background: var(--want-bg); color: var(--want); }
         .spoolcard .say .linkbtn { padding: 0 0 0 4px; font-size: inherit; }
@@ -287,6 +288,7 @@
             <button class="chip" data-f="hand">On hand</button>
             <button class="chip" data-f="open">Open</button>
             <button class="chip" data-f="incoming">On the way</button>
+            <button class="chip" data-f="low">Low stock</button>
             <button class="chip" data-f="out">Out</button>
             <button class="chip" data-f="needspool">Needs a spool</button>
         </div>
@@ -438,8 +440,8 @@
     card.innerHTML = `<div class="sec-head" style="margin:0"><h2>🧺 Reusable spools</h2><button class="linkbtn" id="spool-fix">Count is off?</button></div>
       <div class="row4">
         <div><div class="n" style="color:${r.empty < 0 ? 'var(--need)' : 'var(--accent)'}">${r.empty}</div><div class="l">empty &amp; ready</div></div>
-        <div><div class="n" style="color:var(--want)">${r.holding}</div><div class="l">holding filament</div></div>
-        <div><div class="n">${r.boxed}</div><div class="l">in sealed boxes</div></div>
+        <div title="Spools with an open roll of filament on them"><div class="n" style="color:var(--want)">${r.holding}</div><div class="l">on open rolls</div></div>
+        <div title="Unopened rolls that came on a spool: the spool is in the sealed box with the filament"><div class="n">${r.boxed}</div><div class="l">on sealed rolls</div><div class="l2">filament still boxed</div></div>
         <div><div class="n">${r.total}</div><div class="l">total owned</div></div>
       </div>${say}`;
     const show = $('spool-show');
@@ -470,6 +472,7 @@
       if (stockFilter === 'open') return s.open > 0;
       if (stockFilter === 'incoming') return s.incoming > 0;
       if (stockFilter === 'out') return !s.onHand && !s.incoming && s.spools.length;
+      if (stockFilter === 'low') return s.openPcts.length > 0 && s.openPcts[0] < LOW_PCT;   // an open roll under LOW_PCT %
       if (stockFilter === 'needspool') return s.sealedRefill > 0;   // refills you have now; arriving ones are under On the way
       return true;
     });
@@ -498,7 +501,8 @@
     let grams = 0, opens = 0, lows = 0;
     stock.forEach(s => { grams += s.gramsLeft; opens += s.open; lows += s.openPcts.filter(p => p < LOW_PCT).length; });
     $('stock-sum').innerHTML = all.length ? `≈ <b>${(grams / 1000).toFixed(1)} kg</b> of filament on hand` +
-      (opens ? ` · ${opens} open spool${opens > 1 ? 's' : ''}` : '') + (lows ? ` · <b style="color:var(--need)">${lows} running low</b>` : '') : '';
+      (opens ? ` · ${opens} open spool${opens > 1 ? 's' : ''}` : '') + (lows ? ` · <button class="linkbtn" id="show-low" style="color:var(--need);font-weight:700;padding:0">${lows} running low</button>` : '') : '';
+    const sl = $('show-low'); if (sl) sl.onclick = () => $('stock-filter').querySelector('[data-f="low"]').click();
     const empty = $('stock-empty');
     if (!all.length && importing) {
       empty.hidden = false; empty.innerHTML = 'Importing your spreadsheet…';
