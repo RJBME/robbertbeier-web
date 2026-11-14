@@ -50,6 +50,7 @@
         .tabs button { flex: 1; border: none; background: none; color: var(--muted); padding: 10px 4px; border-radius: 9px; font: inherit;
                        font-size: 0.9rem; font-weight: 600; cursor: pointer; }
         .tabs button.on { background: var(--accent); color: #fff; }
+        @media (max-width: 420px) { .tabs button { font-size: 0.8rem; padding: 9px 2px; } }
         .tabs .count { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--need); color: #fff; font-size: 0.7rem; margin-left: 3px; }
 
         /* controls */
@@ -109,6 +110,7 @@
         .flag.suggested { background: var(--info-bg); color: var(--info); }
         .gear-ic { font-size: 1.2rem; width: 26px; text-align: center; flex-shrink: 0; }
         .gear-row { cursor: pointer; }
+        #add-gear { white-space: nowrap; flex-shrink: 0; }
         .gear-row .meta a { color: var(--link); }
         .shop-group { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); margin: 14px 0 2px; }
 
@@ -281,6 +283,7 @@
         <button data-tab="stock" class="on">Stock</button>
         <button data-tab="orders">Orders</button>
         <button data-tab="shop">Shopping<span class="count" id="shop-count" hidden></span></button>
+        <button data-tab="gear">Wish list</button>
         <button data-tab="costs">Costs</button>
     </div>
 
@@ -325,6 +328,10 @@
             <div id="shop-list"></div>
             <button class="btn full" id="shop-order" style="margin-top:12px">Start an order with selected</button>
         </div>
+    </section>
+
+    <!-- WISH LIST (tools, accessories, upgrades) -->
+    <section id="tab-gear" hidden>
         <div class="card">
             <div class="sec-head"><h2>🛠 Tools, accessories &amp; upgrades</h2><button class="btn small secondary" id="add-gear">＋ Add</button></div>
             <p class="hint" style="margin-top:-4px">A wish list for everything that isn't filament: nozzles, plates, tools, upgrades. Tap one to edit it or mark it <b>Got it</b>.</p>
@@ -422,6 +429,7 @@
     if (tab === 'stock') renderStock();
     if (tab === 'orders') renderOrders();
     if (tab === 'shop') renderShop();
+    if (tab === 'gear') renderGear();
     if (tab === 'costs') renderCosts();
     const n = shopItems().filter(x => x.reason === 'need' || x.reason === 'out' || x.reason === 'low').length;
     $('shop-count').hidden = !n; $('shop-count').textContent = n;
@@ -596,7 +604,6 @@
           <div class="meta">To spool every refill (${r.waiting} on hand${r.arriving ? `, ${r.arriving} on the way` : ''}); ${Math.max(0, r.empty)} empty spool${r.empty === 1 ? '' : 's'} on hand</div></div></div>`);
     const sc = $('shop-spools'); if (sc) sc.onchange = () => { shopSkipSpools = !sc.checked; };
     $('shop-order').hidden = !items.length && !r.short;
-    renderGear();
   }
 
   // ---------- tools / accessories / upgrades wish list ----------
@@ -1142,7 +1149,7 @@
   $('tabs').querySelectorAll('button').forEach(b => b.onclick = () => {
     tab = b.dataset.tab;
     $('tabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-    ['stock', 'orders', 'shop', 'costs'].forEach(t => $('tab-' + t).hidden = t !== tab);
+    ['stock', 'orders', 'shop', 'gear', 'costs'].forEach(t => $('tab-' + t).hidden = t !== tab);
     try { localStorage.setItem('filamentTab', tab); } catch (e) {}
     render();
   });
