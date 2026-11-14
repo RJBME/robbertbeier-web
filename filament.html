@@ -199,29 +199,34 @@
             body > .wrap, dialog, .toast, .sn-bar { display: none !important; }
             #print-area { display: block !important; }
         }
-        .ps { font: 10pt/1.25 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; color: #000; }
+        .ps { font: 9pt/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; color: #000; }
         .ps * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .ps-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; }
-        .ps-head h1 { font-size: 16pt; margin: 0; text-align: left; }
-        .ps-head .r { text-align: right; font-size: 9pt; }
-        .ps-how { font-size: 8.5pt; margin: 0 0 8px; }
-        .ps h2 { font-size: 11pt; margin: 12px 0 4px; break-after: avoid; }
+        .ps-page { break-after: page; page-break-after: always; }
+        .ps-page:last-child { break-after: auto; page-break-after: auto; }
+        .ps-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 3px; margin-bottom: 5px; }
+        .ps-head h1 { font-size: 15pt; margin: 0; text-align: left; }
+        .ps-head .r { text-align: right; font-size: 8.5pt; }
+        .ps-cont { display: flex; justify-content: space-between; font-size: 8.5pt; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 5px; }
+        .ps-how { font-size: 8pt; margin: 0 0 6px; line-height: 1.3; }
         .ps table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .ps th { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .03em; text-align: left; background: #e9e9e9; border: 1px solid #888; padding: 3px 4px; }
-        .ps td { border: 1px solid #888; padding: 3px 4px; height: 0.36in; vertical-align: middle; }
-        .ps tr { break-inside: avoid; }
-        .ps thead { display: table-header-group; }
-        .ps .ref { font: 700 10pt ui-monospace, Menlo, Consolas, monospace; letter-spacing: .04em; }
-        .ps .num { color: #555; font-size: 8pt; text-align: center; }
-        .ps .sw { width: 13px; height: 13px; border-radius: 50%; border: 1px solid #555; display: inline-block; vertical-align: -2px; margin-right: 4px; }
+        .ps th { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; background: #e6e6e6; border: 1px solid #777;
+                 padding: 2px 2px; text-align: center; vertical-align: bottom; line-height: 1.1; }
+        .ps th.l { text-align: left; padding-left: 4px; }
+        .ps th.grp { font-size: 7.5pt; background: #d4d4d4; }
+        .ps td { border: 1px solid #999; height: 0.32in; padding: 0 4px; vertical-align: middle; overflow: hidden; white-space: nowrap; }
+        .ps td.c { text-align: center; padding: 0; }
+        .ps td.split { border-left: 2px solid #000; }
+        .ps th.split { border-left: 2px solid #000; }
+        .ps tr.sec td { height: 0.24in; background: #f0f0f0; font-weight: 700; font-size: 8.5pt; text-transform: none; }
+        .ps .ref { font: 700 9.5pt ui-monospace, Menlo, Consolas, monospace; letter-spacing: .05em; }
+        .ps .num { color: #666; font-size: 7.5pt; text-align: center; padding: 0; }
+        .ps .sw { width: 11px; height: 11px; border-radius: 50%; border: 1px solid #555; display: inline-block; vertical-align: -1px; margin-right: 4px; }
         .ps .nm { font-weight: 700; }
-        .ps .sub { font-size: 7.5pt; color: #444; }
-        .ps .says { font-size: 8.5pt; }
-        .ps .bx { display: inline-block; width: 11px; height: 11px; border: 1.3px solid #000; vertical-align: -2px; margin: 0 2px 0 5px; }
-        .ps .bx:first-child { margin-left: 0; }
-        .ps .opt { white-space: nowrap; font-size: 8.5pt; }
-        .ps .g { display: inline-block; width: 0.45in; border-bottom: 1px solid #000; margin-left: 4px; }
-        .ps .foot { display: flex; gap: 28px; margin-top: 14px; font-size: 10pt; }
+        .ps .psub { font-size: 7pt; color: #444; overflow: hidden; text-overflow: ellipsis; }
+        .ps .bx { display: inline-block; width: 12px; height: 12px; border: 1.3px solid #000; background: #fff; }
+        .ps .na { color: #bbb; font-size: 8pt; }
+        .ps .wl { display: inline-block; border-bottom: 1px solid #888; width: 100%; height: 0.17in; }
+        .ps .foot { display: flex; gap: 28px; margin-top: 10px; font-size: 9.5pt; }
         .ps .foot span { display: inline-block; min-width: 1.1in; border-bottom: 1px solid #000; }
         @media (max-width: 420px) {
             .kpi .num { font-size: 1.2rem; }
@@ -744,51 +749,68 @@
     }
     return new Map(spools.map(s => [s.id, s.id.toUpperCase()]));
   }
+  // Fixed-height rows split into pages by hand (browsers don't reliably keep table rows whole when
+  // printing), with the column headers repeated on every page. One layout for every section: tick
+  // what you see (Sealed / Open / Used up / Missing) and, for open spools, how much is left.
+  const SHEET_ROWS_FIRST = 19, SHEET_ROWS_NEXT = 21;
   function buildStockSheet() {
     const orders = new Map(Store.all('order').map(o => [o.id, o]));
-    const order = filaments();
-    const rank = new Map(order.map((f, i) => [f.id, i]));
+    const rank = new Map(filaments().map((f, i) => [f.id, i]));
     const live = Store.all('spool').filter(s => s.status !== 'empty' && fil(s.fid))
       .sort((a, b) => rank.get(a.fid) - rank.get(b.fid) || (a.status === 'open' ? 0 : 1) - (b.status === 'open' ? 0 : 1));
     const refs = shortRefs(live);
     const onHand = live.filter(s => !spoolIncoming(s, Store.entries)), arriving = live.filter(s => spoolIncoming(s, Store.entries));
-    const sw = f => `<span class="sw" style="background:${esc(swatchCss(f))}"></span>`;
-    const colorCell = f => `${sw(f)}<span class="nm">${esc(f.name)}</span><div class="sub">${esc([f.code, f.material].filter(Boolean).join(' · '))}</div>`;
-    const src = s => { const o = orders.get(s.orderId); return o ? 'ordered ' + fmtDate(o.date, true) : 'added by hand'; };
-    const says = s => s.status === 'sealed' ? 'Sealed'
-      : 'Open · ' + (s.remaining == null || s.remaining === '' ? 'not estimated' : spoolPct(s) + '% (' + Math.round(spoolLeft(s)) + ' g)');
-    const box = t => `<span class="opt"><span class="bx"></span>${t}</span>`;
-    const statusBoxes = [box('Sealed'), box('Open'), box('Used up'), box('Can\'t find')].join(' ');
-    const amountBoxes = [box('Full'), box('¾'), box('½'), box('¼'), box('Low')].join(' ') + ' <span class="opt">or<span class="g"></span> g</span>';
-    let n = 0;
-    const row = s => { const f = fil(s.fid); n++; return `<tr><td class="num">${n}</td><td class="ref">${refs.get(s.id)}</td>
-      <td>${colorCell(f)}</td><td class="says">${esc(says(s))}<div class="sub">${esc(src(s))}</div></td>
-      <td>${statusBoxes}</td><td>${amountBoxes}</td><td></td></tr>`; };
-    const cols = '<colgroup><col style="width:3%"><col style="width:7%"><col style="width:17%"><col style="width:15%"><col style="width:25%"><col style="width:23%"><col style="width:10%"></colgroup>';
-    const head = '<thead><tr><th>#</th><th>Ref</th><th>Color</th><th>Tracker says</th><th>What you see</th><th>Amount left (open spools)</th><th>Notes</th></tr></thead>';
     const cOpen = onHand.filter(s => s.status === 'open').length, cSealed = onHand.length - cOpen;
-    const today = new Date();
-    $('print-area').innerHTML = `<div class="ps">
-      <div class="ps-head"><h1>🧵 Filament stock check</h1>
-        <div class="r">Printed ${esc(fmtDate(todayISO(), true))}, ${today.toTimeString().slice(0, 5)}<br>
-        Tracker says: <b>${cOpen} open · ${cSealed} sealed · ${arriving.length} on the way</b></div></div>
-      <p class="ps-how"><b>How to use:</b> for each spool, tick what you actually see, and for open spools tick (or write in grams) how much is left,
-        from the spool markings or Bambu Handy. Anything that isn't listed goes in <b>Not on this list</b>. When you're done, photograph
-        each page flat and in good light and send the photos to Claude to update the tracker. The <b>Ref</b> code is how each line is matched.</p>
-      <h2>On hand (${onHand.length} spools)</h2>
-      <table>${cols}${head}<tbody>${onHand.map(row).join('')}</tbody></table>
-      ${arriving.length ? `<h2>On the way (${arriving.length} spools) — tick if it has arrived</h2>
-      <table>${cols}<thead><tr><th>#</th><th>Ref</th><th>Color</th><th>Order</th><th>Arrived?</th><th>Opened?</th><th>Notes</th></tr></thead><tbody>
-      ${arriving.map(s => { const f = fil(s.fid); n++; return `<tr><td class="num">${n}</td><td class="ref">${refs.get(s.id)}</td><td>${colorCell(f)}</td>
-        <td class="says">${esc(src(s))}</td><td>${box('Yes')} ${box('No')} <span class="opt">date<span class="g"></span></span></td><td>${box('Still sealed')} ${box('Opened')}</td><td></td></tr>`; }).join('')}
-      </tbody></table>` : ''}
-      <h2>Not on this list — write in anything else you find</h2>
-      <table><colgroup><col style="width:3%"><col style="width:20%"><col style="width:10%"><col style="width:14%"><col style="width:20%"><col style="width:23%"><col style="width:10%"></colgroup>
-      <thead><tr><th>#</th><th>Color name</th><th>Code (label)</th><th>Material</th><th>Status</th><th>Amount left</th><th>Notes</th></tr></thead><tbody>
-      ${Array.from({ length: 6 }, (_, i) => `<tr><td class="num">W${i + 1}</td><td></td><td></td><td></td><td>${box('Sealed')} ${box('Open')}</td><td>${amountBoxes}</td><td></td></tr>`).join('')}
-      </tbody></table>
-      <div class="foot"><div>Empty reusable spools on hand: <span></span></div><div>Checked by: <span></span></div><div>Date: <span></span></div></div>
-    </div>`;
+    const src = s => { const o = orders.get(s.orderId); return o ? 'ordered ' + fmtDate(o.date, true) : 'added by hand'; };
+    const says = s => spoolIncoming(s, Store.entries) ? 'On the way'
+      : s.status === 'sealed' ? 'Sealed'
+      : 'Open · ' + (s.remaining == null || s.remaining === '' ? 'not estimated' : spoolPct(s) + '% (' + Math.round(spoolLeft(s)) + ' g)');
+    const BX = '<span class="bx"></span>';
+    const ticks = (amount) => `<td class="c split">${BX}</td><td class="c">${BX}</td><td class="c">${BX}</td><td class="c">${BX}</td>` +
+      (amount ? `<td class="c split">${BX}</td><td class="c">${BX}</td><td class="c">${BX}</td><td class="c">${BX}</td><td class="c">${BX}</td><td></td>`
+              : '<td class="c split na">—</td><td class="c na">—</td><td class="c na">—</td><td class="c na">—</td><td class="c na">—</td><td class="c na">—</td>');
+    let n = 0;
+    const spoolRow = s => { const f = fil(s.fid); n++;
+      return `<tr><td class="num">${n}</td><td class="ref">${refs.get(s.id)}</td>
+        <td><span class="sw" style="background:${esc(swatchCss(f))}"></span><span class="nm">${esc(f.name)}</span><div class="psub">${esc([f.code, f.material].filter(Boolean).join(' · '))}</div></td>
+        <td>${esc(says(s))}<div class="psub">${esc(src(s))}</div></td>${ticks(true)}<td></td></tr>`; };
+    const writeRow = i => `<tr><td class="num">W${i}</td><td></td><td><span class="wl"></span><div class="psub">name · code · material</div></td><td></td>${ticks(true)}<td></td></tr>`;
+    const sec = t => `<tr class="sec"><td colspan="15">${t}</td></tr>`;
+    const rows = [
+      sec(`On hand — ${onHand.length} spools`), ...onHand.map(spoolRow),
+      ...(arriving.length ? [sec(`On the way — ${arriving.length} spools · tick Sealed or Open if it has arrived, Missing if not`), ...arriving.map(spoolRow)] : []),
+      sec('Not on this list — write in anything else you find'), ...Array.from({ length: 5 }, (_, i) => writeRow(i + 1))
+    ];
+    const cols = '<colgroup><col style="width:0.28in"><col style="width:0.55in"><col style="width:2.05in"><col style="width:1.55in">' +
+      '<col style="width:0.5in"><col style="width:0.5in"><col style="width:0.5in"><col style="width:0.56in">' +
+      '<col style="width:0.36in"><col style="width:0.36in"><col style="width:0.36in"><col style="width:0.36in"><col style="width:0.36in"><col style="width:0.6in"><col></colgroup>';
+    const head = `<thead><tr><th rowspan="2">#</th><th rowspan="2" class="l">Ref</th><th rowspan="2" class="l">Color</th><th rowspan="2" class="l">Tracker says</th>
+        <th colspan="4" class="grp split">What you see</th><th colspan="6" class="grp split">Amount left (open spools)</th><th rowspan="2" class="l">Notes</th></tr>
+      <tr><th class="split">Sealed</th><th>Open</th><th>Used up</th><th>Missing</th><th class="split">Full</th><th>¾</th><th>½</th><th>¼</th><th>Low</th><th>or grams</th></tr></thead>`;
+    const cap = pi => pi ? SHEET_ROWS_NEXT : SHEET_ROWS_FIRST;
+    const pages = [];
+    for (let i = 0; i < rows.length; ) {
+      let pg = rows.slice(i, i + cap(pages.length));
+      // never leave a section heading alone at the bottom of a page
+      if (i + pg.length < rows.length && pg[pg.length - 1].startsWith('<tr class="sec"')) pg = pg.slice(0, -1);
+      pages.push(pg); i += pg.length;
+    }
+    // use any spare room on the last page for extra write-in lines (up to 10 in all)
+    const last = pages[pages.length - 1];
+    for (let w = 6; w <= 10 && last.length < cap(pages.length - 1); w++) last.push(writeRow(w));
+    const asOf = Store.syncedAt ? 'as of ' + new Date(Store.syncedAt).toTimeString().slice(0, 5) : (Store.online === false ? 'offline — may be out of date' : '');
+    const stamp = `Printed ${esc(fmtDate(todayISO(), true))}, ${new Date().toTimeString().slice(0, 5)}`;
+    $('print-area').innerHTML = `<div class="ps">${pages.map((pg, pi) => `<div class="ps-page">
+      ${pi === 0 ? `<div class="ps-head"><h1>🧵 Filament stock check</h1>
+        <div class="r">${stamp} · tracker ${esc(asOf)}<br>Tracker says: <b>${cOpen} open · ${cSealed} sealed · ${arriving.length} on the way</b></div></div>
+        <p class="ps-how"><b>How to use:</b> for each spool tick one box under <b>What you see</b>. For open spools also tick how much is left, or write the grams
+          (from the spool markings or Bambu Handy). Write in anything that isn't listed at the end. Then photograph each page flat and in good light and send the
+          photos to Claude. The <b>Ref</b> code tells Claude which spool each line is.</p>`
+        : `<div class="ps-cont"><b>🧵 Filament stock check (continued)</b><span>${stamp}</span></div>`}
+      <table>${cols}${head}<tbody>${pg.join('')}</tbody></table>
+      ${pi === pages.length - 1 ? '<div class="foot"><div>Empty reusable spools on hand: <span></span></div><div>Checked by: <span></span></div><div>Date: <span></span></div></div>' : ''}
+      <div style="text-align:right;font-size:7.5pt;margin-top:4px">Page ${pi + 1} of ${pages.length}</div>
+    </div>`).join('')}</div>`;
   }
 
   // ---------- order form ----------
@@ -977,7 +999,12 @@
   });
   $('q').oninput = renderStock; $('mat').onchange = renderStock;
   $('add-fil').onclick = () => editFilament(null);
-  $('print-sheet').onclick = () => { buildStockSheet(); window.print(); };
+  $('print-sheet').onclick = async () => {
+    const b = $('print-sheet'); b.disabled = true; b.textContent = 'Getting the latest…';
+    await Store.sync();   // print what's in the cloud now, not a stale copy on this device
+    b.disabled = false; b.textContent = '🖨️ Print stock-check sheet';
+    buildStockSheet(); window.print();
+  };
   window.addEventListener('beforeprint', buildStockSheet);   // Cmd+P prints the sheet too, never a blank page
   $('new-order').onclick = () => openOrder(null);
   $('shop-order').onclick = () => {

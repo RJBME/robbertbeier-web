@@ -164,8 +164,19 @@ const Store = {
   async sync() {
     this.busy = true; this.emit();
     try {
-      await this.flush();
-      const cloud = await cloudList();
+      let cloud = await cloudList();
+      // A device that sat stale must not undo a newer edit made elsewhere: for each pending local
+      // edit, keep whichever copy has the newer timestamp before pushing anything.
+      const cloudById = new Map(cloud.map(e => [e.id, e]));
+      let dropped = false;
+      this.entries = this.entries.map(e => {
+        const c = cloudById.get(e.id);
+        if (!e.synced && c && (+c.t || 0) > (+e.t || 0)) { dropped = true; return Object.assign(normalizeEntry(c), { synced: true }); }
+        return e;
+      });
+      if (dropped) saveLocal(this.entries);
+      if (this.pendingCount()) { await this.flush(); cloud = await cloudList(); }
+      this.syncedAt = Date.now();
       this.online = true;
       const pendingDel = new Set(loadDeletes());
       const byId = new Map();
