@@ -216,6 +216,7 @@ _inputs:
         - "Red E, Traverse City, MI"
         - "Red E, Grayling, MI"
         - "GM Energy/EVgo, Saginaw, MI"
+        - "El Car Wash, Madison Heights, MI"
   energy_kwh:
     type: number
     comment: "Energy added in kWh. For public DC fast charging, use the network's DELIVERED/billed kWh (what you paid for — drives cost & CO₂). For home/other, the Ford app battery-side number."
