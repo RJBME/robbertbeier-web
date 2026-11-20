@@ -7,7 +7,7 @@ permalink: /charging-analytics/
 
 <style>
   /* ── Page-level overrides ── */
-  body { max-width: 1100px !important; overflow-x: clip; overflow-x: hidden; }
+  body { max-width: 1100px !important; overflow-x: hidden; overflow-x: clip; }
   /* overflow-x:clip preferred (doesn't create scroll container, safer for sticky);
      overflow-x:hidden is the Safari 15 fallback — both declarations are intentional,
      browsers take the last valid one they understand. clip is supported in Safari 16+. */
@@ -40,7 +40,7 @@ permalink: /charging-analytics/
   /* ── Back link ── */
   .back-link {
     display: inline-flex; align-items: center; gap: 6px;
-    color: #888; font-size: 0.8rem; text-decoration: none;
+    color:var(--muted); font-size: 0.8rem; text-decoration: none;
     font-weight: 600; margin-bottom: 18px;
   }
   .back-link:hover { color: var(--link); }
@@ -49,11 +49,11 @@ permalink: /charging-analytics/
   .analytics-header { margin-bottom: 22px; }
   .analytics-header h1 { font-size: 1.85rem; margin: 0 0 4px 0; }
   .analytics-header p  { color: #666; font-size: 0.85rem; margin: 0; }
-  [data-theme="dark"] .analytics-header p { color: #aaa; }
+  [data-theme="dark"] .analytics-header p { color:var(--muted); }
 
   /* ── Section quick-nav pills ── */
   .section-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
-  .section-nav a { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 5px 14px; border-radius: 20px; font-size: 0.76rem; color: #888; text-decoration: none; font-weight: 600; transition: all 0.15s; }
+  .section-nav a { background: var(--dash-card); border: 1px solid var(--dash-border); padding: 5px 14px; border-radius: 20px; font-size: 0.76rem; color:var(--muted); text-decoration: none; font-weight: 600; transition: all 0.15s; }
   .section-nav a:hover  { border-color: var(--link); color: var(--link); }
   .section-nav a.active { background: var(--link); border-color: var(--link); color: #fff; font-weight: 700; }
 
@@ -72,13 +72,15 @@ permalink: /charging-analytics/
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
   }
-  .kpi-card:hover {
-    box-shadow: 0 6px 20px rgba(93,63,211,0.14);
-    transform: translateY(-2px);
+  @media (hover: hover) {
+    .kpi-card:hover {
+      box-shadow: 0 6px 20px rgba(93,63,211,0.14);
+      transform: translateY(-2px);
+    }
   }
   .kpi-label {
-    font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em;
-    color: #888; display: block; line-height: 1.3;
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color:var(--muted); display: block; line-height: 1.3;
   }
   .kpi-value {
     font-size: 1.5rem; font-weight: 900; display: block;
@@ -97,13 +99,13 @@ permalink: /charging-analytics/
   }
   .section-header h2 { margin: 0; font-size: 1.05rem; }
   .section-header span { font-size: 0.75rem; color: #666; }
-  [data-theme="dark"] .section-header span { color: #aaa; }
+  [data-theme="dark"] .section-header span { color:var(--muted); }
 
   /* ── New-feature badge ── */
   .new-badge {
     display: inline-block;
-    font-size: 0.6rem; font-weight: 600; letter-spacing: 0.04em;
-    color: #888; margin-left: 6px; vertical-align: middle;
+    font-size: 0.66rem; font-weight: 600; letter-spacing: 0.04em;
+    color:var(--muted); margin-left: 6px; vertical-align: middle;
     white-space: nowrap;
   }
 
@@ -132,7 +134,7 @@ permalink: /charging-analytics/
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.07em; color: #666; margin: 0 0 14px 0;
   }
-  [data-theme="dark"] .chart-title { color: #bbb; }
+  [data-theme="dark"] .chart-title { color:var(--muted); }
   .chart-wrap { position: relative; }
 
   /* ── Top sessions table ── */
@@ -146,7 +148,7 @@ permalink: /charging-analytics/
   .top-table tr:last-child td { border-bottom: none; }
 
   /* ── Badges (same as dashboard) ── */
-  .badge { padding: 3px 9px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
+  .badge { padding: 3px 9px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
   .badge-work   { background: #e3f2fd; color: #0288d1; }
   .badge-home   { background: #f3e5f5; color: #7b1fa2; }
   .badge-tesla  { background: #ffebee; color: #CC0000; }
@@ -161,49 +163,14 @@ permalink: /charging-analytics/
   .badge-evgo   { background: #d9f5f1; color: #0e8074; }
   .badge-other  { background: #f5f5f5; color: #616161; }
 
-  /* ── Insight callout ── */
-  .insight-row { display: flex; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
-  .insight-chip {
-    background: var(--dash-card); border: 1px solid var(--dash-border);
-    border-radius: 8px; padding: 10px 14px; font-size: 0.78rem;
-    flex: 1 1 180px;
-  }
-  .insight-chip strong { color: var(--link); }
-
   /* ── Chart subtitle (was used in markup but never defined) ── */
   .chart-sub {
     display: block;
     font-size: 0.68rem;
-    color: #888;
+    color:var(--muted);
     margin: 2px 0 0;
     line-height: 1.4;
   }
-
-  /* ── Scroll progress bar ── */
-  #scrollProgress {
-    position: fixed; top: 0; left: 0; height: 3px; width: 0;
-    background: linear-gradient(90deg, var(--link), #a389f4);
-    z-index: 700; pointer-events: none; transition: width 0.08s linear;
-  }
-
-  /* ── Raw session data table ── */
-  .data-table-wrap {
-    overflow: auto; max-height: 540px;
-    border: 1px solid var(--dash-border); border-radius: 10px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .data-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 760px; }
-  .data-table thead th {
-    position: sticky; top: 0; z-index: 1; background: var(--dash-card);
-    border-bottom: 2px solid var(--dash-border); padding: 9px 12px; text-align: left;
-    font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em;
-    color: #888; cursor: pointer; white-space: nowrap; user-select: none;
-  }
-  .data-table thead th[data-active="true"] { color: var(--link); }
-  .data-table tbody td { padding: 7px 12px; border-bottom: 1px solid var(--dash-border); white-space: nowrap; }
-  .data-table tbody tr:hover { background: rgba(93,63,211,0.06); }
-  .data-table .dt-num { text-align: right; font-variant-numeric: tabular-nums; }
-  #dataTableMeta { font-size: 0.72rem; color: #888; margin: 0 0 10px; }
 
   /* ── Vehicle filter pills ── */
   #vehicleFilterBtns {
@@ -214,22 +181,22 @@ permalink: /charging-analytics/
     display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
     background: var(--dash-card); border: 1px solid var(--dash-border);
     border-radius: 20px; padding: 6px 14px; font-size: 0.76rem; font-weight: 600;
-    color: #888; user-select: none; transition: all 0.15s;
+    color:var(--muted); user-select: none; transition: all 0.15s;
   }
   .dcfc-filter label:hover { border-color: var(--link); }
   .dcfc-filter label.dcfc-active {
     background: rgba(93,63,211,0.12); border-color: var(--link); color: var(--link);
   }
   .dcfc-filter input { accent-color: var(--link); width: 15px; height: 15px; cursor: pointer; margin: 0; }
-  .dcfc-filter small { color: #aaa; font-weight: 500; }
+  .dcfc-filter small { color:var(--muted); font-weight: 500; }
   .dcfc-filter label.dcfc-active small { color: var(--link); opacity: 0.8; }
 
   /* ── Date-range filter ── */
   .date-filter { margin: 0 0 16px; }
   .date-filter-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .date-filter-label { font-size: 0.76rem; font-weight: 700; color: #888; margin-right: 2px; }
+  .date-filter-label { font-size: 0.76rem; font-weight: 700; color:var(--muted); margin-right: 2px; }
   .dr-preset {
-    background: var(--dash-card); border: 1px solid var(--dash-border); color: #888;
+    background: var(--dash-card); border: 1px solid var(--dash-border); color:var(--muted);
     border-radius: 20px; padding: 5px 12px; font-size: 0.72rem; font-weight: 600;
     cursor: pointer; font-family: inherit; transition: all 0.15s;
   }
@@ -238,10 +205,10 @@ permalink: /charging-analytics/
   .date-filter-custom { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; }
   .date-filter-custom input[type="date"] {
     background: var(--dash-card); border: 1px solid var(--dash-border); color: var(--text);
-    border-radius: 8px; padding: 4px 8px; font-size: 0.72rem; font-family: inherit; color-scheme: light dark;
+    border-radius: 8px; padding: 4px 8px; font-size: 0.72rem; font-family: inherit;
   }
   .date-filter-custom input[type="date"]:hover { border-color: var(--link); }
-  .dr-dash { color: #999; font-size: 0.8rem; }
+  .dr-dash { color:var(--muted); font-size: 0.8rem; }
   .date-filter-status { font-size: 0.72rem; color: var(--link); font-weight: 600; margin-top: 7px; }
   .date-filter-status:empty { display: none; }
   .date-filter-status.dr-warn { color: #e8850c; }
@@ -307,8 +274,8 @@ permalink: /charging-analytics/
     max-width: 1060px; margin: 0 auto; box-sizing: border-box; width: 100%;
   }
   #vehicleFilterSticky .vf-sticky-label {
-    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.12em;
-    color: #888; margin-right: 4px; white-space: nowrap;
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color:var(--muted); margin-right: 4px; white-space: nowrap;
   }
   /* ── Sticky range row (mirrors the inline date-range filter) ── */
   #stickyRangeRow {
@@ -335,7 +302,7 @@ permalink: /charging-analytics/
   .back-top-pill {
     margin-left: auto;
     font-size: 0.68rem;
-    color: #888;
+    color:var(--muted);
     text-decoration: none;
     font-weight: 600;
     padding: 3px 9px;
@@ -352,8 +319,12 @@ permalink: /charging-analytics/
   .section-tab-link:hover { color: var(--link); border-color: var(--link); }
   /* Collapsible sections — click a header to fold/unfold */
   .section-header.collapsible { cursor: pointer; }
+  /* Folded section body. A class (not inline display) so folding never clobbers the
+     inline display:none that rebuild() sets on data-less sections (temp, chemistry, …)
+     — expanding a section must not resurrect them. */
+  .sec-folded { display: none !important; }
   .section-header.collapsible::before {
-    content: '▾'; color: #aaa; font-size: 0.75em; margin-right: 2px; flex-shrink: 0;
+    content: '▾'; color:var(--muted); font-size: 0.75em; margin-right: 2px; flex-shrink: 0;
     transition: color 0.15s; font-weight: 400;
   }
   .section-header.collapsible:hover::before { color: var(--link); }
@@ -361,13 +332,13 @@ permalink: /charging-analytics/
   .section-header.collapsed { margin-bottom: 8px; opacity: 0.72; }
   .section-header.collapsed:hover { opacity: 1; }
   .collapse-all-btn {
-    background: var(--dash-card); border: 1px solid var(--dash-border); color: #888;
+    background: var(--dash-card); border: 1px solid var(--dash-border); color:var(--muted);
     border-radius: 20px; padding: 5px 14px; font-size: 0.72rem; font-weight: 700;
     cursor: pointer; font-family: inherit; transition: all 0.15s;
   }
   .collapse-all-btn:hover { border-color: var(--link); color: var(--link); }
   .collapse-all-btn:disabled { opacity: 0.4; cursor: default; }
-  .collapse-all-btn:disabled:hover { border-color: var(--dash-border); color: #888; }
+  .collapse-all-btn:disabled:hover { border-color: var(--dash-border); color:var(--muted); }
   body.section-focus .collapse-all-btn { display: none; }
   /* Per-section fold/unfold pill — sits with the ↑ top / ⤢ tab pills */
   .section-collapse-btn { margin-left: -6px !important; background: transparent; cursor: pointer; font-family: inherit; }
@@ -426,10 +397,12 @@ permalink: /charging-analytics/
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     transition: box-shadow 0.18s, border-color 0.18s, transform 0.18s;
   }
-  .record-card:hover {
-    border-left-color: var(--link);
-    box-shadow: 0 6px 22px rgba(93,63,211,0.16);
-    transform: translateY(-2px);
+  @media (hover: hover) {
+    .record-card:hover {
+      border-left-color: var(--link);
+      box-shadow: 0 6px 22px rgba(93,63,211,0.16);
+      transform: translateY(-2px);
+    }
   }
   .record-icon  {
     font-size: 1.3rem; line-height: 1; flex-shrink: 0;
@@ -438,9 +411,9 @@ permalink: /charging-analytics/
     background: rgba(93,63,211,0.08); border-radius: 10px;
   }
   .record-body  { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  .record-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: #888; }
+  .record-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color:var(--muted); }
   .record-value { font-size: 1.55rem; font-weight: 900; color: var(--link); line-height: 1.1; }
-  .record-sub   { font-size: 0.75rem; color: #888; }
+  .record-sub   { font-size: 0.75rem; color:var(--muted); }
 
   /* ── Location stats table ── */
   .loc-sort-hdr { cursor: pointer; user-select: none; white-space: nowrap; }
@@ -462,7 +435,7 @@ permalink: /charging-analytics/
 
   /* ── Road trip cards ── */
   .trip-card { transition: box-shadow 0.2s; }
-  .trip-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+  @media (hover: hover) { .trip-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); } }
 
   /* ── CO2 Avoidance section ── */
   .co2-hero {
@@ -477,7 +450,7 @@ permalink: /charging-analytics/
   }
   [data-theme="dark"] .co2-hero { background: linear-gradient(135deg, #0a1f12 0%, #142b1e 50%, #0a1f12 100%); }
   .co2-headline {
-    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.14em;
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.14em;
     color: #2ecc71; margin-bottom: 6px; font-weight: 700;
   }
   .co2-number {
@@ -501,9 +474,9 @@ permalink: /charging-analytics/
     background: rgba(46,204,113,0.08); border: 1px solid rgba(46,204,113,0.2);
     border-radius: 10px; padding: 12px 14px;
   }
-  .co2-stat-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.09em; color: #86efac; opacity: 0.75; display: block; margin-bottom: 4px; }
+  .co2-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.09em; color: #86efac; opacity: 0.75; display: block; margin-bottom: 4px; }
   .co2-stat-value { font-size: 1.15rem; font-weight: 800; color: #fff; display: block; line-height: 1.15; }
-  .co2-stat-sub   { font-size: 0.65rem; color: #86efac; opacity: 0.65; display: block; margin-top: 2px; }
+  .co2-stat-sub   { font-size: 0.7rem; color: #86efac; opacity: 0.65; display: block; margin-top: 2px; }
 
   .co2-honesty {
     background: rgba(243,156,18,0.08); border: 1px solid rgba(243,156,18,0.25);
@@ -525,7 +498,7 @@ permalink: /charging-analytics/
   }
   [data-theme="dark"] .ga-hero { background: linear-gradient(135deg, #15102b 0%, #1e1640 50%, #15102b 100%); }
   .ga-headline {
-    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.14em;
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.14em;
     color: #d4af37; margin-bottom: 6px; font-weight: 700;
   }
   .ga-number {
@@ -544,9 +517,9 @@ permalink: /charging-analytics/
     background: rgba(245,200,66,0.07); border: 1px solid rgba(245,200,66,0.2);
     border-radius: 10px; padding: 12px 14px;
   }
-  .ga-stat-label { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.09em; color: #e6d79a; opacity: 0.8; display: block; margin-bottom: 4px; }
+  .ga-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.09em; color: #e6d79a; opacity: 0.8; display: block; margin-bottom: 4px; }
   .ga-stat-value { font-size: 1.15rem; font-weight: 800; color: #fff; display: block; line-height: 1.15; }
-  .ga-stat-sub   { font-size: 0.65rem; color: #e6d79a; opacity: 0.6; display: block; margin-top: 2px; }
+  .ga-stat-sub   { font-size: 0.7rem; color: #e6d79a; opacity: 0.6; display: block; margin-top: 2px; }
   .ga-note {
     background: rgba(46,204,113,0.08); border: 1px solid rgba(46,204,113,0.28);
     border-radius: 10px; padding: 12px 16px; margin-top: 14px;
@@ -575,15 +548,6 @@ permalink: /charging-analytics/
   .co2-chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
   @media (max-width: 767px) { .co2-chart-row { grid-template-columns: 1fr; } }
 
-  /* CO2 badge on trip cards */
-  .co2-trip-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: rgba(46,204,113,0.12); border: 1px solid rgba(46,204,113,0.3);
-    border-radius: 8px; padding: 5px 10px; font-size: 0.72rem; color: #2ecc71;
-    font-weight: 700;
-  }
-  .co2-trip-badge .co2-trip-num { font-size: 1rem; font-weight: 900; }
-
   /* ── Perspective Hero Cards ── */
   .perspective-section {
     margin-bottom: 32px;
@@ -608,9 +572,11 @@ permalink: /charging-analytics/
     overflow: hidden;
     transition: transform 0.15s, box-shadow 0.15s;
   }
-  .hero-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(93,63,211,0.15);
+  @media (hover: hover) {
+    .hero-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(93,63,211,0.15);
+    }
   }
   .hero-card::before {
     content: '';
@@ -639,10 +605,10 @@ permalink: /charging-analytics/
   }
   .hero-number sup { font-size: 0.55em; font-weight: 600; vertical-align: super; opacity: 0.7; }
   .hero-label {
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #888;
+    color:var(--muted);
     font-weight: 700;
   }
   .hero-desc {
@@ -653,8 +619,8 @@ permalink: /charging-analytics/
     flex: 1;
   }
   .hero-footnote {
-    font-size: 0.62rem;
-    color: #aaa;
+    font-size: 0.68rem;
+    color:var(--muted);
     margin-top: 4px;
     line-height: 1.4;
   }
@@ -700,6 +666,146 @@ permalink: /charging-analytics/
   /* Tighten gap between site nav and charging sub-nav */
   nav { margin-bottom: 0.75rem !important; }
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     DEVICE / VISUAL POLISH  (iPhone · iPad · Mac)
+     Kept in one block so it's easy to find; later rules intentionally override
+     the earlier component rules above.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  /* Muted-text colour that passes contrast (~5:1) on both themes. Replaces the
+     hard-coded #888/#aaa (3.5:1 / 2.3:1 on white) used for small labels. */
+  :root                     { --muted: #6b6b6b; color-scheme: light; }
+  :root[data-theme="dark"]  { --muted: #a8a8a8; color-scheme: dark;  }
+  /* color-scheme follows the SITE toggle (not the OS) so the native date picker,
+     checkboxes and scrollbars match when the two disagree. */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }  /* stop iOS inflating text on rotate */
+
+  /* Safe areas — viewport-fit=cover is on, so landscape iPhones draw under the
+     island/notch and the home indicator. Pad content (and the full-bleed nav) past them. */
+  body {
+    padding-left:  max(2rem, env(safe-area-inset-left, 0px));
+    padding-right: max(2rem, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+  }
+  @media (max-width: 767px) {
+    body {
+      padding-left:  max(1.2rem, env(safe-area-inset-left, 0px));
+      padding-right: max(1.2rem, env(safe-area-inset-right, 0px));
+      padding-bottom: calc(1.2rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+  @media (min-width: 768px) {
+    body > nav {
+      margin-left:  calc(-1 * max(2rem, env(safe-area-inset-left, 0px)));
+      margin-right: calc(-1 * max(2rem, env(safe-area-inset-right, 0px)));
+      padding-left:  max(2rem, env(safe-area-inset-left, 0px));
+      padding-right: max(2rem, env(safe-area-inset-right, 0px));
+    }
+  }
+
+  /* Sticky filter bar: every row is a single horizontally-scrolling line (the active
+     section pill is auto-scrolled into view by JS). Previously the nav row wrapped to
+     ~3 rows on iPad portrait and the vehicle pills wrapped on phones — a 150–190px bar. */
+  #stickyNavRow, #stickyVehicleRow, #stickyRangeRow {
+    padding-left:  max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+  }
+  #stickyNavRow, #stickyRangeRow {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  #stickyNavRow::-webkit-scrollbar, #stickyRangeRow::-webkit-scrollbar { display: none; }
+  #stickyNavRow > *, #stickyRangeRow > *, #stickyVehicleRow > * { flex-shrink: 0; }
+  #stickyRangeRow .date-filter-status { max-width: 340px; }
+  @media (max-width: 767px) {
+    #stickyNavRow, #stickyVehicleRow, #stickyRangeRow {
+      padding-left:  max(12px, env(safe-area-inset-left, 0px));
+      padding-right: max(12px, env(safe-area-inset-right, 0px));
+    }
+    #stickyVehicleRow { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    #stickyVehicleRow::-webkit-scrollbar { display: none; }
+    /* Top-of-page controls: one scrolling line each instead of 3–4 wrapped rows
+       (they pushed the first KPI card below the fold on phones). */
+    .section-nav, .date-filter-presets, #vehicleFilterBtns {
+      flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    .section-nav::-webkit-scrollbar, .date-filter-presets::-webkit-scrollbar, #vehicleFilterBtns::-webkit-scrollbar { display: none; }
+    .section-nav { padding-bottom: 4px; }
+    .section-nav a, .date-filter-presets > *, #vehicleFilterBtns > * { flex-shrink: 0; white-space: nowrap; }
+  }
+  /* Landscape phone (874×402 on iPhone 17 Pro is ≥768 wide, so it gets the desktop
+     layout): the site nav + 3-row bar would eat ~40% of the height. Drop the range row. */
+  @media (max-height: 500px) {
+    #stickyRangeRow { display: none; }
+    #stickyNavRow { padding-top: 4px; padding-bottom: 3px; }
+    #stickyVehicleRow { padding-top: 3px; padding-bottom: 4px; }
+  }
+
+  /* Section-header action pills (↑ top · ⤢ tab · fold) share one right-aligned group */
+  .section-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; align-self: center; flex-shrink: 0; }
+  .section-actions > .back-top-pill,
+  .section-actions > .section-tab-link,
+  .section-actions > .section-collapse-btn { margin-left: 0 !important; }
+
+  /* Touch devices: iOS zooms the page when a focused input is < 16px, and many
+     controls were ~22–30px tall. */
+  a, button, input, label, summary { touch-action: manipulation; }
+  @media (pointer: coarse) {
+    input[type="date"] { font-size: 16px; min-height: 36px; }
+    .dr-preset, .vf-btn, .loc-view-btn, .collapse-all-btn { min-height: 36px; }
+    .dcfc-filter label { min-height: 40px; }
+    .dcfc-filter input, #tempExcludeHome { width: 20px !important; height: 20px !important; }
+    #stickyNavRow a, .section-nav a { min-height: 32px; display: inline-flex; align-items: center; }
+    .back-top-pill, .section-collapse-btn { min-height: 32px; display: inline-flex; align-items: center; padding: 4px 12px; }
+  }
+
+  /* Hover affordances only where a hover exists (iOS latches :hover after a tap) */
+  .cp-nav-link { transition: all 0.15s; }
+  @media (hover: hover) {
+    .cp-nav-link:hover { border-color: var(--link) !important; color: var(--link) !important; }
+    #printFab:hover { transform: scale(1.1); box-shadow: 0 6px 26px rgba(93,63,211,0.58) !important; }
+  }
+  @media (max-width: 767px) {
+    #printFab { width: 44px !important; height: 44px !important; font-size: 1.1rem !important; opacity: 0.92; }
+  }
+
+  /* Wider chart grids stack earlier: three ~245px charts on iPad portrait crowd the axis labels */
+  @media (max-width: 900px) { .chart-grid-3 { grid-template-columns: minmax(0,1fr); } }
+
+  /* Location table: don't squash numbers; long location badges wrap as rounded rects, not lumpy pills */
+  #locationStatsTable { min-width: 560px; }
+  #locationStatsTable td:not(:nth-child(2)) { white-space: nowrap; }
+  .top-table .badge { border-radius: 10px; line-height: 1.35; white-space: normal; }
+
+  /* Heatmap scroller */
+  .heatmap-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+
+  /* Secondary "(≈ lb)" text inside big numbers was ~9px at 62% opacity — nearly invisible */
+  .imp { opacity: 0.72; }
+  .co2-stat-value .imp, #co2SolarBase .imp, #co2Solar50 .imp, #co2Solar100 .imp, #co2SolarAll .imp { font-size: 0.62em; opacity: 0.85; }
+
+  /* Monthly Snapshot "Previous months" arrow follows the real open state */
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] > summary #summaryArrow { transform: rotate(90deg); }
+
+  /* Network badges: fix low-contrast text on the pastel chips (light) and give them
+     theme-aware tinted chips instead of glaring pastels on dark cards. */
+  .badge-rivian { color: #a15c00; }  .badge-cp    { color: #c2570a; }
+  .badge-blink  { color: #3b7a22; }  .badge-wc    { color: #2f7a2e; }
+  .badge-shell  { color: #8a6700; }  .badge-other { color: #555; }
+  [data-theme="dark"] .badge { background: color-mix(in srgb, currentColor 18%, transparent); }
+  [data-theme="dark"] .badge-work   { color: #64b5f6; }  [data-theme="dark"] .badge-home   { color: #d7a3ee; }
+  [data-theme="dark"] .badge-tesla  { color: #ff8a80; }  [data-theme="dark"] .badge-cp     { color: #ffab70; }
+  [data-theme="dark"] .badge-blink  { color: #9ad27f; }  [data-theme="dark"] .badge-rivian { color: #ffc15a; }
+  [data-theme="dark"] .badge-ea     { color: #5fd68f; }  [data-theme="dark"] .badge-wc     { color: #8fd68c; }
+  [data-theme="dark"] .badge-bp     { color: #b6dc77; }  [data-theme="dark"] .badge-shell  { color: #f7d95a; }
+  [data-theme="dark"] .badge-rede   { color: #ff9a9a; }  [data-theme="dark"] .badge-evgo   { color: #5fd9cc; }
+  [data-theme="dark"] .badge-other  { color: #bdbdbd; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .analytics-container, .kpi-card, .record-card, .hero-card, .chart-card { transition: none !important; }
+    .kpi-card:hover, .record-card:hover, .hero-card:hover { transform: none !important; }
+  }
+
   /* ── Print / PDF Report ── */
   #printFab   { display: flex; }
   #printPanel { display: none; flex-direction: column; }
@@ -710,7 +816,6 @@ permalink: /charging-analytics/
 
     /* Hide all UI chrome */
     nav, #chargingPageNav, #vehicleFilterSticky, #vehicleFilterBtns,
-    #scrollProgress,
     .section-nav, .back-top-pill, .back-link, .dcfc-filter,
     #printFab, #printPanel, #hm-tip, #locViewBtns, .loc-view-btn,
     .analytics-header > p { display: none !important; }
@@ -743,10 +848,10 @@ permalink: /charging-analytics/
 
   <!-- Cross-page charging nav -->
   <div id="chargingPageNav" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--dash-border);align-items:center;">
-    <a href="/charging/"         style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">⚡ Dashboard</a>
-    <a href="/charging-history/" style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">📋 History</a>
+    <a class="cp-nav-link" href="/charging/"         style="font-size:0.78rem;font-weight:600;color:var(--muted);text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s">⚡ Dashboard</a>
+    <a class="cp-nav-link" href="/charging-history/" style="font-size:0.78rem;font-weight:600;color:var(--muted);text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s">📋 History</a>
     <a href="/charging-analytics/" style="font-size:0.78rem;font-weight:700;color:#fff;text-decoration:none;padding:5px 14px;border:1px solid var(--link);border-radius:20px;background:var(--link)">📊 Analytics</a>
-    <a href="/trip-calculator/"   style="font-size:0.78rem;font-weight:600;color:#888;text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s" onmouseover="this.style.borderColor='var(--link)';this.style.color='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)';this.style.color='#888'">🧭 Trip</a>
+    <a class="cp-nav-link" href="/trip-calculator/"   style="font-size:0.78rem;font-weight:600;color:var(--muted);text-decoration:none;padding:5px 14px;border:1px solid var(--dash-border);border-radius:20px;background:var(--dash-card);transition:all 0.15s">🧭 Trip</a>
   </div>
   <script>
     /* Early theme init — prevents flash of wrong theme before layout JS runs */
@@ -796,9 +901,9 @@ permalink: /charging-analytics/
   <div id="vehicleFilterSticky">
     <div id="stickyNavRow">
       <!-- Cross-page shortcuts (compact, separated from section nav) -->
-      <a href="/charging/" style="opacity:0.55;font-size:0.62rem;padding:2px 7px">⚡ Dash</a>
-      <a href="/charging-history/" style="opacity:0.55;font-size:0.62rem;padding:2px 7px">📋 History</a>
-      <a href="/trip-calculator/" style="opacity:0.55;font-size:0.62rem;padding:2px 7px">🧭 Trip</a>
+      <a href="/charging/" style="opacity:0.55;font-size:0.68rem;padding:2px 7px">⚡ Dash</a>
+      <a href="/charging-history/" style="opacity:0.55;font-size:0.68rem;padding:2px 7px">📋 History</a>
+      <a href="/trip-calculator/" style="opacity:0.55;font-size:0.68rem;padding:2px 7px">🧭 Trip</a>
       <span style="color:var(--dash-border);margin:0 4px;align-self:center">│</span>
       <a href="#records">Records</a>
       <a href="#perspective">🌍 Perspective</a>
@@ -884,7 +989,7 @@ permalink: /charging-analytics/
     <div class="kpi-card"><span class="kpi-label">Avg kWh/Session</span><span class="kpi-value" id="kpi-avg-session">—</span></div>
     <div class="kpi-card"><span class="kpi-label">Months Active</span><span class="kpi-value" id="kpi-months">—</span></div>
   </div>
-  <p style="font-size:0.64rem;color:#888;margin:10px 4px 0;line-height:1.55">
+  <p style="font-size:0.7rem;color:var(--muted);margin:10px 4px 0;line-height:1.55">
     <strong>Avg ¢/kWh</strong> is total cost ÷ energy added to the car. <strong>Home charging cost includes an
     estimated +10%</strong> for wall-side losses (AC→DC): you pay for a little more energy than actually reaches
     the battery, so home ¢/kWh sits ~10% above the raw electricity rate. Adjust <code>home_charge_uplift</code>
@@ -900,25 +1005,25 @@ permalink: /charging-analytics/
   <div style="background:linear-gradient(135deg,rgba(93,63,211,0.08),rgba(93,63,211,0.04));border:1px solid rgba(93,63,211,0.25);border-radius:14px;padding:20px 22px;margin-bottom:24px;position:relative;overflow:hidden">
     <div style="position:absolute;top:0;right:0;width:120px;height:120px;background:radial-gradient(circle at top right,rgba(93,63,211,0.15),transparent 70%);pointer-events:none"></div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-      <span style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--link);font-weight:700">⚡ Monthly Snapshot</span>
+      <span style="font-size:0.66rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--link);font-weight:700">⚡ Monthly Snapshot</span>
       <span style="background:rgba(93,63,211,0.15);border:1px solid rgba(93,63,211,0.3);border-radius:6px;font-size:0.68rem;font-family:monospace;color:var(--link);padding:2px 10px">{{ latest.label }}</span>
       <div style="margin-left:auto;display:flex;gap:14px;flex-wrap:wrap">
-        {% if latest.kwh > 0 %}<span style="font-size:0.72rem;color:#888"><strong style="color:var(--text)">{{ latest.kwh }}</strong> kWh</span>{% endif %}
-        {% if latest.saving > 0 %}<span style="font-size:0.72rem;color:#888">saved <strong style="color:#2ecc71">${{ latest.saving }}</strong></span>{% endif %}
-        {% if latest.co2_avoided > 0 %}<span style="font-size:0.72rem;color:#888"><strong style="color:#2ecc71">{{ latest.co2_avoided }}</strong> kg <span class="imp">(≈ {{ latest.co2_avoided | times: 2.20462 | round }} lb)</span> CO₂ avoided</span>{% endif %}
+        {% if latest.kwh > 0 %}<span style="font-size:0.72rem;color:var(--muted)"><strong style="color:var(--text)">{{ latest.kwh }}</strong> kWh</span>{% endif %}
+        {% if latest.saving > 0 %}<span style="font-size:0.72rem;color:var(--muted)">saved <strong style="color:#2ecc71">${{ latest.saving }}</strong></span>{% endif %}
+        {% if latest.co2_avoided > 0 %}<span style="font-size:0.72rem;color:var(--muted)"><strong style="color:#2ecc71">{{ latest.co2_avoided }}</strong> kg <span class="imp">(≈ {{ latest.co2_avoided | times: 2.20462 | round }} lb)</span> CO₂ avoided</span>{% endif %}
       </div>
     </div>
     <p style="font-size:0.92rem;line-height:1.75;color:var(--text);margin:0">{{ latest.summary }}</p>
     {% if site.data.monthly_summaries.size > 1 %}
     <details style="margin-top:14px">
-      <summary style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:#888;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">
+      <summary style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">
         <span style="transition:transform 0.2s" id="summaryArrow">▶</span> Previous months
       </summary>
-      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px" onclick="this.previousElementSibling.querySelector('#summaryArrow').style.transform='rotate(90deg)'">
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
         {% for entry in site.data.monthly_summaries offset:1 limit:5 %}
         {% if entry.summary and entry.summary != "" %}
         <div style="border-left:2px solid rgba(93,63,211,0.3);padding:8px 14px;opacity:0.8">
-          <div style="font-size:0.65rem;font-family:monospace;color:var(--link);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.08em">{{ entry.label }}{% if entry.kwh > 0 %} · {{ entry.kwh }} kWh{% endif %}{% if entry.saving > 0 %} · ${{ entry.saving }} saved{% endif %}</div>
+          <div style="font-size:0.7rem;font-family:monospace;color:var(--link);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.08em">{{ entry.label }}{% if entry.kwh > 0 %} · {{ entry.kwh }} kWh{% endif %}{% if entry.saving > 0 %} · ${{ entry.saving }} saved{% endif %}</div>
           <p style="font-size:0.84rem;line-height:1.65;color:var(--text);margin:0">{{ entry.summary }}</p>
         </div>
         {% endif %}
@@ -954,7 +1059,7 @@ permalink: /charging-analytics/
     <div class="perspective-grid" id="heroCardGrid">
       <!-- populated by JS -->
     </div>
-    <p style="font-size:0.68rem;color:#777;margin-top:12px;line-height:1.6" id="heroFootnote"></p>
+    <p style="font-size:0.68rem;color:var(--muted);margin-top:12px;line-height:1.6" id="heroFootnote"></p>
   </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
@@ -1094,7 +1199,7 @@ permalink: /charging-analytics/
         <tbody id="locationStatsBody"></tbody>
       </table>
     </div>
-    <p id="membershipNote" style="font-size:0.68rem;color:#777;margin:10px 4px 0;line-height:1.6;display:none"></p>
+    <p id="membershipNote" style="font-size:0.68rem;color:var(--muted);margin:10px 4px 0;line-height:1.6;display:none"></p>
   </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
@@ -1109,12 +1214,12 @@ permalink: /charging-analytics/
   <div class="chart-grid-2">
     <div class="chart-card">
       <p class="chart-title">Odometer History — miles over time</p>
-      <p class="chart-sub" style="font-size:0.68rem;color:#888">All recorded readings per vehicle</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">All recorded readings per vehicle</p>
       <div class="chart-wrap" style="height:230px"><canvas id="chartOdometer"></canvas></div>
     </div>
     <div class="chart-card">
       <p class="chart-title">Miles Driven Per Month (estimated from readings)</p>
-      <p class="chart-sub" style="font-size:0.68rem;color:#888">Interpolated between odometer readings</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">Interpolated between odometer readings</p>
       <div class="chart-wrap" style="height:230px"><canvas id="chartMilesPerMonth"></canvas></div>
     </div>
   </div>
@@ -1122,12 +1227,12 @@ permalink: /charging-analytics/
   <div class="chart-grid-2" style="margin-top:18px">
     <div class="chart-card">
       <p class="chart-title">Gas Price History ($/gal)</p>
-      <p class="chart-sub" style="font-size:0.68rem;color:#888">Assumed price used for savings calculations — update in _data/rates.yml</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">Assumed price used for savings calculations — update in _data/rates.yml</p>
       <div class="chart-wrap" style="height:230px"><canvas id="chartGasPriceMileage"></canvas></div>
     </div>
     <div class="chart-card">
       <p class="chart-title">Real Efficiency — mi/kWh (left) · Wh/mi (right)</p>
-      <p class="chart-sub" style="font-size:0.68rem;color:#888">From sessions with FordPass miles_added data · tooltip shows both units</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">From sessions with FordPass miles_added data · tooltip shows both units</p>
       <div class="chart-wrap" style="height:230px"><canvas id="chartEfficiencyReal"></canvas></div>
     </div>
   </div>
@@ -1255,7 +1360,7 @@ permalink: /charging-analytics/
           </thead>
           <tbody id="topSessionsBody"></tbody>
         </table>
-        <p style="font-size:0.68rem;color:#888;margin:8px 4px 0">† <strong>Saved</strong> = (kWh × mi/kWh ÷ mpg) × $/gal − actual cost &nbsp;—&nbsp; i.e. what equivalent gas miles would have cost at historical rates, minus what you paid for electricity. Fuel rates from <code>_data/rates.yml → gas_savings</code>.</p>
+        <p style="font-size:0.68rem;color:var(--muted);margin:8px 4px 0">† <strong>Saved</strong> = (kWh × mi/kWh ÷ mpg) × $/gal − actual cost &nbsp;—&nbsp; i.e. what equivalent gas miles would have cost at historical rates, minus what you paid for electricity. Fuel rates from <code>_data/rates.yml → gas_savings</code>.</p>
       </div>
     </div>
   </div>
@@ -1281,7 +1386,7 @@ permalink: /charging-analytics/
     </div>
     <div class="chart-card">
       <p class="chart-title">Free Charging Index — % of kWh Charged Free per Month</p>
-      <p class="chart-sub" style="font-size:0.68rem;color:#888;margin:-4px 0 6px">Stacked: Work vs. other free charging</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:var(--muted);margin:-4px 0 6px">Stacked: Work vs. other free charging</p>
       <div class="chart-wrap" style="height:220px"><canvas id="chartFreeIndex"></canvas></div>
     </div>
   </div>
@@ -1299,16 +1404,16 @@ permalink: /charging-analytics/
   <div class="chart-card chart-full" style="margin-bottom:18px">
     <div id="breakevenHero" style="display:flex;flex-wrap:wrap;gap:24px;align-items:center;padding:8px 0">
       <div style="flex:1;min-width:200px">
-        <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:6px">Total Gas Savings Since Day One</div>
+        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:6px">Total Gas Savings Since Day One</div>
         <div id="breakevenValue" style="font-size:2.6rem;font-weight:900;color:#2ecc71;line-height:1">—</div>
-        <div id="breakevenSub" style="font-size:0.78rem;color:#888;margin-top:6px">saved vs. driving a gas car</div>
+        <div id="breakevenSub" style="font-size:0.78rem;color:var(--muted);margin-top:6px">saved vs. driving a gas car</div>
       </div>
       <div style="flex:2;min-width:260px">
-        <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.1em;color:#888;margin-bottom:8px">Monthly Savings Projection (trailing 3-month avg)</div>
+        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px">Monthly Savings Projection (trailing 3-month avg)</div>
         <div id="projectionRow" style="display:flex;gap:16px;flex-wrap:wrap">
-          <div><span style="font-size:1.3rem;font-weight:800;color:var(--text)" id="projMonthly">—</span><br><span style="font-size:0.7rem;color:#888">avg/month</span></div>
-          <div><span style="font-size:1.3rem;font-weight:800;color:var(--link)" id="projYear">—</span><br><span style="font-size:0.7rem;color:#888">projected full year</span></div>
-          <div><span style="font-size:1.3rem;font-weight:800;color:#f39c12" id="projLifetime">—</span><br><span style="font-size:0.7rem;color:#888">projected 5-yr savings</span></div>
+          <div><span style="font-size:1.3rem;font-weight:800;color:var(--text)" id="projMonthly">—</span><br><span style="font-size:0.7rem;color:var(--muted)">avg/month</span></div>
+          <div><span style="font-size:1.3rem;font-weight:800;color:var(--link)" id="projYear">—</span><br><span style="font-size:0.7rem;color:var(--muted)">projected full year</span></div>
+          <div><span style="font-size:1.3rem;font-weight:800;color:#f39c12" id="projLifetime">—</span><br><span style="font-size:0.7rem;color:var(--muted)">projected 5-yr savings</span></div>
         </div>
       </div>
     </div>
@@ -1317,7 +1422,7 @@ permalink: /charging-analytics/
   <div class="chart-full chart-card" style="margin-bottom:18px">
     <p class="chart-title">Cost Per Mile — Monthly Trend (charging cost ÷ estimated miles driven)</p>
     <div class="chart-wrap" style="height:240px"><canvas id="chartCostPerMile"></canvas></div>
-    <p style="font-size:0.68rem;color:#888;margin-top:8px">† Miles estimated from kWh charged × assumed mi/kWh efficiency for that period. Treat as directional, not odometer-precise.</p>
+    <p style="font-size:0.68rem;color:var(--muted);margin-top:8px">† Miles estimated from kWh charged × assumed mi/kWh efficiency for that period. Treat as directional, not odometer-precise.</p>
   </div>
 
   <div class="chart-grid-2">
@@ -1336,27 +1441,27 @@ permalink: /charging-analytics/
     <p class="chart-title">⛽ Gas Price Sensitivity — What If Gas Was $X/gal?</p>
     <span class="chart-sub">Drag the slider to see how your total savings change at different gas prices</span>
     <div style="display:flex;align-items:center;gap:16px;margin:16px 0 8px;flex-wrap:wrap">
-      <span style="font-size:0.72rem;color:#888;white-space:nowrap">Gas price:</span>
+      <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">Gas price:</span>
       <input type="range" id="gasPriceSlider" min="2.00" max="6.00" step="0.05"
         style="flex:1;min-width:160px;max-width:340px;accent-color:var(--link)">
       <span style="font-size:1.4rem;font-weight:900;color:#f39c12;min-width:60px" id="gasPriceLabel">$3.26</span>
-      <span style="font-size:0.72rem;color:#aaa">vs. your actual avg</span>
+      <span style="font-size:0.72rem;color:var(--muted)">vs. your actual avg</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;container-type:inline-size" id="sensitivityKpis">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="sensitivityKpis">
       <div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 14px;text-align:center">
-        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:4px">Total Savings</div>
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Total Savings</div>
         <div style="font-size:1.25rem;font-weight:900;color:#2ecc71" id="sensTotal">—</div>
       </div>
       <div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 14px;text-align:center">
-        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:4px">vs. Actual Rates</div>
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">vs. Actual Rates</div>
         <div style="font-size:1.25rem;font-weight:900" id="sensDelta">—</div>
       </div>
       <div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 14px;text-align:center">
-        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:4px">Avg/Month</div>
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">Avg/Month</div>
         <div style="font-size:1.25rem;font-weight:900;color:var(--link)" id="sensMonthly">—</div>
       </div>
       <div style="background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 14px;text-align:center">
-        <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:4px">5-yr Projection</div>
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px">5-yr Projection</div>
         <div style="font-size:1.25rem;font-weight:900;color:#f39c12" id="sens5yr">—</div>
       </div>
     </div>
@@ -1396,30 +1501,30 @@ permalink: /charging-analytics/
 
     <!-- Solar scenario footnote -->
     <div id="co2SolarBox" style="margin-top:14px;background:rgba(2,136,209,0.07);border:1px solid rgba(2,136,209,0.25);border-radius:10px;padding:14px 16px">
-      <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:#0288d1;font-weight:700;margin-bottom:10px">☀️ Solar What-If Scenarios — Home Charging</div>
+      <div style="font-size:0.66rem;text-transform:uppercase;letter-spacing:0.12em;color:#7dd3fc;font-weight:700;margin-bottom:10px">☀️ Solar What-If Scenarios — Home Charging</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
         <div style="background:rgba(2,136,209,0.06);border:1px solid rgba(2,136,209,0.18);border-radius:8px;padding:10px 12px">
-          <div style="font-size:0.58rem;text-transform:uppercase;color:#888;margin-bottom:3px">Current (grid-tied)</div>
+          <div style="font-size:0.65rem;text-transform:uppercase;color:#b9d4c4;margin-bottom:3px">Current (grid-tied)</div>
           <div style="font-size:1.2rem;font-weight:900;color:#2ecc71" id="co2SolarBase">—</div>
-          <div style="font-size:0.65rem;color:#888;margin-top:2px">kg net CO₂ avoided</div>
+          <div style="font-size:0.7rem;color:#b9d4c4;margin-top:2px">kg net CO₂ avoided</div>
         </div>
         <div style="background:rgba(2,136,209,0.06);border:1px solid rgba(2,136,209,0.18);border-radius:8px;padding:10px 12px">
-          <div style="font-size:0.58rem;text-transform:uppercase;color:#888;margin-bottom:3px">50% home solar</div>
-          <div style="font-size:1.2rem;font-weight:900;color:#0288d1" id="co2Solar50">—</div>
-          <div style="font-size:0.65rem;color:#888;margin-top:2px">kg avoided · <span id="co2Solar50delta" style="color:#0288d1">—</span> more</div>
+          <div style="font-size:0.65rem;text-transform:uppercase;color:#b9d4c4;margin-bottom:3px">50% home solar</div>
+          <div style="font-size:1.2rem;font-weight:900;color:#7dd3fc" id="co2Solar50">—</div>
+          <div style="font-size:0.7rem;color:#b9d4c4;margin-top:2px">kg avoided · <span id="co2Solar50delta" style="color:#7dd3fc">—</span> more</div>
         </div>
         <div style="background:rgba(2,136,209,0.06);border:1px solid rgba(2,136,209,0.18);border-radius:8px;padding:10px 12px">
-          <div style="font-size:0.58rem;text-transform:uppercase;color:#888;margin-bottom:3px">100% home solar</div>
-          <div style="font-size:1.2rem;font-weight:900;color:#0288d1" id="co2Solar100">—</div>
-          <div style="font-size:0.65rem;color:#888;margin-top:2px">kg avoided · <span id="co2Solar100delta" style="color:#0288d1">—</span> more</div>
+          <div style="font-size:0.65rem;text-transform:uppercase;color:#b9d4c4;margin-bottom:3px">100% home solar</div>
+          <div style="font-size:1.2rem;font-weight:900;color:#7dd3fc" id="co2Solar100">—</div>
+          <div style="font-size:0.7rem;color:#b9d4c4;margin-top:2px">kg avoided · <span id="co2Solar100delta" style="color:#7dd3fc">—</span> more</div>
         </div>
         <div style="background:rgba(2,136,209,0.06);border:1px solid rgba(2,136,209,0.18);border-radius:8px;padding:10px 12px">
-          <div style="font-size:0.58rem;text-transform:uppercase;color:#888;margin-bottom:3px">100% solar, all sites</div>
-          <div style="font-size:1.2rem;font-weight:900;color:#7b1fa2" id="co2SolarAll">—</div>
-          <div style="font-size:0.65rem;color:#888;margin-top:2px">kg avoided · <span id="co2SolarAlldelta" style="color:#7b1fa2">—</span> more</div>
+          <div style="font-size:0.65rem;text-transform:uppercase;color:#b9d4c4;margin-bottom:3px">100% solar, all sites</div>
+          <div style="font-size:1.2rem;font-weight:900;color:#d8b4fe" id="co2SolarAll">—</div>
+          <div style="font-size:0.7rem;color:#b9d4c4;margin-top:2px">kg avoided · <span id="co2SolarAlldelta" style="color:#d8b4fe">—</span> more</div>
         </div>
       </div>
-      <p id="co2SolarNote" style="font-size:0.63rem;color:#888;margin:10px 0 0;line-height:1.55"></p>
+      <p id="co2SolarNote" style="font-size:0.68rem;color:#b9d4c4;margin:10px 0 0;line-height:1.55"></p>
     </div>
   </div><!-- /.co2-hero -->
 
@@ -1444,7 +1549,7 @@ permalink: /charging-analytics/
     <div class="chart-card">
       <p class="chart-title">CO₂ by Charging Location — grid intensity matters</p>
       <div class="chart-wrap" style="height:240px"><canvas id="chartCo2ByLocation"></canvas></div>
-      <div id="co2LocLegend" style="font-size:0.62rem;color:#888;margin-top:6px;display:none"></div>
+      <div id="co2LocLegend" style="font-size:0.68rem;color:var(--muted);margin-top:6px;display:none"></div>
     </div>
   </div>
 
@@ -1457,7 +1562,7 @@ permalink: /charging-analytics/
     <a href="#top" class="back-top-pill">↑ top</a>
   </div>
 
-  <p class="chart-sub" style="font-size:0.9rem;line-height:1.6;color:#888;margin:0 0 18px;max-width:78ch">
+  <p class="chart-sub" style="font-size:0.9rem;line-height:1.6;color:var(--muted);margin:0 0 18px;max-width:78ch">
     Every mile on electrons is a mile not bought at the pump. This is the whole story of the fuel benefit —
     what you paid to charge vs. what the gas car it replaced would have cost, at the real pump prices of the day.
     Comparison baselines: <span id="gaBaselineNote">RJB → 24.4 mpg · LRB → 23 mpg</span>.
@@ -1525,7 +1630,7 @@ permalink: /charging-analytics/
       <div class="chart-wrap" style="height:240px"><canvas id="chartGaBySource"></canvas></div>
     </div>
     <div class="chart-card">
-      <p class="chart-title">Savings If Gas Cost… <span style="font-weight:400;color:#aaa">(sensitivity)</span></p>
+      <p class="chart-title">Savings If Gas Cost… <span style="font-weight:400;color:var(--muted)">(sensitivity)</span></p>
       <div class="chart-wrap" style="height:240px"><canvas id="chartGaSensitivity"></canvas></div>
     </div>
   </div>
@@ -1541,7 +1646,7 @@ permalink: /charging-analytics/
 
   <div class="chart-card chart-full" style="margin-bottom:18px">
     <div id="roadTripContainer">
-      <p style="color:#888;font-size:0.85rem">Detecting trips…</p>
+      <p style="color:var(--muted);font-size:0.85rem">Detecting trips…</p>
     </div>
   </div>
 
@@ -1581,9 +1686,9 @@ permalink: /charging-analytics/
 
     <div class="chart-full chart-card" style="margin-top:18px;margin-bottom:18px">
       <p class="chart-title">Efficiency Comparison — mi/kWh (left) · Wh/mi (right)</p>
-      <p class="chart-sub" style="font-size:0.68rem;color:#888">Only months with FordPass miles_added data — gaps = no real data · hover for both units</p>
+      <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">Only months with FordPass miles_added data — gaps = no real data · hover for both units</p>
       <div class="chart-wrap" style="height:240px"><canvas id="chartVehicleEfficiency"></canvas></div>
-      <p style="font-size:0.68rem;color:#888;margin-top:8px">LFP (Standard Range) chemistry maintains better capacity in cold vs. NCM (GT). Watch for winter divergence.</p>
+      <p style="font-size:0.68rem;color:var(--muted);margin-top:8px">LFP (Standard Range) chemistry maintains better capacity in cold vs. NCM (GT). Watch for winter divergence.</p>
     </div>
 
     <!-- ── LFP vs NCM battery-chemistry comparison (only shown when BOTH chemistries have data) ── -->
@@ -1591,7 +1696,7 @@ permalink: /charging-analytics/
       <p class="chart-title" style="font-size:0.95rem;border-top:2px solid var(--dash-border);padding-top:18px;margin-bottom:2px">
         🔋 Battery Chemistry — LFP vs NCM<span class="new-badge">✨ new · Aug '26</span>
       </p>
-      <p class="chart-sub" style="font-size:0.68rem;color:#888;margin:0 0 14px">
+      <p class="chart-sub" style="font-size:0.68rem;color:var(--muted);margin:0 0 14px">
         Standard Range (LFP) vs GT (NCM) — both owners combined — how the two chemistries differ in real-world use
       </p>
 
@@ -1600,12 +1705,12 @@ permalink: /charging-analytics/
       <div class="chart-grid-2">
         <div class="chart-card">
           <p class="chart-title">Charge-to-Full Behavior — Unplug SOC</p>
-          <p class="chart-sub" style="font-size:0.68rem;color:#888">LFP is designed to hit 100% regularly; NCM is kept near 80% for longevity. % of each chemistry's sessions with a recorded unplug SOC.</p>
+          <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">LFP is designed to hit 100% regularly; NCM is kept near 80% for longevity. % of each chemistry's sessions with a recorded unplug SOC.</p>
           <div class="chart-wrap" style="height:240px"><canvas id="chartChemSocEnd"></canvas></div>
         </div>
         <div class="chart-card">
           <p class="chart-title">Real Efficiency Distribution — mi/kWh</p>
-          <p class="chart-sub" style="font-size:0.68rem;color:#888">Lighter LFP SR vs heavier performance NCM GT. % of each chemistry's FordPass-metered sessions.</p>
+          <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">Lighter LFP SR vs heavier performance NCM GT. % of each chemistry's FordPass-metered sessions.</p>
           <div class="chart-wrap" style="height:240px"><canvas id="chartChemEfficiency"></canvas></div>
         </div>
       </div>
@@ -1696,14 +1801,14 @@ permalink: /charging-analytics/
       <span class="chart-sub">energy_kwh ÷ (soc_added ÷ 100) — should stay near rated UBE. Downward drift = degradation. ⚠ Noise expected; trend matters more than individual points.</span>
       <div style="display:flex;gap:20px;flex-wrap:wrap;margin:12px 0 16px">
         <div id="ubeCardGT" style="display:none;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 18px;min-width:180px">
-          <div style="font-size:0.6rem;text-transform:uppercase;color:#888;margin-bottom:4px">GT Rated UBE</div>
+          <div style="font-size:0.66rem;text-transform:uppercase;color:var(--muted);margin-bottom:4px">GT Rated UBE</div>
           <div style="font-size:1.4rem;font-weight:900;color:#0288d1">91.7 kWh</div>
-          <div style="font-size:0.68rem;color:#888;margin-top:2px">NCM extended range</div>
+          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px">NCM extended range</div>
         </div>
         <div id="ubeCardSR" style="display:none;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:10px;padding:12px 18px;min-width:180px">
-          <div style="font-size:0.6rem;text-transform:uppercase;color:#888;margin-bottom:4px">SR Rated UBE</div>
+          <div style="font-size:0.66rem;text-transform:uppercase;color:var(--muted);margin-bottom:4px">SR Rated UBE</div>
           <div style="font-size:1.4rem;font-weight:900;color:#7b1fa2">72.6 kWh</div>
-          <div style="font-size:0.68rem;color:#888;margin-top:2px">LFP 2026</div>
+          <div style="font-size:0.68rem;color:var(--muted);margin-top:2px">LFP 2026</div>
         </div>
       </div>
       <div class="chart-wrap" style="height:280px"><canvas id="chartBatteryHealth"></canvas></div>
@@ -1815,7 +1920,7 @@ permalink: /charging-analytics/
       <p class="chart-title">Gas Savings: Real vs. Assumed Efficiency</p>
       <span class="chart-sub">Cumulative savings calculated with real mi/kWh (where available) vs. always using the assumed rate — shows how much the assumption matters</span>
       <div class="chart-wrap" style="height:240px"><canvas id="chartSavingsRealVsAssumed"></canvas></div>
-      <p style="font-size:0.68rem;color:#888;margin-top:8px">† Sessions without miles_added data use the assumed rate from _data/rates.yml for both lines.</p>
+      <p style="font-size:0.68rem;color:var(--muted);margin-top:8px">† Sessions without miles_added data use the assumed rate from _data/rates.yml for both lines.</p>
     </div>
 
     <!-- Temperature charts — only shown when temperature data is available -->
@@ -1824,28 +1929,28 @@ permalink: /charging-analytics/
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.82rem;color:var(--text)">
           <input type="checkbox" id="tempExcludeHome" style="accent-color:var(--link);width:15px;height:15px">
           Exclude Home sessions from scatter
-          <span style="font-size:0.72rem;color:#888">(garage temp ≠ outdoor temp)</span>
+          <span style="font-size:0.72rem;color:var(--muted)">(garage temp ≠ outdoor temp)</span>
         </label>
       </div>
       <div class="chart-grid-2" style="margin-bottom:18px">
         <div class="chart-card">
           <p class="chart-title">🌡️ Efficiency vs. Temperature<span class="new-badge">✨ new · Jun '26</span></p>
-          <p class="chart-sub" style="font-size:0.68rem;color:#888">mi/kWh at each session's ambient temperature — cold weather penalty clearly visible</p>
+          <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">mi/kWh at each session's ambient temperature — cold weather penalty clearly visible</p>
           <div class="chart-wrap" style="height:260px"><canvas id="chartEffVsTemp"></canvas></div>
-          <p style="font-size:0.62rem;color:#aaa;margin-top:6px">† Temperatures from Open-Meteo ERA5 outdoor ambient. Home sessions charged in garage — actual battery temp may be warmer in winter, cooler in summer.</p>
+          <p style="font-size:0.68rem;color:var(--muted);margin-top:6px">† Temperatures from Open-Meteo ERA5 outdoor ambient. Home sessions charged in garage — actual battery temp may be warmer in winter, cooler in summer.</p>
         </div>
         <div class="chart-card">
           <p class="chart-title">🌡️ Monthly Avg Temperature vs. Efficiency</p>
-          <p class="chart-sub" style="font-size:0.68rem;color:#888">Seasonal pattern — both axes move together in winter</p>
+          <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">Seasonal pattern — both axes move together in winter</p>
           <div class="chart-wrap" style="height:260px"><canvas id="chartTempVsEffMonth"></canvas></div>
         </div>
       </div>
 
       <div class="chart-full chart-card" style="margin-bottom:18px">
         <p class="chart-title">🌡️ Temperature at Charging — Monthly Distribution</p>
-        <p class="chart-sub" style="font-size:0.68rem;color:#888">What outdoor temperatures you've charged in — min, avg, max per month</p>
+        <p class="chart-sub" style="font-size:0.68rem;color:var(--muted)">What outdoor temperatures you've charged in — min, avg, max per month</p>
         <div class="chart-wrap" style="height:240px"><canvas id="chartTempByMonth"></canvas></div>
-        <p style="font-size:0.62rem;color:#aaa;margin-top:6px">† All sessions included regardless of location. Outdoor ambient temperature from Open-Meteo ERA5 historical archive.</p>
+        <p style="font-size:0.68rem;color:var(--muted);margin-top:6px">† All sessions included regardless of location. Outdoor ambient temperature from Open-Meteo ERA5 historical archive.</p>
       </div>
     </div>
 
@@ -1861,7 +1966,7 @@ permalink: /charging-analytics/
   </div>
 
   <div class="chart-card">
-    <div id="mapNoCoords" style="padding:36px 20px;text-align:center;color:#888;font-size:0.88rem;line-height:1.6;display:none">
+    <div id="mapNoCoords" style="padding:36px 20px;text-align:center;color:var(--muted);font-size:0.88rem;line-height:1.6;display:none">
       <div style="font-size:2rem;margin-bottom:8px">📍</div>
       <strong>No coordinates set yet</strong><br>
       Add <code>lat</code> / <code>lng</code> values to <code>_data/locations.yml</code> to enable this map.<br>
@@ -1874,29 +1979,27 @@ permalink: /charging-analytics/
 </div><!-- .analytics-container -->
 
 <!-- ─── Print Report FAB + Panel ─── -->
-<button id="printFab" title="Generate PDF Report"
-  style="position:fixed;bottom:28px;right:28px;z-index:600;width:52px;height:52px;border-radius:50%;background:var(--link);color:#fff;border:none;font-size:1.35rem;cursor:pointer;box-shadow:0 4px 18px rgba(93,63,211,0.42);transition:transform 0.15s,box-shadow 0.15s;align-items:center;justify-content:center"
-  onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 6px 26px rgba(93,63,211,0.58)'"
-  onmouseout="this.style.transform='';this.style.boxShadow='0 4px 18px rgba(93,63,211,0.42)'">📄</button>
+<button id="printFab" title="Generate PDF Report" aria-label="Generate PDF report"
+  style="position:fixed;bottom:calc(28px + env(safe-area-inset-bottom, 0px));right:max(28px, env(safe-area-inset-right, 0px));z-index:600;width:52px;height:52px;border-radius:50%;background:var(--link);color:#fff;border:none;font-size:1.35rem;cursor:pointer;box-shadow:0 4px 18px rgba(93,63,211,0.42);transition:transform 0.15s,box-shadow 0.15s;align-items:center;justify-content:center">📄</button>
 
-<div id="printPanel" style="position:fixed;bottom:92px;right:28px;z-index:601;width:290px;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:16px;box-shadow:0 8px 36px rgba(0,0,0,0.18);overflow:hidden">
+<div id="printPanel" style="position:fixed;bottom:calc(92px + env(safe-area-inset-bottom, 0px));right:max(28px, env(safe-area-inset-right, 0px));z-index:601;width:290px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 120px);background:var(--dash-card);border:1px solid var(--dash-border);border-radius:16px;box-shadow:0 8px 36px rgba(0,0,0,0.18);overflow:hidden">
   <div style="padding:13px 16px;border-bottom:1px solid var(--dash-border);display:flex;align-items:center;justify-content:space-between">
     <span style="font-weight:800;font-size:0.88rem">📄 Print Report</span>
-    <button id="printClose" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#888;padding:2px 6px;border-radius:6px;line-height:1" onmouseover="this.style.background='var(--dash-border)'" onmouseout="this.style.background=''">✕</button>
+    <button id="printClose" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:6px;line-height:1" onmouseover="this.style.background='var(--dash-border)'" onmouseout="this.style.background=''">✕</button>
   </div>
   <label id="printDcfcRow" title="Report only DC fast-charging sessions (≥25 kW), and auto-pick the fast-charging sections" style="display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--dash-border);cursor:pointer;font-size:0.8rem;font-weight:700;color:var(--text)">
     <input type="checkbox" id="printDcfcOnly" style="width:15px;height:15px;accent-color:var(--link);cursor:pointer;flex-shrink:0">
     <span>⚡ DC fast charging only</span>
-    <span style="font-weight:500;color:#999;font-size:0.68rem;margin-left:auto">≥ 25 kW</span>
+    <span style="font-weight:500;color:var(--muted);font-size:0.68rem;margin-left:auto">≥ 25 kW</span>
   </label>
   <div style="padding:8px 10px;border-bottom:1px solid var(--dash-border);display:flex;gap:8px">
     <button id="printSelectAll"  style="flex:1;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:8px;padding:5px;font-size:0.72rem;font-weight:700;cursor:pointer;color:var(--link);font-family:inherit" onmouseover="this.style.borderColor='var(--link)'" onmouseout="this.style.borderColor='var(--dash-border)'">All</button>
-    <button id="printSelectNone" style="flex:1;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:8px;padding:5px;font-size:0.72rem;font-weight:700;cursor:pointer;color:#888;font-family:inherit">None</button>
+    <button id="printSelectNone" style="flex:1;background:var(--dash-card);border:1px solid var(--dash-border);border-radius:8px;padding:5px;font-size:0.72rem;font-weight:700;cursor:pointer;color:var(--muted);font-family:inherit">None</button>
   </div>
-  <div id="printSectionList" style="padding:6px 8px;max-height:340px;overflow-y:auto"></div>
+  <div id="printSectionList" style="padding:6px 8px;min-height:0;flex:1 1 auto;max-height:340px;overflow-y:auto"></div>
   <div style="padding:10px 12px;border-top:1px solid var(--dash-border)">
     <button id="doPrint" style="width:100%;background:var(--link);color:#fff;border:none;border-radius:10px;padding:10px;font-size:0.86rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity 0.15s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🖨️ Print / Save as PDF</button>
-    <p style="font-size:0.64rem;color:#888;margin:7px 0 0;text-align:center;line-height:1.45">Print dialog → <strong>Save as PDF</strong> · set <strong>Landscape</strong></p>
+    <p style="font-size:0.7rem;color:var(--muted);margin:7px 0 0;text-align:center;line-height:1.45">Print dialog → <strong>Save as PDF</strong> · set <strong>Landscape</strong></p>
   </div>
 </div>
 
@@ -1961,8 +2064,19 @@ let _locHdrsWired = false; // guard: only wire sort-header onclick once
 const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark';
 const tc     = () => isDark() ? '#c8c8c8' : '#555';   // tick / label color
 const gc     = () => isDark() ? '#3a3a3a' : '#e8e8e8'; // grid color
-// Right-side legends squish donut/polar charts on phones — stack under the chart on narrow screens.
-const legendPos = () => (window.innerWidth < 560 ? 'bottom' : 'right');
+// Legend position for donut/polar charts. Keyed off the chart's own card width (not the
+// window) so a ~370px iPad-portrait column stacks the legend below like a phone does;
+// right-side legends squeeze the plot to ~120px at that width. Falls back to the window
+// width when the card is hidden/collapsed (width 0).
+const LEGEND_CHART_IDS = ['chartLocationDonut', 'chartDayOfWeek', 'chartSpeedMixEnergy'];
+const legendPos = (id) => {
+  const host = id && document.getElementById(id);
+  const w = host && host.parentElement ? host.parentElement.clientWidth : 0;
+  return (w > 0 ? w < 480 : window.innerWidth < 560) ? 'bottom' : 'right';
+};
+// Compact vehicle names for legends/axes: "LRB's 2025 Mach-E GT" → "L: 2025 GT".
+// Four full names wrap a top legend to 2–3 rows on a phone and eat the plot area.
+const shortVeh = v => String(v).replace(/^LRB's /, 'L: ').replace(' Mach-E', '');
 
 function getStepRate(arr, date, field, fallback) {
   if (!Array.isArray(arr) || !arr.length) return fallback;
@@ -2176,6 +2290,7 @@ sessions.forEach(s => {
     // metered delivery — when it does it's unreliable, so fall back to delivered energy.
     // Filter outliers: <1.5 mi/kWh (>667 Wh/mi) or >4.75 mi/kWh (<211 Wh/mi) are physically implausible
     const effKwh = (s.batteryKwh && s.batteryKwh > 0 && s.batteryKwh <= s.kwh) ? s.batteryKwh : s.kwh;
+    s.effKwh = effKwh;   // battery-side energy — use this (not s.kwh) for any mi/kWh math
     const rawMiPerKwh = s.milesAdded > 0 && effKwh > 0 ? s.milesAdded / effKwh : null;
     s.hasRealEff   = rawMiPerKwh !== null && rawMiPerKwh >= 1.5 && rawMiPerKwh <= 4.75;
     s.realMiPerKwh = s.hasRealEff ? rawMiPerKwh : null;
@@ -2195,6 +2310,14 @@ sessions.forEach(s => {
     // DOW: parse YYYY-MM-DD directly to avoid locale issues; T12:00:00 prevents DST boundary issues
     const dp    = s.date.split('-');
     s.dow       = new Date(+dp[0], +dp[1]-1, +dp[2], 12).getDay();
+    // Weekday the session STARTED (plug-in). `date` is the END date, so an overnight
+    // charge that began the previous evening must be bucketed on the start day.
+    // Falls back to the end-date weekday when there's no usable start_date.
+    s.startDow  = s.dow;
+    if (s.startDate && /^\d{4}-\d{2}-\d{2}$/.test(s.startDate)) {
+      const sp = s.startDate.split('-');
+      s.startDow = new Date(+sp[0], +sp[1]-1, +sp[2], 12).getDay();
+    }
 
     // CO2 calculations — reuse estMiles already computed above; cache egridFactor
     const mpg        = getBaselineMpg(s.vehicle);
@@ -2220,6 +2343,9 @@ sessions.forEach(s => {
     s.isFree   = s.cost < 0.005;
     s.month    = (s.date || '').substring(0, 7);
     s.dow      = 0;
+    s.startDow = 0;
+    s.effKwh   = s.kwh || 0;
+    s.estMiles = 0; s.gasGallons = 0;
     s.hasRealEff = false; s.realMiPerKwh = null; s.realWhPerMi = null;
     s.tempC = null; s.tempF = null; s.hasTemp = false;
   }
@@ -2613,7 +2739,7 @@ function toggleVehicle(v) {
 
   // Fade out → rebuild → fade in. The 150ms fade-out matches the CSS transition
   // duration and completely masks the chart destroy/recreate flash.
-  if (_container) _container.style.opacity = '0.15';
+  if (_container) _container.style.opacity = '0.6';
 
   // Use setTimeout to let the fade-out paint before the synchronous rebuild runs
   setTimeout(() => {
@@ -2645,6 +2771,15 @@ function toggleVehicle(v) {
    REBUILD — called on init and on vehicle filter change
    ════════════════════════════════════════════════════════ */
 function rebuild(sl) {
+  // Drop any sessions that failed enrichment (missing month = bad date).
+  // Checked BEFORE teardown so an empty filter result leaves the last view intact
+  // instead of destroying every chart and returning with blank canvases.
+  sl = sl.filter(s => s.month && s.month.length === 7);
+  if (!sl.length) {
+    console.warn('[EV] rebuild() called with no valid sessions');
+    return;
+  }
+
   // Destroy all tracked chart instances — null plugin callbacks first to drop
   // any closures holding DOM/data references before Chart.js teardown runs
   allCharts.forEach(c => {
@@ -2656,18 +2791,11 @@ function rebuild(sl) {
   });
   allCharts = [];
 
-  // Drop any sessions that failed enrichment (missing month = bad date)
-  sl = sl.filter(s => s.month && s.month.length === 7);
-  if (!sl.length) {
-    console.warn('[EV] rebuild() called with no valid sessions');
-    return;
-  }
-
   /* MONTHLY AGGREGATES */
   const allMonths = [...new Set(sl.map(s => s.month))].sort();
   const monthly   = {};
   allMonths.forEach(m => {
-    monthly[m] = { kwh:0, cost:0, saving:0, gasEquiv:0,
+    monthly[m] = { kwh:0, cost:0, saving:0, gasEquiv:0, miles:0,
                    sessions:0, freeSessions:0, freeKwh:0, paidKwh:0,
                    freeWorkKwh:0, freeOtherKwh:0,
                    workKwh:0, homeKwh:0, pubKwh:0 };
@@ -2676,6 +2804,7 @@ function rebuild(sl) {
     const m = monthly[s.month];
     m.kwh     += s.kwh;     m.cost    += s.cost;
     m.saving  += s.saving;  m.gasEquiv += s.gasEquiv;
+    m.miles   += s.estMiles || 0;
     m.sessions++;
     if (s.isFree) {
       m.freeKwh += s.kwh; m.freeSessions++;
@@ -2866,7 +2995,7 @@ mkChart('chartLocationDonut', {
     cutout: '62%',
     plugins: {
       legend: {
-        position: legendPos(),
+        position: legendPos('chartLocationDonut'),
         labels: {
           color: tc(), padding: 12, boxWidth: 14, font: { size: 11 },
           generateLabels: chart => {
@@ -2986,7 +3115,7 @@ mkChart('chartMonthlySourceSplit', {
     const datasets = vehList.map(v => {
       const pts = sorted.filter(e => e.vehicle === v);
       return {
-        label: v,
+        label: shortVeh(v),
         data: pts.map(e => e.odometer),
         borderColor: vehColors[v],
         backgroundColor: vehColors[v] + '22',
@@ -3000,7 +3129,7 @@ mkChart('chartMonthlySourceSplit', {
       const ptMap = {};
       sorted.filter(e => e.vehicle === v).forEach(e => { ptMap[e.date] = e.odometer; });
       return {
-        label: v,
+        label: shortVeh(v),
         data: allDates.map(d => ptMap[d] !== undefined ? ptMap[d] : null),
         borderColor: vehColors[v],
         backgroundColor: vehColors[v] + '22',
@@ -3057,7 +3186,7 @@ mkChart('chartMonthlySourceSplit', {
         return Math.max(0, odoEnd - odoStart);
       });
       return {
-        label: v,
+        label: shortVeh(v),
         data,
         backgroundColor: vehColors[v],
         borderColor: vehColors[v],
@@ -3131,14 +3260,14 @@ mkChart('chartMonthlySourceSplit', {
       const data = allMonths.map(m => {
         const ms = sl.filter(s => s.vehicle === v && s.month === m && s.hasRealEff);
         if (!ms.length) return null;
-        const kwh = ms.reduce((a,s) => a + s.kwh, 0);
+        const kwh = ms.reduce((a,s) => a + s.effKwh, 0);   // battery-side energy, same basis as per-session mi/kWh
         const mi  = ms.reduce((a,s) => a + (s.milesAdded || 0), 0);
         if (mi <= 0) return null;
         // Store as mi/kWh for left axis
         return +(mi / kwh).toFixed(3);
       });
       return {
-        label: v, data, borderColor: vehColorMap[v], backgroundColor: vehColorMap[v] + '22',
+        label: shortVeh(v), data, borderColor: vehColorMap[v], backgroundColor: vehColorMap[v] + '22',
         borderWidth: 2.5, pointRadius: 4, tension: 0.35, spanGaps: false, fill: false,
         yAxisID: 'yMiKwh'
       };
@@ -3563,7 +3692,7 @@ mkChart('chartDayOfWeek', {
     responsive: true, maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: legendPos(),
+        position: legendPos('chartDayOfWeek'),
         labels: { color: tc(), boxWidth: 11, padding: 9,
           generateLabels: chart => {
             const ds = chart.data.datasets[0];
@@ -3752,7 +3881,7 @@ mkChart('chartHistogram', {
   const top10 = [...sl].sort((a,b) => b.kwh - a.kwh).slice(0, 10);
   document.getElementById('topSessionsBody').innerHTML = top10.map((s, i) => `
   <tr>
-    <td style="color:#888;font-size:0.7rem">#${i+1}</td>
+    <td style="color:var(--muted);font-size:0.7rem">#${i+1}</td>
     <td>${s.date}</td>
     <td><span class="badge ${badgeClass(s.bucket)}">${s.bucket}</span></td>
     <td><strong>${s.kwh}</strong></td>
@@ -3925,13 +4054,10 @@ mkChart('chartHistogram', {
   if (el_pY) el_pY.textContent = fmtUSD(avg3Saving * 12);
   if (el_pL) el_pL.textContent = fmtUSD(avg3Saving * 60);
 
-  // Cost per mile (estimated: kWh × mi/kWh for that month's gs period)
+  // Cost per mile (estimated): uses each session's estMiles (real FordPass miles when
+  // available, else kWh × assumed mi/kWh) so it agrees with the Gas Avoidance section.
   const cpmData = allMonths.map(m => {
-    const monthSessions = sl.filter(s => s.month === m);
-    if (!monthSessions.length) return 0;
-    const gs       = getGasSavingsObj(monthSessions[monthSessions.length-1].date, monthSessions[monthSessions.length-1].vehicle);
-    const kwhTotal = monthly[m].kwh;
-    const milesEst = kwhTotal * (gs.mi_per_kwh || 3.0);
+    const milesEst = monthly[m].miles;
     return milesEst > 0 ? +(monthly[m].cost / milesEst * 100).toFixed(2) : 0; // ¢/mile
   });
   mkChart('chartCostPerMile', {
@@ -4039,10 +4165,7 @@ mkChart('chartHistogram', {
     if (subEl) subEl.innerHTML = `≈ ${(totalNetAvoided / 1000).toFixed(2)} metric tons <span class="imp">(≈ ${fmtLb(totalNetAvoided)} lb · ${(kgToLb(totalNetAvoided) / 2000).toFixed(2)} US tons)</span> of CO₂ not released into the atmosphere`;
 
     // Stat cards
-    const effTotalMiles = sl.reduce((a,s) => {
-      const eff = s.hasRealEff ? s.realMiPerKwh : (getGasSavingsObj(s.date, s.vehicle).mi_per_kwh || 3.0);
-      return a + s.kwh * eff;
-    }, 0);
+    const effTotalMiles = sl.reduce((a,s) => a + (s.estMiles || 0), 0);
     const gallons = totalGasCould / CO2_GAS_KG_PER_GAL;
     const trees   = totalNetAvoided / CO2_TREE_KG_PER_YEAR;
     const barrels = gallons / 42;
@@ -4545,7 +4668,7 @@ mkChart('chartHistogram', {
       .sort((a, b) => a.date.localeCompare(b.date));
 
     if (!pubSessions.length) {
-      container.innerHTML = '<p style="color:#888;font-size:0.85rem">No road trips detected yet — public charging sessions more than 50 miles from home will appear here.</p>';
+      container.innerHTML = '<p style="color:var(--muted);font-size:0.85rem">No road trips detected yet — public charging sessions more than 50 miles from home will appear here.</p>';
       return;
     }
 
@@ -4635,27 +4758,27 @@ mkChart('chartHistogram', {
           <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.25);border-radius:6px;padding:3px 8px;font-size:0.68rem;color:#2ecc71;font-weight:700">
             🌿 ${tripNetAvoided.toFixed(1)} kg CO₂ avoided${impLb(tripNetAvoided)}
           </span>
-          <span style="font-size:0.63rem;color:#aaa">grid: ${tripGridEmit.toFixed(1)} kg${impLb(tripGridEmit)} · gas equiv: ${tripGasCould.toFixed(1)} kg${impLb(tripGasCould)}</span>
+          <span style="font-size:0.68rem;color:var(--muted)">grid: ${tripGridEmit.toFixed(1)} kg${impLb(tripGridEmit)} · gas equiv: ${tripGasCould.toFixed(1)} kg${impLb(tripGasCould)}</span>
         </div>` : '';
 
       const vehBadgeColor = isLRB ? '#f39c12' : '#7b1fa2';
 
-      return `<div style="background:var(--dash-card);border:1px solid var(--dash-border);border-left:4px solid ${vehBadgeColor};border-radius:12px;padding:16px 20px;margin-bottom:14px;transition:box-shadow 0.2s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow=''">
+      return `<div class="trip-card" style="background:var(--dash-card);border:1px solid var(--dash-border);border-left:4px solid ${vehBadgeColor};border-radius:12px;padding:16px 20px;margin-bottom:14px">
 
         <!-- Header row -->
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <span style="font-weight:800;font-size:0.95rem">🚗 Trip ${tripNum}</span>
-          <span style="color:#888;font-size:0.78rem">${dateRange}</span>
-          ${distLabel ? `<span style="font-size:0.68rem;background:var(--dash-border);padding:2px 8px;border-radius:10px;color:#888">${distLabel}</span>` : ''}
+          <span style="color:var(--muted);font-size:0.78rem">${dateRange}</span>
+          ${distLabel ? `<span style="font-size:0.68rem;background:var(--dash-border);padding:2px 8px;border-radius:10px;color:var(--muted)">${distLabel}</span>` : ''}
           <span style="font-size:0.68rem;padding:2px 8px;border-radius:10px;background:${vehBadgeColor}22;color:${vehBadgeColor};font-weight:600">${tripVehicle}</span>
-          ${note?.destination ? `<span style="font-size:0.82rem;font-weight:700;color:var(--text)">📍 ${note.destination}</span>` : `<span style="font-size:0.7rem;color:#bbb;font-style:italic">add destination in _data/trip_notes.yml</span>`}
+          ${note?.destination ? `<span style="font-size:0.82rem;font-weight:700;color:var(--text)">📍 ${note.destination}</span>` : `<span style="font-size:0.7rem;color:var(--muted);font-style:italic">add destination in _data/trip_notes.yml</span>`}
         </div>
 
-        ${note?.description ? `<p style="font-size:0.78rem;color:#888;margin:0 0 6px">${note.description}</p>` : ''}
-        ${note?.notes ? `<p style="font-size:0.75rem;color:#aaa;margin:0 0 8px;font-style:italic">${note.notes}</p>` : ''}
+        ${note?.description ? `<p style="font-size:0.78rem;color:var(--muted);margin:0 0 6px">${note.description}</p>` : ''}
+        ${note?.notes ? `<p style="font-size:0.75rem;color:var(--muted);margin:0 0 8px;font-style:italic">${note.notes}</p>` : ''}
 
         ${note?.arrive || note?.depart ? `
-        <div style="font-size:0.72rem;color:#888;margin-bottom:8px">
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:8px">
           ${note.arrive ? `<span>✈️ Arrived: <strong style="color:var(--text)">${note.arrive}</strong></span>` : ''}
           ${note.arrive && note.depart ? ' &nbsp;·&nbsp; ' : ''}
           ${note.depart ? `<span>🏠 Departed: <strong style="color:var(--text)">${note.depart}</strong></span>` : ''}
@@ -4663,7 +4786,7 @@ mkChart('chartHistogram', {
 
         ${note?.itinerary && note.itinerary.length ? `
         <details style="margin-bottom:10px">
-          <summary style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.1em;color:#888;cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px;user-select:none;padding:4px 0" onclick="this.parentElement.open ? this.querySelector('.itin-arrow').style.transform='rotate(0deg)' : this.querySelector('.itin-arrow').style.transform='rotate(90deg)'">
+          <summary style="font-size:0.66rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);cursor:pointer;list-style:none;display:flex;align-items:center;gap:5px;user-select:none;padding:4px 0" onclick="this.parentElement.open ? this.querySelector('.itin-arrow').style.transform='rotate(0deg)' : this.querySelector('.itin-arrow').style.transform='rotate(90deg)'">
             <span class="itin-arrow" style="display:inline-block;transition:transform 0.2s;transform:rotate(0deg);font-style:normal;font-size:0.75rem">▶</span>
             Itinerary <span style="font-weight:400;opacity:0.6">(${note.itinerary.length} stops)</span>
           </summary>
@@ -4675,9 +4798,9 @@ mkChart('chartHistogram', {
                   ${si < note.itinerary.length-1 ? '<div style="width:1px;height:100%;min-height:12px;background:var(--dash-border);flex:1"></div>' : ''}
                 </div>
                 <div style="flex:1;padding-bottom:${si < note.itinerary.length-1 ? '4px' : '0'}">
-                  <span style="font-size:0.68rem;color:#aaa;margin-right:6px">${stop.date}</span>
+                  <span style="font-size:0.68rem;color:var(--muted);margin-right:6px">${stop.date}</span>
                   <span style="font-size:0.78rem;font-weight:600;color:var(--text)">${stop.place}</span>
-                  ${stop.note ? `<span style="font-size:0.7rem;color:#888;margin-left:6px">— ${stop.note}</span>` : ''}
+                  ${stop.note ? `<span style="font-size:0.7rem;color:var(--muted);margin-left:6px">— ${stop.note}</span>` : ''}
                 </div>
               </div>
             `).join('')}
@@ -4695,39 +4818,39 @@ mkChart('chartHistogram', {
         <!-- Stats row -->
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;padding-top:10px;border-top:1px solid var(--dash-border)">
           <div style="text-align:center">
-            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Charged</div>
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px">Charged</div>
             <div style="font-weight:800;font-size:1rem">${kwh.toFixed(1)} kWh</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Cost</div>
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px">Cost</div>
             <div style="font-weight:800;font-size:1rem">${isFree ? '<span style="color:'+C_GREEN+'">Free</span>' : fmtUSD(cost)}</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Saved vs Gas</div>
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px">Saved vs Gas</div>
             <div style="font-weight:800;font-size:1rem;color:${savingColor}">${fmtUSD(saving)}</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">DCFC Time</div>
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px">DCFC Time</div>
             <div style="font-weight:800;font-size:1rem">${chargeTimeStr}</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">${milesTitle}</div>
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px">${milesTitle}</div>
             <div style="font-weight:800;font-size:1rem">${milesLabel}</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Gas Stops (${spec.mpg}mpg)</div>
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px">Gas Stops (${spec.mpg}mpg)</div>
             <div style="font-weight:800;font-size:1rem">${gasStops} × ${GAS_STOP_MIN}min = ${gasMins}min</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Time vs Gas</div>
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px">Time vs Gas</div>
             <div style="font-weight:700;font-size:0.9rem;color:${timeDiffColor}">${timeDiffStr}</div>
           </div>
           <div style="text-align:center">
-            <div style="font-size:0.58rem;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:3px">Stops</div>
+            <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:3px">Stops</div>
             <div style="font-weight:800;font-size:1rem">${trip.length}</div>
           </div>
         </div>
-        ${hasUnknownTimes ? '<p style="font-size:0.65rem;color:#888;margin:8px 0 0">* Some DCFC sessions missing start/end time — add to session in CloudCannon for accurate charge time.</p>' : ''}
+        ${hasUnknownTimes ? '<p style="font-size:0.7rem;color:var(--muted);margin:8px 0 0">* Some DCFC sessions missing start/end time — add to session in CloudCannon for accurate charge time.</p>' : ''}
 
         ${note?.energy_screen ? (() => {
           const mi      = note.trip_miles;
@@ -4743,19 +4866,19 @@ mkChart('chartHistogram', {
           const scoreColor = s => s >= 80 ? '#2ecc71' : s >= 60 ? '#f39c12' : '#e74c3c';
           return `
         <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--dash-border)">
-          <div style="font-size:0.6rem;text-transform:uppercase;letter-spacing:0.12em;color:#888;font-weight:700;margin-bottom:10px">📊 Trip Computer — Where did my energy go?</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div style="font-size:0.66rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);font-weight:700;margin-bottom:10px">📊 Trip Computer — Where did my energy go?</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
 
             <!-- Left: trip stats + energy bar -->
             <div>
               <div style="display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap">
-                ${mi ? `<div style="text-align:center"><div style="font-size:0.58rem;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Trip Miles</div><div style="font-weight:800;font-size:1rem">${mi.toLocaleString()}</div></div>` : ''}
-                ${hrs ? `<div style="text-align:center"><div style="font-size:0.58rem;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Drive Time</div><div style="font-weight:800;font-size:1rem">${hrs}</div></div>` : ''}
-                ${eff ? `<div style="text-align:center"><div style="font-size:0.58rem;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Efficiency</div><div style="font-weight:800;font-size:1rem;color:${eff >= 3.0 ? '#2ecc71' : eff >= 2.5 ? '#f39c12' : '#e74c3c'}">${eff} mi/kWh</div></div>` : ''}
+                ${mi ? `<div style="text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Trip Miles</div><div style="font-weight:800;font-size:1rem">${mi.toLocaleString()}</div></div>` : ''}
+                ${hrs ? `<div style="text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Drive Time</div><div style="font-weight:800;font-size:1rem">${hrs}</div></div>` : ''}
+                ${eff ? `<div style="text-align:center"><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:2px">Efficiency</div><div style="font-weight:800;font-size:1rem;color:${eff >= 3.0 ? '#2ecc71' : eff >= 2.5 ? '#f39c12' : '#e74c3c'}">${eff} mi/kWh</div></div>` : ''}
               </div>
 
               <!-- Stacked energy bar -->
-              <div style="font-size:0.6rem;color:#888;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.07em">Energy breakdown</div>
+              <div style="font-size:0.66rem;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.07em">Energy breakdown</div>
               <div style="height:18px;border-radius:6px;overflow:hidden;display:flex;margin-bottom:8px;background:var(--dash-border)">
                 ${drv ? `<div style="width:${drv}%;background:#0288d1;display:flex;align-items:center;justify-content:center" title="Driving ${drv}%"><span style="font-size:9px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;padding:0 3px">${drv > 10 ? drv+'%' : ''}</span></div>` : ''}
                 ${clm ? `<div style="width:${clm}%;background:#7b1fa2;display:flex;align-items:center;justify-content:center" title="Climate ${clm}%"><span style="font-size:9px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;padding:0 3px">${clm > 6 ? clm+'%' : ''}</span></div>` : ''}
@@ -4763,16 +4886,16 @@ mkChart('chartHistogram', {
                 ${ext ? `<div style="width:${ext}%;background:#e74c3c;display:flex;align-items:center;justify-content:center" title="Ext Temp ${ext}%"><span style="font-size:9px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;padding:0 3px">${ext > 6 ? ext+'%' : ''}</span></div>` : ''}
               </div>
               <div style="display:flex;flex-wrap:wrap;gap:8px">
-                ${drv ? `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#0288d1;border-radius:2px"></span>Driving ${drv}%</span>` : ''}
-                ${clm ? `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#7b1fa2;border-radius:2px"></span>Climate ${clm}%</span>` : ''}
-                ${acc ? `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#f39c12;border-radius:2px"></span>Accessories ${acc}%</span>` : ''}
-                ${ext ? `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#e74c3c;border-radius:2px"></span>Ext Temp ${ext}%</span>` : ''}
+                ${drv ? `<span style="font-size:0.7rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#0288d1;border-radius:2px"></span>Driving ${drv}%</span>` : ''}
+                ${clm ? `<span style="font-size:0.7rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#7b1fa2;border-radius:2px"></span>Climate ${clm}%</span>` : ''}
+                ${acc ? `<span style="font-size:0.7rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#f39c12;border-radius:2px"></span>Accessories ${acc}%</span>` : ''}
+                ${ext ? `<span style="font-size:0.7rem;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:8px;height:8px;background:#e74c3c;border-radius:2px"></span>Ext Temp ${ext}%</span>` : ''}
               </div>
             </div>
 
             <!-- Right: driving scores -->
             <div>
-              <div style="font-size:0.6rem;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.07em">How is my driving?</div>
+              <div style="font-size:0.66rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.07em">How is my driving?</div>
               ${[['Acceleration', sAcc], ['Deceleration', sDec], ['Speed', sSpd]].map(([label, score]) => score != null ? `
               <div style="margin-bottom:7px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
@@ -4783,7 +4906,7 @@ mkChart('chartHistogram', {
                   <div style="height:100%;width:${score}%;background:${scoreColor(score)};border-radius:4px;transition:width 0.6s ease"></div>
                 </div>
               </div>` : '').join('')}
-              <div style="font-size:0.62rem;color:#aaa;margin-top:6px">From Mach-E trip computer</div>
+              <div style="font-size:0.68rem;color:var(--muted);margin-top:6px">From Mach-E trip computer</div>
             </div>
 
           </div>
@@ -4792,7 +4915,7 @@ mkChart('chartHistogram', {
       </div>`;
     }).join('');
 
-    container.innerHTML = tripHTML || '<p style="color:#888;font-size:0.85rem">No qualifying road trips found.</p>';
+    container.innerHTML = tripHTML || '<p style="color:var(--muted);font-size:0.85rem">No qualifying road trips found.</p>';
   })(sl);
 
   /* ════════════════════════════════════════
@@ -4825,8 +4948,7 @@ mkChart('chartHistogram', {
       const kwh     = vs.reduce((a,s) => a + s.kwh, 0);
       const cost    = vs.reduce((a,s) => a + s.cost, 0);
       const saving  = vs.reduce((a,s) => a + s.saving, 0);
-      const gs      = vs.length ? getGasSavingsObj(vs[vs.length-1].date, v) : { mi_per_kwh: 3.0 };
-      const milesEst = kwh * (gs.mi_per_kwh || 3.0);
+      const milesEst = vs.reduce((a,s) => a + (s.estMiles || 0), 0);
       vehStats[v] = { kwh, cost, saving, sessions: vs.length, milesEst,
         avgKwh: vs.length ? kwh / vs.length : 0,
         cpm: milesEst > 0 ? cost / milesEst * 100 : 0 };
@@ -4841,12 +4963,12 @@ mkChart('chartHistogram', {
         return `<div style="background:var(--dash-card);border:2px solid ${c}40;border-radius:12px;padding:18px 16px">
           <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:${c};margin-bottom:12px;border-bottom:1px solid ${c}30;padding-bottom:8px">${v}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Total kWh</div><div style="font-weight:800;font-size:1.1rem">${st.kwh.toFixed(1)}</div></div>
-            <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Sessions</div><div style="font-weight:800;font-size:1.1rem">${st.sessions}</div></div>
-            <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Avg kWh</div><div style="font-weight:800;font-size:1.1rem">${st.avgKwh.toFixed(1)}</div></div>
-            <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">¢/mile (est)</div><div style="font-weight:800;font-size:1.1rem">${st.cpm.toFixed(2)}¢</div></div>
-            <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Total Cost</div><div style="font-weight:800;font-size:1.1rem">${fmtUSD(st.cost)}</div></div>
-            <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Gas Savings</div><div style="font-weight:800;font-size:1.1rem;color:#2ecc71">${fmtUSD(st.saving)}</div></div>
+            <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Total kWh</div><div style="font-weight:800;font-size:1.1rem">${st.kwh.toFixed(1)}</div></div>
+            <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Sessions</div><div style="font-weight:800;font-size:1.1rem">${st.sessions}</div></div>
+            <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Avg kWh</div><div style="font-weight:800;font-size:1.1rem">${st.avgKwh.toFixed(1)}</div></div>
+            <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">¢/mile (est)</div><div style="font-weight:800;font-size:1.1rem">${st.cpm.toFixed(2)}¢</div></div>
+            <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Total Cost</div><div style="font-weight:800;font-size:1.1rem">${fmtUSD(st.cost)}</div></div>
+            <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Gas Savings</div><div style="font-weight:800;font-size:1.1rem;color:#2ecc71">${fmtUSD(st.saving)}</div></div>
           </div>
         </div>`;
       }).join('');
@@ -4858,7 +4980,7 @@ mkChart('chartHistogram', {
       data: {
         labels: allMonths.map(monthLabel),
         datasets: vehiclesInData.map(v => ({
-          label: v,
+          label: shortVeh(v),
           data: allMonths.map(m => +sl.filter(s => s.vehicle === v && s.month === m).reduce((a,s) => a+s.kwh, 0).toFixed(1)),
           backgroundColor: vehColorMap[v], borderRadius: 3, stack: 's'
         }))
@@ -4937,7 +5059,7 @@ mkChart('chartHistogram', {
       data: {
         labels: BIN_LABELS,
         datasets: vehiclesInData.map(v => ({
-          label: v,
+          label: shortVeh(v),
           data: BINS.map(([a,b]) => sl.filter(s => s.vehicle === v && s.kwh >= a && s.kwh < b).length),
           backgroundColor: vehColorMap[v], borderRadius: 4
         }))
@@ -4967,12 +5089,12 @@ mkChart('chartHistogram', {
           const data = allMonths.map(m => {
             const ms = sl.filter(s => s.vehicle === v && s.month === m && s.hasRealEff);
             if (!ms.length) return null;
-            const kwh = ms.reduce((a,s) => a + s.kwh, 0);
+            const kwh = ms.reduce((a,s) => a + s.effKwh, 0);   // battery-side, matches per-session mi/kWh
             const mi  = ms.reduce((a,s) => a + s.milesAdded, 0);
             // Store as mi/kWh — the natural EV driver unit (higher = better)
             return mi > 0 ? +(mi / kwh).toFixed(3) : null;
           });
-          return { label: v, data, borderColor: vehColorMap[v], borderWidth: 2.5,
+          return { label: shortVeh(v), data, borderColor: vehColorMap[v], borderWidth: 2.5,
                    pointRadius: 4, tension: 0.35, spanGaps: false, yAxisID: 'yMiKwh' };
         })
       },
@@ -5057,15 +5179,15 @@ mkChart('chartHistogram', {
           return `<div style="background:var(--dash-card);border:2px solid ${m.color}55;border-radius:12px;padding:18px 16px">
             <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid ${m.color}30;padding-bottom:8px">
               <span style="font-size:0.8rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:${m.color}">${k}</span>
-              <span style="font-size:0.62rem;color:#888">${m.full}</span>
+              <span style="font-size:0.68rem;color:var(--muted)">${m.full}</span>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Usable kWh</div><div style="font-weight:800;font-size:1.1rem">${m.ube}</div></div>
-              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Sessions</div><div style="font-weight:800;font-size:1.1rem">${st.sessions}</div></div>
-              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Avg kWh</div><div style="font-weight:800;font-size:1.1rem">${st.avgKwh.toFixed(1)}</div></div>
-              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Avg mi/kWh</div><div style="font-weight:800;font-size:1.1rem">${effVal}</div></div>
-              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Charged to 100%</div><div style="font-weight:800;font-size:1.1rem;color:${m.color}">${eff100}</div></div>
-              <div><div style="font-size:0.58rem;text-transform:uppercase;color:#888">Guidance</div><div style="font-weight:700;font-size:0.72rem;line-height:1.25;margin-top:2px">${m.guidance}</div></div>
+              <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Usable kWh</div><div style="font-weight:800;font-size:1.1rem">${m.ube}</div></div>
+              <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Sessions</div><div style="font-weight:800;font-size:1.1rem">${st.sessions}</div></div>
+              <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Avg kWh</div><div style="font-weight:800;font-size:1.1rem">${st.avgKwh.toFixed(1)}</div></div>
+              <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Avg mi/kWh</div><div style="font-weight:800;font-size:1.1rem">${effVal}</div></div>
+              <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Charged to 100%</div><div style="font-weight:800;font-size:1.1rem;color:${m.color}">${eff100}</div></div>
+              <div><div style="font-size:0.65rem;text-transform:uppercase;color:var(--muted)">Guidance</div><div style="font-weight:700;font-size:0.72rem;line-height:1.25;margin-top:2px">${m.guidance}</div></div>
             </div>
           </div>`;
         }).join('');
@@ -5398,7 +5520,7 @@ mkChart('chartHistogram', {
 
           // Raw session dots — small & semi-transparent
           ubeDatasets.push({
-            label: v,
+            label: shortVeh(v),
             data: aligned,
             borderColor: color + '55',
             backgroundColor: color + '22',
@@ -5407,7 +5529,7 @@ mkChart('chartHistogram', {
           });
           // Bold rolling trend line
           ubeDatasets.push({
-            label: v + ' (5-sess avg)',
+            label: shortVeh(v) + ' (5-sess avg)',
             data: rollingAligned,
             borderColor: color,
             backgroundColor: 'transparent',
@@ -5611,7 +5733,7 @@ mkChart('chartHistogram', {
         },
         options: { responsive:true, maintainAspectRatio:false, cutout:'58%',
           plugins:{
-            legend:{ position:legendPos(), labels:{ color: tc(), boxWidth: 12, padding: 8, font:{ size: 10 },
+            legend:{ position:legendPos('chartSpeedMixEnergy'), labels:{ color: tc(), boxWidth: 12, padding: 8, font:{ size: 10 },
               generateLabels: chart => {
                 const ds  = chart.data.datasets[0];
                 const tot = ds.data.reduce((a,v) => a+v, 0);
@@ -5677,7 +5799,11 @@ mkChart('chartHistogram', {
 
     // ── KPI values ──
     const effValues = effSl.map(s => s.realMiPerKwh);
-    const avgMiKwh  = effValues.reduce((a,v) => a+v, 0) / effValues.length;
+    // Energy-weighted (total miles ÷ total battery-side kWh) so it matches the monthly
+    // efficiency charts; a plain mean of per-session ratios over-weights tiny top-ups.
+    const effMiles  = effSl.reduce((a,s) => a + s.milesAdded, 0);
+    const effEnergy = effSl.reduce((a,s) => a + s.effKwh, 0);
+    const avgMiKwh  = effEnergy > 0 ? effMiles / effEnergy : effValues.reduce((a,v) => a+v, 0) / effValues.length;
     const avgWhMi   = 1000 / avgMiKwh;
     const bestSess  = effSl.reduce((a,s) => s.realMiPerKwh > a.realMiPerKwh ? s : a, effSl[0]);
     const worstSess = effSl.reduce((a,s) => s.realMiPerKwh < a.realMiPerKwh ? s : a, effSl[0]);
@@ -5737,7 +5863,7 @@ mkChart('chartHistogram', {
       pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0, order: 1
     });
     const cloudDatasets = effVehList.map((v, i) => ({
-      label: v,
+      label: shortVeh(v),
       data: effSl.filter(s => s.vehicle === v).map(s => ({ x: s.kwh, y: s.milesAdded, e: s.realMiPerKwh, d: s.date })),
       backgroundColor: vehColor(v, i) + 'bb',
       borderColor: vehColor(v, i),
@@ -5770,7 +5896,9 @@ mkChart('chartHistogram', {
     const step = 0.25;
     const minE = Math.floor(Math.min(...miKwhArr) / step) * step;
     const maxE = Math.ceil( Math.max(...miKwhArr) / step) * step;
-    const numBins = Math.round((maxE - minE) / step);
+    // At least 1 bin: when every value sits on a bin edge, min === max and 0 bins
+    // would make the clamp below index effBins[-1] and throw.
+    const numBins = Math.max(1, Math.round((maxE - minE) / step));
     const effBins = Array.from({length: numBins}, (_, i) => ({
       label: (minE + i*step).toFixed(2) + '–' + (minE + (i+1)*step).toFixed(2),
       count: 0
@@ -5807,7 +5935,7 @@ mkChart('chartHistogram', {
     const wStep = 50;
     const minW = Math.floor(Math.min(...whMiArr) / wStep) * wStep;
     const maxW = Math.ceil( Math.max(...whMiArr) / wStep) * wStep;
-    const wBins = Math.round((maxW - minW) / wStep);
+    const wBins = Math.max(1, Math.round((maxW - minW) / wStep));   // ≥1 bin — see numBins above
     const whBins = Array.from({length: wBins}, (_, i) => ({
       label: (minW + i*wStep) + '–' + (minW + (i+1)*wStep),
       count: 0
@@ -6067,7 +6195,7 @@ mkChart('chartHistogram', {
           type: 'scatter',
           data: {
             datasets: tempVehicles.map(v => ({
-              label: v,
+              label: shortVeh(v),
               data: scatterSl.filter(s => s.vehicle === v)
                              .map(s => ({ x: Math.round(s.tempC*9/5+32), y: s.realMiPerKwh })),
               backgroundColor: vehColors2[v] + 'aa',
@@ -6208,6 +6336,55 @@ mkChart('chartHistogram', {
 
 } // ── end rebuild ──
 
+/* ── Shared heatmap tooltip (#hm-tip) ─────────────────────────────────────
+   Positioned with a transform and CLAMPED to the viewport — the unclamped
+   clientX+14 ran off the right edge on phones (the tip is white-space:nowrap).
+   Touch: a tap shows the tip and it auto-hides after 2.5s or on the next tap
+   elsewhere (hiding on touchend made it flash for a few ms). */
+let _tipHideT = null;
+function _hmTipPlace(tip, cx, cy) {
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  const x = Math.max(8, Math.min(cx + 14, window.innerWidth - w - 8));
+  const y = cy - h - 14 < 8 ? cy + 18 : cy - h - 14;   // flip below the finger/cursor near the top edge
+  tip.style.transform = `translate3d(${Math.round(x)}px,${Math.round(y)}px,0)`;
+}
+function _hmTipShow(tip, text, cx, cy) {
+  tip.textContent = text;
+  tip.style.display = 'block';
+  _hmTipPlace(tip, cx, cy);
+}
+function _hmTipHide(tip) { clearTimeout(_tipHideT); tip.style.display = 'none'; }
+function _hmTipWire(host) {
+  const tip = document.getElementById('hm-tip');
+  if (!tip || !host) return;
+  let raf = null, lastTouch = 0;
+  host.addEventListener('mouseover', e => {
+    if (Date.now() - lastTouch < 600) return;   // ignore iOS's synthesized mouse events after a tap
+    const t = e.target.dataset && e.target.dataset.tip;
+    if (t) _hmTipShow(tip, t, e.clientX, e.clientY);
+  });
+  host.addEventListener('mousemove', e => {
+    if (Date.now() - lastTouch < 600 || raf || tip.style.display === 'none') return;
+    raf = requestAnimationFrame(() => { raf = null; _hmTipPlace(tip, e.clientX, e.clientY); });
+  });
+  host.addEventListener('mouseout', e => {
+    if (Date.now() - lastTouch < 600) return;
+    if (e.target.dataset && e.target.dataset.tip) _hmTipHide(tip);
+  });
+  host.addEventListener('touchstart', e => {
+    lastTouch = Date.now();
+    const t = e.target.dataset && e.target.dataset.tip;
+    const p = e.touches[0];
+    clearTimeout(_tipHideT);
+    if (t && p) {
+      _hmTipShow(tip, t, p.clientX, p.clientY - 24);   // lift above the fingertip
+      _tipHideT = setTimeout(() => _hmTipHide(tip), 2500);
+    } else {
+      _hmTipHide(tip);
+    }
+  }, { passive: true });
+}
+
 /* ════════════════════════════════════════════════════════
    WHEN DO I CHARGE — Hour × Day of Week heatmap
    ════════════════════════════════════════════════════════ */
@@ -6218,7 +6395,7 @@ function buildWhenDoICharge(sl) {
 
   const timed = sl.filter(s => s.startTime && s.startTime.match(/^\d{1,2}:\d{2}/));
   if (!timed.length) {
-    grid.innerHTML = '<p style="color:#888;font-size:0.84rem;padding:12px 0">No sessions with recorded start time yet — start times are captured automatically by the iPhone Shortcut.</p>';
+    grid.innerHTML = '<p style="color:var(--muted);font-size:0.84rem;padding:12px 0">No sessions with recorded start time yet — start times are captured automatically by the iPhone Shortcut.</p>';
     return;
   }
 
@@ -6231,7 +6408,8 @@ function buildWhenDoICharge(sl) {
   let maxCount = 0;
   timed.forEach(s => {
     const hour = parseInt(s.startTime.split(':')[0], 10);
-    const key  = `${hour}_${s.dow}`;
+    // Bucket on the START weekday (matches the start-time hour used here).
+    const key  = `${hour}_${s.startDow}`;
     counts[key] = (counts[key] || 0) + 1;
     (byType[key] ??= {})[s.bucket] = (byType[key][s.bucket] || 0) + 1;
     if (counts[key] > maxCount) maxCount = counts[key];
@@ -6249,7 +6427,7 @@ function buildWhenDoICharge(sl) {
   const hdrColor  = dark ? '#9a9a9a' : '#666';
   const cellBorder = dark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #ececec';
 
-  let html = `<div style="display:grid;grid-template-columns:32px repeat(7,1fr);grid-auto-rows:13px;gap:2px;width:100%">`;
+  let html = `<div style="display:grid;grid-template-columns:32px repeat(7,1fr);grid-auto-rows:15px;gap:2px;width:100%">`;
   html += `<div></div>`;
   DAYS.forEach(d => { html += `<div style="text-align:center;font-size:9.5px;font-weight:600;color:${hdrColor};padding-bottom:2px">${d}</div>`; });
   HOURS.forEach(h => {
@@ -6266,7 +6444,7 @@ function buildWhenDoICharge(sl) {
   const swatch = t => `<div style="width:13px;height:13px;border-radius:2px;background:${t ? `rgba(${ACCENT},${(0.16+0.84*t).toFixed(2)})` : 'transparent'};border:${cellBorder}"></div>`;
   html += `<div style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:10px;color:${hdrColor}">
     <span>Fewer</span>${swatch(0)}${swatch(0.34)}${swatch(0.67)}${swatch(1)}<span>More</span>
-    <span style="margin-left:auto;color:#888">hover a cell for the charging type</span></div>`;
+    <span style="margin-left:auto;color:var(--muted)">hover or tap a cell for the charging type</span></div>`;
 
   grid.innerHTML = html;
 
@@ -6277,22 +6455,7 @@ function buildWhenDoICharge(sl) {
     _whenChargeWired = true;
     // Re-render on theme toggle so the grid colors follow light/dark.
     window.addEventListener('themeChanged', () => { if (_whenChargeSl) buildWhenDoICharge(_whenChargeSl); });
-    const hmTip = document.getElementById('hm-tip');
-    let _hmRafId = null;
-    grid.addEventListener('mouseover', e => {
-      const t = e.target.dataset.tip;
-      if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
-    });
-    grid.addEventListener('mousemove', e => {
-      if (_hmRafId) return;
-      _hmRafId = requestAnimationFrame(() => {
-        _hmRafId = null;
-        hmTip.style.transform = `translate3d(${e.clientX+14}px,${e.clientY-34}px,0)`;
-      });
-    });
-    grid.addEventListener('mouseout', e => {
-      if (e.target.dataset.tip) hmTip.style.display = 'none';
-    });
+    _hmTipWire(grid);
   }
 }
 
@@ -6471,34 +6634,17 @@ function buildPerspectiveCards(sl) {
   // ── Compute total miles ──────────────────────────────
   // Smart: use odometer interpolation if we have ≥2 readings spanning >30 days,
   // otherwise fall back to sum of miles_added + kWh-estimated remainder
-  // All-time miles driven — sum real FordPass miles_added per session where
-  // available, and fill the rest with a kWh × mi/kWh estimate. This matches the
-  // energy / gas / CO2 cards (all all-time) and respects the vehicle filter (sl).
+  // All-time miles driven — sum each session's estMiles (real FordPass miles_added when
+  // it passed the plausibility check, otherwise kWh × assumed mi/kWh). Same figure the
+  // Gas Avoidance / CO2 sections use, and respects the vehicle filter (sl).
   // The odometer readings only cover a partial window, so a delta would badly
   // undercount actual driving; they still power the precise Mileage-tab charts.
-  let totalMiles = 0;
   const milesMethod = 'estimated';
-  sl.forEach(s => {
-    if (s.milesAdded && s.milesAdded > 0) {
-      totalMiles += s.milesAdded;
-    } else {
-      const gs = getGasSavingsObj(s.date, s.vehicle);
-      totalMiles += s.kwh * (gs.mi_per_kwh || 3.0);
-    }
-  });
+  const totalMiles = sl.reduce((a, s) => a + (s.estMiles || 0), 0);
 
   // ── Core stats ───────────────────────────────────────
   const totalKwh     = sl.reduce((a,s) => a + s.kwh, 0);
-  const totalGasEquiv= sl.reduce((a,s) => a + s.gasEquiv, 0);
-  const totalGallons = totalGasEquiv / 3.26;
-  // gallons = what we would have pumped = gasEquiv $ / avg gas price
-  // More accurately: sum of (estMiles / mpg) per session
-  const totalGallonsAvoided = sl.reduce((a,s) => {
-    const gs = getGasSavingsObj(s.date, s.vehicle);
-    const mi = (s.milesAdded > 0 ? s.milesAdded : s.kwh * (gs.mi_per_kwh || 3.0));
-    const mpg = VEHICLE_MPG[s.vehicle] || 24.4;
-    return a + mi / mpg;
-  }, 0);
+  const totalGallonsAvoided = sl.reduce((a, s) => a + (s.gasGallons || 0), 0);
   const totalCo2Avoided = sl.reduce((a,s) => a + (s.co2NetAvoided || 0), 0);
 
   // ── Reference constants ──────────────────────────────
@@ -6620,7 +6766,7 @@ function buildPerspectiveCards(sl) {
       <div class="hero-icon">${c.icon}</div>
       <div class="hero-label">${c.label}</div>
       <div class="hero-number">${c.number}</div>
-      <div style="font-size:0.7rem;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">${c.unit}</div>
+      <div style="font-size:0.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">${c.unit}</div>
       <div class="hero-desc">${c.desc}</div>
       ${c.footnote ? `<div class="hero-footnote">† ${c.footnote}</div>` : ''}
     </div>
@@ -6769,7 +6915,9 @@ window.addEventListener('load', function() {
   try {
     // scrollWheelZoom off by default so scrolling the page doesn't get hijacked
     // into map zoom; it's enabled once the user clicks the map (see below).
-    _leafletMap = L.map('chargingMap', { preferCanvas: true, scrollWheelZoom: false });
+    // On touch devices one-finger drag is also off (it traps page scrolling over a
+    // 420px-tall map); pinch / two-finger gestures still pan and zoom.
+    _leafletMap = L.map('chargingMap', { preferCanvas: true, scrollWheelZoom: false, dragging: !L.Browser.mobile });
     _applyTiles();
     // Create marker group once — clearLayers() on rebuild keeps tile cache alive
     _markerGroup = L.layerGroup().addTo(_leafletMap);
@@ -6867,7 +7015,7 @@ function buildMap(sl) {
     const netName = st.bucket;  // already human-readable (Tesla SC, ChargePoint, Home, …)
     const costStr = st.cost > 0 ? `$${st.cost.toFixed(2)}` : 'Free';
     const popup = `<b>${loc.location}</b>` +
-      (loc.city ? `<br><small style="color:#888">${loc.city}</small>` : '') +
+      (loc.city ? `<br><small style="color:var(--muted)">${loc.city}</small>` : '') +
       `<br><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:5px;vertical-align:middle"></span>${netName}` +
       `<br><b>${st.kwh.toFixed(1)} kWh</b> &nbsp;·&nbsp; ${costStr}` +
       `<br>${st.sessions} session${st.sessions !== 1 ? 's' : ''} &nbsp;·&nbsp; avg ${avg} kWh`;
@@ -7001,10 +7149,10 @@ function renderLocationStats() {
   tbody.innerHTML = rows.map((d, i) => {
     const freeCell = d.free > 0
       ? `<span style="color:#2ecc71">${d.free} (${Math.round(d.free/d.sessions*100)}%)</span>`
-      : '<span style="color:#888">—</span>';
+      : '<span style="color:var(--muted)">—</span>';
     const rowColor = 'color:inherit';
     return `<tr style="${rowColor}">
-      <td style="color:#888;font-size:0.7rem">#${i+1}</td>
+      <td style="color:var(--muted);font-size:0.7rem">#${i+1}</td>
       <td><span class="badge ${badgeClass(d.bucket)}">${d.name}</span></td>
       <td style="text-align:center">${d.sessions}</td>
       <td style="text-align:center">${freeCell}</td>
@@ -7262,7 +7410,7 @@ function buildHeatmap(sl) {
     if (singleVehicle) {
       // Show one swatch per bucket that is the DOMINANT bucket on at least one day
       var bucketsInData = [...new Set(Object.keys(dayBucketMap).map(dominantBucket).filter(Boolean))].sort();
-      leg += '<span style="font-size:10px;color:#888;margin-right:4px;">Location:</span>';
+      leg += '<span style="font-size:10px;color:var(--muted);margin-right:4px;">Location:</span>';
       bucketsInData.forEach(function(b) {
         var pal = isDark() ? BUCKET_PALS.dark[b] : BUCKET_PALS.light[b];
         if (!pal) return;
@@ -7272,11 +7420,11 @@ function buildHeatmap(sl) {
              + '<span style="font-size:10px;color:' + (isDark() ? '#aaa' : '#666') + '">' + (BUCKET_LABELS[b]||b) + '</span>'
              + '</div>';
       });
-      leg += '<span style="font-size:10px;color:#aaa;margin-left:8px;">color = dominant location · intensity = kWh</span>';
+      leg += '<span style="font-size:10px;color:var(--muted);margin-left:8px;">color = dominant location · intensity = kWh</span>';
     } else {
       // Generic intensity legend
       var thresh = [0, Math.round(maxDay*0.20), Math.round(maxDay*0.45), Math.round(maxDay*0.75), Math.round(maxDay)];
-      leg += '<span style="font-size:10px;color:#888;margin-right:2px;">Less</span>';
+      leg += '<span style="font-size:10px;color:var(--muted);margin-right:2px;">Less</span>';
       p.forEach(function(c, i) {
         leg += '<div title="' + (i===0 ? 'No charge' : '≥'+thresh[i]+' kWh') + '" style="'
              + 'width:' + CELL + 'px;height:' + CELL + 'px;background:' + c + ';'
@@ -7284,8 +7432,8 @@ function buildHeatmap(sl) {
              + (i===0 ? 'border:1px solid '+(isDark()?'#3a3a3a':'#ddd')+';' : '')
              + '"></div>';
       });
-      leg += '<span style="font-size:10px;color:#888;margin-left:2px;">More</span>';
-      leg += '<span style="font-size:10px;color:#aaa;margin-left:16px;">Hover cell for kWh</span>';
+      leg += '<span style="font-size:10px;color:var(--muted);margin-left:2px;">More</span>';
+      leg += '<span style="font-size:10px;color:var(--muted);margin-left:16px;">Hover or tap a cell for kWh</span>';
     }
     leg += '</div>';
 
@@ -7301,34 +7449,18 @@ function buildHeatmap(sl) {
     _heatmapWired = true;
     window.addEventListener('themeChanged', function() { if (_hmRender) _hmRender(); });
 
-    /* Tooltip — delegated on the container, wired once */
-    var hmTip = document.getElementById('hm-tip');
-    var _tipRaf = null;
-    el.addEventListener('mouseover', function(e) {
-      var t = e.target.dataset.tip;
-      if (t) { hmTip.textContent = t; hmTip.style.display = 'block'; }
-    });
-    el.addEventListener('mousemove', function(e) {
-      if (_tipRaf) return;
-      _tipRaf = requestAnimationFrame(function() {
-        _tipRaf = null;
-        hmTip.style.transform = 'translate3d(' + (e.clientX + 14) + 'px,' + (e.clientY - 34) + 'px,0)';
-      });
-    });
-    el.addEventListener('mouseout', function(e) {
-      if (e.target.dataset.tip) hmTip.style.display = 'none';
-    });
-    el.addEventListener('touchstart', function(e) {
-      var t = e.target.dataset.tip;
-      if (t) {
-        var touch = e.touches[0];
-        hmTip.textContent = t;
-        hmTip.style.transform = 'translate3d(' + (touch.clientX + 14) + 'px,' + (touch.clientY - 44) + 'px,0)';
-        hmTip.style.display = 'block';
-      }
-    }, {passive: true});
-    el.addEventListener('touchend', function() { hmTip.style.display = 'none'; }, {passive: true});
+    /* Tooltip — delegated on the container, wired once (shared, viewport-clamped, touch-aware) */
+    _hmTipWire(el);
   }
+  _hmScrollToLatest();
+}
+
+// The heatmap runs from the first session to today (~20px/week), so it scrolls sideways.
+// Open on the most recent weeks, not the oldest. No-op while the section is collapsed
+// (width 0) — setSectionCollapsed() calls this again on expand.
+function _hmScrollToLatest() {
+  const sc = document.querySelector('.heatmap-scroll');
+  if (sc && sc.scrollWidth > sc.clientWidth) sc.scrollLeft = sc.scrollWidth;
 }
 
 /* ════════════════════════════════════════════════════════
@@ -7373,6 +7505,23 @@ window.addEventListener('themeChanged', () => {
    } catch(e){ /* one bad chart must never block the rest */ }
   });
 });
+
+/* Re-pick donut/polar legend side after rotation / window resize (legendPos is otherwise
+   only evaluated when a chart is built). Debounced; updates only charts whose side changed. */
+let _legendResizeT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_legendResizeT);
+  _legendResizeT = setTimeout(() => {
+    LEGEND_CHART_IDS.forEach(id => {
+      const cv = document.getElementById(id);
+      const ch = cv && Chart.getChart(cv);
+      const lg = ch && ch.options.plugins && ch.options.plugins.legend;
+      if (!lg) return;
+      const pos = legendPos(id);
+      if (lg.position !== pos) { lg.position = pos; ch.update('none'); }
+    });
+  }, 200);
+}, { passive: true });
 
 /* ════════════════════════════════════════════════════════
    PRINT / PDF REPORT
@@ -7520,6 +7669,20 @@ function initPrint() {
   });
 }
 
+// Right-aligned wrapper for a header's action pills (↑ top · ⤢ tab · fold). One flex
+// group that wraps as a unit — previously each pill wrapped on its own on phones and
+// the negative left margins pulled stray pills outside the header padding.
+function _sectionActions(hdr) {
+  let box = hdr.querySelector(':scope > .section-actions');
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'section-actions';
+    hdr.querySelectorAll(':scope > .back-top-pill').forEach(p => box.appendChild(p));
+    hdr.appendChild(box);
+  }
+  return box;
+}
+
 // ── Per-section "open in new tab" links + focused single-section view ──────
 // Each section header gets an "⤢ tab" link → /charging-analytics/?section=<id>.
 // When ?section=<id> is present, show ONLY that section (reusing the print
@@ -7533,8 +7696,7 @@ function initSectionFocus() {
     a.target = '_blank'; a.rel = 'noopener';
     a.title = 'Open this section in its own tab';
     a.textContent = '⤢ tab';
-    const pill = hdr.querySelector('.back-top-pill');
-    (pill || hdr.lastElementChild || hdr).insertAdjacentElement('afterend', a);
+    _sectionActions(hdr).appendChild(a);
   });
 
   const target = new URLSearchParams(location.search).get('section');
@@ -7574,11 +7736,13 @@ function _sectionBody(hdr) {
 function setSectionCollapsed(hdr, collapse, skipSave) {
   hdr.classList.toggle('collapsed', collapse);
   if (hdr._syncCollapseLbl) hdr._syncCollapseLbl();   // keep this section's pill label in sync
-  _sectionBody(hdr).forEach(el => { el.style.display = collapse ? 'none' : ''; });
+  _sectionBody(hdr).forEach(el => { el.classList.toggle('sec-folded', collapse); });
   if (!collapse) {
     // Map re-fit runs OUTSIDE rAF: _settleMap() is setInterval-based so it still
     // corrects the over-zoom even when rAF is throttled (e.g. background tab).
     if (hdr.id === 'map' && _leafletMap) { try { _leafletMap.invalidateSize(); _settleMap(); } catch(e){} }
+    // Heatmap had no width while folded, so its scroll-to-latest was a no-op — redo it now.
+    if (hdr.id === 'heatmap') requestAnimationFrame(_hmScrollToLatest);
     // Charts in a hidden section don't size themselves — resize on the next frame.
     requestAnimationFrame(() => {
       _sectionBody(hdr).forEach(el => {
@@ -7647,7 +7811,7 @@ function initCollapsible() {
       setSectionCollapsed(hdr, !hdr.classList.contains('collapsed'));
       _updateCollapseBtns();
     });
-    hdr.appendChild(cbtn);
+    _sectionActions(hdr).appendChild(cbtn);
     hdr.addEventListener('click', e => {
       if (e.target.closest('a, button, input')) return; // let the ↑ top / ⤢ tab / fold pills work
       setSectionCollapsed(hdr, !hdr.classList.contains('collapsed'));
