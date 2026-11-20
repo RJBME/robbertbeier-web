@@ -801,6 +801,45 @@ permalink: /charging-analytics/
   [data-theme="dark"] .badge-rede   { color: #ff9a9a; }  [data-theme="dark"] .badge-evgo   { color: #5fd9cc; }
   [data-theme="dark"] .badge-other  { color: #bdbdbd; }
 
+  /* ── Session details popover (opened from the Session kWh scatter) ── */
+  #sessionPop {
+    position: fixed; z-index: 700; display: none; box-sizing: border-box;
+    width: 340px; max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px);
+    overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    background: var(--dash-card); color: var(--text);
+    border: 1px solid var(--dash-border); border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+    padding: 14px 16px 16px; font-size: 0.82rem; line-height: 1.35;
+  }
+  #sessionPop.open { display: block; }
+  #sessionPop.sheet {            /* phones: bottom sheet, clear of the home indicator */
+    left: 0 !important; right: 0; top: auto !important; bottom: 0; width: auto; max-width: none;
+    max-height: 72vh; max-height: 72dvh; border-radius: 16px 16px 0 0;
+    padding-left:  max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+  .sp-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .sp-date { font-weight: 700; flex: 1; min-width: 0; }
+  .sp-x {
+    margin-left: auto; background: none; border: 1px solid var(--dash-border); color: var(--muted);
+    border-radius: 50%; width: 30px; height: 30px; font-size: 0.8rem; line-height: 1; cursor: pointer;
+    font-family: inherit; flex-shrink: 0;
+  }
+  .sp-x:hover { color: var(--link); border-color: var(--link); }
+  .sp-loc { font-weight: 800; font-size: 1rem; line-height: 1.25; padding-left: 8px; border-left: 4px solid var(--link); }
+  .sp-veh { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 0.74rem; margin: 6px 0 12px; }
+  .sp-veh i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .sp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .sp-stat { background: rgba(128,128,128,0.09); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+  .sp-l { display: block; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .sp-v { display: block; font-weight: 800; font-size: 1.02rem; margin-top: 1px; }
+  .sp-s { display: block; font-size: 0.7rem; color: var(--muted); margin-top: 1px; overflow-wrap: anywhere; }
+  .sp-good { color: #1f9d55; } .sp-bad { color: #d64533; }
+  [data-theme="dark"] .sp-good { color: #2ecc71; } [data-theme="dark"] .sp-bad { color: #ff7a6b; }
+  .sp-notes { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--dash-border); color: var(--muted); font-style: italic; font-size: 0.78rem; overflow-wrap: anywhere; }
+
   @media (prefers-reduced-motion: reduce) {
     .analytics-container, .kpi-card, .record-card, .hero-card, .chart-card { transition: none !important; }
     .kpi-card:hover, .record-card:hover, .hero-card:hover { transform: none !important; }
@@ -817,7 +856,7 @@ permalink: /charging-analytics/
     /* Hide all UI chrome */
     nav, #chargingPageNav, #vehicleFilterSticky, #vehicleFilterBtns,
     .section-nav, .back-top-pill, .back-link, .dcfc-filter,
-    #printFab, #printPanel, #hm-tip, #locViewBtns, .loc-view-btn,
+    #printFab, #printPanel, #hm-tip, #sessionPop, #locViewBtns, .loc-view-btn,
     .analytics-header > p { display: none !important; }
 
     /* Reset layout for full-width print */
@@ -1339,6 +1378,7 @@ permalink: /charging-analytics/
 
   <div class="chart-full chart-card">
     <p class="chart-title">Session kWh Over Time — colored by charging source</p>
+    <span class="chart-sub">Click or tap a dot for the full session details</span>
     <div class="chart-wrap" style="height:280px">
       <canvas id="chartSessionScatter"></canvas>
     </div>
@@ -2028,7 +2068,7 @@ permalink: /charging-analytics/
    RAW DATA FROM JEKYLL LIQUID
    ════════════════════════════════════════════════════════ */
 const sessions = [
-  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }}, milesAdded: {{ entry.miles_added | default: 0 }}, batteryKwh: {{ entry.battery_kwh | default: "null" }}, solar: {{ entry.solar | default: false }}, tempC: {{ entry.temperature_c | default: "null" }}, tempF: {{ entry.temperature_f | default: "null" }} }{% unless forloop.last %},{% endunless %}
+  {% for entry in sorted_sessions %}{ date: "{{ entry.date | date: '%Y-%m-%d' }}", location: "{{ entry.location | replace: '"', "'" }}", vehicle: "{{ entry.vehicle | default: '2025 Mach-E GT' | replace: '"', "'" }}", kwh: {{ entry.energy_kwh | times: 1.0 }}, rawCost: {{ entry.cost | times: 1.0 }}, startDate: "{{ entry.start_date | date: '%Y-%m-%d' }}", startTime: "{{ entry.start_time }}", endTime: "{{ entry.end_time }}", socStart: {{ entry.soc_start | default: 0 }}, socEnd: {{ entry.soc_end | default: 0 }}, socAdded: {{ entry.soc_added | default: 0 }}, milesAdded: {{ entry.miles_added | default: 0 }}, batteryKwh: {{ entry.battery_kwh | default: "null" }}, solar: {{ entry.solar | default: false }}, tempC: {{ entry.temperature_c | default: "null" }}, tempF: {{ entry.temperature_f | default: "null" }}, notes: {{ entry.notes | jsonify | replace: '</', '<\/' }} }{% unless forloop.last %},{% endunless %}
   {% endfor %}
 ];
 
@@ -2771,6 +2811,7 @@ function toggleVehicle(v) {
    REBUILD — called on init and on vehicle filter change
    ════════════════════════════════════════════════════════ */
 function rebuild(sl) {
+  closeSessionPopover();   // a filter change invalidates any open session popover
   // Drop any sessions that failed enrichment (missing month = bad date).
   // Checked BEFORE teardown so an empty filter result leaves the last view intact
   // instead of destroying every chart and returning with blank canvases.
@@ -3802,10 +3843,12 @@ mkChart('chartDayOfWeek', {
   const buckets = Object.keys(BUCKET_COLORS);
   const scatterDatasets = buckets.map(b => ({
     label: b,
-    data: sl.map((s, i) => s.bucket === b ? { x: i, y: s.kwh, date: s.date } : null).filter(Boolean),
+    // `s` = the full enriched session, `n` = its 1-based position — used by the click popover
+    data: sl.map((s, i) => s.bucket === b ? { x: i, y: s.kwh, date: s.date, s, n: i + 1 } : null).filter(Boolean),
   backgroundColor: BUCKET_COLORS[b] + 'cc',
   pointRadius: 4,
-  pointHoverRadius: 7
+  pointHoverRadius: 7,
+  pointHitRadius: window.matchMedia('(pointer: coarse)').matches ? 18 : 10   // forgiving tap/click target
 })).filter(ds => ds.data.length > 0);
 
 mkChart('chartSessionScatter', {
@@ -3813,10 +3856,20 @@ mkChart('chartSessionScatter', {
   data: { datasets: scatterDatasets },
   options: {
     responsive: true, maintainAspectRatio: false,
+    // Click / tap a dot → full session details popover (bottom sheet on phones)
+    onClick: (evt, els, chart) => {
+      if (!els.length) return;
+      const d  = chart.data.datasets[els[0].datasetIndex].data[els[0].index];
+      const r  = chart.canvas.getBoundingClientRect();
+      openSessionPopover(d.s, d.n, sl.length, r.left + els[0].element.x, r.top + els[0].element.y);
+    },
+    onHover: (evt, els) => { if (evt.native && evt.native.target) evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
     plugins: {
       legend: { position: 'top', labels: { color: tc(), boxWidth: 10, padding: 14 } },
       datalabels: { display: false },
-      tooltip: { callbacks: { label: ctx => `${ctx.raw.date}: ${ctx.raw.y} kWh` } }
+      // Hover tooltip only where hover exists; on touch the tap opens the popover instead
+      tooltip: { enabled: window.matchMedia('(hover: hover)').matches,
+                 callbacks: { label: ctx => `${ctx.raw.date}: ${ctx.raw.y} kWh` } }
     },
     scales: {
       x: {
@@ -6335,6 +6388,148 @@ mkChart('chartHistogram', {
   buildGasSensitivity(sl);
 
 } // ── end rebuild ──
+
+/* ── Session details popover ───────────────────────────────────────────────
+   Opened by clicking/tapping a dot on the "Session kWh Over Time" scatter. Built from
+   the enriched session object, so it shows everything the page knows about the charge
+   (energy, cost, savings, timing, SOC, efficiency, temperature, CO₂, notes).
+   ≥560px wide: floats next to the dot. Narrower (phones): bottom sheet.
+   Closes on ✕, Esc, tapping elsewhere, a filter rebuild, a big page scroll or a width change. */
+let _sessPopEl = null, _sessPopSheet = false, _sessPopScrollY = 0, _sessPopW = 0;
+const _esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+function _fmtClock(t) {                         // "07:28" → "7:28 AM"
+  const m = /^(\d{1,2}):(\d{2})/.exec(t || '');
+  if (!m) return '';
+  const h = +m[1];
+  return ((h % 12) || 12) + ':' + m[2] + ' ' + (h >= 12 ? 'PM' : 'AM');
+}
+function _fmtDay(iso, withYear) {
+  return new Date(iso + 'T12:00:00').toLocaleDateString(undefined,
+    withYear ? { weekday:'short', month:'short', day:'numeric', year:'numeric' } : { weekday:'short', month:'short', day:'numeric' });
+}
+function _sessHours(s) {                        // plug-in → unplug hours, or null
+  if (!s.startTime || !s.endTime) return null;
+  const st = new Date((s.startDate || s.date) + 'T' + s.startTime + ':00');
+  const en = new Date(s.date + 'T' + s.endTime + ':00');
+  let h = (en - st) / 3600000;
+  if (isNaN(h)) return null;
+  if (h < 0) h += 24;                           // same-day wrap when no start_date
+  return h > 0 ? h : null;
+}
+function _fmtDur(h) {
+  if (h < 1) return Math.round(h * 60) + ' min';
+  const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+  return mm === 60 ? (hh + 1) + 'h' : hh + 'h' + (mm ? ' ' + mm + 'm' : '');
+}
+
+function _sessionPopHtml(s, n, total) {
+  const hrs   = _sessHours(s);
+  const stats = [];
+  const add = (label, value, sub) => stats.push(
+    `<div class="sp-stat"><span class="sp-l">${label}</span><span class="sp-v">${value}</span>${sub ? `<span class="sp-s">${sub}</span>` : ''}</div>`);
+
+  // Energy (+ battery-side figure when it differs, i.e. public DC sessions)
+  const intoBatt = s.effKwh && Math.abs(s.effKwh - s.kwh) > 0.05 ? `${s.effKwh.toFixed(1)} kWh into battery` : '';
+  add('Energy', `${s.kwh.toFixed(1)} kWh`, intoBatt);
+
+  // Cost
+  let costSub = '';
+  if (!s.isFree && s.kwh > 0) costSub = `${(s.cost / s.kwh * 100).toFixed(1)}¢/kWh`;
+  if (s.bucket === 'Home' && !s.isFree) costSub += ' · incl. wall-side loss';
+  if (s.membershipFee > 0.005) costSub += ` · incl. ${fmtUSD(s.membershipFee)} ${_esc(s.membershipLabel)} fee`;
+  add('Cost', s.isFree ? '<span class="sp-good">Free</span>' : fmtUSD(s.cost), costSub.replace(/^ · /, ''));
+
+  add('Saved vs gas', `<span class="${s.saving >= 0 ? 'sp-good' : 'sp-bad'}">${fmtUSD(s.saving)}</span>`, `gas car: ${fmtUSD(s.gasEquiv)}`);
+
+  if (s.gasGallons > 0) add('Gas avoided', `${s.gasGallons.toFixed(2)} gal`, `≈ ${Math.round(s.estMiles)} mi`);
+
+  if (hrs) add('Duration', _fmtDur(hrs), `${(s.kwh / hrs).toFixed(1)} kW avg (incl. idle)`);
+
+  if (s.startTime || s.endTime) {
+    const t = s.startTime && s.endTime ? `${_fmtClock(s.startTime)} → ${_fmtClock(s.endTime)}`
+            : s.startTime ? `from ${_fmtClock(s.startTime)}` : `until ${_fmtClock(s.endTime)}`;
+    add('Plugged in', t, s.startDate && s.startDate !== s.date ? `${_fmtDay(s.startDate)} → ${_fmtDay(s.date)} (overnight)` : '');
+  }
+
+  if (s.socEnd > 0) add('Battery', `${s.socStart}% → ${s.socEnd}%`, s.socAdded > 0 ? `+${s.socAdded}% added` : '');
+
+  if (s.milesAdded > 0) {
+    add('Range added', `${s.milesAdded} mi`,
+        s.hasRealEff ? `${s.realMiPerKwh.toFixed(2)} mi/kWh · ${Math.round(s.realWhPerMi)} Wh/mi` : 'efficiency outside plausible range — not counted');
+  }
+
+  if (s.hasTemp) {
+    const f = s.tempF != null ? s.tempF : s.tempC * 9 / 5 + 32;
+    add('Outdoor temp', `${Math.round(f)}°F`, `${s.tempC.toFixed(1)}°C`);
+  }
+
+  add('CO₂ avoided', `${(s.co2NetAvoided || 0).toFixed(1)} kg`,
+      `grid ${(s.co2GridEmit || 0).toFixed(1)} kg · gas ${(s.co2GasCould || 0).toFixed(1)} kg${s.solar ? ' · ☀ solar' : ''}`);
+
+  const color = BUCKET_COLORS[s.bucket] || '#909090';
+  const notes = String(s.notes || '').trim();
+  return `
+    <div class="sp-head">
+      <span class="badge ${badgeClass(s.bucket)}">${_esc(s.bucket)}</span>
+      <span class="sp-date">${_fmtDay(s.date, true)}</span>
+      <button type="button" class="sp-x" aria-label="Close session details">✕</button>
+    </div>
+    <div class="sp-loc" style="border-left-color:${color}">${_esc(s.location)}</div>
+    <div class="sp-veh"><i style="background:${vehColor(s.vehicle)}"></i>${_esc(s.vehicle)} · session ${n} of ${total}</div>
+    <div class="sp-grid">${stats.join('')}</div>
+    ${notes ? `<div class="sp-notes">${_esc(notes)}</div>` : ''}`;
+}
+
+function closeSessionPopover() {
+  if (_sessPopEl) _sessPopEl.classList.remove('open');
+}
+
+function openSessionPopover(s, n, total, ax, ay) {
+  if (!s) return;
+  if (!_sessPopEl) {
+    const el = document.createElement('div');
+    el.id = 'sessionPop';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', 'Charging session details');
+    document.body.appendChild(el);
+    _sessPopEl = el;
+    el.addEventListener('click', e => { if (e.target.closest('.sp-x')) closeSessionPopover(); });
+    // Capture phase: runs before the chart's own click, so tapping another dot closes then reopens.
+    document.addEventListener('pointerdown', e => {
+      if (el.classList.contains('open') && !el.contains(e.target)) closeSessionPopover();
+    }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSessionPopover(); });
+    window.addEventListener('scroll', () => {
+      // floating mode is anchored to a dot, so a real scroll detaches it; the sheet is fixed and stays
+      if (el.classList.contains('open') && !_sessPopSheet && Math.abs(window.scrollY - _sessPopScrollY) > 24) closeSessionPopover();
+    }, { passive: true });
+    window.addEventListener('resize', () => {
+      // width changes only — iOS fires resize as the URL bar collapses while scrolling
+      if (window.innerWidth !== _sessPopW) closeSessionPopover();
+    }, { passive: true });
+  }
+  const el = _sessPopEl;
+  _sessPopSheet = window.innerWidth < 560;
+  _sessPopW = window.innerWidth;
+  _sessPopScrollY = window.scrollY;
+  el.innerHTML = _sessionPopHtml(s, n, total);
+  el.classList.toggle('sheet', _sessPopSheet);
+  el.classList.add('open');
+  el.scrollTop = 0;
+  if (_sessPopSheet) {
+    el.style.left = el.style.top = '';
+  } else {
+    const w = el.offsetWidth, h = el.offsetHeight;
+    let x = ax + 16;
+    if (x + w > window.innerWidth - 8) x = ax - w - 16;                       // flip left near the right edge
+    x = Math.max(8, Math.min(x, window.innerWidth - w - 8));
+    const y = Math.max(8, Math.min(ay - h / 2, window.innerHeight - h - 8));
+    el.style.left = Math.round(x) + 'px';
+    el.style.top  = Math.round(y) + 'px';
+  }
+  const x = el.querySelector('.sp-x');
+  if (x) x.focus({ preventScroll: true });
+}
 
 /* ── Shared heatmap tooltip (#hm-tip) ─────────────────────────────────────
    Positioned with a transform and CLAMPED to the viewport — the unclamped
