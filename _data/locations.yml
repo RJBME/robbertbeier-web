@@ -213,3 +213,8 @@
   lat: 43.451600538793144
   lng: -83.89444865226432
   city: "Saginaw, MI"
+
+- location: "El Car Wash, Madison Heights, MI"
+  lat: 42.53321625912837
+  lng: -83.1222659756037
+  city: "Madison Heights, MI"
