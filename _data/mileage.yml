@@ -37,6 +37,11 @@
   odometer: 5970
   notes: "current reading"
 
+- date: "2026-11-20"
+  vehicle: "LRB's 2026 Mach-E SR"
+  odometer: 5611
+  notes: "current reading"
+
 - date: "2026-10-24"
   vehicle: "2026 Mach-E SR"
   odometer: 5011
